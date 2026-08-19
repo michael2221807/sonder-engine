@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// App doc: docs/user-guide/pages/creation.md §2.6
 import { useI18n } from 'vue-i18n';
 import type { PhaseErrorAction } from '@/engine/pipeline/sub-pipelines/enhanced-opening';
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// App doc: docs/user-guide/pages/creation.md §2.6
 /**
  * StepConfirmation — 创角步骤：最终确认。
  *
@@ -15,6 +16,7 @@ import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
 import type { SelectOption } from '@/ui/components/shared/AgaSelect.vue';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
+import type { BudgetSummary } from '@/engine/creation/creation-budget';
 
 const { t } = useI18n();
 
@@ -49,6 +51,7 @@ const props = defineProps<{
    */
   selection: unknown;
   budget: number;
+  budgetSummary?: BudgetSummary | null;
 }>();
 
 const emit = defineEmits<{
@@ -290,6 +293,16 @@ onMounted(() => {
 
     <!-- 摘要列表 -->
     <div class="summary-list">
+      <div v-if="budgetSummary" class="summary-row summary-row--budget" data-testid="creation-budget-summary">
+        <span class="summary-label">{{ $t('creation.confirm.budget') }}</span>
+        <span class="summary-value">
+          {{ $t('creation.confirm.budgetValue', {
+            spent: budgetSummary.spent,
+            total: budgetSummary.total,
+            remaining: budgetSummary.remaining,
+          }) }}
+        </span>
+      </div>
       <div v-for="item in summaryItems" :key="item.stepId" class="summary-row">
         <span class="summary-label">{{ item.label }}</span>
         <span class="summary-value">{{ item.display }}</span>

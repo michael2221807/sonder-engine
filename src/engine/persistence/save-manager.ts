@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/creation.md §2.10
 /**
  * 存档管理器 — 处理游戏状态树的存取
  *
@@ -135,6 +136,18 @@ export class SaveManager {
         `[SaveManager] Migration chain interrupted at ${result.finalVersion}:`,
         result.error,
       );
+    }
+
+    // A migration prefix is not a valid target-version save. Returning or
+    // persisting it would silently turn one compatible old save into a
+    // half-migrated save when the registry has a gap (for example 0 → 0.5
+    // while the installed pack is 0.6). Keep both IDB and runtime data intact.
+    if (!result.error && compareVersions(result.finalVersion, this.currentPackVersion) < 0) {
+      console.warn(
+        `[SaveManager] Incomplete migration path ${fromVersion || '0'} → ${this.currentPackVersion}; ` +
+        `stopped at ${result.finalVersion}. Loading the original save without rewriting it.`,
+      );
+      return raw;
     }
 
     // Persist migrated data + version to IDB so next load doesn't re-migrate

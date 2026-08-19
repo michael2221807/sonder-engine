@@ -46,6 +46,12 @@ export type {
   PromptFlowModule,
   CustomPresetSchema,
   CustomPresetField,
+  PresetEntry,
+  WorldPresetEntry,
+  CreationChoicePresetEntry,
+  CreationGenre,
+  CreationContentRating,
+  CreationGenreScope,
 } from './game-pack';
 
 // ─── Behavior Module Configs ───

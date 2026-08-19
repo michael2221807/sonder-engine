@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// App doc: docs/user-guide/pages/creation.md §2.7
 /**
  * CustomPresetModal — 用户自定义创角预设的填写表单
  *
@@ -19,6 +20,11 @@ import { useI18n } from 'vue-i18n';
 import Modal from '@/ui/components/common/Modal.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import type { CustomPresetSchema } from '@/engine/types';
+import {
+  buildCustomPresetFormData,
+  normalizeCustomPresetFormData,
+  validateCustomPresetForm,
+} from '@/engine/creation/custom-preset-form';
 
 const { t } = useI18n();
 
@@ -54,7 +60,7 @@ watch(
   () => [props.modelValue, props.initialData] as const,
   ([open, init]) => {
     if (!open) return;
-    formData.value = buildInitialFormData(init);
+    formData.value = buildCustomPresetFormData(props.schema, init);
     errors.value = [];
   },
   { immediate: true },
@@ -65,52 +71,17 @@ watch(
  * - 编辑模式：从 initialData 中按 schema 字段 key 取值
  * - 新增模式：每个字段填默认值（number = 0 或 default，其他 = ''）
  */
-function buildInitialFormData(init: Record<string, unknown> | undefined): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const f of props.schema.fields) {
-    if (init && f.key in init) {
-      out[f.key] = init[f.key];
-    } else if (f.default !== undefined) {
-      out[f.key] = f.default;
-    } else if (f.type === 'number') {
-      out[f.key] = 0;
-    } else {
-      out[f.key] = '';
-    }
-  }
-  return out;
-}
-
 // ─── Validation ────────────────────────────────────────────
 
 function validate(): boolean {
-  const errs: string[] = [];
-  for (const f of props.schema.fields) {
-    const v = formData.value[f.key];
-    // required check
-    if (f.required) {
-      if (v === undefined || v === null || (typeof v === 'string' && v.trim() === '')) {
-        errs.push(t('creation.customPreset.requiredError', { label: f.label }));
-        continue;
-      }
-    }
-    // number range check
-    if (f.type === 'number') {
-      const n = Number(v);
-      if (v !== '' && v !== null && Number.isFinite(n)) {
-        if (typeof f.min === 'number' && n < f.min) {
-          errs.push(t('creation.customPreset.minError', { label: f.label, min: f.min }));
-        }
-        if (typeof f.max === 'number' && n > f.max) {
-          errs.push(t('creation.customPreset.maxError', { label: f.label, max: f.max }));
-        }
-      } else if (f.required) {
-        errs.push(t('creation.customPreset.numberError', { label: f.label }));
-      }
-    }
-  }
-  errors.value = errs;
-  return errs.length === 0;
+  const issues = validateCustomPresetForm(props.schema, formData.value);
+  errors.value = issues.map((issue) => {
+    if (issue.type === 'min') return t('creation.customPreset.minError', { label: issue.label, min: issue.limit });
+    if (issue.type === 'max') return t('creation.customPreset.maxError', { label: issue.label, max: issue.limit });
+    if (issue.type === 'number') return t('creation.customPreset.numberError', { label: issue.label });
+    return t('creation.customPreset.requiredError', { label: issue.label });
+  });
+  return issues.length === 0;
 }
 
 // ─── Actions ───────────────────────────────────────────────
@@ -121,14 +92,7 @@ function close(): void {
 
 function submit(): void {
   if (!validate()) return;
-  // 数字字段强制转 number 类型再提交
-  const out: Record<string, unknown> = { ...formData.value };
-  for (const f of props.schema.fields) {
-    if (f.type === 'number' && out[f.key] !== '' && out[f.key] !== null) {
-      out[f.key] = Number(out[f.key]);
-    }
-  }
-  emit('submit', out);
+  emit('submit', normalizeCustomPresetFormData(props.schema, formData.value));
 }
 
 // ─── Computed ──────────────────────────────────────────────
@@ -145,6 +109,16 @@ function getVal(key: string): string {
 }
 function setVal(key: string, v: string): void {
   formData.value[key] = v;
+}
+function getSelectVal(key: string): string {
+  const value = formData.value[key];
+  return Array.isArray(value) ? String(value[0] ?? '') : getVal(key);
+}
+function getChecked(key: string): boolean {
+  return formData.value[key] === true;
+}
+function setChecked(key: string, value: boolean): void {
+  formData.value[key] = value;
 }
 </script>
 
@@ -187,6 +161,25 @@ function setVal(key: string, v: string): void {
           :max="field.max"
           class="form-input form-input--number"
           @input="setVal(field.key, ($event.target as HTMLInputElement).value)"
+        />
+
+        <select
+          v-else-if="field.type === 'select'"
+          :id="`fld-${field.key}`"
+          :value="getSelectVal(field.key)"
+          class="form-input"
+          @change="setVal(field.key, ($event.target as HTMLSelectElement).value)"
+        >
+          <option v-for="option in field.options ?? []" :key="option" :value="option">{{ option }}</option>
+        </select>
+
+        <input
+          v-else-if="field.type === 'checkbox'"
+          :id="`fld-${field.key}`"
+          :checked="getChecked(field.key)"
+          type="checkbox"
+          class="form-checkbox"
+          @change="setChecked(field.key, ($event.target as HTMLInputElement).checked)"
         />
       </div>
 
@@ -272,6 +265,11 @@ function setVal(key: string, v: string): void {
 .form-input--number {
   max-width: 140px;
   font-family: var(--font-mono);
+}
+.form-checkbox {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-sage-400);
 }
 
 .form-errors {

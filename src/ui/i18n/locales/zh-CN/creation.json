@@ -41,6 +41,9 @@
   "creation.selectMany.customizeStep": "自定义{label}",
   "creation.selectMany.confirmDelete": "确认删除自定义 \"{name}\"？此操作不可撤销。",
   "creation.selectMany.budgetBadge": "剩余: {remaining} / {total}",
+  "creation.error.invalidBuild": "角色构筑未完成或已超出总预算，请返回检查选择。",
+  "creation.confirm.budget": "构筑预算",
+  "creation.confirm.budgetValue": "已用 {spent} / {total}，剩余 {remaining}",
 
   "creation.attributes.pointsBadge": "剩余点数: {remaining} / {total}",
   "creation.attributes.reset": "重置",

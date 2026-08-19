@@ -91,6 +91,24 @@ describe('load (empty cases)', () => {
 });
 
 describe('save / load round-trip', () => {
+  it('preserves creation genre and adult metadata without a schema migration', async () => {
+    const s = new CustomPresetStore();
+    const created = await s.add('tianming', 'origins', {
+      name: '夜班信使',
+      genres: ['modern'],
+      adultOnly: true,
+      attribute_modifiers: { 直觉: 2 },
+    });
+    const loaded = await s.get('tianming', 'origins');
+    expect(loaded[0]).toMatchObject({
+      id: created.id,
+      genres: ['modern'],
+      adultOnly: true,
+      attribute_modifiers: { 直觉: 2 },
+    });
+    expect((await s.load('tianming')).schemaVersion).toBe(1);
+  });
+
   it('persists data and reloads', async () => {
     const s = new CustomPresetStore();
     await s.save({
@@ -193,6 +211,20 @@ describe('update', () => {
     expect(list[0].id).toBe(created.id); // 未被覆盖
     expect(list[0].source).toBe('user'); // 未被覆盖
     expect(list[0].createdAt).toBe(created.createdAt); // 未被覆盖
+  });
+
+  it('adds optional creation metadata to a legacy entry without a store schema bump', async () => {
+    const s = new CustomPresetStore();
+    const created = await s.add('tianming', 'origins', { name: 'Legacy origin' });
+
+    expect(await s.update('tianming', 'origins', created.id, {
+      genres: ['fantasy'], adultOnly: true, talent_cost: 6,
+    })).toBe(true);
+
+    expect((await s.get('tianming', 'origins'))[0]).toMatchObject({
+      name: 'Legacy origin', genres: ['fantasy'], adultOnly: true, talent_cost: 6,
+    });
+    expect((await s.load('tianming')).schemaVersion).toBe(1);
   });
 
   it('returns false for non-user id', async () => {

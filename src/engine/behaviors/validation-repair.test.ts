@@ -162,6 +162,36 @@ describe('ValidationRepairModule', () => {
       expect(sm.get('体力')).toBe(9999);
     });
 
+    it('ignores creation-only bounds when loading an existing save', () => {
+      const schema = {
+        type: 'object',
+        properties: {
+          角色: {
+            type: 'object',
+            properties: {
+              属性: {
+                type: 'object',
+                properties: {
+                  体质: {
+                    type: 'number',
+                    default: 5,
+                    'x-creation-min': 1,
+                    'x-max': 20,
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+      const mod = createModule(schema);
+      const { sm } = createMockStateManager({ 角色: { 属性: { 体质: -7 } } });
+
+      mod.onGameLoad(sm as never);
+
+      expect(sm.get('角色.属性.体质')).toBe(-7);
+    });
+
     it('handles integer type same as number', () => {
       const schema = {
         type: 'object',

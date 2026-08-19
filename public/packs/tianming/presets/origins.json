@@ -1,194 +1,562 @@
 [
   {
     "id": 1,
-    "name": "山野遗孤",
-    "description": "自幼在山野中长大，与自然和野兽为伴，体质与耐受力出众，意志坚韧；对城市与规矩略感疏离。",
+    "name": "平民之家",
+    "description": "生于普通家庭，资源和人脉有限，却熟悉多数人的生活方式。你习惯靠劳动、互助与耐心解决问题，不会因身份自动受到优待。",
     "talent_cost": 0,
-    "attribute_modifiers": { "体质": 1 },
-    "rarity": 3
+    "attribute_modifiers": { "心性": 1 },
+    "rarity": 1,
+    "genres": ["all"],
+    "adultOnly": false
   },
   {
     "id": 2,
-    "name": "书香门第",
-    "description": "出身于官宦或学者世家，饱读诗书，悟性超乎常人，对道理与规律有敏锐的理解力；有时略显清高。",
+    "name": "学者门第",
+    "description": "家中重视教育、记录与专业知识，你从小接触书籍、档案和严谨讨论。见识高于同龄人，也容易把复杂处境先当成可以理解的问题。",
     "talent_cost": 2,
     "attribute_modifiers": { "悟性": 2 },
-    "rarity": 3
+    "rarity": 3,
+    "genres": ["all"],
+    "adultOnly": false
   },
   {
     "id": 3,
-    "name": "商贾之子",
-    "description": "生于富贵之家，精通人情世故，处事圆滑，魅力出众；在社交与利益场中如鱼得水。",
-    "talent_cost": 2,
-    "attribute_modifiers": { "魅力": 2 },
-    "rarity": 3
+    "name": "商旅世家",
+    "description": "家族以贸易、运输或经营产业为生。你很早便懂得价格、信用和人情的分量，能自然进入利益交换的场合，也背负维护家业的期待。",
+    "talent_cost": 3,
+    "attribute_modifiers": { "魅力": 1, "悟性": 1 },
+    "rarity": 3,
+    "genres": ["modern", "wuxia", "fantasy"],
+    "adultOnly": false
   },
   {
     "id": 4,
-    "name": "将门之后",
-    "description": "名将之后，体质与心性兼得：勇武果决，遇事不慌，能扛能打；血脉中自带一股不服输的韧劲。",
+    "name": "军旅家庭",
+    "description": "家中有人长期服役、守边或承担武装职责。纪律、责任和风险是日常的一部分，你接受过比常人更系统的体能与危机训练。",
     "talent_cost": 3,
-    "attribute_modifiers": { "心性": 2, "体质": 1 },
-    "rarity": 3
+    "attribute_modifiers": { "体质": 1, "心性": 1 },
+    "rarity": 3,
+    "genres": ["all"],
+    "adultOnly": false
   },
   {
     "id": 5,
-    "name": "游方师承",
-    "description": "师从一位游走四方的能人，继承了其部分本领与眼界；见多识广，悟性与心性皆有所得。",
-    "talent_cost": 4,
-    "attribute_modifiers": { "悟性": 1, "心性": 1 },
-    "rarity": 4
+    "name": "手艺传家",
+    "description": "家族依靠一门可反复打磨的手艺立足，可能是修理、医药、制作、烹饪或艺术。你不一定富有，但懂得材料、流程与口碑如何积累。",
+    "talent_cost": 2,
+    "attribute_modifiers": { "悟性": 1, "直觉": 1 },
+    "rarity": 2,
+    "genres": ["all"],
+    "adultOnly": false
   },
   {
     "id": 6,
-    "name": "双面人生",
-    "description": "曾长期身处对立阵营之间，心性历练远超常人，善于在压力下保持冷静与伪装；代价是难以完全信任他人。",
-    "talent_cost": 1,
-    "attribute_modifiers": { "心性": 3 },
-    "rarity": 4
+    "name": "没落名门",
+    "description": "家族仍保留姓氏、礼仪和旧关系，却已失去大部分财富或权力。你既懂上层规则，也清楚体面背后的窘迫，复兴与摆脱家名都可能成为道路。",
+    "talent_cost": 3,
+    "attribute_modifiers": { "魅力": 1, "心性": 1 },
+    "rarity": 4,
+    "genres": ["all"],
+    "adultOnly": false
   },
   {
     "id": 7,
-    "name": "重生者",
-    "description": "你带着前世的记忆而来，对未来的大势与关键节点了如指掌；气运与悟性皆得益于此，但易与当下脱节。",
-    "talent_cost": 5,
-    "attribute_modifiers": { "悟性": 2, "气运": 1 },
-    "rarity": 5
+    "name": "行业学徒",
+    "description": "你很早进入某个行业或组织，从杂务、规矩和前辈的脸色中学会生存。起点不高，却拥有一条明确的专业路径和最初的人际网络。",
+    "talent_cost": 1,
+    "attribute_modifiers": { "悟性": 1 },
+    "rarity": 2,
+    "genres": ["all"],
+    "adultOnly": false
   },
   {
     "id": 8,
-    "name": "名门血脉",
-    "description": "血脉中流淌着某支古老或显赫家族的传承，灵性十足，成长略快于常人；有时会招致嫉妒或期待。",
-    "talent_cost": 6,
-    "attribute_modifiers": { "直觉": 2, "体质": 1 },
-    "rarity": 5
+    "name": "边地遗民",
+    "description": "你来自秩序薄弱的边境、荒野或灾后聚落，见过资源短缺与规则失效。陌生环境不会轻易击垮你，但你对中心世界的礼法并不天然信任。",
+    "talent_cost": 2,
+    "attribute_modifiers": { "体质": 1, "直觉": 1 },
+    "rarity": 3,
+    "genres": ["wuxia", "fantasy", "dystopia"],
+    "adultOnly": false
   },
   {
     "id": 9,
-    "name": "宿慧老者",
-    "description": "灵魂历经沧桑，虽居年轻之身，见识与悟性却远超同辈；心性偶显孤僻或与世不容。",
-    "talent_cost": 7,
-    "attribute_modifiers": { "悟性": 3, "心性": -1 },
-    "rarity": 5
+    "name": "优渥家庭",
+    "description": "家庭能提供良好教育、稳定资产和可靠关系。你拥有试错余地，也更早接触资源如何流动；相应地，家人对你的职业、婚姻与名声往往有明确安排。",
+    "talent_cost": 5,
+    "attribute_modifiers": { "魅力": 2, "气运": 1 },
+    "rarity": 4,
+    "genres": ["modern", "dystopia"],
+    "adultOnly": false
   },
   {
     "id": 10,
-    "name": "庙祝之子",
-    "description": "从小在庙宇或祭祀之地长大，对不可言说之事直觉敏锐，灵性受滋养；介于世俗与神秘之间。",
-    "talent_cost": 2,
-    "attribute_modifiers": { "直觉": 2 },
-    "rarity": 3
+    "name": "体制家庭",
+    "description": "家族长期服务于行政、司法、技术官僚或大型机构。你熟悉程序、级别与内部语言，知道规则怎样保护人，也知道它怎样把责任切割得无人承担。",
+    "talent_cost": 4,
+    "attribute_modifiers": { "悟性": 1, "心性": 1, "魅力": 1 },
+    "rarity": 4,
+    "genres": ["modern", "dystopia"],
+    "adultOnly": false
   },
   {
     "id": 11,
-    "name": "渔家少年",
-    "description": "常年在江河湖海讨生活，体质强健，水性极佳；吃苦耐劳，对风浪与变故习以为常。",
-    "talent_cost": 1,
-    "attribute_modifiers": { "体质": 2 },
-    "rarity": 2
+    "name": "江湖门下",
+    "description": "你在门派、镖局、帮会或武馆中长大，师承和辈分决定最初的位置。你拥有基本武学与江湖常识，也继承了组织的盟友、仇怨和规矩。",
+    "talent_cost": 4,
+    "attribute_modifiers": { "体质": 1, "直觉": 1, "心性": 1 },
+    "rarity": 4,
+    "genres": ["wuxia"],
+    "adultOnly": false
   },
   {
     "id": 12,
-    "name": "王朝皇子",
-    "description": "生于权力之巅，自幼锦衣玉食、受教于最好的师傅；魅力与心性皆有所长，但对民间疾苦未必亲历。",
-    "talent_cost": 3,
-    "attribute_modifiers": { "魅力": 2, "心性": 1 },
-    "rarity": 4
+    "name": "冒险者后代",
+    "description": "父母或监护人曾以探索遗迹、护送商队或处理魔物为生。家中留下地图、传闻和不完整的人脉，你对危险世界的认识比学院教材更实际。",
+    "talent_cost": 4,
+    "attribute_modifiers": { "直觉": 2, "气运": 1 },
+    "rarity": 4,
+    "genres": ["fantasy"],
+    "adultOnly": false
   },
   {
     "id": 13,
-    "name": "药坊学徒",
-    "description": "自幼在药坊或医馆长大，与草木、方剂为伴，对药理与调理有超常的敏感与悟性。",
-    "talent_cost": 2,
-    "attribute_modifiers": { "直觉": 1, "悟性": 1 },
-    "rarity": 3
+    "name": "下层区居民",
+    "description": "你在配给稀少、监控密集的下层区域长大，熟悉维修通道、二手市场和规避检查的办法。官方履历不漂亮，但真正的生存网络远比档案复杂。",
+    "talent_cost": 1,
+    "attribute_modifiers": { "直觉": 2, "气运": -1 },
+    "rarity": 3,
+    "genres": ["dystopia"],
+    "adultOnly": false
   },
   {
     "id": 14,
-    "name": "机关学徒",
-    "description": "师从机关或格致大师，自小研习结构与布局，对空间与逻辑极其敏锐；悟性与灵性兼得。",
-    "talent_cost": 3,
-    "attribute_modifiers": { "悟性": 2, "直觉": 1 },
-    "rarity": 4
+    "name": "抵契家庭",
+    "description": "成年后，你继承了家庭留下的特殊债务、监护安排或长期服务契约。它让你比常人更早接触权力如何进入私人生活，也可能成为他人主张支配权的依据。",
+    "talent_cost": -2,
+    "attribute_modifiers": { "心性": 1, "气运": -1 },
+    "rarity": 3,
+    "genres": ["modern", "dystopia"],
+    "adultOnly": true
   },
   {
     "id": 15,
-    "name": "猎户世家",
-    "description": "祖上世代以狩猎或探险为生，体质与胆识出众，对危险与异动极其敏感；心性坚韧。",
-    "talent_cost": 4,
-    "attribute_modifiers": { "体质": 2, "心性": 1 },
-    "rarity": 4
+    "name": "乐籍旧户",
+    "description": "家族曾被编入以侍奉、表演或婚配为义务的特殊户籍。即使旧债已清，技艺、污名和旧主关系仍在；你既能借此进入隐秘场合，也可能再次被礼法索取。",
+    "talent_cost": -1,
+    "attribute_modifiers": { "魅力": 2, "心性": -1 },
+    "rarity": 4,
+    "genres": ["wuxia"],
+    "adultOnly": true
   },
   {
     "id": 16,
-    "name": "流浪乞丐",
-    "description": "自幼流落街头，饱经风霜；心性被磨得极韧，适应力惊人，但气运往往不佳，易遭冷眼。",
-    "talent_cost": -1,
-    "attribute_modifiers": { "心性": 2, "气运": -1 },
-    "rarity": 2
+    "name": "欲晶眷属",
+    "description": "成年后，你被某个家族、神殿或魔导组织登记为欲晶眷属。身体能够储存和输送特殊魔力，因此得到训练与庇护，也可能被要求以亲密侍奉、身体改造或生育承担偿还义务。",
+    "talent_cost": 1,
+    "attribute_modifiers": { "魅力": 1, "直觉": 1, "心性": -1 },
+    "rarity": 4,
+    "genres": ["fantasy"],
+    "adultOnly": true
   },
   {
     "id": 17,
-    "name": "矿工余生",
-    "description": "曾在矿洞或苦役中挣扎求生，体魄强健、能扛重活，但长期封闭环境也令灵性与社交略逊。",
-    "talent_cost": 0,
-    "attribute_modifiers": { "体质": 3, "直觉": -1 },
-    "rarity": 2
+    "name": "小镇来客",
+    "description": "你在熟人社会浓厚的小城或县镇长大，带着有限积蓄和家人的期待进入大都市。你熟悉普通人的生计与体面，也必须重新学习陌生城市的阶层、规则和孤独。",
+    "talent_cost": 1,
+    "attribute_modifiers": { "心性": 1, "气运": -1 },
+    "rarity": 2,
+    "genres": ["modern"],
+    "adultOnly": false
   },
   {
     "id": 18,
-    "name": "画师传人",
-    "description": "师承名家，精通丹青与造型，对线条、符号与意境有天生理解；悟性与魅力皆可用于表达。",
+    "name": "医护家庭",
+    "description": "家中长期有人在医院、诊所或照护行业工作。你很早便见过疾病、死亡、资源紧张和人情冷暖，对身体风险与机构运作拥有超过常人的现实认识。",
     "talent_cost": 3,
-    "attribute_modifiers": { "悟性": 1, "魅力": 2 },
-    "rarity": 3
+    "attribute_modifiers": { "悟性": 1, "心性": 2 },
+    "rarity": 3,
+    "genres": ["modern"],
+    "adultOnly": false
   },
   {
     "id": 19,
-    "name": "守陵人",
-    "description": "世代守护陵墓或遗迹，长期与寂静与禁忌为伴，心性沉稳、直觉敏锐；对生死与秘密有独特感悟。",
-    "talent_cost": 2,
-    "attribute_modifiers": { "心性": 2, "直觉": 1 },
-    "rarity": 4
+    "name": "文娱世家",
+    "description": "家族活跃于影视、媒体、艺术或公共表达行业。你熟悉镜头、舆论和名声如何制造机会，也知道公众形象、私人关系与商业利益往往无法真正分开。",
+    "talent_cost": 4,
+    "attribute_modifiers": { "魅力": 2, "直觉": 1 },
+    "rarity": 4,
+    "genres": ["modern"],
+    "adultOnly": false
   },
   {
     "id": 20,
-    "name": "戏班伶人",
-    "description": "自幼学戏，擅长察言观色、以情动人，魅力非凡；心性易受他人评价左右，不够定锚。",
-    "talent_cost": 1,
-    "attribute_modifiers": { "魅力": 3, "心性": -1 },
-    "rarity": 2
+    "name": "灰色生意之家",
+    "description": "家中经营的生意游走在法律、关系和地方秩序的边缘。你不一定参与违法活动，却从小知道正规合同之外还有担保人、保护费、口头承诺和不能公开的债。",
+    "talent_cost": 2,
+    "attribute_modifiers": { "直觉": 2, "心性": 1 },
+    "rarity": 4,
+    "genres": ["modern"],
+    "adultOnly": false
   },
   {
     "id": 21,
-    "name": "星象世家",
-    "description": "家族世代观星测运，你自小研习历法与天象，对规律与气运有独特直觉；悟性与气运皆得益。",
+    "name": "镖局少主",
+    "description": "你在镖旗、马队和江湖切口中长大，既要懂武，也要懂路线、货物、官面关系和各地势力。家业给你声名与人手，也留下必须兑现的旧约和仇怨。",
     "talent_cost": 5,
-    "attribute_modifiers": { "悟性": 2, "气运": 2 },
-    "rarity": 5
+    "attribute_modifiers": { "体质": 1, "魅力": 1, "直觉": 1 },
+    "rarity": 4,
+    "genres": ["wuxia"],
+    "adultOnly": false
   },
   {
     "id": 22,
-    "name": "部落萨满",
-    "description": "出身蛮荒或边地部落，继承萨满传承，对自然与灵性之力有天生亲和；体质与灵性兼得。",
+    "name": "官门子弟",
+    "description": "父辈任职于州县衙门、刑名机构或军政体系。你熟悉公文、律例和官场称谓，知道一纸文书怎样保护百姓，也知道同一条律例怎样被权势解释成不同结果。",
     "talent_cost": 4,
-    "attribute_modifiers": { "直觉": 2, "体质": 1 },
-    "rarity": 4
+    "attribute_modifiers": { "悟性": 1, "魅力": 1, "心性": 1 },
+    "rarity": 4,
+    "genres": ["wuxia"],
+    "adultOnly": false
   },
   {
     "id": 23,
-    "name": "孤岛遗民",
-    "description": "生于与世隔绝的孤岛，保留着古老的生活方式与技艺；心性坚韧，悟性在独特环境中自成一路。",
-    "talent_cost": 3,
-    "attribute_modifiers": { "心性": 2, "悟性": 1 },
-    "rarity": 4
+    "name": "医谷传人",
+    "description": "你受过系统的诊脉、药理、针灸和外伤处理训练，能够出入许多武人不便接近的病榻与内宅。医名带来尊重，也会把你卷入毒案、秘密和无法拒绝的求诊。",
+    "talent_cost": 5,
+    "attribute_modifiers": { "悟性": 2, "直觉": 1 },
+    "rarity": 4,
+    "genres": ["wuxia"],
+    "adultOnly": false
   },
   {
     "id": 24,
-    "name": "亡国遗孤",
-    "description": "国破家亡，历经苦难，心性坚韧如铁；背负仇恨或使命，气运多舛，却往往在绝境中爆发出惊人意志。",
+    "name": "绿林遗孤",
+    "description": "你由山寨、船帮或亡命客抚养长大，熟悉黑道规矩、藏身路线和底层义气。官府档案中的家世并不清白，但江湖上仍有人记得上一代留下的恩与仇。",
+    "talent_cost": 1,
+    "attribute_modifiers": { "体质": 1, "直觉": 2, "气运": -1 },
+    "rarity": 3,
+    "genres": ["wuxia"],
+    "adultOnly": false
+  },
+  {
+    "id": 25,
+    "name": "骑士家族",
+    "description": "家族世代向某个王国、城邦或神殿宣誓效忠，拥有武备、封地或军中关系。你接受过礼仪与战斗教育，也继承了忠诚对象、政治婚约和家族荣誉的约束。",
+    "talent_cost": 5,
+    "attribute_modifiers": { "体质": 1, "心性": 1, "魅力": 1 },
+    "rarity": 4,
+    "genres": ["fantasy"],
+    "adultOnly": false
+  },
+  {
+    "id": 26,
+    "name": "学院附属家庭",
+    "description": "家人服务于魔法学院、炼金工房或晶脉研究机构，你从小接触法术器材、学派争论和实验事故。正式资格仍需自己争取，但知识环境已给你明显先发优势。",
+    "talent_cost": 4,
+    "attribute_modifiers": { "悟性": 2, "直觉": 1 },
+    "rarity": 4,
+    "genres": ["fantasy"],
+    "adultOnly": false
+  },
+  {
+    "id": 27,
+    "name": "飞空艇民",
+    "description": "你在商用飞空艇、空港或漂浮聚落中长大，把气流、机械噪声和跨国航线当作日常。你没有稳定故乡，却熟悉各地口音、货路与天空中的危险。",
+    "talent_cost": 3,
+    "attribute_modifiers": { "直觉": 2, "气运": 1 },
+    "rarity": 4,
+    "genres": ["fantasy"],
+    "adultOnly": false
+  },
+  {
+    "id": 28,
+    "name": "异族混血",
+    "description": "你的血统连接两个拥有不同寿命、身体特征或文化传统的种族。你可能同时继承双方的天赋，也常被迫在旁人替你划定的身份之间证明归属。",
+    "talent_cost": 4,
+    "attribute_modifiers": { "魅力": 1, "直觉": 1, "体质": 1 },
+    "rarity": 5,
+    "genres": ["fantasy"],
+    "adultOnly": false
+  },
+  {
+    "id": 29,
+    "name": "企业公民",
+    "description": "你出生在巨企控制的住宅区，教育、医疗和身份档案都由同一家公司提供。企业品牌近似家族姓氏，忠诚能换来稳定生活，离职却可能等同于失去公民资格。",
+    "talent_cost": 4,
+    "attribute_modifiers": { "悟性": 1, "魅力": 1, "心性": 1 },
+    "rarity": 4,
+    "genres": ["dystopia"],
+    "adultOnly": false
+  },
+  {
+    "id": 30,
+    "name": "街头诊所养子",
+    "description": "你由无证义体医生、地下药师或街区互助组织抚养，见惯残损身体和黑市零件。你熟悉官方医疗之外的生存办法，也背负诊所欠下的人情与保护债。",
     "talent_cost": 2,
-    "attribute_modifiers": { "心性": 3, "气运": -1 },
-    "rarity": 3
+    "attribute_modifiers": { "悟性": 1, "直觉": 2 },
+    "rarity": 4,
+    "genres": ["dystopia"],
+    "adultOnly": false
+  },
+  {
+    "id": 31,
+    "name": "荒原车队",
+    "description": "你在城市墙外的货运车队、回收营地或流动聚落中长大，依靠维修、驾驶和警戒穿越污染荒地。城市人视你为野蛮人，巨企却离不开你们运送的资源。",
+    "talent_cost": 2,
+    "attribute_modifiers": { "体质": 1, "直觉": 2 },
+    "rarity": 3,
+    "genres": ["dystopia"],
+    "adultOnly": false
+  },
+  {
+    "id": 32,
+    "name": "无档案者",
+    "description": "你的出生、身份或生物记录没有进入官方数据库，可能源于战争、非法克隆或一次成功的数据抹除。没有系统束缚也意味着没有合法医疗、账户和求助渠道。",
+    "talent_cost": 0,
+    "attribute_modifiers": { "气运": -1, "直觉": 2, "心性": 1 },
+    "rarity": 5,
+    "genres": ["dystopia"],
+    "adultOnly": false
+  },
+  {
+    "id": 33,
+    "name": "权贵外宅",
+    "description": "你成年后长期生活在某位权势人物秘密供养的住宅与关系网中，享受远超常人的资源，却没有公开身份和稳定保障。你的体面、自由与去留都依附于不能见光的占有关系。",
+    "talent_cost": 1,
+    "attribute_modifiers": { "魅力": 2, "心性": -1 },
+    "rarity": 5,
+    "genres": ["modern"],
+    "adultOnly": true
+  },
+  {
+    "id": 34,
+    "name": "契约名媛",
+    "description": "你以成年人的身份进入上流社交与公众活动，衣着、关系和绯闻都由资助方精心安排。外界看到的是优雅与机会，合同背后则包含亲密陪侍、形象服从和不可公开的交换。",
+    "talent_cost": 3,
+    "attribute_modifiers": { "魅力": 3, "心性": -1 },
+    "rarity": 5,
+    "genres": ["modern"],
+    "adultOnly": true
+  },
+  {
+    "id": 35,
+    "name": "教坊伶首",
+    "description": "你成年后在官办教坊或权贵私馆中以歌舞、酒令和亲密侍奉成名，懂得如何取悦席间最有权势的人。声名能换来情报与庇护，也让赎身和真正隐退变得更困难。",
+    "talent_cost": 2,
+    "attribute_modifiers": { "魅力": 3, "心性": -1 },
+    "rarity": 4,
+    "genres": ["wuxia"],
+    "adultOnly": true
+  },
+  {
+    "id": 36,
+    "name": "败门女眷",
+    "description": "宗门覆灭后，你作为成年的核心女眷被胜者接收，原有辈分、婚约与武林声望都成为重新分配身份的筹码。旧部仍可能营救你，敌人则期待亲眼看见名门体面被改造成服从。",
+    "talent_cost": -2,
+    "attribute_modifiers": { "心性": 1, "气运": -2, "魅力": 1 },
+    "rarity": 5,
+    "genres": ["wuxia"],
+    "adultOnly": true
+  },
+  {
+    "id": 37,
+    "name": "神殿圣娼",
+    "description": "成年后，你被神殿选中，以身体侍奉、欲晶提纯和宗教仪式为职责。信徒将你的性服从称为神圣奉献，神殿则以刻印记录归属、服务对象与能够调用的魔力。",
+    "talent_cost": 2,
+    "attribute_modifiers": { "魅力": 2, "直觉": 1, "心性": -1 },
+    "rarity": 5,
+    "genres": ["fantasy"],
+    "adultOnly": true
+  },
+  {
+    "id": 38,
+    "name": "战败魔器",
+    "description": "你曾拥有女骑士、女术师或异族贵族的身份，成年后因战败、魔力债或政治裁决被刻印为他人的专属魔器。旧有技艺仍在，但身体调用权与公开身份已落入胜者手中。",
+    "talent_cost": -2,
+    "attribute_modifiers": { "悟性": 1, "魅力": 1, "气运": -2 },
+    "rarity": 5,
+    "genres": ["fantasy"],
+    "adultOnly": true
+  },
+  {
+    "id": 39,
+    "name": "优待岗位家庭",
+    "description": "家中女性世代享受企业提供的教育、外貌维护和体面职业，也世代履行对应的成人服务义务。你熟悉如何在会议室保持权威，又如何在调用通知到来后切换身份。",
+    "talent_cost": 3,
+    "attribute_modifiers": { "魅力": 2, "悟性": 1, "心性": -1 },
+    "rarity": 5,
+    "genres": ["dystopia"],
+    "adultOnly": true
+  },
+  {
+    "id": 40,
+    "name": "义体偿债者",
+    "description": "成年后，你因医疗、义体或家庭债务签下身体权限合同。企业可以安排工作、感官参数和亲密服务来抵扣利息；越先进的身体带来越高能力，也意味着越昂贵的所有权争议。",
+    "talent_cost": -1,
+    "attribute_modifiers": { "体质": 1, "悟性": 1, "气运": -1 },
+    "rarity": 4,
+    "genres": ["dystopia"],
+    "adultOnly": true
+  },
+  {
+    "id": 41,
+    "name": "会所签约人",
+    "description": "成年后，你与只接待会员的私人会所签订长期合约，以陪宴、亲密社交和满足特殊偏好换取住所、培训与人脉。你熟悉秘密如何被定价，也清楚违约者会失去哪些体面。",
+    "talent_cost": 1,
+    "attribute_modifiers": { "魅力": 2, "直觉": 1, "心性": -1 },
+    "rarity": 4,
+    "genres": ["modern"],
+    "adultOnly": true
+  },
+  {
+    "id": 42,
+    "name": "债务婚约者",
+    "description": "成年后，家庭债务被一纸婚约或包养协议接管，你因此进入债权人的生活与社交圈。物质条件明显改善，但亲密义务、公开形象和离开的代价都写在对方掌握的条款里。",
+    "talent_cost": -1,
+    "attribute_modifiers": { "魅力": 1, "气运": -1, "心性": 1 },
+    "rarity": 4,
+    "genres": ["modern"],
+    "adultOnly": true
+  },
+  {
+    "id": 43,
+    "name": "绯闻偶像",
+    "description": "你是已成年的公众人物，事业依赖镜头、粉丝和资本，却因一段被掌握的私密影像而受制于幕后关系。舞台上的完美形象越耀眼，私下被要求服从时形成的反差越危险。",
+    "talent_cost": 3,
+    "attribute_modifiers": { "魅力": 3, "气运": -1 },
+    "rarity": 5,
+    "genres": ["modern"],
+    "adultOnly": true
+  },
+  {
+    "id": 44,
+    "name": "贴身生活助理",
+    "description": "你成年后受雇处理雇主从行程到卧室的一切私人事务，保密、顺从和随叫随到被视为职业素养。你比任何人都接近权力，也比任何人都容易被工作关系吞没私人边界。",
+    "talent_cost": 1,
+    "attribute_modifiers": { "直觉": 2, "魅力": 1, "心性": -1 },
+    "rarity": 4,
+    "genres": ["modern"],
+    "adultOnly": true
+  },
+  {
+    "id": 45,
+    "name": "和亲贡礼",
+    "description": "你是成年后被宗门或世家作为和亲贡礼送出的核心人物，名义上维系两方盟约，实际上连婚配、侍奉和传承职责都已被谈妥。你的出身仍有价值，却恰好因此无法轻易逃离。",
+    "talent_cost": 0,
+    "attribute_modifiers": { "魅力": 2, "气运": -2, "心性": 1 },
+    "rarity": 5,
+    "genres": ["wuxia"],
+    "adultOnly": true
+  },
+  {
+    "id": 46,
+    "name": "合欢叛徒",
+    "description": "你成年后曾在合欢一脉学习房中秘术、采补法门与控制欲念的手段，后来因无法接受门规或争夺秘典而出逃。正邪两道都觊觎你的技艺，旧师门则想把你抓回去重新调教。",
+    "talent_cost": 2,
+    "attribute_modifiers": { "魅力": 2, "悟性": 1, "气运": -1 },
+    "rarity": 5,
+    "genres": ["wuxia"],
+    "adultOnly": true
+  },
+  {
+    "id": 47,
+    "name": "炉鼎逃奴",
+    "description": "你的经脉成年后被鉴定为适合双修采补，随即被卖入秘庄培养成供高手突破的炉鼎。你带着尚未完成的驯化印记逃出，身体仍会对特定内息产生难以掩饰的反应。",
+    "talent_cost": -2,
+    "attribute_modifiers": { "体质": 1, "魅力": 2, "气运": -2 },
+    "rarity": 5,
+    "genres": ["wuxia"],
+    "adultOnly": true
+  },
+  {
+    "id": 48,
+    "name": "内宅侍妾",
+    "description": "成年后，你在豪门内宅以侍妾身份生活，熟悉正室、宠妾、子嗣、奴仆和外院门客之间隐秘而残酷的秩序。床笫恩宠能换取资源，却也会让每一次失宠都变成生存危机。",
+    "talent_cost": 0,
+    "attribute_modifiers": { "魅力": 2, "直觉": 1, "心性": -1 },
+    "rarity": 4,
+    "genres": ["wuxia"],
+    "adultOnly": true
+  },
+  {
+    "id": 49,
+    "name": "龙巢贡品",
+    "description": "你成年后被领地选作献给古龙的贡品，用以换取风调雨顺与边境庇护。传说中的献祭并非死亡，而是接受龙血、占有契约和漫长的巢穴侍奉，归来者往往已不再完全属于人类。",
+    "talent_cost": 0,
+    "attribute_modifiers": { "体质": 2, "气运": -2, "魅力": 1 },
+    "rarity": 5,
+    "genres": ["fantasy"],
+    "adultOnly": true
+  },
+  {
+    "id": 50,
+    "name": "魅魔契裔",
+    "description": "你的成年礼唤醒了家族与魅魔签订的血脉契约，使欲望能够转化为魔力，也让梦境和身体向契约主人开放。你可以利用这份力量引诱他人，却必须防止自己先成为被豢养的一方。",
+    "talent_cost": 3,
+    "attribute_modifiers": { "魅力": 3, "心性": -1 },
+    "rarity": 5,
+    "genres": ["fantasy"],
+    "adultOnly": true
+  },
+  {
+    "id": 51,
+    "name": "繁育圣所侍从",
+    "description": "你成年后进入供奉生命女神的圣所，负责受孕祝祷、血脉配对和以身体承接神恩的仪式。圣所称你为延续种族的神圣侍从，贵族与教团却把你的生育能力列入可调用名册。",
+    "talent_cost": 1,
+    "attribute_modifiers": { "体质": 2, "魅力": 1, "心性": -1 },
+    "rarity": 5,
+    "genres": ["fantasy"],
+    "adultOnly": true
+  },
+  {
+    "id": 52,
+    "name": "奴隶行鉴定品",
+    "description": "你成年后被大型奴隶商会按照种族、魔力、外貌与性适配度完成鉴定，身上留有代表价格和用途的奥术标记。买卖尚未完成便发生变故，但档案仍能让任何分行认出你的估值。",
+    "talent_cost": -2,
+    "attribute_modifiers": { "魅力": 2, "直觉": 1, "气运": -2 },
+    "rarity": 5,
+    "genres": ["fantasy"],
+    "adultOnly": true
+  },
+  {
+    "id": 53,
+    "name": "服从矫正毕业生",
+    "description": "你成年后因多次拒绝企业调用而被送入行为矫正中心，经过药物、神经反馈和公开服从训练后重新获得公民资格。档案宣称治疗成功，但你仍分不清某些顺从冲动是否属于自己。",
+    "talent_cost": -1,
+    "attribute_modifiers": { "心性": 1, "魅力": 1, "气运": -1 },
+    "rarity": 5,
+    "genres": ["dystopia"],
+    "adultOnly": true
+  },
+  {
+    "id": 54,
+    "name": "公益伴侣",
+    "description": "你是城市福利系统认证的成年公益伴侣，以定期服务高危劳动者换取住房、医疗和体面岗位积分。官方宣传把你塑造成协作典范，服务评分却决定你能否保留现有生活。",
+    "talent_cost": 1,
+    "attribute_modifiers": { "魅力": 2, "体质": 1, "心性": -1 },
+    "rarity": 4,
+    "genres": ["dystopia"],
+    "adultOnly": true
+  },
+  {
+    "id": 55,
+    "name": "高管专属资产",
+    "description": "你成年后被企业高管以长期资源合同登记为专属资产，拥有顶级住所、医疗和形象团队，同时接受全天候定位、身体权限和排他性亲密调用。奢华生活本身就是最牢固的锁。",
+    "talent_cost": 3,
+    "attribute_modifiers": { "魅力": 3, "气运": 1, "心性": -2 },
+    "rarity": 5,
+    "genres": ["dystopia"],
+    "adultOnly": true
+  },
+  {
+    "id": 56,
+    "name": "生育配额对象",
+    "description": "人口管理算法在你成年后判定你的基因、身体与社会评分适合承担生育配额，并指定候选配偶、受孕周期和奖励等级。服从可以换来阶层跃升，拒绝则会被视为浪费公共资源。",
+    "talent_cost": 0,
+    "attribute_modifiers": { "体质": 2, "悟性": 1, "心性": -1 },
+    "rarity": 5,
+    "genres": ["dystopia"],
+    "adultOnly": true
   }
 ]

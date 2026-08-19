@@ -41,6 +41,9 @@
   "creation.selectMany.customizeStep": "Custom {label}",
   "creation.selectMany.confirmDelete": "Confirm delete custom \"{name}\"? This action cannot be undone.",
   "creation.selectMany.budgetBadge": "Remaining: {remaining} / {total}",
+  "creation.error.invalidBuild": "The character build is incomplete or over budget. Review your selections.",
+  "creation.confirm.budget": "Build budget",
+  "creation.confirm.budgetValue": "Spent {spent} / {total}, {remaining} remaining",
 
   "creation.attributes.pointsBadge": "Remaining points: {remaining} / {total}",
   "creation.attributes.reset": "Reset",

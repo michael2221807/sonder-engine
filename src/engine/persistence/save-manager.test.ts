@@ -130,12 +130,53 @@ describe('SaveManager', () => {
       expect(result).toEqual({ v: '0.1' });
     });
 
-    it('skips migration when save version matches current', async () => {
-      sm.setCurrentPackVersion('1.0.0');
-      slotMeta['s1'] = { packVersion: '1.0.0' } as SaveSlotMeta;
-      memStore.set('save_p1_s1', { data: true });
+    it('returns a production-version save by reference without rewriting data or metadata', async () => {
+      const original = { data: true, nested: { legacy: 'kept' } };
+      sm.setCurrentPackVersion('0.5.0');
+      slotMeta['s1'] = { packVersion: '0.5.0' } as SaveSlotMeta;
+      memStore.set('save_p1_s1', original);
       const result = await sm.loadGame('p1', 's1');
-      expect(result).toEqual({ data: true });
+
+      expect(result).toBe(original);
+      expect(memStore.get('save_p1_s1')).toBe(original);
+      expect(memStore.has('save_p1_s1:pre-migration')).toBe(false);
+      expect(pm.updateSlotMeta).not.toHaveBeenCalled();
+    });
+
+    it('does not rewrite an older save when no complete migration path exists', async () => {
+      const original = { character: { name: 'legacy' } };
+      sm.setCurrentPackVersion('0.6.0');
+      slotMeta['s1'] = { packVersion: '0.5.0' } as SaveSlotMeta;
+      memStore.set('save_p1_s1', original);
+
+      const result = await sm.loadGame('p1', 's1');
+
+      expect(result).toBe(original);
+      expect(memStore.get('save_p1_s1')).toBe(original);
+      expect(memStore.has('save_p1_s1:pre-migration')).toBe(false);
+      expect(pm.updateSlotMeta).not.toHaveBeenCalled();
+      expect(slotMeta['s1']?.packVersion).toBe('0.5.0');
+    });
+
+    it('discards a partial migration chain and leaves the existing save byte-shape intact', async () => {
+      migrationRegistry.register({
+        fromVersion: '0',
+        toVersion: '0.5.0',
+        description: 'partial only',
+        migrate: (data) => ({ ...data, shouldNotLeak: true }),
+      });
+      const original = { legacy: { value: 1 } };
+      sm.setCurrentPackVersion('0.6.0');
+      slotMeta['s1'] = { packVersion: '0' } as SaveSlotMeta;
+      memStore.set('save_p1_s1', original);
+
+      const result = await sm.loadGame('p1', 's1');
+
+      expect(result).toBe(original);
+      expect(result).not.toHaveProperty('shouldNotLeak');
+      expect(memStore.get('save_p1_s1')).toBe(original);
+      expect(memStore.has('save_p1_s1:pre-migration')).toBe(false);
+      expect(pm.updateSlotMeta).not.toHaveBeenCalled();
     });
 
     it('applies migration when save version is older', async () => {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// App doc: docs/user-guide/pages/creation.md §2.9
 /**
  * PresetDetailPanel — 显示预设条目的完整详情。
  *
@@ -13,16 +14,7 @@
  */
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { DetailField } from '@/engine/types';
-
-interface PresetEntry {
-  id?: string;
-  name?: string;
-  label?: string;
-  description?: string;
-  rarity?: string;
-  [key: string]: unknown;
-}
+import type { DetailField, PresetEntry } from '@/engine/types';
 
 const props = defineProps<{
   /** 当前悬停或选中的预设条目，null 时显示空态 */
@@ -39,7 +31,7 @@ const HIDDEN_KEYS = new Set(['id', 'name', 'label', 'description', 'rarity']);
 
 /** 展示名称 */
 function getDisplayName(entry: PresetEntry): string {
-  return entry.name ?? entry.label ?? entry.id ?? t('creation.selectOne.unnamed');
+  return entry.name ?? entry.label ?? String(entry.id ?? t('creation.selectOne.unnamed'));
 }
 
 /** 花费值 */

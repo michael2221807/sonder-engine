@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// App doc: docs/user-guide/pages/creation.md §2.3
 /**
  * StepSelectMany — 创角步骤：多选。
  *
@@ -9,24 +10,14 @@
  */
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { CreationStep } from '@/engine/types';
+import type { CreationStep, PresetEntry } from '@/engine/types';
 import PresetDetailPanel from './PresetDetailPanel.vue';
 import CustomPresetModal from './CustomPresetModal.vue';
 import AIPresetGenModal from './AIPresetGenModal.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
+import { canAffordPresetCandidate, type BudgetSummary } from '@/engine/creation/creation-budget';
 
 const { t } = useI18n();
-
-/** 预设条目的最小类型契约 */
-interface PresetEntry {
-  id?: string;
-  name?: string;
-  label?: string;
-  description?: string;
-  /** 2026-04-14：'pack' = 内置只读，'user' = 用户自定义可编辑可删 */
-  source?: 'pack' | 'user';
-  [key: string]: unknown;
-}
 
 const props = defineProps<{
   step: CreationStep;
@@ -34,6 +25,7 @@ const props = defineProps<{
   /** 当前选中值 — 多选时为数组 */
   selection: unknown;
   budget: number;
+  budgetSummary?: BudgetSummary | null;
 }>();
 
 const emit = defineEmits<{
@@ -121,19 +113,6 @@ const selectedList = computed<PresetEntry[]>(() => {
   return props.selection as PresetEntry[];
 });
 
-/** 已花费总点数 */
-const spent = computed<number>(() => {
-  if (!props.step.costField) return 0;
-  const field = props.step.costField;
-  return selectedList.value.reduce((sum, item) => {
-    const cost = typeof item[field] === 'number' ? (item[field] as number) : 0;
-    return sum + cost;
-  }, 0);
-});
-
-/** 剩余可用预算 */
-const remaining = computed<number>(() => props.budget - spent.value);
-
 /** 获取条目花费 */
 function getCost(preset: PresetEntry): number | null {
   if (!props.step.costField) return null;
@@ -143,7 +122,7 @@ function getCost(preset: PresetEntry): number | null {
 
 /** 条目唯一标识 */
 function getKey(preset: PresetEntry): string {
-  return preset.id ?? preset.name ?? '';
+  return String(preset.id ?? preset.name ?? '');
 }
 
 /** 是否已选中 */
@@ -154,10 +133,12 @@ function isSelected(preset: PresetEntry): boolean {
 
 /** 是否因预算不足而禁用（未选中状态下检查） */
 function isDisabled(preset: PresetEntry): boolean {
-  if (isSelected(preset)) return false;
-  const cost = getCost(preset);
-  if (cost === null) return false;
-  return cost > remaining.value;
+  return !canAffordPresetCandidate(
+    props.step,
+    preset,
+    props.selection,
+    props.budgetSummary ?? null,
+  );
 }
 
 /**
@@ -184,7 +165,7 @@ function toggle(preset: PresetEntry): void {
 
 /** 显示名称 */
 function getDisplayName(preset: PresetEntry): string {
-  return preset.name ?? preset.label ?? preset.id ?? t('creation.selectMany.unnamed');
+  return preset.name ?? preset.label ?? String(preset.id ?? t('creation.selectMany.unnamed'));
 }
 
 /** 当前悬停的预设条目（用于右侧详情面板） */
@@ -195,8 +176,16 @@ const hoveredPreset = ref<PresetEntry | null>(null);
   <div class="step-select-many">
     <div class="step-header">
       <h3 class="step-title">{{ step.label }}</h3>
-      <span v-if="step.costField" class="budget-badge">
-        {{ $t('creation.selectMany.budgetBadge', { remaining, total: budget }) }}
+      <span
+        v-if="step.costField && budgetSummary"
+        class="budget-badge"
+        data-testid="creation-budget-summary"
+      >
+        {{ $t('creation.confirm.budgetValue', {
+          spent: budgetSummary.spent,
+          total: budgetSummary.total,
+          remaining: budgetSummary.remaining,
+        }) }}
       </span>
     </div>
 

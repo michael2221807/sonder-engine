@@ -3,7 +3,7 @@
   "name": "天命",
   "version": "0.5.0",
   "engineVersion": "1.0.0",
-  "description": "天命 Game Pack — 六维创角系统，十世界，七档天资，24出身，26特质，30天赋",
+  "description": "天命 Game Pack — 六维创角系统，4+4 世界，七档天资，56 出身，48 特质，77 天赋",
   "author": "AutoGameAgent",
   "entrySchema": "schemas/state-schema.json",
   "creationFlow": "creation-flow.json",

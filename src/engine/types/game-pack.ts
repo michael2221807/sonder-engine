@@ -78,6 +78,38 @@ export interface GamePack {
 
 // ─── 创角流程相关类型 ───
 
+export type CreationGenre = 'modern' | 'wuxia' | 'fantasy' | 'dystopia';
+export type CreationContentRating = 'general' | 'nsfw';
+export type CreationGenreScope = CreationGenre | 'all';
+
+/** Shared runtime shape for pack and user-authored preset entries. */
+export interface PresetEntry {
+  id?: string | number;
+  name?: string;
+  label?: string;
+  description?: string;
+  source?: 'pack' | 'user';
+  [key: string]: unknown;
+}
+
+export interface WorldPresetEntry extends PresetEntry {
+  id: string;
+  name: string;
+  description: string;
+  genre: CreationGenre;
+  contentRating: CreationContentRating;
+}
+
+export interface CreationChoicePresetEntry extends PresetEntry {
+  id: string;
+  name: string;
+  description: string;
+  genres: CreationGenreScope[];
+  adultOnly: boolean;
+  talent_cost: number;
+  attribute_modifiers?: Record<string, number>;
+}
+
 /** 创角流程配置 — 定义创角的所有步骤 */
 export interface CreationFlowConfig {
   steps: CreationStep[];
@@ -209,15 +241,17 @@ export interface CustomPresetField {
   /** UI 显示标签 */
   label: string;
   /** 输入类型 —— 简单几种，配合 native input/textarea 即可 */
-  type: 'text' | 'textarea' | 'number';
+  type: 'text' | 'textarea' | 'number' | 'select' | 'checkbox';
   /** 占位提示文本 */
   placeholder?: string;
   /** 是否必填（提交校验） */
   required?: boolean;
   /** number 类型：默认值 / 范围 */
-  default?: string | number;
+  default?: string | number | boolean;
   min?: number;
   max?: number;
+  /** select 类型：静态选项值。 */
+  options?: string[];
   /** textarea 行数 */
   rows?: number;
 }

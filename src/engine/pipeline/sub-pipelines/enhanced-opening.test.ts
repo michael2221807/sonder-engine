@@ -254,6 +254,53 @@ describe('Phase A-D output structure and state writes', () => {
     );
   });
 
+  it('injects the same narrative-only player profile into phases A, B, and C', async () => {
+    const pa = makePromptAssembler();
+    const sm = makeStateManager({
+      [DEFAULT_ENGINE_PATHS.playerName]: 'Mira',
+      [`${DEFAULT_ENGINE_PATHS.characterAttributes}.STR`]: 10,
+    });
+    const gp = {
+      ...makeGamePack(),
+      creationFlow: {
+        steps: [
+          { id: 'world', label: 'World', type: 'select-one', dataSource: 'presets.worlds' },
+          { id: 'tier', label: 'Tier', type: 'select-one', dataSource: 'presets.talentTiers' },
+          { id: 'origin', label: 'Origin', type: 'select-one', dataSource: 'presets.origins' },
+          { id: 'trait', label: 'Trait', type: 'select-one', dataSource: 'presets.traits' },
+          { id: 'talents', label: 'Talents', type: 'select-many', dataSource: 'presets.talents' },
+        ],
+      },
+    };
+    const choices = {
+      selections: {
+        world: { name: 'World Nine', description: 'Canonical world text', genre: 'fantasy', contentRating: 'general' },
+        tier: { name: 'Twenty', total_points: 20 },
+        origin: { name: 'Courier', description: 'Knows the roads', talent_cost: 7, genres: ['fantasy'], attribute_modifiers: { STR: 2 } },
+        trait: { name: 'Calm', description: 'Keeps focus', talent_cost: 5, adultOnly: false },
+        talents: [{ name: 'Alert', description: 'Notices danger', talent_cost: 3 }],
+      },
+      attributes: { STR: 8 },
+      formValues: { name: 'Mira' },
+    };
+    const { pipeline } = makePipeline({ pa, sm, gp });
+
+    await pipeline.execute(makeDefaultOptions({ choices }));
+
+    const phaseVars = ['openingEnhancedA', 'openingEnhancedB', 'openingEnhancedC'].map((id) => {
+      const call = pa.assemble.mock.calls.find((args: unknown[]) => (args[0] as { id?: string })?.id === id);
+      return call?.[1] as Record<string, string>;
+    });
+    const profiles = phaseVars.map((variables) => variables.PLAYER_PROFILE);
+    expect(new Set(profiles).size).toBe(1);
+    expect(profiles[0]).toContain('Courier');
+    expect(profiles[0]).toContain('Knows the roads');
+    expect(profiles[0]).toContain('STR 10');
+    expect(profiles[0]).not.toMatch(/talent_cost|attribute_modifiers|genres|adultOnly|total_points/);
+    expect(phaseVars[0].WORLD_SELECTION).toContain('Canonical world text');
+    expect(phaseVars[0].WORLD_SELECTION).not.toMatch(/genre|contentRating/);
+  });
+
   it('Phase B writes locations and inventory via push', async () => {
     const { pipeline, sm } = makePipeline();
     await pipeline.execute(makeDefaultOptions());

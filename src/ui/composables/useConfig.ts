@@ -18,12 +18,7 @@
  */
 import { computed, inject } from 'vue';
 import type { ComputedRef } from 'vue';
-import type { GamePack } from '@/engine/types';
-
-/** Narrowed preset entry type — ensures entries are objects, not primitives */
-interface PresetEntry {
-  [key: string]: unknown;
-}
+import type { GamePack, PresetEntry } from '@/engine/types';
 
 export interface UseConfigReturn {
   /** The injected GamePack (undefined if no pack is loaded) */

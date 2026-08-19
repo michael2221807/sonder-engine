@@ -1,338 +1,772 @@
 [
   {
     "id": 1,
-    "name": "天命主角",
-    "description": "气运惊人，总能在绝境中逢生，获得意想不到的机缘与贵人；人生剧本仿佛总在关键处多写一笔。",
-    "talent_cost": 15,
-    "rarity": 5,
-    "effects": [
-      { "类型": "后天六司", "目标": "气运", "数值": 8 },
-      { "类型": "特殊能力", "名称": "逢凶化吉", "数值": 0.1 }
-    ]
+    "name": "过目不忘",
+    "description": "看过、听过的信息很少彻底遗忘，学习新知识和复盘细节时拥有稳定优势；记忆准确并不等于理解一定正确。",
+    "talent_cost": 3,
+    "attribute_modifiers": { "悟性": 2 },
+    "rarity": 2,
+    "genres": ["all"],
+    "adultOnly": false
   },
   {
     "id": 2,
-    "name": "剑术精通",
-    "description": "对剑类兵器有天生悟性，学得快、用得准，在需要决断与锋芒的场景下表现突出；体质也因常年练剑而受益。",
-    "talent_cost": 12,
-    "rarity": 5,
-    "effects": [
-      { "类型": "技能加成", "技能": "剑法", "数值": 0.2 },
-      { "类型": "后天六司", "目标": "体质", "数值": 3 }
-    ]
+    "name": "体魄强健",
+    "description": "先天体能、恢复力与耐受力优于常人，适合长时间劳动、训练和奔波；它提供更高起点，却不能替代技巧与判断。",
+    "talent_cost": 4,
+    "attribute_modifiers": { "体质": 2 },
+    "rarity": 3,
+    "genres": ["all"],
+    "adultOnly": false
   },
   {
     "id": 3,
-    "name": "药理圣手",
-    "description": "对药性与方剂有超凡领悟，调配与炼制成功率高、品质好；悟性在草木与剂量间格外敏锐。",
-    "talent_cost": 12,
-    "rarity": 5,
-    "effects": [
-      { "类型": "技能加成", "技能": "炼丹", "数值": 0.15 },
-      { "类型": "后天六司", "目标": "悟性", "数值": 2 }
-    ]
+    "name": "洞察过人",
+    "description": "能较快把零散线索拼成完整图景，对话中的回避、环境中的异常和利益关系中的缺口很难从你眼前溜走。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "直觉": 2, "悟性": 1 },
+    "rarity": 4,
+    "genres": ["all"],
+    "adultOnly": false
   },
   {
     "id": 4,
-    "name": "布局大师",
-    "description": "对阵法、机关与空间布局有极高天赋，学习与布置效率大增；善于利用环境与结构达成目标。",
-    "talent_cost": 8,
+    "name": "顶级魅力",
+    "description": "外形、仪态与表达方式具有罕见吸引力，你很容易成为人群焦点并获得第一次接触的机会；关注同时也会带来投射、嫉妒和占有欲。",
+    "talent_cost": 7,
+    "attribute_modifiers": { "魅力": 3 },
     "rarity": 4,
-    "effects": [
-      { "类型": "技能加成", "技能": "阵法", "数值": 0.12 },
-      { "类型": "后天六司", "目标": "悟性", "数值": 2 }
-    ]
+    "genres": ["all"],
+    "adultOnly": false
   },
   {
     "id": 5,
-    "name": "工艺鬼才",
-    "description": "对材料与制作有敏锐感知，打造器物时更容易出精品；触觉与直觉在工匠活里格外管用。",
-    "talent_cost": 8,
+    "name": "意志如铁",
+    "description": "在恐惧、诱惑和持续压力下仍能维持清晰的自我判断。你可以被说服，却很难仅靠气势或反复消耗被迫屈服。",
+    "talent_cost": 7,
+    "attribute_modifiers": { "心性": 3 },
     "rarity": 4,
-    "effects": [
-      { "类型": "技能加成", "技能": "炼器", "数值": 0.1 },
-      { "类型": "特殊能力", "名称": "材料感知", "数值": 1 }
-    ]
+    "genres": ["all"],
+    "adultOnly": false
   },
   {
     "id": 6,
-    "name": "寻宝直觉",
-    "description": "出门在外时，更容易发现隐藏的宝物、线索与机遇；气运在\"发现\"这件事上格外眷顾你。",
-    "talent_cost": 7,
-    "rarity": 4,
-    "effects": [
-      { "类型": "后天六司", "目标": "气运", "数值": 3 },
-      { "类型": "特殊能力", "名称": "寻宝天赋", "数值": 0.15 }
-    ]
+    "name": "一诺千金",
+    "description": "你擅长让承诺具有可信的分量，并长期维护自己的信用。盟友更愿意把重要事务交给你，敌人也会认真对待你的条件。",
+    "talent_cost": 4,
+    "attribute_modifiers": { "魅力": 1, "心性": 1 },
+    "rarity": 3,
+    "genres": ["all"],
+    "adultOnly": false
   },
   {
     "id": 7,
-    "name": "体魄强健",
-    "description": "体质出众，耐打耐耗，适合需要体力与韧性的路线；六维中\"体质\"一枝独秀。",
-    "talent_cost": 5,
-    "rarity": 3,
-    "effects": [
-      { "类型": "后天六司", "目标": "体质", "数值": 3 },
-      { "类型": "特殊能力", "名称": "体修天赋", "数值": 0.1 }
-    ]
+    "name": "天生神力",
+    "description": "你的力量与爆发力远超同体型常人，搬运、近身对抗和需要强行突破的场面尤其占优，但蛮力无法自动解决后果。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "体质": 3 },
+    "rarity": 4,
+    "genres": ["all"],
+    "adultOnly": false
   },
   {
     "id": 8,
-    "name": "洞察过人",
-    "description": "悟性与直觉兼得：思维清晰，不易被幻象与话术蛊惑，在需要看破本质时表现突出。",
-    "talent_cost": 5,
-    "rarity": 3,
-    "effects": [
-      { "类型": "后天六司", "目标": "悟性", "数值": 3 },
-      { "类型": "特殊能力", "名称": "心魔抗性", "数值": 0.1 }
-    ]
+    "name": "灵觉敏锐",
+    "description": "危险、敌意或环境骤变到来前，你常先产生难以解释的警觉。预感只提供方向，仍需要你判断威胁来自哪里。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "直觉": 3 },
+    "rarity": 4,
+    "genres": ["wuxia", "fantasy"],
+    "adultOnly": false
   },
   {
     "id": 9,
-    "name": "身法灵动",
-    "description": "直觉在闪避与走位上格外敏锐，反应快、步法刁钻；在混乱与危机中更容易脱身。",
+    "name": "工艺巧手",
+    "description": "对材料、结构和工具拥有自然手感，能较快掌握制作、维修与改造。你更容易从实物中发现设计者留下的意图。",
     "talent_cost": 4,
+    "attribute_modifiers": { "悟性": 1, "直觉": 1 },
     "rarity": 3,
-    "effects": [
-      { "类型": "后天六司", "目标": "直觉", "数值": 2 },
-      { "类型": "特殊能力", "名称": "闪避天赋", "数值": 0.08 }
-    ]
+    "genres": ["all"],
+    "adultOnly": false
   },
   {
     "id": 10,
-    "name": "乡土根性",
-    "description": "心性扎根于土地与劳作，坚韧、踏实；对植物与自然有额外亲和，不易被浮华动摇。",
-    "talent_cost": 2,
-    "rarity": 2,
-    "effects": [
-      { "类型": "后天六司", "目标": "心性", "数值": 1 },
-      { "类型": "特殊能力", "名称": "灵植亲和", "数值": 0.1 }
-    ]
+    "name": "绝境逢生",
+    "description": "事情最坏时，你仍比常人更容易遇到一条狭窄生路、一个意外变量或愿意伸手的人。好运会救命，却不会免除此前选择的代价。",
+    "talent_cost": 8,
+    "attribute_modifiers": { "气运": 3 },
+    "rarity": 5,
+    "genres": ["all"],
+    "adultOnly": false
   },
   {
     "id": 11,
-    "name": "过目不忘",
-    "description": "悟性在记忆与学习上格外突出，看过、听过的东西不易忘，学什么都比别人快一步。",
-    "talent_cost": 2,
-    "rarity": 2,
-    "effects": [
-      { "类型": "后天六司", "目标": "悟性", "数值": 2 }
-    ]
+    "name": "资源整合",
+    "description": "你善于发现资金、信息、人脉和闲置能力之间的连接，并把彼此不信任的人拉进同一件事。复杂组织中尤其能发挥价值。",
+    "talent_cost": 5,
+    "attribute_modifiers": { "悟性": 1, "魅力": 1 },
+    "rarity": 4,
+    "genres": ["modern", "dystopia"],
+    "adultOnly": false
   },
   {
     "id": 12,
-    "name": "老实人",
-    "description": "与人交易或打交道时，不易被欺骗；气质里自带一种\"不好骗\"的磁场。",
-    "talent_cost": 1,
-    "rarity": 1,
-    "effects": [
-      { "类型": "特殊能力", "名称": "防欺诈", "数值": 1 }
-    ]
+    "name": "舆情嗅觉",
+    "description": "你能较早判断什么会引发传播、共鸣或集体敌意，擅长选择表达时机。理解公众情绪不代表你一定能控制它。",
+    "talent_cost": 4,
+    "attribute_modifiers": { "直觉": 1, "魅力": 1 },
+    "rarity": 3,
+    "genres": ["modern", "dystopia"],
+    "adultOnly": false
   },
   {
     "id": 13,
-    "name": "一诺千金",
-    "description": "魅力来自信誉：你的承诺极具分量，更容易获得他人信任与好感，合作与同盟更稳固。",
-    "talent_cost": 3,
-    "rarity": 2,
-    "effects": [
-      { "类型": "后天六司", "目标": "魅力", "数值": 2 }
-    ]
+    "name": "剑术精通",
+    "description": "你对剑类兵器的距离、节奏与发力领悟很快，经过基础训练便能形成鲜明风格。它是一门技艺，不会凭空赋予修为。",
+    "talent_cost": 7,
+    "attribute_modifiers": { "体质": 1, "悟性": 1 },
+    "rarity": 4,
+    "genres": ["wuxia", "fantasy"],
+    "adultOnly": false
   },
   {
     "id": 14,
-    "name": "百毒不侵",
-    "description": "体质对毒素与异常状态抗性极强，甚至能化毒为用；但气质偏冷峻，常人不敢轻易接近。",
+    "name": "内息通明",
+    "description": "你很早便能辨认自身气息运行的细微变化，学习内功、调息和点穴时少走弯路，也更容易发现走火与暗伤的征兆。",
     "talent_cost": 6,
+    "attribute_modifiers": { "体质": 1, "心性": 1 },
     "rarity": 4,
-    "effects": [
-      { "类型": "特殊能力", "名称": "毒素免疫", "数值": 1 },
-      { "类型": "技能加成", "技能": "毒术", "数值": 0.15 },
-      { "类型": "后天六司", "目标": "魅力", "数值": -2 }
-    ]
+    "genres": ["wuxia"],
+    "adultOnly": false
   },
   {
     "id": 15,
-    "name": "符艺点睛",
-    "description": "在绘制符纹、印记或符号时，有一定几率触发意想不到的强化效果；笔尖带一点玄机。",
-    "talent_cost": 4,
-    "rarity": 3,
-    "effects": [
-      { "类型": "技能加成", "技能": "符箓", "数值": 0.1 },
-      { "类型": "特殊能力", "名称": "符箓变异", "数值": 0.05 }
-    ]
+    "name": "百毒耐受",
+    "description": "身体对常见毒物、腐败食物与异常药性有较强耐受，能争取更多救治时间；罕见剧毒和超出剂量的伤害依然致命。",
+    "talent_cost": 5,
+    "attribute_modifiers": { "体质": 2 },
+    "rarity": 4,
+    "genres": ["wuxia", "fantasy"],
+    "adultOnly": false
   },
   {
     "id": 16,
-    "name": "顶级魅力",
-    "description": "魅力超群，气质夺人。走到哪里都是焦点，容易获得好感与信任，在社交与谈判中如鱼得水，常能化干戈为玉帛。",
-    "talent_cost": 8,
+    "name": "魔力亲和",
+    "description": "你对环境魔力的流向与纯度感受清晰，学习施法和辨认魔法现象更快。亲和让力量更易靠近，也让失控污染更容易影响你。",
+    "talent_cost": 7,
+    "attribute_modifiers": { "悟性": 2, "直觉": 1 },
     "rarity": 4,
-    "effects": [
-      { "类型": "后天六司", "目标": "魅力", "数值": 5 },
-      { "类型": "特殊能力", "名称": "魅力光环", "数值": 0.2 },
-      { "类型": "特殊能力", "名称": "社交天赋", "数值": 0.15 }
-    ]
+    "genres": ["fantasy"],
+    "adultOnly": false
   },
   {
     "id": 17,
-    "name": "意志如铁",
-    "description": "心性极稳，不易被诱惑与幻术动摇；在关键抉择与逆境中，更能守住本心、不崩盘。",
-    "talent_cost": 6,
+    "name": "契约通晓",
+    "description": "你能敏锐识别誓言、魔法契约与交易条款中的关键条件，擅长设计互相制衡的约定，但仍必须为亲手签下的内容负责。",
+    "talent_cost": 5,
+    "attribute_modifiers": { "悟性": 1, "心性": 1 },
     "rarity": 4,
-    "effects": [
-      { "类型": "后天六司", "目标": "心性", "数值": 3 },
-      { "类型": "特殊能力", "名称": "心魔抗性", "数值": 0.3 }
-    ]
+    "genres": ["fantasy"],
+    "adultOnly": false
   },
   {
     "id": 18,
-    "name": "天生神力",
-    "description": "体质在力量与爆发上格外突出，力大耐扛，在需要体力与近身对抗的场景中占优。",
+    "name": "义体适配",
+    "description": "神经系统对接口、义体和生理校准的排异较低，你能更快把外部设备当作身体的一部分，也更容易被系统读取和干预。",
     "talent_cost": 5,
-    "rarity": 3,
-    "effects": [
-      { "类型": "后天六司", "目标": "体质", "数值": 4 },
-      { "类型": "特殊能力", "名称": "近战增幅", "数值": 0.2 }
-    ]
+    "attribute_modifiers": { "体质": 1, "悟性": 1 },
+    "rarity": 4,
+    "genres": ["dystopia"],
+    "adultOnly": false
   },
   {
     "id": 19,
-    "name": "灵觉敏锐",
-    "description": "直觉超凡，对危险与异常有本能预感；在探险与变故中能提前嗅到威胁，少踩坑。",
-    "talent_cost": 4,
-    "rarity": 3,
-    "effects": [
-      { "类型": "后天六司", "目标": "直觉", "数值": 3 },
-      { "类型": "特殊能力", "名称": "危险感知", "数值": 1 }
-    ]
+    "name": "系统盲区",
+    "description": "你的行为习惯不容易被预测模型稳定归类，常在自动审查和风险画像间留下可利用的误差；人工关注仍然可能识破你。",
+    "talent_cost": 5,
+    "attribute_modifiers": { "气运": 1, "直觉": 1 },
+    "rarity": 5,
+    "genres": ["dystopia"],
+    "adultOnly": false
   },
   {
     "id": 20,
-    "name": "夜型人",
-    "description": "夜晚精神与效率更高，适合在夜间行动或思考；白天则容易犯困，作息与常人略反。",
-    "talent_cost": 1,
-    "rarity": 2,
-    "effects": [
-      { "类型": "特殊能力", "名称": "夜间修炼加速", "数值": 0.3 }
-    ]
+    "name": "媚骨天成",
+    "description": "你的身体语言和亲密表达天然具有强烈性吸引力，即使保持克制也很难完全隐藏。它能打开特殊关系，也会招来物化与争夺。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "魅力": 3 },
+    "rarity": 4,
+    "genres": ["all"],
+    "adultOnly": true
   },
   {
     "id": 21,
-    "name": "命运眷顾",
-    "description": "气运眷顾，在关键突破与重大抉择时成功率更高，遭遇厄运时往往能化险为夷。",
-    "talent_cost": 10,
-    "rarity": 5,
-    "effects": [
-      { "类型": "后天六司", "目标": "气运", "数值": 5 },
-      { "类型": "特殊能力", "名称": "突破成功率", "数值": 0.2 },
-      { "类型": "特殊能力", "名称": "天劫削弱", "数值": 0.15 }
-    ]
+    "name": "欲望洞察",
+    "description": "你擅长从停顿、视线与距离中辨认他人不愿明说的成人欲望，也知道权力会怎样改变欲望的表达；看见并不等于掌控。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "直觉": 2, "魅力": 1 },
+    "rarity": 4,
+    "genres": ["all"],
+    "adultOnly": true
   },
   {
     "id": 22,
-    "name": "剑骨天成",
-    "description": "体质与剑类兵器天生契合，剑法威力与领悟速度都远超常人；仿佛为剑而生。",
-    "talent_cost": 10,
-    "rarity": 5,
-    "effects": [
-      { "类型": "后天六司", "目标": "体质", "数值": 2 },
-      { "类型": "技能加成", "技能": "剑法", "数值": 0.25 },
-      { "类型": "特殊能力", "名称": "剑意感悟", "数值": 0.2 }
-    ]
+    "name": "易感体质",
+    "description": "你的感官与身体反应比常人更敏锐，愉悦、触碰、气味与氛围都容易留下深刻影响。这既提供丰富体验，也让身体更早暴露真实反应。",
+    "talent_cost": 1,
+    "attribute_modifiers": { "魅力": 1, "心性": -1 },
+    "rarity": 3,
+    "genres": ["all"],
+    "adultOnly": true
   },
   {
     "id": 23,
-    "name": "通才",
-    "description": "悟性与直觉双高，学什么都能触类旁通、事半功倍；没有明显短板，适合多线发展。",
-    "talent_cost": 18,
-    "rarity": 5,
-    "effects": [
-      { "类型": "后天六司", "目标": "悟性", "数值": 4 },
-      { "类型": "后天六司", "目标": "直觉", "数值": 4 },
-      { "类型": "特殊能力", "名称": "万法精通", "数值": 0.3 }
-    ]
+    "name": "欲晶感应",
+    "description": "你能感知欲望魔法、淫纹与身体改造中流动的魔力，并判断储量、归属和侵蚀程度；近距离共鸣也可能放大自身的感官反应。",
+    "talent_cost": 5,
+    "attribute_modifiers": { "直觉": 1, "悟性": 1 },
+    "rarity": 4,
+    "genres": ["fantasy"],
+    "adultOnly": true
   },
   {
     "id": 24,
-    "name": "符艺奇才",
-    "description": "对符纹与符号有超凡领悟，绘制成功率高、效果强；悟性在\"规则与象征\"上格外敏锐。",
-    "talent_cost": 7,
+    "name": "驯化抗性",
+    "description": "你对重复奖惩、羞辱和依赖塑造有较强自我觉察，能更久地区分真实选择与被培养出的反应；抗性并不意味着永远不会改变。",
+    "talent_cost": 5,
+    "attribute_modifiers": { "心性": 2 },
     "rarity": 4,
-    "effects": [
-      { "类型": "后天六司", "目标": "悟性", "数值": 2 },
-      { "类型": "技能加成", "技能": "符箓", "数值": 0.2 },
-      { "类型": "特殊能力", "名称": "符箓精通", "数值": 0.15 }
-    ]
+    "genres": ["all"],
+    "adultOnly": true
   },
   {
     "id": 25,
-    "name": "动物亲和",
-    "description": "魅力对动物与灵兽格外有效，更容易建立信任与契约；伙伴在你身边时往往表现更佳。",
-    "talent_cost": 6,
+    "name": "双面生活",
+    "description": "你擅长维护彼此隔离的公开身份与私密关系，能迅速切换语言、仪态和社交边界。任何一处破绽也可能让两边同时坍塌。",
+    "talent_cost": 4,
+    "attribute_modifiers": { "魅力": 1, "心性": 1 },
     "rarity": 4,
-    "effects": [
-      { "类型": "后天六司", "目标": "魅力", "数值": 2 },
-      { "类型": "特殊能力", "名称": "灵兽契约", "数值": 0.3 },
-      { "类型": "特殊能力", "名称": "灵兽战力", "数值": 0.2 }
-    ]
+    "genres": ["modern", "dystopia"],
+    "adultOnly": true
   },
   {
     "id": 26,
-    "name": "执念之躯",
-    "description": "心性偏执，在认定之事上进步极快，但容易走极端、被执念反噬；与\"正道\"或常规路线常有冲突。",
-    "talent_cost": 5,
-    "rarity": 4,
-    "effects": [
-      { "类型": "后天六司", "目标": "心性", "数值": -2 },
-      { "类型": "特殊能力", "名称": "魔功加速", "数值": 0.4 },
-      { "类型": "特殊能力", "名称": "走火入魔", "数值": 0.15 }
-    ]
+    "name": "专业写作",
+    "description": "你能快速理解复杂材料并写成清晰、可信且符合对象需要的文本，无论是报道、方案、合同还是演讲稿。文字能建立影响，也会留下可追责的证据。",
+    "talent_cost": 4,
+    "attribute_modifiers": { "悟性": 2 },
+    "rarity": 3,
+    "genres": ["modern"],
+    "adultOnly": false
   },
   {
     "id": 27,
-    "name": "工艺宗师",
-    "description": "对锻造与制作有非凡天赋，成品品质与成功率都高；悟性在\"物\"与\"器\"上发挥到极致。",
-    "talent_cost": 9,
+    "name": "谈判专家",
+    "description": "你擅长识别双方真正不能失去的东西，并用节奏、措辞和让步设计促成交易。谈判能改变条件，却无法创造对方根本不愿给出的筹码。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "魅力": 2, "悟性": 1 },
     "rarity": 4,
-    "effects": [
-      { "类型": "后天六司", "目标": "悟性", "数值": 2 },
-      { "类型": "技能加成", "技能": "炼器", "数值": 0.25 },
-      { "类型": "特殊能力", "名称": "极品概率", "数值": 0.1 }
-    ]
+    "genres": ["modern"],
+    "adultOnly": false
   },
   {
     "id": 28,
-    "name": "孤星命格",
-    "description": "气运极低，注定孤独，难得贵人；但在绝境与背水一战时，反而更容易爆发出惊人突破。",
-    "talent_cost": -3,
-    "rarity": 3,
-    "effects": [
-      { "类型": "后天六司", "目标": "气运", "数值": -5 },
-      { "类型": "特殊能力", "名称": "绝境突破", "数值": 0.3 }
-    ]
+    "name": "数字取证",
+    "description": "你能从设备、账户、影像和网络痕迹中还原行为链，识别删改与伪造。技术让谎言留下痕迹，也可能把你带到不该被普通人看见的秘密面前。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "悟性": 2, "直觉": 1 },
+    "rarity": 4,
+    "genres": ["modern"],
+    "adultOnly": false
   },
   {
     "id": 29,
-    "name": "先知梦境",
-    "description": "偶尔在梦中窥见未来的片段，能提前规避危险或把握机缘；悟性与气运在\"预知\"上偶有交汇。",
-    "talent_cost": 8,
-    "rarity": 5,
-    "effects": [
-      { "类型": "后天六司", "目标": "悟性", "数值": 2 },
-      { "类型": "后天六司", "目标": "气运", "数值": 3 },
-      { "类型": "特殊能力", "名称": "预知危险", "数值": 1 }
-    ]
+    "name": "急救训练",
+    "description": "你能在救护到来前处理出血、窒息、休克和常见创伤，并在混乱现场保持基本秩序。它能争取时间，但不能替代医院、药物和专业手术。",
+    "talent_cost": 4,
+    "attribute_modifiers": { "悟性": 1, "心性": 1 },
+    "rarity": 3,
+    "genres": ["modern"],
+    "adultOnly": false
   },
   {
     "id": 30,
-    "name": "长寿之躯",
-    "description": "体质偏于长寿，比常人更不易衰老，有更多时间打磨技艺、经营人生与关系。",
-    "talent_cost": 12,
+    "name": "商业嗅觉",
+    "description": "你对需求变化、价格异常和行业机会反应很快，常能在别人确认趋势前先下注。先见带来利润，也会诱使你把关系和原则都视作可配置成本。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "直觉": 1, "魅力": 1, "气运": 1 },
+    "rarity": 4,
+    "genres": ["modern"],
+    "adultOnly": false
+  },
+  {
+    "id": 31,
+    "name": "暗器巧手",
+    "description": "你对小型兵器、机关发力和隐蔽出手拥有敏锐手感，能在极短距离内完成取用、判断与投掷。暗器提供突然性，却也会影响旁人对你手段的评价。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "直觉": 2, "悟性": 1 },
+    "rarity": 4,
+    "genres": ["wuxia"],
+    "adultOnly": false
+  },
+  {
+    "id": 32,
+    "name": "轻功身法",
+    "description": "你对重心、借力和落点有天然理解，学习翻墙、踏檐、闪避与追逐时进展迅速。轻功让你抵达别人去不了的地方，却不能无视体力与地形。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "体质": 1, "直觉": 2 },
+    "rarity": 4,
+    "genres": ["wuxia"],
+    "adultOnly": false
+  },
+  {
+    "id": 33,
+    "name": "岐黄医术",
+    "description": "你在诊脉、辨伤、针灸与方药上拥有扎实天分，能处理旅途中常见的疾病和内外伤。医术也让你更容易发现毒药、隐疾与被刻意遮掩的身体事实。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "悟性": 2, "直觉": 1 },
+    "rarity": 4,
+    "genres": ["wuxia"],
+    "adultOnly": false
+  },
+  {
+    "id": 34,
+    "name": "追踪辨迹",
+    "description": "脚印深浅、草木折痕、马匹状态和沿途打听能在你眼中组成路线。经验能缩小范围，却仍可能被高手布置的假迹和恶劣天气误导。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "直觉": 3 },
+    "rarity": 4,
+    "genres": ["wuxia"],
+    "adultOnly": false
+  },
+  {
+    "id": 35,
+    "name": "骑射娴熟",
+    "description": "你能在奔马、车队和不稳定地形上保持控制，并熟练使用弓弩或投射兵器。它特别适合边关、护送与追逐，不会自动赋予近身武艺。",
+    "talent_cost": 5,
+    "attribute_modifiers": { "体质": 1, "直觉": 1 },
+    "rarity": 3,
+    "genres": ["wuxia"],
+    "adultOnly": false
+  },
+  {
+    "id": 36,
+    "name": "黑魔法天资",
+    "description": "你对火焰、寒冰、雷霆与破坏性术式的结构理解很快，能以较少练习形成稳定威力。越强的法术越依赖水晶纯度、施法节奏和对反噬的控制。",
+    "talent_cost": 7,
+    "attribute_modifiers": { "悟性": 2, "直觉": 1 },
+    "rarity": 4,
+    "genres": ["fantasy"],
+    "adultOnly": false
+  },
+  {
+    "id": 37,
+    "name": "白魔法天资",
+    "description": "你对治疗、防护和净化术式拥有天然亲和，能够更快辨认生命状态并稳定魔力。治愈并非无中生有，严重伤势仍会消耗材料、时间或施术者自身。",
+    "talent_cost": 7,
+    "attribute_modifiers": { "悟性": 1, "心性": 2 },
+    "rarity": 4,
+    "genres": ["fantasy"],
+    "adultOnly": false
+  },
+  {
+    "id": 38,
+    "name": "召唤感应",
+    "description": "你能察觉召唤兽、元素精灵和古老神性留下的回响，并更容易在仪式中得到回应。感应建立联系，却不能保证对方友善或愿意服从。",
+    "talent_cost": 7,
+    "attribute_modifiers": { "直觉": 2, "气运": 1 },
     "rarity": 5,
-    "effects": [
-      { "类型": "后天六司", "目标": "体质", "数值": 3 },
-      { "类型": "特殊能力", "名称": "寿命延长", "数值": 0.3 }
-    ]
+    "genres": ["fantasy"],
+    "adultOnly": false
+  },
+  {
+    "id": 39,
+    "name": "魔导机械",
+    "description": "你理解水晶动力、符文回路和机械结构之间的转换，能够维修或改装常见魔导设备。古代兵器与军用核心仍可能包含超出当代知识的危险。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "悟性": 2, "直觉": 1 },
+    "rarity": 4,
+    "genres": ["fantasy"],
+    "adultOnly": false
+  },
+  {
+    "id": 40,
+    "name": "飞空艇驾驶",
+    "description": "你对升力晶核、风向、空港信号和艇体状态有快速判断，能驾驶或协助操纵常见飞空艇。恶劣天气、战斗损伤与陌生机型仍需要团队配合。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "直觉": 2, "悟性": 1 },
+    "rarity": 4,
+    "genres": ["fantasy"],
+    "adultOnly": false
+  },
+  {
+    "id": 41,
+    "name": "网络潜行",
+    "description": "你擅长隐藏数据足迹、绕过身份验证并在企业网络中寻找权限缝隙。每次入侵都会留下风险，真正危险的系统还可能沿神经接口反向追踪。",
+    "talent_cost": 7,
+    "attribute_modifiers": { "悟性": 2, "直觉": 1 },
+    "rarity": 4,
+    "genres": ["dystopia"],
+    "adultOnly": false
+  },
+  {
+    "id": 42,
+    "name": "枪械接口",
+    "description": "你的神经接口能快速适应智能瞄准、后坐补偿和敌我识别系统，使枪械反应更接近身体本能。接口被入侵或授权撤销时，同样可能成为致命弱点。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "直觉": 2, "体质": 1 },
+    "rarity": 4,
+    "genres": ["dystopia"],
+    "adultOnly": false
+  },
+  {
+    "id": 43,
+    "name": "义体维修",
+    "description": "你能诊断常见义体的机械、神经和固件故障，并用有限零件完成应急修复。高端加密模块和生物排异仍需要专用设备与药物。",
+    "talent_cost": 5,
+    "attribute_modifiers": { "悟性": 2 },
+    "rarity": 4,
+    "genres": ["dystopia"],
+    "adultOnly": false
+  },
+  {
+    "id": 44,
+    "name": "记忆防火墙",
+    "description": "你受过抵抗神经诱导、虚假记忆和情绪脚本的训练，能更快察觉思想中不属于自己的接缝。强制覆写仍可能成功，但更难不留痕迹。",
+    "talent_cost": 7,
+    "attribute_modifiers": { "心性": 2, "悟性": 1 },
+    "rarity": 5,
+    "genres": ["dystopia"],
+    "adultOnly": false
+  },
+  {
+    "id": 45,
+    "name": "荒原生存",
+    "description": "你能判断污染区天气、水源、旧设施和掠夺者活动，在城市补给之外维持车队与营地。长期荒原生活也让你不习惯企业城市的精密规训。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "体质": 2, "直觉": 1 },
+    "rarity": 4,
+    "genres": ["dystopia"],
+    "adultOnly": false
+  },
+  {
+    "id": 46,
+    "name": "私密表演",
+    "description": "你能有意识地控制亲密场合中的神态、声音和身体语言，让他人相信自己正得到独一无二的关注。高水平表演也可能模糊真实欲望与职业反应的边界。",
+    "talent_cost": 5,
+    "attribute_modifiers": { "魅力": 2, "心性": 1 },
+    "rarity": 4,
+    "genres": ["modern"],
+    "adultOnly": true
+  },
+  {
+    "id": 47,
+    "name": "权势嗅觉",
+    "description": "你能从随从、称呼、安保和旁人的回避中迅速识别真正掌握资源的人，也懂得对方的成人兴趣可能如何转化为机会或危险。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "直觉": 2, "魅力": 1 },
+    "rarity": 5,
+    "genres": ["modern"],
+    "adultOnly": true
+  },
+  {
+    "id": 48,
+    "name": "媚术精通",
+    "description": "你受过以目光、姿态、舞步、香气和言语牵动欲望的系统训练，能够在宴席、内宅和近身周旋中影响判断。真正的高手也会警惕这类手段。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "魅力": 3 },
+    "rarity": 5,
+    "genres": ["wuxia"],
+    "adultOnly": true
+  },
+  {
+    "id": 49,
+    "name": "合欢内息",
+    "description": "你的内息会在亲密交合、服从刺激和强烈快感中加速流转，能够辅助疗伤或修炼。依赖这种路径越深，身体越可能主动渴求特定对象与主从关系。",
+    "talent_cost": 5,
+    "attribute_modifiers": { "体质": 1, "魅力": 2 },
+    "rarity": 5,
+    "genres": ["wuxia"],
+    "adultOnly": true
+  },
+  {
+    "id": 50,
+    "name": "淫纹适配",
+    "description": "你的身体能迅速接受欲晶淫纹与权限刻印，较少出现魔力排斥，并能承载更复杂的调用规则。适配越好，刻印对欲望和服从反应的影响也越深入。",
+    "talent_cost": 3,
+    "attribute_modifiers": { "魅力": 1, "直觉": 1, "心性": -1 },
+    "rarity": 5,
+    "genres": ["fantasy"],
+    "adultOnly": true
+  },
+  {
+    "id": 51,
+    "name": "受肉容器",
+    "description": "你的成年身体与召唤兽、魔族或高阶精灵拥有罕见相容性，可以在仪式中成为其临时受肉和魔力通道。降临会强化肉体，也可能留下异族特征、欲望和归属印记。",
+    "talent_cost": 5,
+    "attribute_modifiers": { "体质": 2, "魅力": 1, "心性": -1 },
+    "rarity": 5,
+    "genres": ["fantasy"],
+    "adultOnly": true
+  },
+  {
+    "id": 52,
+    "name": "服务协议适配",
+    "description": "你能迅速理解并执行企业规定的成人服务流程，在调用、记录和事后评估中维持职业表现。熟练会保护职位，也会让制度更容易把服从当成你的真实意愿。",
+    "talent_cost": 3,
+    "attribute_modifiers": { "魅力": 2, "心性": -1 },
+    "rarity": 5,
+    "genres": ["dystopia"],
+    "adultOnly": true
+  },
+  {
+    "id": 53,
+    "name": "感官接口超频",
+    "description": "你的神经接口能够安全承受更高强度的触觉、快感与服从反馈，并把体验转化为可上传数据。超频提高服务价值，也会加快依赖、条件反射和企业远程控制。",
+    "talent_cost": 4,
+    "attribute_modifiers": { "体质": 1, "魅力": 2, "心性": -1 },
+    "rarity": 5,
+    "genres": ["dystopia"],
+    "adultOnly": true
+  },
+  {
+    "id": 54,
+    "name": "双面切换",
+    "description": "你能在公众身份与私密服从之间迅速切换神态、语言和行为，让两个圈子都难以察觉另一面的存在。切换越熟练，真实自我与扮演角色的边界越容易模糊。",
+    "talent_cost": 5,
+    "attribute_modifiers": { "魅力": 2, "心性": 1 },
+    "rarity": 4,
+    "genres": ["modern"],
+    "adultOnly": true
+  },
+  {
+    "id": 55,
+    "name": "亲密套话",
+    "description": "你擅长在酒后、枕边与情绪高涨时引导对方吐露利益关系、弱点和秘密，并让其误以为只是自然亲近。面对专业反情报人员时，这套方法可能反过来暴露你的目的。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "魅力": 2, "直觉": 2 },
+    "rarity": 5,
+    "genres": ["modern"],
+    "adultOnly": true
+  },
+  {
+    "id": 56,
+    "name": "隐秘合约识读",
+    "description": "你熟悉包养、陪侍、形象管理和保密协议中的陷阱，能快速发现身体权限、违约责任与证据归属的危险措辞。看懂条款并不代表你总有拒绝签署的资本。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "悟性": 2, "直觉": 1 },
+    "rarity": 5,
+    "genres": ["modern"],
+    "adultOnly": true
+  },
+  {
+    "id": 57,
+    "name": "舆情反制",
+    "description": "你知道如何处理私密影像、桃色传闻与身份曝光，能够组织证据、操纵叙事或把丑闻转化为关注度。真正掌握平台和资本的人仍可能让你的反击无处发声。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "悟性": 1, "魅力": 2 },
+    "rarity": 5,
+    "genres": ["modern"],
+    "adultOnly": true
+  },
+  {
+    "id": 58,
+    "name": "边界谈判",
+    "description": "你能在成人关系开始前明确底线、交换条件与退出方式，也善于判断口头承诺是否可信。这不能消除权力差距，却能让你在复杂交易里争取更大的主动空间。",
+    "talent_cost": 5,
+    "attribute_modifiers": { "心性": 2, "悟性": 1 },
+    "rarity": 4,
+    "genres": ["modern"],
+    "adultOnly": true
+  },
+  {
+    "id": 59,
+    "name": "镜头诱导",
+    "description": "你了解机位、灯光、姿态和观众心理，能够在拍摄或直播中制造精确的情色暗示与羞耻反差。镜头也会留下可复制的证据，使每次表演都伴随失控风险。",
+    "talent_cost": 5,
+    "attribute_modifiers": { "魅力": 3 },
+    "rarity": 4,
+    "genres": ["modern"],
+    "adultOnly": true
+  },
+  {
+    "id": 60,
+    "name": "秘戏图谱",
+    "description": "你熟记多套房中秘戏、调情礼法与侍奉姿势，能够依对象身份和性情调整手段。图谱中还暗藏穴位与呼吸配合，既可取悦，也可在近身时制造破绽。",
+    "talent_cost": 5,
+    "attribute_modifiers": { "魅力": 2, "悟性": 1 },
+    "rarity": 4,
+    "genres": ["wuxia"],
+    "adultOnly": true
+  },
+  {
+    "id": 61,
+    "name": "采补辨息",
+    "description": "你能从内息变化判断双修、采补与媚功留下的痕迹，也能分辨对方是在滋养、窃取还是留下控制暗劲。高深功法仍可能伪装成无害的真气交融。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "直觉": 2, "悟性": 1 },
+    "rarity": 5,
+    "genres": ["wuxia"],
+    "adultOnly": true
+  },
+  {
+    "id": 62,
+    "name": "穴脉受控",
+    "description": "你的身体对点穴、截脉与内息牵引异常敏锐，高手可以借此控制姿势、快感和行动，但你也能更清楚感知暗劲流向并寻找解穴机会。敏锐既是弱点，也是学习捷径。",
+    "talent_cost": 3,
+    "attribute_modifiers": { "直觉": 2, "体质": 1, "心性": -1 },
+    "rarity": 5,
+    "genres": ["wuxia"],
+    "adultOnly": true
+  },
+  {
+    "id": 63,
+    "name": "内宅周旋",
+    "description": "你熟悉妻妾、侍婢、门客和宗族长辈之间围绕恩宠、子嗣与名分展开的暗斗，能借礼法保护自己或打击对手。一次错误站队也可能让所有体面同时崩塌。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "直觉": 2, "魅力": 1 },
+    "rarity": 4,
+    "genres": ["wuxia"],
+    "adultOnly": true
+  },
+  {
+    "id": 64,
+    "name": "欢毒耐受",
+    "description": "你对催情香、合欢散和扰乱心神的春毒拥有较强耐受，能够在欲念被放大的状态下保留部分判断与行动能力。耐受不等于免疫，剂量与混毒仍可能击穿防线。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "体质": 2, "心性": 1 },
+    "rarity": 5,
+    "genres": ["wuxia"],
+    "adultOnly": true
+  },
+  {
+    "id": 65,
+    "name": "声息惑心",
+    "description": "你能把内力融入喘息、低语与歌声，使近距离目标的欲望和注意力随节奏偏移。意志坚定者能够抵抗，而持续施展也会让你自己的情绪被声音反向牵动。",
+    "talent_cost": 7,
+    "attribute_modifiers": { "魅力": 3, "心性": 1 },
+    "rarity": 5,
+    "genres": ["wuxia"],
+    "adultOnly": true
+  },
+  {
+    "id": 66,
+    "name": "欲晶精炼",
+    "description": "你能把亲密行为、高潮与服从仪式产生的欲晶魔力提纯并储存，供法术、治疗或魔导器使用。效率越高，越容易被教会、军团与商会视作必须控制的能源节点。",
+    "talent_cost": 7,
+    "attribute_modifiers": { "悟性": 2, "魅力": 1 },
+    "rarity": 5,
+    "genres": ["fantasy"],
+    "adultOnly": true
+  },
+  {
+    "id": 67,
+    "name": "魔物亲和",
+    "description": "你的气味、魔力和身体能够安抚具有繁殖或占有本能的魔物，使本应攻击的异种愿意接近、交涉甚至结契。亲和无法保证人类意义上的温柔或对等。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "魅力": 2, "直觉": 2 },
+    "rarity": 5,
+    "genres": ["fantasy"],
+    "adultOnly": true
+  },
+  {
+    "id": 68,
+    "name": "刻印篡改",
+    "description": "你掌握少量修改欲晶刻印、主人权限和调用条件的禁术，可以隐藏命令、伪造归属或为服从留下漏洞。错误修改会直接作用于欲望、记忆和身体反应。",
+    "talent_cost": 8,
+    "attribute_modifiers": { "悟性": 3, "心性": 1 },
+    "rarity": 6,
+    "genres": ["fantasy"],
+    "adultOnly": true
+  },
+  {
+    "id": 69,
+    "name": "丰饶祝福",
+    "description": "生命魔法强化了你的生育、孕育与恢复能力，也能感知血脉和受孕状态。许多势力会把这份祝福视为宗教象征、政治资源或繁育计划的核心条件。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "体质": 3 },
+    "rarity": 5,
+    "genres": ["fantasy"],
+    "adultOnly": true
+  },
+  {
+    "id": 70,
+    "name": "感官幻术",
+    "description": "你可以制造触觉、气味、声音与快感幻觉，让目标在没有真实接触时也相信身体正在被占有或满足。幻术同样能用于审讯、诱导和遮掩真实发生的事情。",
+    "talent_cost": 7,
+    "attribute_modifiers": { "悟性": 2, "魅力": 2 },
+    "rarity": 5,
+    "genres": ["fantasy"],
+    "adultOnly": true
+  },
+  {
+    "id": 71,
+    "name": "契约漏洞",
+    "description": "你对奴役契约、召唤誓约和主从魔法的文字结构极为敏感，能发现命令范围、转让规则与解除条件中的漏洞。利用漏洞通常要求先承认契约本身，失败代价十分直接。",
+    "talent_cost": 7,
+    "attribute_modifiers": { "悟性": 2, "直觉": 1, "心性": 1 },
+    "rarity": 5,
+    "genres": ["fantasy"],
+    "adultOnly": true
+  },
+  {
+    "id": 72,
+    "name": "权限伪造",
+    "description": "你能伪造服务系统的身份令牌、调用许可与执行记录，短时间骗过门禁、身体芯片和审计程序。权限等级越高，留下的取证痕迹和企业追责也越严重。",
+    "talent_cost": 8,
+    "attribute_modifiers": { "悟性": 3, "直觉": 1 },
+    "rarity": 6,
+    "genres": ["dystopia"],
+    "adultOnly": true
+  },
+  {
+    "id": 73,
+    "name": "评分操纵",
+    "description": "你了解成人服务评分模型的偏差，能通过行为设计、数据互换或关系网络提高自己与他人的合规评价。异常提升会触发审计，低层执行者往往成为替罪者。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "悟性": 2, "魅力": 1 },
+    "rarity": 5,
+    "genres": ["dystopia"],
+    "adultOnly": true
+  },
+  {
+    "id": 74,
+    "name": "感官日志分析",
+    "description": "你能读取并分析神经接口保存的触觉、快感、恐惧与服从数据，从细微波形判断真实反应、药物影响和记录篡改。反复读取他人体验也会污染自身记忆。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "悟性": 2, "直觉": 2 },
+    "rarity": 5,
+    "genres": ["dystopia"],
+    "adultOnly": true
+  },
+  {
+    "id": 75,
+    "name": "远程控制抗性",
+    "description": "你的神经接口经过加固，能够延迟或削弱远程触发的跪伏、高潮、疼痛和肌肉锁定命令，为反制争取数秒时间。高级管理员仍可通过物理后门强制接管。",
+    "talent_cost": 7,
+    "attribute_modifiers": { "心性": 2, "体质": 1 },
+    "rarity": 5,
+    "genres": ["dystopia"],
+    "adultOnly": true
+  },
+  {
+    "id": 76,
+    "name": "激素调谐",
+    "description": "你可以通过植入体主动调整兴奋、依恋、泌乳与生育相关激素，在任务前后改变身体状态。精细控制提高适应性，长期使用却可能让自然反应永久失真。",
+    "talent_cost": 6,
+    "attribute_modifiers": { "体质": 2, "悟性": 1 },
+    "rarity": 5,
+    "genres": ["dystopia"],
+    "adultOnly": true
+  },
+  {
+    "id": 77,
+    "name": "记忆隔舱",
+    "description": "你能把成人服务经历、公开职业人格与真实情感分隔在不同记忆区，降低羞耻和创伤对日常行动的干扰。隔舱一旦破裂，被压缩的体验会同时回流。",
+    "talent_cost": 7,
+    "attribute_modifiers": { "心性": 3 },
+    "rarity": 5,
+    "genres": ["dystopia"],
+    "adultOnly": true
   }
 ]

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// App doc: docs/user-guide/pages/creation.md §2.2
 /**
  * StepSelectOne — 创角步骤：单选。
  *
@@ -8,27 +9,14 @@
  */
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { CreationStep } from '@/engine/types';
+import type { CreationStep, PresetEntry } from '@/engine/types';
 import PresetDetailPanel from './PresetDetailPanel.vue';
 import CustomPresetModal from './CustomPresetModal.vue';
 import AIPresetGenModal from './AIPresetGenModal.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
+import { canAffordPresetCandidate, type BudgetSummary } from '@/engine/creation/creation-budget';
 
 const { t } = useI18n();
-
-/** 预设条目的最小类型契约 — 根据 Game Pack JSON 运行时结构 */
-interface PresetEntry {
-  id?: string;
-  name?: string;
-  label?: string;
-  description?: string;
-  /**
-   * 2026-04-14 新增：'pack' = pack 内置（只读），'user' = 用户自定义（可编辑/删除）
-   * useCreationFlow.getPresetsForStep 已为合并结果打标。
-   */
-  source?: 'pack' | 'user';
-  [key: string]: unknown;
-}
 
 const props = defineProps<{
   /** 当前步骤定义 */
@@ -39,6 +27,7 @@ const props = defineProps<{
   selection: unknown;
   /** 剩余点数预算 */
   budget: number;
+  budgetSummary?: BudgetSummary | null;
 }>();
 
 const emit = defineEmits<{
@@ -147,7 +136,7 @@ function isSelected(preset: PresetEntry): boolean {
 
 /** 获取预设的显示名称 */
 function getDisplayName(preset: PresetEntry): string {
-  return preset.name ?? preset.label ?? preset.id ?? t('creation.selectOne.unnamed');
+  return preset.name ?? preset.label ?? String(preset.id ?? t('creation.selectOne.unnamed'));
 }
 
 /** 获取预设的花费值（如存在 costField） */
@@ -159,7 +148,12 @@ function getCost(preset: PresetEntry): number | null {
 
 /** 选中某个预设 */
 function selectPreset(preset: PresetEntry): void {
+  if (!canAffordPresetCandidate(props.step, preset, props.selection, props.budgetSummary ?? null)) return;
   emit('select', preset);
+}
+
+function isDisabled(preset: PresetEntry): boolean {
+  return !canAffordPresetCandidate(props.step, preset, props.selection, props.budgetSummary ?? null);
 }
 
 /** 是否启用 AI 生成 */
@@ -176,7 +170,20 @@ const selectedPreset = computed<PresetEntry | null>(() =>
 
 <template>
   <div class="step-select-one">
-    <h3 class="step-title">{{ step.label }}</h3>
+    <div class="step-header">
+      <h3 class="step-title">{{ step.label }}</h3>
+      <span
+        v-if="step.costField && budgetSummary"
+        class="budget-badge"
+        data-testid="creation-budget-summary"
+      >
+        {{ $t('creation.confirm.budgetValue', {
+          spent: budgetSummary.spent,
+          total: budgetSummary.total,
+          remaining: budgetSummary.remaining,
+        }) }}
+      </span>
+    </div>
 
     <div class="step-layout">
       <!-- 左栏：选项卡片列表 -->
@@ -195,7 +202,8 @@ const selectedPreset = computed<PresetEntry | null>(() =>
           v-for="(preset, idx) in typedPresets"
           :key="preset.id ?? preset.name ?? idx"
           class="preset-card"
-          :class="{ selected: isSelected(preset), 'preset-card--user': preset.source === 'user' }"
+          :class="{ selected: isSelected(preset), disabled: isDisabled(preset), 'preset-card--user': preset.source === 'user' }"
+          :disabled="isDisabled(preset)"
           @click="selectPreset(preset)"
           @mouseenter="hoveredPreset = preset"
           @mouseleave="hoveredPreset = null"
@@ -342,9 +350,28 @@ const selectedPreset = computed<PresetEntry | null>(() =>
               box-shadow var(--duration-fast) var(--ease-out);
 }
 
-.preset-card:hover {
+.preset-card:hover:not(.disabled) {
   border-color: color-mix(in oklch, var(--color-sage-400) 45%, transparent);
   background: linear-gradient(180deg, color-mix(in oklch, var(--color-sage-400) 7%, var(--color-surface-elevated)), color-mix(in oklch, var(--color-sage-400) 3%, var(--color-surface-elevated)));
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.budget-badge {
+  flex: none;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.preset-card.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .preset-card.selected {

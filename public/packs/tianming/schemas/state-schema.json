@@ -122,12 +122,12 @@
           "x-display": "stat-section",
           "$comment": "六维后天属性 — 引擎通过 x-display 扫描渲染进度条。字段名由 Game Pack 定义（天命使用六维），上限均为 20",
           "properties": {
-            "体质": { "type": "number", "default": 5, "x-display": "stat-bar", "x-max": 20, "x-order": 1 },
-            "直觉": { "type": "number", "default": 5, "x-display": "stat-bar", "x-max": 20, "x-order": 2 },
-            "悟性": { "type": "number", "default": 5, "x-display": "stat-bar", "x-max": 20, "x-order": 3 },
-            "气运": { "type": "number", "default": 5, "x-display": "stat-bar", "x-max": 20, "x-order": 4 },
-            "魅力": { "type": "number", "default": 5, "x-display": "stat-bar", "x-max": 20, "x-order": 5 },
-            "心性": { "type": "number", "default": 5, "x-display": "stat-bar", "x-max": 20, "x-order": 6 }
+            "体质": { "type": "number", "default": 5, "x-creation-min": 1, "x-display": "stat-bar", "x-max": 20, "x-order": 1 },
+            "直觉": { "type": "number", "default": 5, "x-creation-min": 1, "x-display": "stat-bar", "x-max": 20, "x-order": 2 },
+            "悟性": { "type": "number", "default": 5, "x-creation-min": 1, "x-display": "stat-bar", "x-max": 20, "x-order": 3 },
+            "气运": { "type": "number", "default": 5, "x-creation-min": 1, "x-display": "stat-bar", "x-max": 20, "x-order": 4 },
+            "魅力": { "type": "number", "default": 5, "x-creation-min": 1, "x-display": "stat-bar", "x-max": 20, "x-order": 5 },
+            "心性": { "type": "number", "default": 5, "x-creation-min": 1, "x-display": "stat-bar", "x-max": 20, "x-order": 6 }
           }
         },
 

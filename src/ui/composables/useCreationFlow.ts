@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/creation.md §2.1
 /**
  * useCreationFlow — JSON-driven character creation flow composable
  *
@@ -40,21 +41,31 @@ import type {
   GamePack,
   CreationFlowConfig,
   CreationStep,
+  PresetEntry,
 } from '@/engine/types';
 import type { AIService } from '@/engine/ai/ai-service';
 import type { PromptAssembler } from '@/engine/prompt/prompt-assembler';
 import type { ResponseParser } from '@/engine/ai/response-parser';
 import type { CreationChoices } from '@/engine/pipeline/sub-pipelines/character-init';
 import type { CustomPresetStore, CustomPresetEntry } from '@/engine/persistence/custom-preset-store';
+import {
+  getCreationGenre,
+  isChoicePresetVisible,
+  isPresetEntry,
+  isWorldPresetVisible,
+  retainVisiblePresetSelection,
+} from '@/engine/creation/preset-policy';
+import {
+  buildBudgetSummary,
+  validateCreationFlow,
+  validateCreationStep,
+  type BudgetSummary,
+  type CreationValidationState,
+} from '@/engine/creation/creation-budget';
 
 // ═══════════════════════════════════════════════════════════════
 //  Internal helper types (not exported — keep API surface small)
 // ═══════════════════════════════════════════════════════════════
-
-/** A single preset entry surfaced from GamePack.presets */
-interface PresetEntry {
-  [key: string]: unknown;
-}
 
 /** Error info surfaced to the UI for AI generation failures */
 interface GenerationError {
@@ -104,6 +115,10 @@ export interface UseCreationFlowReturn {
   remainingBudget: ComputedRef<number | null>;
   /** Total spent in the current step (null if step has no budget) */
   totalSpent: ComputedRef<number | null>;
+  /** One cross-step budget summary shared by all construction steps and confirmation. */
+  budgetSummary: ComputedRef<BudgetSummary | null>;
+  /** Validate all steps without mutating navigation state. */
+  validateFlow: () => boolean;
 
   // ─── Navigation ──────────────────────────────────────────────
   /** Advance to the next step (no-op if already last or validation fails) */
@@ -181,6 +196,9 @@ export function useCreationFlow(): UseCreationFlowReturn {
 
   const flowConfig: CreationFlowConfig = gamePack.creationFlow;
   const packId = gamePack.manifest.id;
+  // Creation visibility is a session snapshot. Settings cannot change while the
+  // wizard is open, so deliberately do not add a storage watcher here.
+  const nsfwEnabled = readNsfwSettingOnce();
 
   // ─── User-custom presets state ──────────────────────────────
   /**
@@ -249,6 +267,18 @@ export function useCreationFlow(): UseCreationFlowReturn {
   const isGenerating = ref(false);
   const generationError = ref<GenerationError | null>(null);
 
+  function readNsfwSettingOnce(): boolean {
+    if (typeof localStorage === 'undefined') return false;
+    try {
+      const raw = localStorage.getItem('aga_nsfw_settings');
+      if (!raw) return false;
+      const parsed = JSON.parse(raw) as { nsfwMode?: unknown };
+      return parsed.nsfwMode === true;
+    } catch {
+      return false;
+    }
+  }
+
   // ─── Computed state ──────────────────────────────────────────
 
   const steps = computed(() => flowConfig.steps);
@@ -262,53 +292,30 @@ export function useCreationFlow(): UseCreationFlowReturn {
 
   // ─── Budget helpers ──────────────────────────────────────────
 
-  /**
-   * Compute the total cost of currently selected items for a given step.
-   * Returns 0 if the step has no cost tracking.
-   */
-  function computeStepCost(step: CreationStep): number {
-    if (!step.costField) return 0;
-
-    const selected = selections.value[step.id];
-    if (!selected) return 0;
-
-    const items = Array.isArray(selected) ? selected : [selected];
-    let total = 0;
-    for (const item of items) {
-      if (item !== null && typeof item === 'object') {
-        const cost = (item as Record<string, unknown>)[step.costField];
-        if (typeof cost === 'number') {
-          total += cost;
-        }
-      }
-    }
-    return total;
+  function getValidationState(): CreationValidationState {
+    return {
+      selections: selections.value,
+      attributes: attributes.value,
+      formValues: formValues.value,
+      flowVariables: flowVariables.value,
+    };
   }
 
-  /**
-   * Get the available budget for a step by reading its costSource variable.
-   * Returns null if the step doesn't use budget constraints.
-   */
-  function getBudgetForStep(step: CreationStep): number | null {
-    if (!step.costSource) return null;
-    const budget = flowVariables.value[step.costSource];
-    return typeof budget === 'number' ? budget : null;
+  const budgetSummary = computed(() => {
+    const step = currentStep.value;
+    const source = step?.costSource
+      ?? flowConfig.steps.find((candidate) => candidate.costSource)?.costSource;
+    return source
+      ? buildBudgetSummary(flowConfig.steps, getValidationState(), source)
+      : null;
+  });
+
+  const remainingBudget = computed(() => budgetSummary.value?.remaining ?? null);
+  const totalSpent = computed(() => budgetSummary.value?.spent ?? null);
+
+  function validateFlow(): boolean {
+    return validateCreationFlow(flowConfig.steps, getValidationState());
   }
-
-  const remainingBudget = computed(() => {
-    const step = currentStep.value;
-    if (!step) return null;
-    const budget = getBudgetForStep(step);
-    if (budget === null) return null;
-    return budget - computeStepCost(step);
-  });
-
-  const totalSpent = computed(() => {
-    const step = currentStep.value;
-    if (!step) return null;
-    if (!step.costField) return null;
-    return computeStepCost(step);
-  });
 
   // ─── Validation ──────────────────────────────────────────────
 
@@ -325,68 +332,8 @@ export function useCreationFlow(): UseCreationFlowReturn {
   const canProceed = computed(() => {
     const step = currentStep.value;
     if (!step) return false;
-
-    switch (step.type) {
-      case 'select-one': {
-        if (!step.required) return true;
-        return selections.value[step.id] != null;
-      }
-
-      case 'select-many': {
-        const selected = selections.value[step.id];
-        const items = Array.isArray(selected) ? selected : [];
-
-        // Required check: at least one selection
-        if (step.required && items.length === 0) return false;
-
-        // Budget check: total cost must not exceed available budget
-        const budget = getBudgetForStep(step);
-        if (budget !== null) {
-          const spent = computeStepCost(step);
-          if (spent > budget) return false;
-        }
-        return true;
-      }
-
-      case 'attribute-allocation': {
-        const alloc = attributes.value[step.id];
-        if (!alloc || !step.totalPoints) return false;
-
-        const allocated = Object.values(alloc).reduce((sum, v) => sum + v, 0);
-        // Must allocate exactly the specified total
-        if (allocated !== step.totalPoints) return false;
-
-        // Enforce per-attribute max if configured
-        if (step.perAttributeMax != null) {
-          for (const val of Object.values(alloc)) {
-            if (val > step.perAttributeMax) return false;
-          }
-        }
-
-        // No negative values allowed
-        for (const val of Object.values(alloc)) {
-          if (val < 0) return false;
-        }
-        return true;
-      }
-
-      case 'form': {
-        if (!step.fields) return true;
-        const values = formValues.value[step.id] ?? {};
-        for (const field of step.fields) {
-          if (!field.required) continue;
-          const val = values[field.key];
-          if (val === undefined || val === null || val === '') return false;
-        }
-        return true;
-      }
-
-      case 'confirmation':
-        return true;
-
-      default:
-        return false;
-    }
+    if (step.type === 'confirmation') return validateFlow();
+    return validateCreationStep(step, flowConfig.steps, getValidationState());
   });
 
   // ─── Affects processing ──────────────────────────────────────
@@ -465,10 +412,7 @@ export function useCreationFlow(): UseCreationFlowReturn {
     // ── Pack-bundled presets ──
     const packEntries = gamePack?.presets[key];
     const packList: PresetEntry[] = Array.isArray(packEntries)
-      ? packEntries.filter(
-          (entry): entry is PresetEntry =>
-            entry !== null && typeof entry === 'object' && !Array.isArray(entry),
-        )
+      ? packEntries.filter(isPresetEntry)
       : [];
     // 给 pack 项打 source: 'pack' 标签（不会污染原始 gamePack.presets，因为我们 spread 复制）
     const packTagged: PresetEntry[] = packList.map((p) => ({ ...p, source: 'pack' as const }));
@@ -482,7 +426,15 @@ export function useCreationFlow(): UseCreationFlowReturn {
     const packIds = new Set(packTagged.map((p) => (p.id ?? p.name) as string));
     const userFiltered = userList.filter((u) => !packIds.has(u.id));
 
-    return [...userFiltered, ...packTagged];
+    const merged = [...userFiltered, ...packTagged];
+    if (key === 'worlds') {
+      return merged.filter((entry) => isWorldPresetVisible(entry, nsfwEnabled));
+    }
+    if (key === 'origins' || key === 'traits' || key === 'talents') {
+      const selectedGenre = getCreationGenre(selections.value.world);
+      return merged.filter((entry) => isChoicePresetVisible(entry, selectedGenre, nsfwEnabled));
+    }
+    return merged;
   }
 
   // ─── User-custom preset mutations (Phase 1) ─────────────────
@@ -560,6 +512,27 @@ export function useCreationFlow(): UseCreationFlowReturn {
     const step = flowConfig.steps.find((s) => s.id === stepId);
     if (step) {
       processAffects(step, item);
+    }
+
+    if (stepId === 'world') {
+      clearSelectionsHiddenByWorld();
+    }
+  }
+
+  function clearSelectionsHiddenByWorld(): void {
+    for (const step of flowConfig.steps) {
+      if (step.id === 'world' || (step.type !== 'select-one' && step.type !== 'select-many')) {
+        continue;
+      }
+      const selected = selections.value[step.id];
+      if (selected == null) continue;
+      const visible = getPresetsForStep(step);
+      const retained = retainVisiblePresetSelection(selected, visible);
+      if (retained === undefined) {
+        delete selections.value[step.id];
+      } else {
+        selections.value[step.id] = retained;
+      }
     }
   }
 
@@ -829,10 +802,6 @@ export function useCreationFlow(): UseCreationFlowReturn {
   }
 
   /** Type guard: check that a parsed value is a non-null, non-array object */
-  function isPresetEntry(value: unknown): value is PresetEntry {
-    return value !== null && typeof value === 'object' && !Array.isArray(value);
-  }
-
   // ─── Finalisation ────────────────────────────────────────────
 
   /**
@@ -907,6 +876,8 @@ export function useCreationFlow(): UseCreationFlowReturn {
 
     remainingBudget,
     totalSpent,
+    budgetSummary,
+    validateFlow,
 
     next,
     prev,

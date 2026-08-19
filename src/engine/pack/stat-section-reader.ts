@@ -16,6 +16,10 @@ export interface StatFieldDef {
   key: string;
   /** 最大值（来自 x-max，默认 100） */
   max: number;
+  /** Numeric lower bound used by deterministic creation settlement. */
+  minimum: number;
+  /** Numeric upper bound used by deterministic creation settlement. */
+  maximum: number;
   /** 显示顺序（来自 x-order，默认 999） */
   order: number;
 }
@@ -51,6 +55,18 @@ export function readStatFields(
     fields.push({
       key,
       max: typeof fieldSchema['x-max'] === 'number' ? fieldSchema['x-max'] : 100,
+      minimum: typeof fieldSchema['x-creation-min'] === 'number'
+        ? fieldSchema['x-creation-min']
+        : typeof fieldSchema.minimum === 'number'
+          ? fieldSchema.minimum
+          : 0,
+      maximum: typeof fieldSchema['x-creation-max'] === 'number'
+        ? fieldSchema['x-creation-max']
+        : typeof fieldSchema.maximum === 'number'
+        ? fieldSchema.maximum
+        : typeof fieldSchema['x-max'] === 'number'
+          ? fieldSchema['x-max']
+          : 100,
       order: typeof fieldSchema['x-order'] === 'number' ? fieldSchema['x-order'] : 999,
     });
   }

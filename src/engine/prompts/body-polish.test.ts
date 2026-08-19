@@ -183,6 +183,7 @@ describe('BODY_POLISH_COT — migration constraints', () => {
 });
 
 describe('pack file sync — public/packs/tianming/prompts/bodyPolish.md', () => {
+  const readNormalizedPack = () => readFileSync(packPath, 'utf-8').replace(/\r\n/g, '\n');
   /**
    * The pack file is the runtime-visible copy (consumed by PromptAssembler).
    * TS constants are the source of truth; a drift between them means users get
@@ -191,12 +192,12 @@ describe('pack file sync — public/packs/tianming/prompts/bodyPolish.md', () =>
    * the repo root.
    */
   it('contains DEFAULT_BODY_POLISH_PROMPT verbatim', () => {
-    const pack = readFileSync(packPath, 'utf-8');
+    const pack = readNormalizedPack();
     expect(pack).toContain(DEFAULT_BODY_POLISH_PROMPT);
   });
 
   it('contains BODY_POLISH_COT verbatim', () => {
-    const pack = readFileSync(packPath, 'utf-8');
+    const pack = readNormalizedPack();
     expect(pack).toContain(BODY_POLISH_COT);
   });
 });

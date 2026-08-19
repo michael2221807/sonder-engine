@@ -60,7 +60,7 @@ function makeExportService(tree: Record<string, unknown>) {
     exportWorldBooks: async () => ({ version: 1, exportedAt: 'x', books: [] }),
     exportBuiltinOverrides: async () => ({ version: 1, exportedAt: 'x', entries: [] }),
   } as unknown as WorldBookStorage;
-  const customPresetStore = { load: async () => ({ packId: 'tianming', schemaVersion: 1, presets: { origins: [{ id: 'user_o1', source: 'user', createdAt: 1, generatedBy: 'manual', name: '寒门' }] }, meta: { lastUpdated: 0 } }) } as unknown as CustomPresetStore;
+  const customPresetStore = { load: async () => ({ packId: 'tianming', schemaVersion: 1, presets: { origins: [{ id: 'user_o1', source: 'user', createdAt: 1, generatedBy: 'manual', name: '寒门', genres: ['modern'], adultOnly: true, attribute_modifiers: { 直觉: 2 } }] }, meta: { lastUpdated: 0 } }) } as unknown as CustomPresetStore;
   const imageAssetCache = { exportByIds: async (ids: Set<string>) => [...ids].map((id) => ({ id, metadata: { id }, base64: `B64_${id}`, mimeType: 'image/png' })) } as unknown as ImageAssetCache;
   return new GameCardExportService(saveManager, configStore, promptStorage, worldBookStorage, customPresetStore, imageAssetCache);
 }
@@ -121,6 +121,11 @@ describe('export → import round-trip (real services)', () => {
     expect(decoded.bundle.cardMeta.packId).toBe('tianming');
     expect(decoded.bundle.cardMeta.title).toBe('往返卡');
     expect(decoded.bundle.cardMeta.formatVersion).toBe(bundle.cardMeta.formatVersion);
+    expect(decoded.bundle.customPresets?.tianming?.origins?.[0]).toMatchObject({
+      genres: ['modern'],
+      adultOnly: true,
+      attribute_modifiers: { 直觉: 2 },
+    });
   });
 
   it('engram + 世界设定 往返保真，mergedTree 重建世界', async () => {

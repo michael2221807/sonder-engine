@@ -764,7 +764,7 @@ function initCytoscape(): void {
     relayoutPending = true;
     const unfixed = new Set<string>();
     unfixed.add(dragged.id());
-    dragged.descendants().forEach((d) => unfixed.add(d.id()));
+    dragged.descendants().forEach((d) => { unfixed.add(d.id()); });
     const fixed: Array<{ nodeId: string; position: { x: number; y: number } }> = [];
     cyInstance.nodes().forEach((n) => {
       if (n.isParent() || unfixed.has(n.id())) return;

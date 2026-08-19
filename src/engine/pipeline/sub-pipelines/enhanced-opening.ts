@@ -32,6 +32,10 @@ import {
 } from '../../core/prompt-debug';
 import { eventBus } from '../../core/event-bus';
 import { mergeDuplicateNpcArray } from '../../social/npc-merge';
+import {
+  formatSettledPlayerProfile,
+  formatWorldContext,
+} from '../../creation/creation-prompt-formatter';
 
 // ═══════════════════════════════════════════════════════════════
 //  Public types
@@ -500,54 +504,16 @@ async function executePhaseD(ctx: PhaseContext): Promise<NormalizedKnowledgeFact
 // ═══════════════════════════════════════════════════════════════
 
 function buildPlayerProfileString(ctx: PhaseContext): string {
-  const sm = ctx.stateManager;
-  const p = ctx.paths;
-  const name = sm.get<string>(p.playerName) ?? '';
-  const gender = sm.get<string>(p.characterGender) ?? '';
-  const age = sm.get<number>(p.characterAge) ?? 0;
-  const occupation = sm.get<string>(p.characterOccupation) ?? '';
-  const desc = sm.get<string>(p.characterDescription) ?? '';
-  const readNameDesc = (raw: unknown): { name: string; desc: string } => {
-    if (typeof raw === 'string') return { name: raw, desc: '' };
-    if (raw && typeof raw === 'object') {
-      const o = raw as Record<string, unknown>;
-      return { name: typeof o['名称'] === 'string' ? o['名称'] : '', desc: typeof o['描述'] === 'string' ? o['描述'] : '' };
-    }
-    return { name: '', desc: '' };
-  };
-
-  const traitObj = readNameDesc(sm.get(p.characterTraits));
-  const originObj = readNameDesc(sm.get(p.characterOrigin));
-
-  const parts = [`姓名：${name}`];
-  if (gender) parts.push(`性别：${gender}`);
-  if (age) parts.push(`年龄：${age}`);
-  if (occupation) parts.push(`身份：${occupation}`);
-  if (originObj.name) parts.push(`出身：${originObj.name}${originObj.desc ? `（${originObj.desc}）` : ''}`);
-  if (traitObj.name) parts.push(`特质：${traitObj.name}${traitObj.desc ? `（${traitObj.desc}）` : ''}`);
-
-  const rawTalents = sm.get<unknown[]>(p.talents) ?? [];
-  if (rawTalents.length > 0) {
-    const talentEntries = rawTalents.map((t) => {
-      const { name: n, desc: d } = readNameDesc(t);
-      return d ? `${n}（${d}）` : n;
-    }).filter(Boolean);
-    if (talentEntries.length > 0) parts.push(`天赋：${talentEntries.join('、')}`);
+  const settled: Record<string, number> = {};
+  for (const attr of Object.keys(ctx.options.choices.attributes ?? {})) {
+    const value = ctx.stateManager.get<unknown>(`${ctx.paths.characterAttributes}.${attr}`);
+    if (typeof value === 'number') settled[attr] = value;
   }
-
-  if (desc) parts.push(`描述：${desc}`);
-
-  return parts.join('\n');
+  return formatSettledPlayerProfile(ctx.gamePack, ctx.options.choices, settled);
 }
 
 function buildWorldSelectionString(ctx: PhaseContext): string {
-  const choices = ctx.options.choices;
-  const payload: Record<string, unknown> = {
-    选择项: choices.selections,
-  };
-  if (choices.attributes) payload['先天六维分配'] = choices.attributes;
-  if (choices.formValues) payload['身份信息'] = choices.formValues;
-  return JSON.stringify(payload, null, 2);
+  return formatWorldContext(ctx.gamePack, ctx.options.choices);
 }
 
 // ═══════════════════════════════════════════════════════════════

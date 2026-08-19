@@ -4,9 +4,7 @@
 
 ## 创角信息
 
-```json
 {{CREATION_CHOICES}}
-```
 
 ## 推演要求
 

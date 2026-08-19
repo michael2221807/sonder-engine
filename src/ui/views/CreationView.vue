@@ -79,6 +79,8 @@ const {
   isGenerating,
   generationError,
   remainingBudget,
+  budgetSummary,
+  validateFlow,
   next,
   prev,
   jumpTo,
@@ -366,6 +368,12 @@ function onDotClick(index: number): void {
 async function onFinalize(): Promise<void> {
   if (isFinalizing.value) return;
 
+  // Must reject an invalid build before clearGame() touches the active profile.
+  if (!validateFlow()) {
+    finalizeError.value = t('creation.error.invalidBuild');
+    return;
+  }
+
   isFinalizing.value = true;
   finalizeError.value = null;
 
@@ -545,6 +553,7 @@ function goHome(): void {
           :presets="currentPresets"
           :selection="currentSelection"
           :budget="currentBudget"
+          :budget-summary="budgetSummary"
           @select="onStepSelect"
           @custom-save="onCustomSave"
           @custom-remove="onCustomRemove"

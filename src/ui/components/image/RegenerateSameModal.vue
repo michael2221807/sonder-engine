@@ -12,10 +12,8 @@
  * calling `ImageService.regenerateFromPrompts` with its own subject params.
  */
 import { ref, computed, watch, inject, onMounted, onUnmounted, nextTick } from 'vue';
-import { useI18n } from 'vue-i18n';
 import type { ImageBackendType, CivitaiLoraSnapshot, ImageReferenceInput } from '@/engine/image/types';
 
-const { t } = useI18n();
 import { PROVIDER_CAPABILITIES } from '@/engine/image/provider-capabilities';
 import AgaSelect, { type SelectOption } from '@/ui/components/shared/AgaSelect.vue';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
@@ -66,7 +64,7 @@ const canUseReference = computed(() =>
 );
 watch(canUseReference, (can) => { if (!can) useReference.value = false; });
 
-const imageService = inject<{ getAssetCache(): { retrieve(id: string): Promise<{ blob: Blob } | null> } }>('imageService', null);
+const imageService = inject<{ getAssetCache(): { retrieve(id: string): Promise<{ blob: Blob } | null> } } | null>('imageService', null);
 
 watch(() => props.availableBackends, (opts) => {
   if (opts?.length && !opts.some((o) => o.value === chosenBackend.value)) {

@@ -32,6 +32,13 @@ const SCHEMA_BASIC: CustomPresetSchema = {
   ],
 };
 
+const SCHEMA_METADATA: CustomPresetSchema = {
+  fields: [
+    { key: 'genres', label: '适用题材', type: 'select', required: true, options: ['all', 'modern', 'wuxia'] },
+    { key: 'adultOnly', label: '仅成人内容', type: 'checkbox', required: true },
+  ],
+};
+
 /**
  * 创建一个返回固定字符串的 mock AIService
  *
@@ -221,6 +228,24 @@ describe('PresetAIGenerator.generate — 必填校验', () => {
 // ─── pickSchemaFields 经由 generate() 的间接覆盖 ──────────
 
 describe('PresetAIGenerator.generate — 字段类型规范化', () => {
+  it('select genres 规范化为单元素数组，checkbox 保持 boolean', async () => {
+    const { aiService } = makeMockAIService('{"genres":"modern","adultOnly":true}');
+    const gen = new PresetAIGenerator(aiService, null);
+    const res = await gen.generate({
+      presetType: 'origins', stepLabel: '出身', schema: SCHEMA_METADATA, userSeed: '',
+    });
+    expect(res.fields.genres).toEqual(['modern']);
+    expect(res.fields.adultOnly).toBe(true);
+  });
+
+  it('拒绝 select 契约外值和非 boolean checkbox', async () => {
+    const { aiService } = makeMockAIService('{"genres":"space","adultOnly":"yes"}');
+    const gen = new PresetAIGenerator(aiService, null);
+    await expect(gen.generate({
+      presetType: 'origins', stepLabel: '出身', schema: SCHEMA_METADATA, userSeed: '',
+    })).rejects.toThrow(/字段类型\/取值无效/);
+  });
+
   it('number 字段：字符串数字被转换', async () => {
     const { aiService } = makeMockAIService('{"name":"A","description":"B","talent_cost":"7"}');
     const gen = new PresetAIGenerator(aiService, null);

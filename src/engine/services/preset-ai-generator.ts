@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/creation.md §2.8
 /**
  * PresetAIGenerator — AI 推演用户自定义创角预设
  *
@@ -70,6 +71,10 @@ function describeSchema(schema: CustomPresetSchema): string {
         if (typeof f.min === 'number') range.push(`min=${f.min}`);
         if (typeof f.max === 'number') range.push(`max=${f.max}`);
         if (range.length) parts.push(`, ${range.join(' ')}`);
+      } else if (f.type === 'select' && f.options?.length) {
+        parts.push(`, 只能是 ${f.options.map((option) => JSON.stringify(option)).join(' / ')}`);
+      } else if (f.type === 'checkbox') {
+        parts.push(', boolean true/false');
       }
       parts[parts.length - 1] = parts[parts.length - 1] + ')';
       const head = parts.join('');
@@ -163,7 +168,12 @@ function validateRequired(
   for (const f of schema.fields) {
     if (!f.required) continue;
     const v = fields[f.key];
-    if (v === undefined || v === null || (typeof v === 'string' && v.trim() === '')) {
+    if (
+      v === undefined
+      || v === null
+      || (typeof v === 'string' && v.trim() === '')
+      || (Array.isArray(v) && v.length === 0)
+    ) {
       missing.push(f.label);
     }
   }
@@ -186,7 +196,7 @@ function pickSchemaFields(
   schema: CustomPresetSchema,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  const numberErrors: string[] = [];
+  const fieldErrors: string[] = [];
   for (const f of schema.fields) {
     if (!(f.key in raw)) continue;
     const v = raw[f.key];
@@ -198,16 +208,31 @@ function pickSchemaFields(
         : typeof v === 'string' ? v.trim() !== '' && Number.isFinite(Number(v))
         : false;
       if (!isAcceptable) {
-        numberErrors.push(`${f.label}（值为 ${JSON.stringify(v)}）`);
+        fieldErrors.push(`${f.label}（值为 ${JSON.stringify(v)}）`);
         continue;
       }
       out[f.key] = Number(v);
+    } else if (f.type === 'checkbox') {
+      if (v === true || v === false) {
+        out[f.key] = v;
+      } else if (v === 'true' || v === 'false') {
+        out[f.key] = v === 'true';
+      } else {
+        fieldErrors.push(`${f.label}（值为 ${JSON.stringify(v)}）`);
+      }
+    } else if (f.type === 'select') {
+      const selected = Array.isArray(v) && f.key === 'genres' ? v[0] : v;
+      if (typeof selected !== 'string' || (f.options && !f.options.includes(selected))) {
+        fieldErrors.push(`${f.label}（值为 ${JSON.stringify(v)}）`);
+      } else {
+        out[f.key] = f.key === 'genres' ? [selected] : selected;
+      }
     } else {
       out[f.key] = typeof v === 'string' ? v : v == null ? '' : String(v);
     }
   }
-  if (numberErrors.length > 0) {
-    throw new Error(`AI 输出的数值字段无法解析：${numberErrors.join('、')}`);
+  if (fieldErrors.length > 0) {
+    throw new Error(`AI 输出的数值字段无法解析或字段类型/取值无效：${fieldErrors.join('、')}`);
   }
   return out;
 }

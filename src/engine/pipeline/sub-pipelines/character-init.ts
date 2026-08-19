@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/creation.md §2.10
 /**
  * 角色初始化子流水线 — 创角完成后的最终处理
  *
@@ -39,6 +40,10 @@ import type { GamePack, ProfileMeta, PromptFlowConfig } from '../../types';
 import type { BehaviorRunner } from '../../behaviors/behavior-runner';
 import type { EnginePathConfig } from '../types';
 import type { MemoryManager } from '../../memory/memory-manager';
+import { readStatFields } from '../../pack/stat-section-reader';
+import { settleCreationAttributes } from '../../creation/creation-attributes';
+import { formatCreationPromptContext } from '../../creation/creation-prompt-formatter';
+import { validateFinalCreationChoices } from '../../creation/creation-budget';
 
 /** 创角结果 — 返回给调用方的完整创建信息 */
 export interface CharacterInitResult {
@@ -127,8 +132,14 @@ export class CharacterInitPipeline {
     const slotId = 'auto';
 
     try {
+      const validation = validateFinalCreationChoices(this.gamePack.creationFlow.steps, choices);
+      if (!validation.valid) {
+        throw new Error(`Invalid creation choices: ${validation.errors.join(', ')}`);
+      }
+
       // 步骤 1: 构建初始状态树
-      const initialState = this.buildInitialState(choices);
+      const settledAttributes = this.settleAttributes(choices);
+      const initialState = this.buildInitialState(choices, settledAttributes);
       this.stateManager.loadTree(initialState);
 
       // 步骤 1.5: 从 localStorage 同步 NSFW 设置到状态树
@@ -150,6 +161,7 @@ export class CharacterInitPipeline {
 
       // 步骤 2: 运行创角阶段的行为模块
       this.behaviorRunner.runOnCreation(this.stateManager);
+      this.applySettledAttributes(settledAttributes);
 
       // ─── 分叉点：增强开局 vs 低负载路径 ───
       let worldDescription: string | null = null;
@@ -224,8 +236,13 @@ export class CharacterInitPipeline {
         }
       }
 
+      // AI commands are narrative inputs, not the authority for deterministic
+      // character construction. Restore the locally settled values on both paths.
+      this.applySettledAttributes(settledAttributes);
+
       // 步骤 5.5: 运行 onGameLoad 行为钩子（校验+修复 AI 生成后的状态）
       this.behaviorRunner.runOnGameLoad(this.stateManager);
+      this.applySettledAttributes(settledAttributes);
 
       // 步骤 6: 创建角色档案
       const characterName = this.extractCharacterName(choices);
@@ -281,19 +298,19 @@ export class CharacterInitPipeline {
    *   schema 定义的 `角色.身份.天赋` 等路径下，玩家看到的 GameVariablePanel 里
    *   「天赋」永远是空数组
    * - 新版本按 `CreationStep.statePath` + `valueField` 指示把选择写到正确路径
-   * - 属性分配之前写到 `角色.属性.${attr}`，和 AI 开场场景要写的 "后天六维"
-   *   （= 先天六维 + 出身修正 + 天赋修正）路径冲突；新版本写到 statePath
-   *   （天命约定为 `角色.身份.先天六维`）作为只读基线，同时**镜像到**
-   *   `角色.属性.${attr}` 作为首次显示的 fallback —— AI 开场成功时会覆盖为
-   *   带修正值的后天六维，失败时用户至少能看到自己分配的数字
+   * - 属性分配写到 statePath（天命约定为 `角色.身份.先天六维`）作为基线，
+   *   后天属性由 schema 驱动的本地结算函数写入 `paths.characterAttributes`
    *
    * 策略顺序：
    * 1. 以 Game Pack stateSchema 中定义的默认值为基础
    * 2. 按 statePath 将 selections 写入正确路径
-   * 3. 按 statePath 将 attributes 写入基线路径，再镜像到 `角色.属性`
+   * 3. 按 statePath 将 attributes 写入基线路径，再写入本地结算后的后天属性
    * 4. form 字段按 key 写入（form 的 key 本身是 dot-path，不依赖 statePath）
    */
-  private buildInitialState(choices: CreationChoices): Record<string, unknown> {
+  private buildInitialState(
+    choices: CreationChoices,
+    settledAttributes = this.settleAttributes(choices),
+  ): Record<string, unknown> {
     // ── 1. 从 stateSchema 提取默认值 ──
     // 复用共享原语 buildSchemaDefaultTree（与 Story 6 卡导入同一套默认构建逻辑，
     // 防止"创角默认树"与"导入默认底树"漂移）。
@@ -331,11 +348,11 @@ export class CharacterInitPipeline {
         if (baselinePath) {
           _set(state, `${baselinePath}.${attr}`, val);
         }
-        // 镜像到 `角色.属性.${attr}` 作为首次显示的 fallback 值
-        // （AI 开场场景通常会覆盖为带修正值的后天六维；若 AI 失败或跳过此步，
-        //  玩家角色面板至少能看到自己分配的数字而不是 schema 默认的 5-5-5-5-5-5）
-        _set(state, `角色.属性.${attr}`, val);
       }
+    }
+
+    for (const [attr, value] of Object.entries(settledAttributes)) {
+      _set(state, `${this.paths.characterAttributes}.${attr}`, value);
     }
 
     // ── 4. 合并表单值（key 自己是 dot-path） ──
@@ -350,6 +367,34 @@ export class CharacterInitPipeline {
     }
 
     return state;
+  }
+
+  private settleAttributes(choices: CreationChoices): Record<string, number> {
+    const attributeStep = this.gamePack.creationFlow.steps.find(
+      (step) => step.type === 'attribute-allocation',
+    );
+    const fields = readStatFields(this.gamePack.stateSchema, this.paths.characterAttributes);
+    return settleCreationAttributes(
+      choices.attributes,
+      choices.selections,
+      fields,
+      attributeStep?.attributes ?? [],
+    );
+  }
+
+  private applySettledAttributes(settled: Record<string, number>): void {
+    for (const [attr, value] of Object.entries(settled)) {
+      this.stateManager.set(`${this.paths.characterAttributes}.${attr}`, value, 'system');
+    }
+  }
+
+  private readSettledAttributes(choices: CreationChoices): Record<string, number> {
+    const settled: Record<string, number> = {};
+    for (const attr of Object.keys(choices.attributes ?? {})) {
+      const value = this.stateManager.get<unknown>(`${this.paths.characterAttributes}.${attr}`);
+      if (typeof value === 'number') settled[attr] = value;
+    }
+    return settled;
   }
 
   /**
@@ -415,19 +460,12 @@ export class CharacterInitPipeline {
       const flow = this.gamePack.promptFlows['worldGeneration'];
       if (!flow) return null;
 
-      // 与 openingScene 保持一致：注入完整 creation choices（selections + attributes + formValues）
-      // 便于 worldGen prompt 根据玩家的天赋档次 / 出身等推导世界观细节
-      const creationChoicesPayload: Record<string, unknown> = {
-        选择项: choices.selections,
-      };
-      if (choices.attributes) {
-        creationChoicesPayload['先天六维分配'] = choices.attributes;
-      }
-      if (choices.formValues) {
-        creationChoicesPayload['身份信息'] = choices.formValues;
-      }
       const variables: Record<string, string> = {
-        CREATION_CHOICES: JSON.stringify(creationChoicesPayload, null, 2),
+        CREATION_CHOICES: formatCreationPromptContext(
+          this.gamePack,
+          choices,
+          this.readSettledAttributes(choices),
+        ),
       };
 
       const assembled = this.promptAssembler.assemble(flow, variables);
@@ -492,25 +530,12 @@ export class CharacterInitPipeline {
     worldDescription: string | null,
     splitGen: boolean,
   ): Promise<string | null> {
-    // 2026-04-11 fix：CREATION_CHOICES 之前只含 selections，AI 看不到玩家分配的
-    // 六维基线和姓名，导致 opening.md 里 "值 = 先天六维 + 出身修正 + 天赋修正"
-    // 的计算没有输入。新版把三项全量序列化注入：
-    //   - selections：玩家选的 world/talentTier/origin/trait/talents（完整 preset 对象）
-    //   - attributes：玩家分配的 6 维数值（与 `角色.身份.先天六维` 一一对应）
-    //   - formValues：姓名 / 性别 / 年龄
-    // JSON 结构对 AI 友好，key 用中文标签让 prompt 里直接可读。
-    const creationChoicesPayload: Record<string, unknown> = {
-      选择项: choices.selections,
-    };
-    if (choices.attributes) {
-      creationChoicesPayload['先天六维分配'] = choices.attributes;
-    }
-    if (choices.formValues) {
-      creationChoicesPayload['身份信息'] = choices.formValues;
-    }
-
     const variables: Record<string, string> = {
-      CREATION_CHOICES: JSON.stringify(creationChoicesPayload, null, 2),
+      CREATION_CHOICES: formatCreationPromptContext(
+        this.gamePack,
+        choices,
+        this.readSettledAttributes(choices),
+      ),
       WORLD_DESCRIPTION: worldDescription ?? '',
       CHARACTER_NAME: this.extractCharacterName(choices),
     };

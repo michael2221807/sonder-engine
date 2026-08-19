@@ -9,7 +9,9 @@
       "customSchema": {
         "fields": [
           { "key": "name", "label": "世界名称", "type": "text", "required": true, "placeholder": "如「九霄界」" },
-          { "key": "description", "label": "世界描述", "type": "textarea", "rows": 4, "placeholder": "简述这个世界的背景、修炼体系、文化特色…" }
+          { "key": "description", "label": "世界描述", "type": "textarea", "rows": 4, "placeholder": "简述这个世界的背景、社会结构与文化特色…" },
+          { "key": "genre", "label": "题材", "type": "select", "required": true, "options": ["modern", "wuxia", "fantasy", "dystopia"] },
+          { "key": "contentRating", "label": "内容等级", "type": "select", "required": true, "options": ["general", "nsfw"] }
         ]
       },
       "aiGeneration": {
@@ -45,7 +47,9 @@
         "fields": [
           { "key": "name", "label": "出身名称", "type": "text", "required": true, "placeholder": "如「将门遗孤」" },
           { "key": "description", "label": "出身描述", "type": "textarea", "rows": 3, "placeholder": "出身背景的简述…" },
-          { "key": "talent_cost", "label": "天资点花费", "type": "number", "default": 0, "min": 0, "max": 50 }
+          { "key": "talent_cost", "label": "天资点花费", "type": "number", "default": 0, "min": 0, "max": 50 },
+          { "key": "genres", "label": "适用题材", "type": "select", "required": true, "options": ["all", "modern", "wuxia", "fantasy", "dystopia"] },
+          { "key": "adultOnly", "label": "仅成人内容", "type": "checkbox", "default": false }
         ]
       },
       "aiGeneration": {
@@ -71,7 +75,9 @@
         "fields": [
           { "key": "name", "label": "特质名称", "type": "text", "required": true, "placeholder": "如「过目不忘」" },
           { "key": "description", "label": "特质描述", "type": "textarea", "rows": 3 },
-          { "key": "talent_cost", "label": "天资点花费", "type": "number", "default": 0, "min": 0, "max": 30 }
+          { "key": "talent_cost", "label": "天资点花费", "type": "number", "default": 0, "min": 0, "max": 30 },
+          { "key": "genres", "label": "适用题材", "type": "select", "required": true, "options": ["all", "modern", "wuxia", "fantasy", "dystopia"] },
+          { "key": "adultOnly", "label": "仅成人内容", "type": "checkbox", "default": false }
         ]
       },
       "aiGeneration": {
@@ -97,7 +103,9 @@
         "fields": [
           { "key": "name", "label": "天赋名称", "type": "text", "required": true, "placeholder": "如「天眼通」" },
           { "key": "description", "label": "天赋描述", "type": "textarea", "rows": 3 },
-          { "key": "talent_cost", "label": "天资点花费", "type": "number", "default": 0, "min": 0, "max": 30 }
+          { "key": "talent_cost", "label": "天资点花费", "type": "number", "default": 0, "min": 0, "max": 30 },
+          { "key": "genres", "label": "适用题材", "type": "select", "required": true, "options": ["all", "modern", "wuxia", "fantasy", "dystopia"] },
+          { "key": "adultOnly", "label": "仅成人内容", "type": "checkbox", "default": false }
         ]
       },
       "aiGeneration": {
