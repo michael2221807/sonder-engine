@@ -115,4 +115,15 @@ const styleVars = computed(() => ({ '--tt-delay': `${props.delay}ms` }));
     transition: none;
   }
 }
+
+/* Touch-only devices have no hover, so the bubble can never legitimately
+   reveal — but as a hidden absolutely-positioned box (`visibility: hidden`
+   still occupies scrollable overflow) it widened scroll containers past the
+   viewport and let iOS Safari pan the page horizontally during vertical
+   pulls (2026-08-21 mobile bug). `display: none` removes it from layout. */
+@media (hover: none) and (pointer: coarse) {
+  .tt-bubble {
+    display: none;
+  }
+}
 </style>

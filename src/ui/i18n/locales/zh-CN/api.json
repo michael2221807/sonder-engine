@@ -157,6 +157,8 @@
   "api.card.keyMasked": "••••••",
   "api.card.enable": "启用",
   "api.card.disable": "禁用",
+  "api.card.duplicate": "复制",
+  "api.card.copyName": "{name} 副本",
 
   "api.test.testing": "测试中…",
   "api.test.testConnection": "测试连接",

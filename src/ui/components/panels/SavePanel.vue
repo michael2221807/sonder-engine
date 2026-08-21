@@ -720,7 +720,7 @@ async function executeImport(): Promise<void> {
 
 // ─── GitHub Cloud Sync ───────────────────────────────────────
 
-import type { GitHubSyncService, SyncStatus, DegradedUploadDetail, CloudFormat } from '@/engine/sync/github-sync';
+import type { GitHubSyncService, SyncStatus, DegradedUploadDetail, CloudFormat, CloudInfo } from '@/engine/sync/github-sync';
 import { DegradedUploadError } from '@/engine/sync/github-sync';
 import CloudSlotsSection from '@/ui/components/cloud/CloudSlotsSection.vue';
 
@@ -736,7 +736,7 @@ const ghRepoName = ref(githubSync?.getRepoName() ?? 'aga-cloud-save');
 const ghStatus = ref<SyncStatus>({ stage: 'idle', message: '' });
 const ghUsername = ref('');
 const ghShowToken = ref(false);
-const ghCloudInfo = ref<{ exists: boolean; updatedAt?: string; sizeKB?: number } | null>(null);
+const ghCloudInfo = ref<CloudInfo | null>(null);
 
 async function ghSaveToken(): Promise<void> {
   if (!githubSync) return;
@@ -978,6 +978,7 @@ const showSettings = ref(false);
             <div class="gh-cloud-meta">
               <span v-if="ghCloudInfo?.exists" class="gh-cloud-info">
                 {{ $t('save.github.cloudInfo', { time: ghCloudInfo.updatedAt ? formatDateTime(ghCloudInfo.updatedAt) : $t('common.fallback.unknown'), size: ghCloudInfo.sizeKB ?? 0 }) }}
+                <template v-if="ghCloudInfo.uploadedByLabel"> · {{ $t('save.cloudSlots.uploadedBy', { device: ghCloudInfo.uploadedByLabel }) }}</template>
               </span>
               <span v-else-if="ghCloudInfo" class="gh-cloud-info gh-cloud-empty">{{ $t('save.github.cloudEmpty') }}</span>
             </div>

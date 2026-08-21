@@ -1699,7 +1699,10 @@ watch(
 .messages-container {
   flex: 1;
   overflow-y: auto;
+  /* clip + hidden fallback: `hidden` alone still lets iOS Safari touch-pan
+     this axis when any descendant overflows (see GameLayout.vue note). */
   overflow-x: hidden;
+  overflow-x: clip;
   /* Dynamic horizontal padding — sidebar-reserve pattern. Vertical 1rem
      preserved so prose breathes above/below chrome bars. */
   padding: 1rem var(--sidebar-right-reserve, 40px) 1rem var(--sidebar-left-reserve, 40px);

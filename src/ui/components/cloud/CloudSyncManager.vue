@@ -91,6 +91,8 @@ const conflictOpen = ref(false);
 const conflictDetail = ref<{
   cloudUpdatedAt?: string;
   cloudSizeKB?: number;
+  /** 云端版本的上传设备（manifest 审计戳；旧 manifest 无此字段） */
+  cloudDeviceLabel?: string;
   /** v3 插槽管线：冲突所在插槽（profileId 或 GLOBAL_SLOT_KEY）；v2 整包管线为 undefined */
   slotKey?: string;
   /** 展示用：档案名 / "全局设置" */
@@ -170,7 +172,7 @@ async function autoUploadV2(gh: GitHubSyncService): Promise<void> {
   }
   if (check.conflict) {
     // D3: cloud moved on since our last sync — never auto-overwrite. Ask the user.
-    conflictDetail.value = { cloudUpdatedAt: check.cloud.updatedAt, cloudSizeKB: check.cloud.sizeKB };
+    conflictDetail.value = { cloudUpdatedAt: check.cloud.updatedAt, cloudSizeKB: check.cloud.sizeKB, cloudDeviceLabel: check.cloud.uploadedByLabel };
     conflictOpen.value = true;
     return;
   }
@@ -200,6 +202,7 @@ async function autoUploadV3(gh: GitHubSyncService): Promise<void> {
     conflictDetail.value = {
       cloudUpdatedAt: check.cloud.updatedAt,
       cloudSizeKB: check.cloud.sizeKB,
+      cloudDeviceLabel: check.cloud.uploadedByLabel,
       slotKey: pid,
       slotName: profileManager?.getProfile(pid)?.characterName || pid,
     };
@@ -222,6 +225,7 @@ async function syncGlobalSlot(gh: GitHubSyncService): Promise<void> {
       conflictDetail.value = {
         cloudUpdatedAt: gCheck.cloud.updatedAt,
         cloudSizeKB: gCheck.cloud.sizeKB,
+        cloudDeviceLabel: gCheck.cloud.uploadedByLabel,
         slotKey: GLOBAL_SLOT_KEY,
         slotName: t('save.cloudSlots.globalRow'),
       };
@@ -438,6 +442,7 @@ onBeforeUnmount(() => {
         <span class="cloud-conflict__v">
           {{ cloudTimeDisplay() }}
           <span v-if="conflictDetail.cloudSizeKB != null" class="cloud-conflict__size">· {{ conflictDetail.cloudSizeKB }} KB</span>
+          <span v-if="conflictDetail.cloudDeviceLabel" class="cloud-conflict__size">· {{ $t('save.cloudSlots.uploadedBy', { device: conflictDetail.cloudDeviceLabel }) }}</span>
         </span>
       </div>
       <div class="cloud-conflict__row">

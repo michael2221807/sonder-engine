@@ -76,6 +76,9 @@ const LS_DEVICE_LOCAL_KEYS: ReadonlySet<string> = new Set([
   // 排除集——升级期间旧客户端仍在写它们。
   'aga_github_sync_baselines',
   'aga_github_sync_pending_map',
+  // 设备指纹（2026-08-21）：云上传审计用的本设备稳定 ID（device-identity.ts）。
+  // 若随备份迁移，恢复方会继承源设备的指纹，"这个存档是哪台设备传的"就失去意义。
+  'aga_device_id',
 ]);
 
 // ─── 类型 ───

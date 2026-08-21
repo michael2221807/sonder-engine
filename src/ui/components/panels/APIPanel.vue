@@ -417,9 +417,8 @@ function openAddModal(): void {
   showEditModal.value = true;
 }
 
-function openEditModal(api: APIConfig): void {
-  isNewAPI.value = false;
-  editingId.value = api.id;
+/** 把一份已有配置铺进弹窗表单（编辑与复制共用的字段映射）。 */
+function fillFormFromConfig(api: APIConfig): void {
   availableModels.value = [];
   // CR-R10: 每次打开弹窗都清空类别缓存
   categoryFormCache.value = {};
@@ -443,6 +442,24 @@ function openEditModal(api: APIConfig): void {
   if ((api.apiCategory ?? 'llm') === 'image') {
     imageBackend.value = inferImageBackend(api.url);
   }
+}
+
+function openEditModal(api: APIConfig): void {
+  isNewAPI.value = false;
+  editingId.value = api.id;
+  fillFormFromConfig(api);
+  showEditModal.value = true;
+}
+
+/**
+ * 复制一份已有配置：以"新增"模式打开弹窗并预填克隆值（名称加"副本"后缀）。
+ * 用户可先改再保存；取消则什么都不会创建 —— 不产生未确认的孤儿副本。
+ */
+function duplicateAPI(api: APIConfig): void {
+  isNewAPI.value = true;
+  editingId.value = '';
+  fillFormFromConfig(api);
+  form.value.name = t('api.card.copyName', { name: api.name });
   showEditModal.value = true;
 }
 
@@ -926,6 +943,7 @@ function getAssignableAPIOptions(type: UsageType): SelectOption[] {
             {{ testStatuses[api.id] === 'testing' ? $t('api.test.testing') : $t('api.test.testConnection') }}
           </button>
           <button class="btn-sm" @click="openEditModal(api)">{{ $t('common.actions.edit') }}</button>
+          <button class="btn-sm" @click="duplicateAPI(api)">{{ $t('api.card.duplicate') }}</button>
           <button
             v-if="api.id !== 'default'"
             class="btn-sm btn-sm--danger"

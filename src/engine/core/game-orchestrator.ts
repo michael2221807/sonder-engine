@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-image.md §自动任务设置 (auto scene/portrait consumption)
 /**
  * 游戏编排器 — 接通 pipeline:user-input 事件到 PipelineRunner
  *
@@ -83,7 +84,9 @@ import type {
 } from '../pipeline/types';
 import type { GamePack } from '../types';
 import type { GameTime } from '../image/scene-context';
-import type { ImageBackendType } from '../image/types';
+import type { ImageBackendType, StylePreset } from '../image/types';
+import { parseSizeString } from '../image/image-size-options';
+import { ART_STYLE_PROMPT_LABELS } from '../image/tokenizer';
 import type { MemorySummaryPipeline } from '../pipeline/sub-pipelines/memory-summary';
 import type { MidTermRefinePipeline } from '../pipeline/sub-pipelines/mid-term-refine';
 import type { LongTermCompactPipeline } from '../pipeline/sub-pipelines/long-term-compact';
@@ -828,6 +831,19 @@ export class GameOrchestrator {
           // images reflect current weather/festival/environment (same plumbing
           // as ImagePanel.vue manual generation).
           const sceneAnchors = this.subPipelines.imageService.collectSceneRoleAnchors();
+          // Consume the auto-scene settings the Settings tab writes (they were
+          // previously dead controls): resolution → preset width/height,
+          // composition → pure_landscape / story_snapshot.
+          const autoResolution = parseSizeString(stateManager.get<string>('系统.扩展.image.config.auto.sceneResolution') ?? '');
+          const autoOrientation = stateManager.get<string>('系统.扩展.image.config.auto.sceneOrientation') === 'portrait' ? 'portrait' : 'landscape';
+          const fallbackSize = autoOrientation === 'portrait' ? { width: 576, height: 1024 } : { width: 1024, height: 576 };
+          const autoSize = autoResolution ?? fallbackSize;
+          const autoScenePreset: StylePreset = {
+            id: 'auto_scene', name: 'auto scene', positivePrefix: '', positiveSuffix: '', negative: '',
+            source: 'auto', width: autoSize.width, height: autoSize.height,
+          };
+          const autoComposition = stateManager.get<string>('系统.扩展.image.config.auto.sceneComposition') === 'snapshot'
+            ? 'story_snapshot' as const : 'pure_landscape' as const;
           this.subPipelines.imageService.generateSceneImage({
             sceneDescription: ctx.parsedResponse.text.slice(0, 800),
             location,
@@ -836,7 +852,8 @@ export class GameOrchestrator {
             festival: paths ? stateManager.get<unknown>(paths.festival) : undefined,
             environment: paths ? stateManager.get<unknown>(paths.environmentTags) : undefined,
             backend: defaultBackend,
-            compositionMode: 'auto',
+            compositionMode: autoComposition,
+            preset: autoScenePreset,
             presentNpcs: sceneAnchors.presentNpcs,
             roleAnchors: sceneAnchors.roleAnchors.length > 0 ? sceneAnchors.roleAnchors : undefined,
           }).then(() => {
@@ -859,6 +876,10 @@ export class GameOrchestrator {
           const genderFilter = stateManager.get<string>('系统.扩展.image.config.auto.genderFilter') ?? 'all';
           const importanceFilter = stateManager.get<string>('系统.扩展.image.config.auto.importanceFilter') ?? 'major';
           const defaultBackend = (stateManager.get<string>('系统.扩展.image.config.defaultBackend') ?? 'novelai') as ImageBackendType;
+          // Consume the "NPC 默认画风" setting (was a dead control): stored as a
+          // style KEY ('generic'|'anime'|'realistic'|'chinese') → prompt label.
+          const npcStyleKey = stateManager.get<string>('系统.扩展.image.config.auto.npcStyle') ?? 'generic';
+          const npcArtStyle = ART_STYLE_PROMPT_LABELS[npcStyleKey] ?? ART_STYLE_PROMPT_LABELS.generic;
 
           for (const npc of relations) {
             const name = String(npc['名称'] ?? '');
@@ -879,6 +900,7 @@ export class GameOrchestrator {
               description: String(npc['描述'] ?? ''),
               appearance: String(npc['外貌描写'] ?? npc['描述'] ?? ''),
               backend: defaultBackend,
+              artStyle: npcArtStyle,
             }).then(() => {
               eventBus.emit('ui:toast', { type: 'success', i18nKey: 'engine.toast.autoPortraitComplete', i18nParams: { name }, message: `${name} 自动肖像已生成`, duration: 2000 });
             }).catch((err) => console.debug(`[Orchestrator] Auto portrait for ${name} failed:`, err));

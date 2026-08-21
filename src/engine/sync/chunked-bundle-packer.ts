@@ -10,6 +10,13 @@ export interface ChunkManifest {
   totalSizeBytes: number;
   bundleChecksum: string;
   chunks: ChunkEntry[];
+  /**
+   * Audit stamp: which device produced this upload. Set by GitHubSyncService at
+   * upload time (the packer never writes it). Manifest fields are not covered
+   * by bundleChecksum / chunk checksums, so this is roundtrip-safe and old
+   * manifests without it stay valid.
+   */
+  uploadedBy?: import('./device-identity').UploadDeviceStamp;
 }
 
 export interface ChunkEntry {

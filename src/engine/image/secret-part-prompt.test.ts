@@ -56,6 +56,22 @@ describe('buildSecretPartSystemPrompt', () => {
     expect(generic).not.toContain('武侠');
     expect(generic).not.toContain('仙侠');
   });
+
+  it('injects the art style line on both backends when artStyle is set', () => {
+    const nai = buildSecretPartSystemPrompt({ part: 'breast', isNovelAI: true, hasAnchor: false, artStyle: '动漫' });
+    const generic = buildSecretPartSystemPrompt({ part: 'vagina', isNovelAI: false, hasAnchor: false, artStyle: '写实' });
+    expect(nai).toContain('【画风要求】');
+    expect(nai).toContain('「动漫」');
+    expect(generic).toContain('画风要求');
+    expect(generic).toContain('「写实」');
+  });
+
+  it('omits the art style line when artStyle is absent', () => {
+    const nai = buildSecretPartSystemPrompt({ part: 'breast', isNovelAI: true, hasAnchor: false });
+    const generic = buildSecretPartSystemPrompt({ part: 'breast', isNovelAI: false, hasAnchor: false });
+    expect(nai).not.toContain('画风要求');
+    expect(generic).not.toContain('画风要求');
+  });
 });
 
 describe('buildSecretPartTaskData', () => {
@@ -90,6 +106,15 @@ describe('buildSecretPartTaskData', () => {
     });
     expect(data).not.toContain('武侠');
     expect(data).not.toContain('仙侠');
+  });
+
+  it('includes 画风 line on both backends when artStyle is set, omits otherwise', () => {
+    const nai = buildSecretPartTaskData({ part: 'breast', rawDescription: '{}', isNovelAI: true, artStyle: '古风' });
+    const generic = buildSecretPartTaskData({ part: 'anus', rawDescription: '{}', isNovelAI: false, artStyle: '动漫' });
+    const none = buildSecretPartTaskData({ part: 'breast', rawDescription: '{}', isNovelAI: true });
+    expect(nai).toContain('画风：古风');
+    expect(generic).toContain('画风：动漫');
+    expect(none).not.toContain('画风：');
   });
 });
 

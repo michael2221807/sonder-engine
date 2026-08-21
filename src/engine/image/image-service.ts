@@ -591,6 +591,8 @@ export class ImageService {
     artistPrefix?: string;
     extraNegative?: string;
     extraPrompt?: string;
+    /** Overall art style label (画风 grid: 通用/动漫/写实/古风). Omitted = no style line. */
+    artStyle?: string;
     backend: ImageBackendType;
     reference?: ImageReferenceInput;
     styleParamOverrides?: Record<string, unknown>;
@@ -638,6 +640,7 @@ export class ImageService {
           : undefined,
         isNovelAI,
         extraRequirements: params.extraPrompt,
+        artStyle: params.artStyle,
       });
 
       const processedPositive = normalizeSingleCharacterOutput(tokenResult.rawResponse, { isNovelAI });
@@ -733,6 +736,7 @@ export class ImageService {
           backend: params.backend,
           model: modelName,
           apiConfigName: apiName,
+          artStyle: params.artStyle,
           createdAt,
           ...metaSpread,
         });

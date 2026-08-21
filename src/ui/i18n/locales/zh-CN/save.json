@@ -453,6 +453,8 @@
   "save.cloudSlots.v2Revived": "检测到另一台设备仍在用旧版本上传旧格式存档。请先升级那台设备的页面（刷新即可），否则两边进度会分叉。",
   "save.cloudSlots.cloudMeta": "云端 {time} · {size} KB",
   "save.cloudSlots.notInCloud": "云端暂无",
+  "save.cloudSlots.uploadedBy": "来自 {device}",
+  "save.cloudSlots.uploadedByTip": "上传该版本的设备（ID：{id}）",
   "save.cloudSlots.cloudOnly": "云端档案",
   "save.cloudSlots.globalRow": "全局设置（API 配置 / 提示词 / 偏好）",
   "save.cloudSlots.uploadBtn": "上传",

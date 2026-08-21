@@ -353,6 +353,9 @@ function formatTime(iso?: string): string {
               {{ t('save.cloudSlots.cloudMeta', { time: formatTime(row.cloud.updatedAt), size: row.cloud.sizeKB }) }}
             </span>
             <span v-else class="cs-meta cs-meta--none">{{ t('save.cloudSlots.notInCloud') }}</span>
+            <Tooltip v-if="row.cloud?.uploadedByLabel" :text="t('save.cloudSlots.uploadedByTip', { id: row.cloud.uploadedByDeviceId ?? '?' })">
+              <span class="cs-meta cs-meta--device">{{ t('save.cloudSlots.uploadedBy', { device: row.cloud.uploadedByLabel }) }}</span>
+            </Tooltip>
             <span v-if="!row.local" class="cs-chip">{{ t('save.cloudSlots.cloudOnly') }}</span>
           </div>
           <div class="cs-row-actions">
@@ -378,6 +381,9 @@ function formatTime(iso?: string): string {
               {{ t('save.cloudSlots.cloudMeta', { time: formatTime(globalSlot.updatedAt), size: globalSlot.sizeKB }) }}
             </span>
             <span v-else class="cs-meta cs-meta--none">{{ t('save.cloudSlots.notInCloud') }}</span>
+            <Tooltip v-if="globalSlot?.uploadedByLabel" :text="t('save.cloudSlots.uploadedByTip', { id: globalSlot.uploadedByDeviceId ?? '?' })">
+              <span class="cs-meta cs-meta--device">{{ t('save.cloudSlots.uploadedBy', { device: globalSlot.uploadedByLabel }) }}</span>
+            </Tooltip>
           </div>
           <div class="cs-row-actions">
             <AgaButton variant="primary" size="sm" :disabled="isBusy" data-testid="cs-upload-global" @click="uploadGlobalUi">
@@ -500,6 +506,7 @@ function formatTime(iso?: string): string {
 .cs-name { font-size: 13px; color: var(--text-primary, #e8e4da); }
 .cs-meta { font-size: 11px; color: var(--text-tertiary, #8a8577); }
 .cs-meta--none { font-style: italic; opacity: 0.8; }
+.cs-meta--device { opacity: 0.75; }
 .cs-chip {
   font-size: 10px; padding: 1px 6px; border-radius: 999px;
   color: var(--accent-fg, #9ec49a); background: rgba(158, 196, 154, 0.12);

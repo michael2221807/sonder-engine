@@ -157,6 +157,8 @@
   "api.card.keyMasked": "••••••",
   "api.card.enable": "Enable",
   "api.card.disable": "Disable",
+  "api.card.duplicate": "Duplicate",
+  "api.card.copyName": "{name} (copy)",
 
   "api.test.testing": "Testing...",
   "api.test.testConnection": "Test Connection",

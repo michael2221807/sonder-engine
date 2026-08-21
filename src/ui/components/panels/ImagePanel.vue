@@ -10,7 +10,7 @@ import { ref, computed, inject, onMounted, onUnmounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import type { ImageService } from '@/engine/image/image-service';
-import type { ImageBackendType, ImageTask, ArtistPreset, ImageAsset, SecretPartType } from '@/engine/image/types';
+import type { ImageBackendType, ImageTask, ArtistPreset, ImageAsset, SecretPartType, StylePreset } from '@/engine/image/types';
 import { generateReferenceId } from '@/engine/image/utils';
 import type { GameTime, SceneNpcDetail } from '@/engine/image/scene-context';
 import ImageDisplay from '@/ui/components/image/ImageDisplay.vue';
@@ -192,7 +192,7 @@ const manualStatusText = ref('');
 
 // Secret part state (independent from manual form)
 const secretStyle = ref<'none' | 'generic' | 'anime' | 'realistic' | 'chinese'>('none');
-const secretSizePreset = ref<'none' | '1:1' | '3:4' | '9:16' | '16:9' | 'custom'>('1:1');
+const secretSizePreset = ref<'none' | '1:1' | '3:4' | '9:16' | '16:9'>('1:1');
 const secretArtistPreset = ref('');
 const secretPngPreset = ref('');
 const secretExtraPrompt = ref('');
@@ -293,6 +293,21 @@ const currentSizeDisplay = computed(() => {
   const h = manualHeight.value.trim();
   if (!w || !h || !/^\d+$/.test(w) || !/^\d+$/.test(h)) return t('image.manual.sizeNotFilled');
   return `${w}x${h}`;
+});
+
+/**
+ * Manual-size → StylePreset carrier. The engine only honors width/height via
+ * `params.preset`; without this the size grid was a dead control and every
+ * custom-composition request fell back to the composer's 1024×1024 default.
+ * Only applies when the size grid is active (custom composition + a selected
+ * preset) and both fields hold positive integers.
+ */
+const manualSizePreset = computed<StylePreset | undefined>(() => {
+  if (!isCustomComposition.value || sizePreset.value === 'none') return undefined;
+  const w = Number(manualWidth.value.trim());
+  const h = Number(manualHeight.value.trim());
+  if (!Number.isInteger(w) || !Number.isInteger(h) || w <= 0 || h <= 0) return undefined;
+  return { id: 'npc_manual_size', name: '手动分辨率', positivePrefix: '', positiveSuffix: '', negative: '', source: 'manual', width: w, height: h };
 });
 
 const styleOptions = computed(() => [
@@ -582,6 +597,7 @@ async function submitGenerate() {
       bodyDescription: bodyText,
       outfitStyle: outfitText,
       backend: backend.value,
+      preset: manualSizePreset.value,
       composition: composition.value,
       customComposition: customComposition.value || undefined,
       artStyle: artStyleMap[artStyle.value] ?? t('image.manual.artStyle.generic'),
@@ -707,6 +723,28 @@ const secretParts = computed(() => [
   { key: 'anus' as const,   label: t('image.secret.bodyPart.anus') },
 ]);
 
+/**
+ * Secret-part size buttons → StylePreset carrier (same consumption fix as
+ * `manualSizePreset`): the engine only honors width/height via `params.preset`.
+ * 'none' falls through to the engine's secret_part default (1024×1024).
+ */
+function secretSizeStylePreset(): StylePreset | undefined {
+  const p = secretSizePreset.value;
+  if (p === 'none') return undefined;
+  const dims = SIZE_BASES[p];
+  return { id: `secret_${p}`, name: p, positivePrefix: '', positiveSuffix: '', negative: '', source: 'manual', width: dims.w, height: dims.h };
+}
+
+/** Secret grid options — the shared list minus 'custom' (the secret section has
+ *  no width/height inputs, so a 'custom' button there could never take effect). */
+const secretSizeOptions = computed(() => sizePresetOptions.value.filter((o) => o.value !== 'custom'));
+
+/** 画风 grid key → display label passed to the engine ('none' → no style line). */
+function artStyleLabelFor(key: 'none' | 'generic' | 'anime' | 'realistic' | 'chinese'): string | undefined {
+  if (key === 'none') return undefined;
+  return t(`image.manual.artStyle.${key}`);
+}
+
 async function generateSecretPart(partKey: 'breast' | 'vagina' | 'anus') {
   if (!imageService || !selectedNpc.value) return;
   const part = secretParts.value.find((p) => p.key === partKey);
@@ -724,6 +762,8 @@ async function generateSecretPart(partKey: 'breast' | 'vagina' | 'anus') {
       characterName: selectedNpc.value,
       part: partKey,
       backend: backend.value,
+      preset: secretSizeStylePreset(),
+      artStyle: artStyleLabelFor(secretStyle.value),
       artistPrefix: styleInjection.artistPrefix,
       extraNegative: styleInjection.extraNegative,
       extraPrompt: secretExtraPrompt.value || undefined,
@@ -761,6 +801,8 @@ async function generateAllSecretParts() {
         characterName: selectedNpc.value,
         part: part.key,
         backend: backend.value,
+        preset: secretSizeStylePreset(),
+        artStyle: artStyleLabelFor(secretStyle.value),
         artistPrefix: styleInjection.artistPrefix,
         extraNegative: styleInjection.extraNegative,
         extraPrompt: secretExtraPrompt.value || undefined,
@@ -803,6 +845,8 @@ async function generateSecretPartWithReference(partKey: 'breast' | 'vagina' | 'a
       characterName: selectedNpc.value,
       part: partKey,
       backend: backend.value,
+      preset: secretSizeStylePreset(),
+      artStyle: artStyleLabelFor(secretStyle.value),
       artistPrefix: styleInjection.artistPrefix,
       extraNegative: styleInjection.extraNegative,
       extraPrompt: secretExtraPrompt.value || undefined,
@@ -3285,8 +3329,8 @@ function clearNpcImages() {
                 </div>
                 <div class="form-section">
                   <label class="form-label">{{ $t('image.manual.sizeLabel') }}</label>
-                  <div class="btn-grid btn-grid--6">
-                    <button v-for="opt in sizePresetOptions" :key="opt.value" type="button"
+                  <div class="btn-grid btn-grid--5">
+                    <button v-for="opt in secretSizeOptions" :key="opt.value" type="button"
                       :class="['grid-btn grid-btn--compact grid-btn--fuchsia', { 'grid-btn--fuchsia-active': secretSizePreset === opt.value }]"
                       @click="secretSizePreset = opt.value"
                     ><div class="grid-btn__label">{{ opt.label }}</div></button>

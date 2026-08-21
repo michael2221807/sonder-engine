@@ -19,6 +19,7 @@
 
 import type { BackupService, ExportImageIntegrity, ProfileDisplayMeta } from '../persistence/backup-service';
 import { packChunks, unpack, sha256String, sha256Blob, type ChunkManifest } from './chunked-bundle-packer';
+import { getDeviceStamp } from './device-identity';
 
 // ─── 常量 ───
 
@@ -91,6 +92,9 @@ export interface CloudInfo {
   exists: boolean;
   updatedAt?: string;
   sizeKB?: number;
+  /** 上传该云端版本的设备（manifest `uploadedBy` 审计戳；旧 manifest 无此字段）。 */
+  uploadedByLabel?: string;
+  uploadedByDeviceId?: string;
 }
 
 /**
@@ -157,6 +161,9 @@ export interface CloudSlotInfo {
   packId?: string;
   slotCount?: number;
   lastPlayedAt?: string | null;
+  /** 上传该插槽当前版本的设备（manifest `uploadedBy` 审计戳；旧 manifest 无此字段）。 */
+  uploadedByLabel?: string;
+  uploadedByDeviceId?: string;
 }
 
 // ─── 服务 ───
@@ -391,6 +398,7 @@ export class GitHubSyncService {
       const gp = genPathByOriginal.get(c.path);
       if (gp) c.path = gp;
     }
+    manifest.uploadedBy = getDeviceStamp();
 
     // The manifest is written LAST so it is the commit point: if any chunk PUT
     // above fails, the cloud still has the OLD manifest pointing at OLD chunks,
@@ -633,6 +641,8 @@ export class GitHubSyncService {
           packId: m.slotMeta?.packId,
           slotCount: m.slotMeta?.slotCount,
           lastPlayedAt: m.slotMeta?.lastPlayedAt ?? null,
+          uploadedByLabel: m.uploadedBy?.deviceLabel,
+          uploadedByDeviceId: m.uploadedBy?.deviceId,
         });
       } catch (err) {
         // 404（缺 manifest 的孤儿目录）与损坏（JSON 解析/编码错误）都只跳过该
@@ -645,7 +655,10 @@ export class GitHubSyncService {
     }
     try {
       const g = await this.fetchManifestAt(owner, repo, `${GLOBAL_DIR}/manifest.json`);
-      infos.push({ slotKey: GLOBAL_SLOT_KEY, updatedAt: g.createdAt, sizeKB: Math.round(g.totalSizeBytes / 1024) });
+      infos.push({
+        slotKey: GLOBAL_SLOT_KEY, updatedAt: g.createdAt, sizeKB: Math.round(g.totalSizeBytes / 1024),
+        uploadedByLabel: g.uploadedBy?.deviceLabel, uploadedByDeviceId: g.uploadedBy?.deviceId,
+      });
     } catch (err) {
       if (err instanceof ApiError && err.status !== 404) throw err;
       if (!(err instanceof ApiError)) console.warn('[GitHubSync] skip corrupted global manifest:', err);
@@ -659,7 +672,10 @@ export class GitHubSyncService {
     const { owner, repo } = this.resolveTarget();
     try {
       const m = await this.fetchManifestAt(owner, repo, `${slotDir(slotKey)}/manifest.json`);
-      return { exists: true, updatedAt: m.createdAt, sizeKB: Math.round(m.totalSizeBytes / 1024) };
+      return {
+        exists: true, updatedAt: m.createdAt, sizeKB: Math.round(m.totalSizeBytes / 1024),
+        uploadedByLabel: m.uploadedBy?.deviceLabel, uploadedByDeviceId: m.uploadedBy?.deviceId,
+      };
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) return { exists: false };
       if (err instanceof ApiError) throw err; // 网络/鉴权错误上抛
@@ -1067,6 +1083,7 @@ export class GitHubSyncService {
       const gp = genPathByOriginal.get(c.path);
       if (gp) c.path = gp;
     }
+    manifest.uploadedBy = getDeviceStamp();
     decorate?.(manifest);
 
     emit('uploading', '正在更新索引…');
@@ -1130,6 +1147,8 @@ export class GitHubSyncService {
         exists: true,
         updatedAt: manifest.createdAt,
         sizeKB: Math.round(manifest.totalSizeBytes / 1024),
+        uploadedByLabel: manifest.uploadedBy?.deviceLabel,
+        uploadedByDeviceId: manifest.uploadedBy?.deviceId,
       };
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) return { exists: false };

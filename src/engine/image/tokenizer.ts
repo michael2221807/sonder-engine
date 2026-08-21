@@ -32,6 +32,18 @@ import { eventBus } from '../core/event-bus';
  * but kept local so the image tokenizer doesn't need to instantiate the full
  * parser just for debug capture.
  */
+/**
+ * UI art-style keys → the labels the tokenizer prompts speak (Chinese, matching
+ * the existing `ART_STYLE` fallback '通用'). Used by callers that hold a stored
+ * style KEY (e.g. `config.auto.npcStyle`) rather than a display label.
+ */
+export const ART_STYLE_PROMPT_LABELS: Record<string, string> = {
+  generic: '通用',
+  anime: '二次元',
+  realistic: '写实',
+  chinese: '国风',
+};
+
 const THINKING_TAG_RE = /<(?:think|thinking|reasoning|thought)>([\s\S]*?)<\/(?:think|thinking|reasoning|thought)>/gi;
 function extractThinking(raw: string): string | undefined {
   const blocks: string[] = [];
@@ -385,6 +397,8 @@ export class ImageTokenizer {
     isNovelAI?: boolean;
     /** Extra generation requirements */
     extraRequirements?: string;
+    /** Overall art style label (画风 grid: 通用/动漫/写实/古风). Omitted = no style line. */
+    artStyle?: string;
     /** Resolved preset context (model bundle only — NO task preset) */
     presetContext?: TransformerPresetContext;
   }): Promise<TokenizerResult> {
@@ -404,6 +418,7 @@ export class ImageTokenizer {
       part: context.part,
       isNovelAI,
       hasAnchor,
+      artStyle: context.artStyle,
     });
 
     // Build task data as assistant message
@@ -427,6 +442,7 @@ export class ImageTokenizer {
       isNovelAI,
       anchorPositive: context.anchor?.positive,
       anchorInjected: anchorInjected || undefined,
+      artStyle: context.artStyle,
       extraRequirements: context.extraRequirements,
     });
 

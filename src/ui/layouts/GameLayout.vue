@@ -149,7 +149,13 @@ watch(isWorldBuilding, (wb, prev) => {
   position: absolute;
   inset: 0;
   overflow-y: auto;
+  /* `clip` (with `hidden` fallback) — iOS Safari can still touch-pan a
+     `hidden` axis when descendants overflow (e.g. absolutely-positioned
+     tooltip bubbles), which made the mobile page wobble horizontally during
+     vertical pulls. `clip` removes the scrollable overflow region entirely.
+     Inner wide content (tables/code) keeps its own overflow-x:auto wrapper. */
   overflow-x: hidden;
+  overflow-x: clip;
   z-index: 1;
   background: linear-gradient(180deg,
     transparent 0%,

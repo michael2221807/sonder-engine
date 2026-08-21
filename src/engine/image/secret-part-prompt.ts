@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-image.md §私密部位生成区
 /**
  * Secret Part Prompt Utilities — ported
  *
@@ -51,6 +52,8 @@ export function buildSecretPartSystemPrompt(params: {
   hasAnchor: boolean;
   compatMode?: boolean;
   stylePromptInput?: string;
+  /** Overall art style label from the UI grid (通用/动漫/写实/古风). Omitted = no style line. */
+  artStyle?: string;
 }): string {
   const description = buildSecretPartDescription(params.part);
 
@@ -65,6 +68,7 @@ export function buildSecretPartSystemPrompt(params: {
       '【风格对齐】：跟随输入资料、额外要求和风格词，不要擅自附加档案页、参考页、拼贴页、多分镜或固定画风底座。',
       params.hasAnchor ? '【锚点对齐】：优先继承与目标部位稳定相关的身体特征，让局部细节与角色保持一致。' : '',
       '禁止生成：face, eyes, hair, arms, legs, background scenery, furniture, clothes (除非作为边缘遮挡)。',
+      params.artStyle ? `【画风要求】：整体画风为「${params.artStyle}」。在不破坏微距特写构图的前提下体现该画风的质感与渲染方式。` : '',
       params.compatMode && params.stylePromptInput ? '请自然吸收并整合额外提供的风格词：' + params.stylePromptInput : '',
       `本次目标：${description}`,
       '输出结构：请只输出 <提示词>...</提示词>。',
@@ -79,6 +83,7 @@ export function buildSecretPartSystemPrompt(params: {
     '单体约束：画面中只能有一个目标器官，严禁任何形式的解剖重复或畸变镜像。',
     '质感表现：优先体现肤质（如玉、细腻）、湿润感、光影层次（侧逆光、柔光）以及布料的物理挤压关系。',
     '风格要求：跟随输入资料、额外要求和风格提示词；不要默认补充固定质量串、固定二次元风格串或固定写实风格串。',
+    params.artStyle ? `画风要求：整体画风为「${params.artStyle}」。在保持微距特写构图的前提下体现该画风的质感与渲染方式。` : '',
     params.hasAnchor ? '锚点对齐：优先继承与目标部位稳定相关的身体特征，让局部细节与角色保持一致。' : '',
     '输出格式：使用英文逗号分隔的短语串。',
     params.compatMode && params.stylePromptInput ? '请吸收额外风格词并整合：' + params.stylePromptInput : '',
@@ -103,6 +108,8 @@ export function buildSecretPartTaskData(params: {
   anchorInjected?: string;
   compatMode?: boolean;
   stylePromptInput?: string;
+  /** Overall art style label from the UI grid (通用/动漫/写实/古风). Omitted = no style line. */
+  artStyle?: string;
   extraRequirements?: string;
 }): string {
   const hasAnchor = Boolean(params.anchorPositive?.trim());
@@ -122,6 +129,7 @@ export function buildSecretPartTaskData(params: {
       '镜头要求：必须是 extreme close-up / ultra tight crop，目标部位占据画面主体，不能退成普通近景。',
       '数量要求：只允许一个目标部位，不允许重复、镜像复制、并排复制。',
       '禁止内容：face, portrait, upper body, half body, full body, legs, hands, multiple people, room focus, scenery focus。',
+      params.artStyle ? `画风：${params.artStyle}` : '',
       params.compatMode && params.stylePromptInput ? `额外风格正面提示词：${params.stylePromptInput}` : '',
       params.extraRequirements ? `附加要求：${params.extraRequirements}` : '附加要求：无',
     ].filter(Boolean).join('\n');
@@ -142,6 +150,7 @@ export function buildSecretPartTaskData(params: {
     '数量要求：只允许一个目标部位，不允许重复、镜像复制、并排复制。',
     '禁止内容：face, portrait, upper body, half body, full body, legs, hands, multiple people, room focus, scenery focus。',
     '格式：请只输出 <提示词>...</提示词>。',
+    params.artStyle ? `画风：${params.artStyle}` : '',
     params.compatMode && params.stylePromptInput ? `额外风格正面提示词：${params.stylePromptInput}` : '',
     params.extraRequirements ? `附加要求：${params.extraRequirements}` : '附加要求：无',
   ].filter(Boolean).join('\n');
