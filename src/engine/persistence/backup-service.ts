@@ -162,6 +162,34 @@ export interface ExportImageIntegrity {
 }
 
 /**
+ * 档案元数据声明的存档槽与实际存档记录不一致。
+ *
+ * 这种状态不是“合法空档案”：继续导出会得到 `saves: {}`，继而让图片完整性
+ * 检查退化成 0 === 0，并可能用结构性空壳覆盖健康云存档。
+ */
+export class ProfileSaveIntegrityError extends Error {
+  constructor(
+    public readonly profileId: string,
+    public readonly missingSlotIds: string[],
+    public readonly orphanSaveSlotIds: string[] = [],
+  ) {
+    const problems = [
+      missingSlotIds.length > 0
+        ? `元数据有槽但存档数据缺失：${missingSlotIds.join(', ')}`
+        : '',
+      orphanSaveSlotIds.length > 0
+        ? `存档数据有槽但元数据缺失：${orphanSaveSlotIds.join(', ')}`
+        : '',
+    ].filter(Boolean).join('；');
+    super(
+      `档案“${profileId}”的存档结构不完整（${problems}）。` +
+      '已阻止导出/上传/导入，请先从健康备份恢复，勿覆盖现有数据。',
+    );
+    this.name = 'ProfileSaveIntegrityError';
+  }
+}
+
+/**
  * 档案展示元信息 — 随 exportProfileForSync 返回，供云端插槽 manifest 携带
  * （插槽列表 UI 无需下载整包即可显示档案名/槽数等）。
  */
@@ -661,6 +689,17 @@ export class BackupService {
       );
     }
     const profileId = profileIds[0];
+    const incomingMeta = bundle.profiles[profileId] as ProfileMeta | undefined;
+    const incomingSlotIds = new Set(Object.keys(incomingMeta?.slots ?? {}));
+    const incomingSaves = filterCompositeByProfile(bundle.saves, profileId);
+    const incomingSaveSlotIds = new Set(
+      Object.keys(incomingSaves).map((key) => parseCompositeKey(key).slotId),
+    );
+    const missingSlotIds = [...incomingSlotIds].filter((slotId) => !incomingSaveSlotIds.has(slotId));
+    const orphanSaveSlotIds = [...incomingSaveSlotIds].filter((slotId) => !incomingSlotIds.has(slotId));
+    if (missingSlotIds.length > 0 || orphanSaveSlotIds.length > 0) {
+      throw new ProfileSaveIntegrityError(profileId, missingSlotIds, orphanSaveSlotIds);
+    }
 
     // 退化包检测（与全替换同一指纹）：来包引用图片却一张不带 ⇒ 本地图片缓存被清后
     // 做的备份。此时跳过一切图片删除（宁留孤图），并提示。
@@ -671,8 +710,6 @@ export class BackupService {
 
     try {
       /* ── 2. 删除"本地有、来包无"的存档槽（真替换语义） ── */
-      const incomingMeta = bundle.profiles[profileId] as ProfileMeta | undefined;
-      const incomingSlotIds = new Set(Object.keys(incomingMeta?.slots ?? {}));
       const localProfile = this.profileManager.getProfile(profileId);
       if (localProfile) {
         for (const slotId of Object.keys(localProfile.slots)) {
@@ -687,7 +724,7 @@ export class BackupService {
          saves/vectors 先按 profileId 过滤：档案包内出现其他档案的复合 key 属于
          损坏/恶意数据，绝不能写进别的档案。 */
       await this.restoreProfiles({ [profileId]: bundle.profiles[profileId] });
-      const saves = filterCompositeByProfile(bundle.saves, profileId);
+      const saves = incomingSaves;
       const vectors = filterCompositeByProfile(bundle.vectors, profileId);
       await this.restoreSaves(saves);
       // 来包未携带向量的槽，本地旧向量已过时（对应旧存档内容）→ 先清后写
@@ -1456,6 +1493,7 @@ export class BackupService {
 
     const saves: Record<string, unknown> = {};
     const vectors: Record<string, unknown> = {};
+    const missingSlotIds: string[] = [];
 
     for (const slotId of Object.keys(profile.slots)) {
       const compositeKey = compositeSlotKey(profileId, slotId);
@@ -1463,12 +1501,22 @@ export class BackupService {
       const saveData = await this.saveManager.loadGame(profileId, slotId);
       if (saveData !== undefined) {
         saves[compositeKey] = structuredClone(saveData);
+      } else {
+        missingSlotIds.push(slotId);
       }
 
       const vectorData = await this.vectorStore.load(profileId, slotId);
       if (hasVectorContent(vectorData)) {
         vectors[compositeKey] = structuredClone(vectorData);
       }
+    }
+
+    // Structural integrity gate: profile metadata and actual save records must
+    // agree before image integrity is calculated. Without this, a missing save
+    // record produces zero image references and bypasses the 2026-07-10
+    // degraded-image guard as a seemingly legitimate image-free profile.
+    if (missingSlotIds.length > 0) {
+      throw new ProfileSaveIntegrityError(profileId, missingSlotIds);
     }
 
     const { assets: imageAssets, integrity: imageIntegrity } =

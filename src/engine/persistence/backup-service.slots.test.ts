@@ -43,7 +43,11 @@ vi.mock('../core/event-bus', () => ({
   },
 }));
 
-import { BackupService, type BackupBundle } from './backup-service';
+import {
+  BackupService,
+  ProfileSaveIntegrityError,
+  type BackupBundle,
+} from './backup-service';
 import { ProfileManager } from './profile-manager';
 import { SaveManager } from './save-manager';
 import { createMockLocalStorage } from '@/engine/__test-utils__/local-storage.mock';
@@ -264,6 +268,21 @@ describe('backup-service save-slot primitives', () => {
 
     it('throws for a nonexistent profile', async () => {
       await expect(service.exportProfileForSync('ghost')).rejects.toThrow('does not exist');
+    });
+
+    it('blocks export when profile metadata references a missing save record', async () => {
+      await pm.createProfile(makeMeta('p1', ['healthy', 'missing']));
+      const { idbAdapter } = await import('./idb-adapter');
+      await idbAdapter.set('save_p1_healthy', makeSaveTree('imgA'));
+
+      const error = await service.exportProfileForSync('p1').catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(ProfileSaveIntegrityError);
+      expect(error).toMatchObject({
+        profileId: 'p1',
+        missingSlotIds: ['missing'],
+      });
+      expect((error as Error).message).toContain('已阻止导出/上传/导入');
     });
   });
 
@@ -497,6 +516,23 @@ describe('backup-service save-slot primitives', () => {
       expect(images.images.has('imgB')).toBe(true); // 退化包绝不删图
       expect(emitted.some((e) => e.event === 'ui:toast'
         && (e.payload as { id?: string }).id === 'import-preserved-images')).toBe(true);
+    });
+
+    it('rejects a profile bundle whose metadata slot has no save payload, before pruning images', async () => {
+      await seedTwoProfiles();
+      images.seed('imgA');
+      images.seed('imgB');
+      const malformed = p1ReplaceBundle();
+      malformed.saves = {};
+
+      const error = await service.importProfileReplace(toBlob(malformed)).catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(ProfileSaveIntegrityError);
+      expect(error).toMatchObject({ profileId: 'p1', missingSlotIds: ['s1'] });
+      expect(memStore.get('save_p1_s1')).toBeDefined();
+      expect(memStore.get('save_p1_s2')).toBeDefined();
+      expect(images.images.has('imgA')).toBe(true);
+      expect(images.images.has('imgB')).toBe(true);
     });
 
     it('rolls back the profile on failure and leaves other profiles untouched', async () => {

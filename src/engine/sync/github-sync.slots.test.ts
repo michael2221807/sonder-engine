@@ -243,6 +243,17 @@ describe('uploadSlot', () => {
     expect(fetchCalls.filter((c) => c.method === 'PUT')).toHaveLength(0);
   });
 
+  it('does not touch the cloud when profile export detects missing save data', async () => {
+    const backup = createMockBackup();
+    backup.exportProfileForSync.mockRejectedValue(
+      new Error('档案存档结构不完整：元数据有槽但存档数据缺失'),
+    );
+    const sync = new GitHubSyncService(backup as never);
+
+    await expect(sync.uploadSlot('p1')).rejects.toThrow('存档结构不完整');
+    expect(fetchCalls.filter((c) => c.method === 'PUT' || c.method === 'DELETE')).toHaveLength(0);
+  });
+
   it('cleanup deletes stale files ONLY inside its own slot directory', async () => {
     setDirListing('slots/p1', [
       { name: 'state.old.gz', path: 'slots/p1/state.old.gz', sha: 'stale1', type: 'file' },

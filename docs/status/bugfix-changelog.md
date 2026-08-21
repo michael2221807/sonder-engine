@@ -11,6 +11,20 @@ Regression phase started: 2026-04-09
 
 ---
 
+## [2026-08-20] Fix/Recovery: 韩素琴云插槽被结构性空壳覆盖 — 恢复 14 图健康档 + 存档槽一致性硬闸
+
+**Flow:** GitHub v3 存档插槽自动/手动上传 → `BackupService.exportProfileForSync` → `GitHubSyncService.uploadSlot`；云端下载 → `downloadSlot` → `importProfileReplace`。
+
+**事故边界（America/Toronto）：** `aga-cloud-save` 的 `profile_1784682846719` 在 `4035507`（2026-08-20 11:30 上传；包内实际游戏保存时间 02:40）仍为 48,659,472 字符、`state-0..3 + img-0`、1 存档 / 1 向量 / 14 图；`efa5174`（16:27）骤变为 1,001 字符、单个 508 B state、0 存档 / 0 向量 / 0 图，`8543a92`（17:27）再次上传同类空壳。三个版本的 chunk 与整包 SHA-256 均验证通过，证明不是 GitHub 分块损坏，而是客户端确实提交了结构完整但内容退化的包。
+
+**Root cause:** 本地档案元数据仍声明 `auto` 槽存在（`saveSize=16,316,128`，`lastSavedAt=16:10:08Z` / 多伦多 12:10），但对应 IndexedDB 存档记录已不存在。`buildProfileBundle` 对 `loadGame() === undefined` 静默跳过，得到 `saves:{}`；随后图片完整性闸按空 saves 算出 `referencedAssets=0 / exportedAssets=0`，误把结构性空壳当成“合法无图档”并允许覆盖云端。下载该畸形包时，导入端也未验证 metadata slots 与 saves payload 一致，存在用空引用集合剪枝本地图的风险。云仓历史能证明存档记录在本地时间 12:10–16:27 间消失，但仅凭云端数据无法反推出本地是显式删除中断、全量恢复异常还是浏览器存储事件；本次修复封死所有来源的同一损坏形态。
+
+**Recovery（已执行）：** 从最后健康提交 `4035507` 恢复且仅恢复韩素琴插槽；保留 global、其他档案及全部事故历史。生产云仓恢复提交 `ba1f3c6`，远端 HEAD 复核为 1 存档 / 14 图，五个分块与整包 checksum 全通过。恢复后的 manifest 时间戳与坏客户端基线不同，自动同步会先触发冲突保护，不会继续静默覆盖。
+
+**Fix:** `BackupService.buildProfileBundle` 新增结构一致性硬闸：元数据声明的任一 slot 缺少真实 save 时抛 `ProfileSaveIntegrityError`，发生在图片统计和任何云端写入之前，`force` 也不能绕过；`importProfileReplace` 在快照、删除、写入和图片剪枝之前验证 metadata slots 与包内 saves 双向一致，畸形下载响亮失败且本地零修改。新增 3 个回归用例覆盖部分槽缺失导出、上传零 PUT/DELETE、畸形下载不改存档不删图片。
+
+**Evidence:** 专项 66/66；持久化/同步/导出门禁 22 files / 515 tests；`npm run typecheck` 通过；远端 `ba1f3c6` 重新拉取并双层校验通过。
+
 ## [2026-05-25] Fix: NPC 共同记忆 (记忆) duplicate entries accumulating
 
 **Flow:** Main Round AI commands → `push 社交.关系[名称=X].记忆` / NPC Private Chat → `appendNpcMemory`
