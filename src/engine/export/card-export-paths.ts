@@ -34,6 +34,15 @@ export interface CardStripPaths {
   plotDirection: string;
   /** Engram graph — extracted to bundle.engram by the service, then cleared here (G5). */
   engramMemory: string;
+  /**
+   * Canon Capture's slot-owned settings book (`系统.扩展.slotWorldBooks`).
+   *
+   * Its own field rather than a member of `gameplayHistory`, because the handling is
+   * CONDITIONAL: the book always leaves the state tree, but when the author ticks
+   * "include world books" it re-enters the card through the `worldBooks` payload instead.
+   * Putting it in the unconditional list would make that choice impossible to honour.
+   */
+  capturedSettings: string;
   /** Variable attributes reset to baseline (reputation→0, vitals→full) — injected so the stripper stays literal-free. */
   variableReset: {
     reputationPath: string;
@@ -130,6 +139,7 @@ export function buildDefaultCardStripPaths(p: EnginePathConfig = DEFAULT_ENGINE_
     heroinePlan: '元数据.女主规划',
     plotDirection: p.plotDirection,               // 元数据.剧情导向
     engramMemory: p.engramMemory,                 // 系统.扩展.engramMemory
+    capturedSettings: p.slotWorldBooks,           // 系统.扩展.slotWorldBooks
     variableReset: {
       reputationPath: p.reputation,               // 角色.可变属性.声望
       vitalPaths: [p.vitalHealth, p.vitalEnergy], // 角色.可变属性.体力 / 精力

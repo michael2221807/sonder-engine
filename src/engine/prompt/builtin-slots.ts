@@ -48,6 +48,20 @@ export const BUILTIN_SLOTS: Record<string, BuiltinSlotDefinition> = {
     description: '定义 AI 的输出标签结构（<正文>、<judge> 等）和指令场景规则',
     defaultPromptId: 'core',
   },
+  setting_authority: {
+    id: 'setting_authority',
+    title: '作者设定标记',
+    category: '主剧情',
+    description: '解释 <设定> 标记的语义：本回合立即生效且长期有效（仅本回合含标记时注入）',
+    defaultPromptId: 'settingAuthority',
+  },
+  setting_capture: {
+    id: 'setting_capture',
+    title: '设定提取协议',
+    category: '主剧情',
+    description: 'setting_updates 字段结构与提取规则（仅本回合含标记时注入）',
+    defaultPromptId: 'settingCapture',
+  },
   format_prompt: {
     id: 'format_prompt',
     title: '输出格式提示词',

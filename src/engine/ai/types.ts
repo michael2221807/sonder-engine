@@ -198,6 +198,36 @@ export interface GenerateOptions {
   maxTokens?: number;
 }
 
+// ─── Canon Capture ───
+
+/**
+ * A single `setting_updates` item exactly as the model emitted it.
+ *
+ * Deliberately typed with `unknown` fields: this is UNTRUSTED model output. Shape,
+ * enum, length, evidence and capacity checks all happen in `SettingCaptureStage`,
+ * which needs to report a per-candidate rejection reason to the player — so the
+ * parser must NOT quietly discard malformed items on its way through.
+ *
+ * The validated shape is `SettingUpdateCandidate` (see `setting-capture` types).
+ */
+export interface RawSettingUpdate {
+  kind?: unknown;
+  statement?: unknown;
+  evidence?: unknown;
+  anchors?: unknown;
+  entities?: unknown;
+}
+
+/**
+ * Upper bound on raw items retained from one response.
+ *
+ * NOT the product cap — the per-round product cap (10) is enforced by
+ * `SettingCaptureStage` so that overflow is REPORTED to the player rather than
+ * silently dropped. This bound only stops a runaway model from parking an unbounded
+ * array in memory.
+ */
+export const MAX_RAW_SETTING_UPDATES = 50;
+
 // ─── AI 响应 ───
 
 /**
@@ -230,6 +260,18 @@ export interface AIResponse {
   semanticMemory?: Record<string, unknown>;
   /** V2: AI 产出的知识事实（从 knowledge_facts 提取） */
   knowledgeFacts?: Array<{ fact: string; sourceEntity: string; targetEntity: string }>;
+  /**
+   * Canon Capture — long-term settings the player marked with `<设定>` this round.
+   *
+   * An explicit field rather than a `customFields` passenger, because split-gen merges
+   * response fields through a hand-written whitelist (`ai-call.ts`): anything not named
+   * there is silently dropped in split mode, and a silently-dropped player setting is
+   * exactly the failure this feature exists to prevent.
+   *
+   * `undefined` = the model never emitted the key (normal for rounds with no tag).
+   * `[]` = emitted but empty.
+   */
+  settingUpdates?: RawSettingUpdate[];
   /**
    * §7.2 NPC 私聊专属 — NPC 以第一人称总结本次交流对自己的影响（50 字内）
    *

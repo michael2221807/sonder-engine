@@ -9,6 +9,7 @@
     { "promptId": "presencePartition", "role": "system", "order": 2.5, "depth": 0, "condition": "NPC_PRESENCE_ENABLED" },
     { "promptId": "actionOptions", "role": "system", "order": 3, "depth": 0, "condition": "ACTION_OPTIONS_MODE_IS_ACTION" },
     { "promptId": "actionOptionsStory", "role": "system", "order": 3, "depth": 0, "condition": "ACTION_OPTIONS_MODE_IS_STORY" },
+    { "promptId": "settingCapture", "role": "system", "order": 3.5, "depth": 0, "condition": "SETTING_CAPTURE_ACTIVE" },
     { "promptId": "plotEvaluationStep2", "role": "system", "order": 850, "depth": 0, "condition": "PLOT_COMPLETION_HINT" },
     { "promptId": "historyFraming", "role": "system", "order": 10, "depth": 0 }
   ]

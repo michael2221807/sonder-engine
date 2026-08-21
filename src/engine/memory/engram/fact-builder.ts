@@ -12,10 +12,37 @@ import { engramEdgeId, isEdgeCurrentlyValid } from './knowledge-edge';
 import type { EngramEntity } from './entity-builder';
 import type { VectorStore } from './vector-store';
 
+/**
+ * Where a single fact came from.
+ *
+ * Per-FACT rather than per-batch: one `processResponse()` call can carry both the main
+ * model's `knowledge_facts` (source `ai`, not core) and Canon Capture projections
+ * (source `user-canon`, core, exempt from the length filter). The batch-level
+ * `defaultCore` / `defaultSource` options cannot express that difference, so anything
+ * with its own provenance carries it here and wins over the defaults.
+ */
+export interface FactProvenance {
+  source: EngramEdge['source'];
+  core?: boolean;
+  canonEntryId?: string;
+  /**
+   * Skip the minimum-length pre-filter.
+   *
+   * That filter exists to drop fragments the MODEL guessed at. A canon fact is a
+   * sentence the PLAYER wrote inside a `<设定>` tag and the engine already proved
+   * against the original text — and it is often short ("林月是玩家的妹妹" is 8
+   * characters), so applying a heuristic meant for model noise would silently discard
+   * exactly the facts with the strongest evidence behind them.
+   */
+  exemptFromLengthFilter?: boolean;
+}
+
 export interface KnowledgeFact {
   fact: string;
   sourceEntity: string;
   targetEntity: string;
+  /** Absent → the batch defaults apply (ordinary AI-produced facts). */
+  provenance?: FactProvenance;
 }
 
 export interface FactBuilderParams {
@@ -37,6 +64,31 @@ export interface FactBuilderOptions {
   perFactCap?: number;
   defaultCore?: boolean;
   defaultSource?: EngramEdge['source'];
+}
+
+/**
+ * Promote an existing edge when the same fact arrives with stronger provenance.
+ *
+ * The main model and Canon Capture can produce the SAME fact in one round: the model
+ * notices "林月是玩家的妹妹" from the narrative while the player also marks it. Creating
+ * two edges would double-count it in retrieval, and leaving the AI-sourced one alone
+ * would strand the world-book entry with no edge to invalidate when it is undone.
+ * Merging upward keeps one edge that the panel can still find by `canonEntryId`.
+ *
+ * Only ever upgrades — an ordinary AI re-mention must never downgrade a canon edge.
+ */
+function upgradeProvenance(edge: EngramEdge, provenance?: FactProvenance): void {
+  if (!provenance) return;
+  if (provenance.source === 'user-canon') {
+    edge.source = 'user-canon';
+    // Never steal ownership from a DIFFERENT captured entry. Two entries that happen to
+    // produce near-identical facts would otherwise fight over this field, and the loser's
+    // `findCanonEdges` would silently return nothing forever — making its undo a no-op.
+    // First claim wins; the second entry simply has no edge of its own, which is the
+    // honest outcome for a duplicate.
+    if (!edge.canonEntryId) edge.canonEntryId = provenance.canonEntryId;
+  }
+  if (provenance.core) edge.core = true;
 }
 
 export function buildFacts(
@@ -61,7 +113,7 @@ export function buildFacts(
 
   for (const kf of knowledgeFacts) {
     // Step 1: Pre-filter
-    if (kf.fact.length < 10) continue;
+    if (kf.fact.length < 10 && !kf.provenance?.exemptFromLengthFilter) continue;
     // Both entities unknown → reject
     if (!entityNames.has(kf.sourceEntity) && !entityNames.has(kf.targetEntity)) continue;
     // Reject descriptive phrases masquerading as entity names
@@ -84,6 +136,7 @@ export function buildFacts(
         existing.invalidAtRound = undefined;
         existing.temporalStatus = undefined;
       }
+      upgradeProvenance(existing, kf.provenance);
       reinforcedIds.push(id);
       continue;
     }
@@ -123,6 +176,7 @@ export function buildFacts(
             edge.episodes.push(currentEventId);
           }
           edge.lastSeenRound = currentRound;
+          upgradeProvenance(edge, kf.provenance);
           reinforcedIds.push(edge.id);
           isDuplicate = true;
           break;
@@ -180,6 +234,14 @@ export function buildFacts(
           if (currentEventId && !ne.episodes.includes(currentEventId)) {
             ne.episodes.push(currentEventId);
           }
+          // MUST upgrade here too, not just in Steps 2 and 3. This is the branch a
+          // captured fact takes when it dedupes against an edge the MAIN MODEL created
+          // earlier in the SAME call — which is the normal shape, since the round's AI
+          // facts and canon facts go through one `buildFacts()`. Skipping it leaves the
+          // surviving edge with `canonEntryId: undefined`, and then the entry can never
+          // be found for retraction and its status chip is stuck on "not in the graph yet"
+          // forever.
+          upgradeProvenance(ne, kf.provenance);
           reinforcedIds.push(ne.id);
           intraRoundDup = true;
           break;
@@ -199,8 +261,10 @@ export function buildFacts(
       createdAtRound: currentRound,
       lastSeenRound: currentRound,
       learnedAtRound: currentRound,
-      core: options?.defaultCore,
-      source: options?.defaultSource,
+      // Per-fact provenance wins over the batch defaults so a mixed batch stays honest.
+      core: kf.provenance?.core ?? options?.defaultCore,
+      source: kf.provenance?.source ?? options?.defaultSource,
+      canonEntryId: kf.provenance?.canonEntryId,
     });
   }
 

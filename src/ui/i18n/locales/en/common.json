@@ -52,6 +52,7 @@
 
   "common.toast.ariaContainer": "Notifications",
   "common.toast.ariaClose": "Close notification",
+  "common.toast.actionFailed": "That action failed. Please try again.",
   "common.toast.type.info": "Info",
   "common.toast.type.success": "Success",
   "common.toast.type.warning": "Warning",

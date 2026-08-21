@@ -14,7 +14,8 @@
  * 移植自 demo AIBidirectionalSystem.ts 的 JSON 解析逻辑。
  * 对应 STEP-03B M2.5。
  */
-import type { AIResponse } from './types';
+import type { AIResponse, RawSettingUpdate } from './types';
+import { MAX_RAW_SETTING_UPDATES } from './types';
 import type { Command } from '../types';
 import { sanitizeJsonEscapes } from './json-escape-sanitize';
 
@@ -132,6 +133,7 @@ export class ResponseParser {
         judgement: json.judgement as AIResponse['judgement'],
         semanticMemory: json.semantic_memory as Record<string, unknown> | undefined,
         knowledgeFacts: this.normalizeKnowledgeFacts(json.knowledge_facts),
+        settingUpdates: this.normalizeSettingUpdates(json.setting_updates),
         memoryEntry: this.normalizeMemoryEntry(json.memoryEntry ?? json.memory_entry ?? json['记忆条目']),
         customFields: this.collectCustomFields(json),
         thinking,
@@ -308,8 +310,38 @@ export class ResponseParser {
     'judgement',
     'semantic_memory',
     'knowledge_facts',
+    'setting_updates',
     'memoryEntry', 'memory_entry', '记忆条目',
   ]);
+
+  /**
+   * Canon Capture: shape-normalize `setting_updates` WITHOUT judging its contents.
+   *
+   * Contract: keep every plain object the model produced (up to a memory bound) and
+   * hand them to `SettingCaptureStage`, which owns validation AND the per-candidate
+   * rejection reason shown to the player. Dropping malformed items here would turn a
+   * reportable rejection into an invisible one.
+   *
+   * Returns `undefined` when the key is absent or is not an array, so downstream can
+   * tell "model never answered" from "model answered with nothing".
+   */
+  private normalizeSettingUpdates(raw: unknown): RawSettingUpdate[] | undefined {
+    if (!Array.isArray(raw)) return undefined;
+    const out: RawSettingUpdate[] = [];
+    for (const item of raw) {
+      if (out.length >= MAX_RAW_SETTING_UPDATES) break;
+      if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+      const o = item as Record<string, unknown>;
+      out.push({
+        kind: o['kind'],
+        statement: o['statement'],
+        evidence: o['evidence'],
+        anchors: o['anchors'],
+        entities: o['entities'],
+      });
+    }
+    return out;
+  }
 
   /**
    * Sprint Plot-1: 收集 JSON 中未被显式提取的顶级 key。

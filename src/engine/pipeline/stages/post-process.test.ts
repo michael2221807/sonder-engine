@@ -11,7 +11,7 @@
  * are mocked to no-ops.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PostProcessStage } from './post-process';
+import { PostProcessStage, collectCanonMutations } from './post-process';
 import type {
   PipelineContext,
   EnginePathConfig,
@@ -358,5 +358,71 @@ describe('PostProcessStage — Phase 1 per-turn metadata', () => {
     const entry = getAssistantEntry();
     expect(entry?.role).toBe('assistant');
     expect(entry?.content).toBe('narrative body');
+  });
+});
+
+// ─── Canon Capture: what PostProcess hands the graph (P3) ───
+
+describe('collectCanonMutations', () => {
+  function ctxWith(settingCapture: unknown): PipelineContext {
+    return { meta: { settingCapture } } as unknown as PipelineContext;
+  }
+
+  const accepted = {
+    entryId: 'cap_1',
+    candidate: {
+      kind: 'relationship',
+      statement: '林月是玩家的妹妹。',
+      evidence: '林月是我的妹妹',
+      anchors: ['林月'],
+      entities: ['林月', '玩家'],
+    },
+  };
+
+  it('maps accepted captures into graph-shaped mutations', () => {
+    const out = collectCanonMutations(ctxWith({ accepted: [accepted] }));
+    expect(out).toEqual([{
+      entryId: 'cap_1',
+      kind: 'relationship',
+      statement: '林月是玩家的妹妹。',
+      entities: ['林月', '玩家'],
+      op: 'add',
+    }]);
+  });
+
+  it('returns nothing when the round captured nothing', () => {
+    expect(collectCanonMutations(ctxWith(undefined))).toEqual([]);
+    expect(collectCanonMutations(ctxWith({ accepted: [] }))).toEqual([]);
+    expect(collectCanonMutations({ meta: {} } as unknown as PipelineContext)).toEqual([]);
+  });
+
+  it('survives a partial result from the fail-soft capture stage', () => {
+    // SettingCaptureStage is fail-soft and can write an incomplete result; a shape
+    // surprise here must not sink an otherwise complete round.
+    const out = collectCanonMutations(ctxWith({
+      accepted: [
+        { entryId: 'cap_ok', candidate: { kind: 'character', statement: 'ok', entities: [] } },
+        { entryId: 123, candidate: { kind: 'relationship', statement: 'x' } },
+        { candidate: { kind: 'relationship', statement: 'no id' } },
+        { entryId: 'cap_no_statement', candidate: { kind: 'relationship' } },
+        null,
+      ],
+    }));
+    expect(out.map((m) => m.entryId)).toEqual(['cap_ok']);
+  });
+
+  it('does not pre-filter by kind — projection rules live in canon-projection', () => {
+    // Keeping the filter in one place means the panel and the graph cannot disagree
+    // about what is projectable.
+    const out = collectCanonMutations(ctxWith({
+      accepted: [{ entryId: 'cap_t', candidate: { kind: 'character', statement: '林月怕水。', entities: ['林月'] } }],
+    }));
+    expect(out).toHaveLength(1);
+    expect(out[0].kind).toBe('character');
+  });
+
+  it('never emits a retraction — undo is out-of-round only', () => {
+    const out = collectCanonMutations(ctxWith({ accepted: [accepted] }));
+    expect(out.every((m) => m.op === 'add')).toBe(true);
   });
 });

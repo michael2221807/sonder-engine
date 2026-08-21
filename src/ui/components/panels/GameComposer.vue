@@ -3,6 +3,7 @@
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import MicInputButton from '@/ui/components/shared/MicInputButton.vue';
+import SettingTagButton from '@/ui/components/shared/SettingTagButton.vue';
 import AddLexiconTermButton from '@/ui/components/shared/AddLexiconTermButton.vue';
 
 const ACTION_OPTIONS_COLLAPSED_KEY = 'aga_action_options_collapsed';
@@ -193,6 +194,11 @@ defineExpose({
         @input="autoResizeTextarea"
       />
       <AddLexiconTermButton />
+      <SettingTagButton
+        v-model="userInput"
+        :textarea="textareaRef"
+        :disabled="props.isGenerating"
+      />
       <MicInputButton
         v-model="userInput"
         :textarea="textareaRef"

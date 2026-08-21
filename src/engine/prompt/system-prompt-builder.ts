@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-main.md §3.15.3（世界书注入与配额）
 /**
  * SystemPromptBuilder — replaces PromptAssembler with context-piece architecture.
  *
@@ -19,13 +20,16 @@ import type {
   PromptSettings,
 } from './world-book';
 import { formatHeroinePlanForContext, type HeroinePlan } from '../story/heroine-plan';
-import { DEFAULT_PROMPT_SETTINGS } from './world-book';
+import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio } from './world-book';
 import { BUILTIN_SLOTS } from './builtin-slots';
 import type { EnginePathConfig } from '../pipeline/types';
 import {
   buildCorpus,
-  selectActiveEntries,
+  buildFocusedCorpus,
+  extractPresentNpcNames,
+  selectActiveEntriesDetailed,
   buildWorldBookInjectionText,
+  formatGameTimeForWorldBook,
   type WorldBookInjectionResult,
 } from './world-book-selector';
 
@@ -88,7 +92,13 @@ export interface SystemPromptBuildParams {
   cotEnabled: boolean;
   /** Whether CoT judge is enabled */
   cotJudgeEnabled: boolean;
-  /** Whether split-gen mode is active */
+  /**
+   * Whether split-gen mode is active.
+   *
+   * Canon Capture is the first real consumer: in split mode step1 writes the prose and
+   * step2 emits the structured fields, so step1 gets the AUTHORITY prompt (it must obey
+   * the setting this turn) but NOT the capture prompt (it must not be asked for JSON).
+   */
   splitGen: boolean;
   /** CoT masquerade pseudo-history prompt */
   cotPseudoEnabled: boolean;
@@ -106,6 +116,18 @@ export interface SystemPromptBuildParams {
   implicitMidTermBlock?: string;
   /** Raw narrative history (last 12 entries, NO XML wrapping) for world book corpus */
   narrativeHistoryForCorpus?: Array<{ content: string }>;
+  /**
+   * Text of the world event triggered THIS round, if any — part of the focused
+   * world-book corpus. Absent when no event fired.
+   */
+  triggeredEventTexts?: string[];
+  /**
+   * True when this round carries a well-formed `<设定>` tag AND capture is enabled.
+   *
+   * Gates the two Canon Capture prompt pieces. When false, not one extra character
+   * reaches the model — the feature costs nothing on ordinary rounds.
+   */
+  settingCaptureActive?: boolean;
 }
 
 /**
@@ -183,6 +205,11 @@ function filterByFeatureToggles(content: string, settings: PromptSettings): stri
     switch (featureId.toLowerCase()) {
       case 'nocontrol': return settings.enableNoControl;
       case 'action_options': return settings.enableActionOptions;
+      // Canon Capture must be recognised EXPLICITLY. The `default: true` below means an
+      // unknown feature id stays switched on — so relying on it would leave the capture
+      // instructions in the prompt even with the feature turned off, breaking the
+      // "zero token delta when disabled" guarantee.
+      case 'setting_capture': return settings.enableWorldBook && settings.enableSettingCapture;
       default: return true; // unknown features default to enabled
     }
   };
@@ -248,6 +275,9 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
     cotEnabled,
     cotJudgeEnabled,
     cotPseudoEnabled,
+    // First real consumer of this flag (it was declared but unused until Canon Capture):
+    // split-gen step1 must get the authority prompt but NOT the capture prompt.
+    splitGen,
     gproxyCache = false,
   } = params;
 
@@ -304,11 +334,25 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   const worldBookEnabled = settings.enableWorldBook !== false && worldBooks.length > 0;
   let wbResult: WorldBookInjectionResult | undefined;
   let worldBookHits: SystemPromptBuildResult['worldBookHits'];
+  let worldBookSkipped: SystemPromptBuildResult['worldBookSkipped'];
+  let capturedHits: SystemPromptBuildResult['capturedHits'];
+  let worldBookBudget: SystemPromptBuildResult['worldBookBudget'];
 
   if (worldBookEnabled) {
     const worldEvents = stateManager.get<unknown[]>(paths.worldEvents) ?? [];
     const gameTime = stateManager.get<unknown>(paths.gameTime);
+    // B0-2: `世界.时间` is an OBJECT, but this builder used to hand the selector
+    // `typeof gameTime === 'string' ? gameTime : ''` — i.e. always '' — which made
+    // `isTimelineMatch()` reject EVERY timeline-scoped entry. Format it properly.
+    const gameTimeText = formatGameTimeForWorldBook(gameTime, paths.gameTimeFieldNames);
 
+    // NOTE (code review 2026-08-21): the formatted value is deliberately NOT fed into
+    // the keyword corpus. `YYYY:MM:DD:HH:MM` is a MACHINE format for `isTimelineMatch`;
+    // the corpus is human-readable text matched with `corpus.includes(keyword)`. Putting
+    // a digit string that is present every single round into the corpus would make any
+    // world-book keyword containing a short numeric substring ("01", "15", …) match
+    // unconditionally, forever. The corpus keeps its previous behavior here (the raw
+    // object is coerced to '' by `textOf()`), so B0-2 changes timeline matching only.
     const corpus = buildCorpus({
       environment: {
         location: currentLocation,
@@ -324,22 +368,58 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
       },
       narrativeHistory: params.narrativeHistoryForCorpus,
       worldEvents,
+      // Fixes "the keyword fires one round late": the corpus previously held only
+      // state and PAST narrative, so a keyword the player just typed could not match
+      // until the next round. `userInput` (action-queue prefix included — panel
+      // actions are real round content) closes that gap for BOTH corpora.
+      extraTexts: [userInput],
     });
 
-    const selected = selectActiveEntries({
+    // Focused corpus — only this round's signal. Auto-captured entries match against
+    // this so that a character setting does not become a permanent resident merely
+    // because its NPC exists somewhere in the social table.
+    const focused = buildFocusedCorpus({
+      userInput,
+      location: currentLocation,
+      presentNpcNames: extractPresentNpcNames(
+        relationships,
+        paths.npcFieldNames?.name ?? '名称',
+        paths.npcFieldNames?.isPresent ?? '是否在场',
+      ),
+      triggeredEventTexts: params.triggeredEventTexts,
+    });
+
+    const selection = selectActiveEntriesDetailed({
       books: worldBooks,
       activeScopes: ['main'],
-      corpus,
-      currentGameTime: typeof gameTime === 'string' ? gameTime : '',
+      corpora: { broad: corpus, focused },
+      currentGameTime: gameTimeText,
+      capturedBudgetRatio: resolveCapturedBudgetRatio(settings.capturedEntryBudgetRatio),
     });
+    const selected = selection.selected;
 
     wbResult = buildWorldBookInjectionText(selected);
-    worldBookHits = selected.map((e) => ({
-      entryId: e.id,
-      title: e.title,
-      type: e.type,
-      matchedKeywords: e.injectionMode === 'match_any' ? e.keywords : undefined,
+    // Attribution comes straight from the selector, which still had the book in hand.
+    // Do NOT re-derive it by looking the entry id up across books: ids are only unique
+    // WITHIN a book, so a collision would silently mislabel an entry's origin/pool.
+    worldBookHits = selection.selectedInfo.map(({ entry, bookId, origin, matchSource }) => ({
+      entryId: entry.id,
+      title: entry.title,
+      type: entry.type,
+      matchedKeywords: entry.injectionMode === 'match_any' ? entry.keywords : undefined,
+      bookId,
+      origin,
+      matchSource,
     }));
+    worldBookSkipped = selection.skipped;
+    capturedHits = selection.capturedHits;
+    worldBookBudget = {
+      budget: selection.budget,
+      userChars: selection.userChars,
+      capturedChars: selection.capturedChars,
+      capturedCap: selection.capturedCap,
+      unlimited: selection.unlimited,
+    };
   }
 
   const worldPrompt = [
@@ -551,6 +631,22 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   // ── 22. Format/Output Protocol ──
   push('format_prompt', '输出格式提示词', '系统', 'system', slot('format_prompt'));
 
+  // ── 22a. Canon Capture (only when THIS round carries a <设定> tag) ──
+  //
+  // Both pieces are DYNAMIC and must stay out of `GPROXY_CACHE_STATIC_PIECE_IDS`:
+  // they appear only on tagged rounds, so putting them in the "guaranteed static"
+  // cache prefix would invalidate the whole prefix every time a player marks a
+  // setting. A round with no tag emits neither, keeping the prompt byte-identical
+  // to what it was before this feature existed.
+  if (params.settingCaptureActive) {
+    // step1 of split-gen writes the narrative → it needs to know the tag is
+    // authoritative, but must not be asked to emit structured fields.
+    push('setting_authority', '作者设定标记', '系统', 'system', slot('setting_authority'));
+    if (!splitGen) {
+      push('setting_capture', '设定提取协议', '系统', 'system', slot('setting_capture'));
+    }
+  }
+
   // ── 22b. World Book Output Rules (after format prompt) ──
   if (wbResult?.outputRuleText) {
     push('wb_output_rules', '世界书输出规则', '系统', 'system', wbResult.outputRuleText);
@@ -590,6 +686,9 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
     shortMemoryContext,
     runtimePromptStates,
     worldBookHits,
+    worldBookSkipped,
+    capturedHits,
+    worldBookBudget,
   };
 }
 

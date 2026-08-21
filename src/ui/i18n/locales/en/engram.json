@@ -162,6 +162,7 @@
   "engram.editor.edge.sourceLabel.user": "User Edit",
   "engram.editor.edge.sourceLabel.opening": "Opening",
   "engram.editor.edge.sourceLabel.card-import": "Card Import",
+  "engram.editor.edge.sourceLabel.user-canon": "Marked setting",
   "engram.editor.edge.sourceLabel.batch-sync": "Batch Sync",
 
   "engram.editor.vectorize.button": "Compute All",

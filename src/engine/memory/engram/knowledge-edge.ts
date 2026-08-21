@@ -31,8 +31,22 @@ export interface EngramEdge {
   /**
    * 数据来源标记。
    * undefined = legacy 旧数据 / 主回合 AI 自动生成（迁移时视为 'ai'）
+   *
+   * `user-canon` — projected from a Canon Capture setting the player marked with a
+   * `<设定>` tag. Distinguished from `user` (hand-authored directly in the graph editor)
+   * because the world-book entry stays the AUTHORITY: retracting or editing that entry
+   * has to be able to find and invalidate exactly the edges it produced.
    */
-  source?: 'ai' | 'user' | 'opening' | 'card-import' | 'batch-sync';
+  source?: 'ai' | 'user' | 'opening' | 'card-import' | 'batch-sync' | 'user-canon';
+
+  /**
+   * Id of the captured world-book entry this edge was projected from.
+   *
+   * The join key for the whole lifecycle: undo / edit / restore in the panel look edges
+   * up by this, not by fact text (which changes) or by edge id (which is derived from
+   * the fact text and therefore also changes).
+   */
+  canonEntryId?: string;
 }
 
 export function isEdgeCurrentlyValid(edge: EngramEdge): boolean {

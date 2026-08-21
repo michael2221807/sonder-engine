@@ -20,7 +20,10 @@
           :key="toast.id"
           :class="['toast', `toast--${toast.type}`]"
           role="status"
-          :aria-label="`${toastTypeLabel(toast.type)}: ${toast.message}`"
+          :aria-label="toast.actions.length > 0
+            ? undefined
+            : `${toastTypeLabel(toast.type)}: ${toast.message}`"
+          :aria-roledescription="toast.actions.length > 0 ? toastTypeLabel(toast.type) : undefined"
           @mouseenter="pauseDismiss(toast.id)"
           @mouseleave="resumeDismiss(toast.id)"
         >
@@ -40,7 +43,20 @@
             </svg>
           </span>
 
-          <span class="toast__message">{{ toast.message }}</span>
+          <div class="toast__body">
+            <span class="toast__message">{{ toast.message }}</span>
+
+            <!-- Actions — real buttons so they are keyboard reachable. -->
+            <div v-if="toast.actions.length > 0" class="toast__actions">
+              <button
+                v-for="(action, i) in toast.actions"
+                :key="i"
+                type="button"
+                :class="['toast__action', `toast__action--${action.variant ?? 'secondary'}`]"
+                @click="runAction(toast.id, action)"
+              >{{ actionLabel(action) }}</button>
+            </div>
+          </div>
 
           <!-- Dismiss button -->
           <button
@@ -67,10 +83,12 @@
 </template>
 
 <script setup lang="ts">
+// App doc: docs/user-guide/pages/game-main.md §3.15.1（action 按钮能力）
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { eventBus } from '@/engine/core/event-bus';
-import type { ToastPayload } from '@/engine/types';
+import type { ToastPayload, ToastAction } from '@/engine/types';
+import { MAX_TOAST_ACTIONS } from '@/engine/types';
 
 const { t } = useI18n();
 
@@ -87,7 +105,17 @@ interface ToastEntry {
   timerId: ReturnType<typeof setTimeout> | null;
   remaining: number;
   pausedAt: number | null;
+  actions: ToastAction[];
 }
+
+/**
+ * Default lifetime for a toast carrying actions.
+ *
+ * Longer than a plain notice because the player has to read it, decide, and aim —
+ * but still bounded: an undo affordance that never expires becomes a permanent
+ * decision the player has to make, which is worse than a default.
+ */
+const ACTION_DURATION = 10000;
 
 const MAX_VISIBLE_TOASTS = 5;
 const DEFAULT_DURATION = 5500;
@@ -105,6 +133,40 @@ function toastTypeLabel(type: ToastEntry['type']): string {
     error: t('common.toast.type.error'),
   };
   return labels[type];
+}
+
+/** Resolve a button label, preferring i18n and falling back to the literal. */
+function actionLabel(action: ToastAction): string {
+  if (action.i18nKey) {
+    const translated = t(action.i18nKey, action.i18nParams ?? {});
+    if (translated && translated !== action.i18nKey) return translated;
+  }
+  return action.label ?? action.i18nKey;
+}
+
+/**
+ * Run a toast action, then dismiss.
+ *
+ * Dismiss happens whether the callback resolves or throws: leaving the button on
+ * screen after a click invites a double-apply, and an undo applied twice is worse
+ * than an undo that reports failure elsewhere.
+ */
+async function runAction(id: number, action: ToastAction): Promise<void> {
+  dismiss(id);
+  try {
+    await action.onClick();
+  } catch (err) {
+    // The toast is already gone by now, so a console line would be the ONLY trace and
+    // the player would just see the notification vanish. Say something instead — silent
+    // failure is the exact mode this project treats as a defect.
+    console.error('[Toast] action failed:', err);
+    eventBus.emit('ui:toast', {
+      type: 'error',
+      i18nKey: 'common.toast.actionFailed',
+      message: t('common.toast.actionFailed'),
+      duration: 3000,
+    });
+  }
 }
 
 /** Schedule auto-dismiss for a toast */
@@ -159,7 +221,11 @@ function handleToastEvent(payload: unknown): void {
     ? t(p.i18nKey, p.i18nParams ?? {})
     : p.message ?? '';
 
-  const rawDuration = p.duration ?? DEFAULT_DURATION;
+  const actions = Array.isArray(p.actions)
+    ? p.actions.filter((a) => a && typeof a.onClick === 'function').slice(0, MAX_TOAST_ACTIONS)
+    : [];
+
+  const rawDuration = p.duration ?? (actions.length > 0 ? ACTION_DURATION : DEFAULT_DURATION);
   const duration = rawDuration > 0 ? Math.max(rawDuration, MIN_DURATION) : 0;
   const toast: ToastEntry = {
     id: nextId++,
@@ -170,6 +236,7 @@ function handleToastEvent(payload: unknown): void {
     timerId: null,
     remaining: duration,
     pausedAt: null,
+    actions,
   };
 
   visibleToasts.value.push(toast);
@@ -293,10 +360,60 @@ onUnmounted(() => {
   height: 100%;
 }
 
-/* ── Message text ── */
-.toast__message {
+/* ── Message + actions column ── */
+.toast__body {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast__message {
   word-break: break-word;
+}
+
+/* ── Action buttons ── */
+.toast__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.toast__action {
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-family: inherit;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+/* Primary reads as the offered escape hatch without shouting over the message. */
+.toast__action--primary {
+  background: color-mix(in oklch, var(--toast-accent, var(--color-sage-400)) 22%, transparent);
+  color: var(--color-text);
+}
+.toast__action--primary:hover {
+  background: color-mix(in oklch, var(--toast-accent, var(--color-sage-400)) 34%, transparent);
+}
+
+.toast__action--secondary {
+  background: color-mix(in oklch, var(--color-text) 7%, transparent);
+  color: var(--color-text-muted);
+}
+.toast__action--secondary:hover {
+  background: color-mix(in oklch, var(--color-text) 12%, transparent);
+  color: var(--color-text);
+}
+
+.toast__action:focus-visible {
+  outline: 2px solid var(--toast-accent, var(--color-sage-400));
+  outline-offset: 2px;
 }
 
 /* ── Close button ── */

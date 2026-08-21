@@ -29,9 +29,12 @@ import { NpcPresenceService, type NpcRecord } from '../../social/npc-presence';
 import { NpcContextRenderer } from '../../social/npc-context-renderer';
 import { NpcRelevanceScorer, DEFAULT_NPC_RELEVANCE_CONFIG } from '../../social/npc-relevance-scorer';
 import { buildSystemPrompt } from '../../prompt/system-prompt-builder';
+import { hasSettingTag, parseSettingTagNames } from '../../prompt/setting-tag-scanner';
+import { DEFAULT_PROMPT_SETTINGS } from '../../prompt/world-book';
+import type { PromptSettings } from '../../prompt/world-book';
 import { buildEnvironmentBlock } from '../../prompt/environment-block';
 import { PlotInjector } from '../../plot/plot-injector';
-import type { WorldBook, BuiltinPromptEntry } from '../../prompt/world-book';
+import type { WorldBook, BuiltinPromptEntry, SystemPromptBuildResult } from '../../prompt/world-book';
 
 /** 状态树中叙事历史条目的结构 — 从 "元数据.叙事历史" 读取 */
 interface NarrativeEntry {
@@ -265,6 +268,22 @@ export class ContextAssemblyStage implements PipelineStage {
       this.pack.engineFragments?.bookmarkedRoundsEntryFormat,
     );
 
+    // ── 6b. Canon Capture: is this round carrying a <设定> tag? ──
+    //
+    // Evidence is validated against `originalUserInput` (PreProcess prepends the action
+    // queue to `userInput`, and that text must never count as something the PLAYER
+    // wrote). The same pristine string decides whether the capture prompts are injected
+    // at all, so the prompt and the gate can never disagree about what round this is.
+    const promptSettings: PromptSettings = {
+      ...DEFAULT_PROMPT_SETTINGS,
+      ...(this.stateManager.get<Partial<PromptSettings>>('系统.设置.prompt') ?? {}),
+    };
+    const settingTagNames = parseSettingTagNames(this.pack.engineFragments?.settingTagNames);
+    const settingCaptureActive =
+      promptSettings.enableWorldBook !== false &&
+      promptSettings.enableSettingCapture !== false &&
+      hasSettingTag(ctx.originalUserInput ?? ctx.userInput ?? '', settingTagNames);
+
     const variables: Record<string, string> = {
       PLAYER_NAME: this.stateManager.get<string>(this.paths.playerName) ?? '',
       CURRENT_LOCATION: this.stateManager.get<string>(this.paths.playerLocation) ?? '',
@@ -274,6 +293,12 @@ export class ContextAssemblyStage implements PipelineStage {
         ? (ctx.meta['worldEventContext'] as string | undefined) ?? ''
         : '',
       USER_INPUT: ctx.userInput,
+
+      // Canon Capture: drives the `settingCapture` module in the split-gen step2 flow.
+      // It MUST be a flow `condition` rather than a `PROMPT_FEATURE` block — the
+      // PromptAssembler only does template rendering and never strips feature comments,
+      // so an HTML-comment block would be shipped to the model verbatim.
+      SETTING_CAPTURE_ACTIVE: settingCaptureActive ? '1' : '',
 
       // Action options wiring — 条件变量 + 内容注入
       ACTION_OPTIONS_MODE: actionMode,
@@ -397,6 +422,18 @@ export class ContextAssemblyStage implements PipelineStage {
       chatHistory = tail.map(wrap);
     }
 
+    // ── 6c. Merge profile world books with this slot's auto-settings book ──
+    //
+    // Two storage homes, ONE runtime contract: profile books live in IndexedDB (shared
+    // across slots), the captured book lives in the state tree (slot-scoped, rolls back
+    // with the round). They go through the same selector, formatter and budget — Canon
+    // Capture deliberately does not add a second injection path.
+    const profileWorldBooks = this.getWorldBooks?.() ?? [];
+    const slotWorldBooks = this.stateManager.get<WorldBook[]>(this.paths.slotWorldBooks);
+    const mergedWorldBooks = Array.isArray(slotWorldBooks) && slotWorldBooks.length > 0
+      ? [...profileWorldBooks, ...slotWorldBooks]
+      : profileWorldBooks;
+
     // ── 7. Prompt 组装 ──
     const splitGen = ctx.meta.splitGen === true;
 
@@ -404,6 +441,10 @@ export class ContextAssemblyStage implements PipelineStage {
     let messageSources: string[];
     let splitStep2Messages: AIMessage[] | undefined;
     let splitStep2Sources: string[] | undefined;
+    /** Auto-captured world-book entries injected this round (hit-counter write-back list). */
+    let capturedHits: string[] = [];
+    let worldBookSkipped: SystemPromptBuildResult['worldBookSkipped'];
+    let worldBookBudget: SystemPromptBuildResult['worldBookBudget'];
 
     if (this.useNewBuilder) {
       // ═══ NEW PATH: SystemPromptBuilder (context-piece architecture) ═══
@@ -430,7 +471,7 @@ export class ContextAssemblyStage implements PipelineStage {
         paths: this.paths,
         packPrompts: this.pack.prompts,
         builtinOverrides: this.getBuiltinOverrides?.() ?? [],
-        worldBooks: this.getWorldBooks?.() ?? [],
+        worldBooks: mergedWorldBooks,
         userInput: ctx.userInput,
         playerName: this.stateManager.get<string>(this.paths.playerName) ?? '',
         cotEnabled,
@@ -441,6 +482,29 @@ export class ContextAssemblyStage implements PipelineStage {
         implicitMidTermBlock: implicitMidBlock,
         narrativeHistoryForCorpus: rawHistoryForCorpus,
         gproxyCache: this.getGproxyCacheEnabled?.() ?? false,
+        // Focused world-book corpus input: only THIS round's event, not the whole
+        // event log (the log already feeds the broad corpus).
+        triggeredEventTexts: worldEventTriggered
+          ? [String(ctx.meta['worldEventContext'] ?? '')].filter(Boolean)
+          : [],
+        settingCaptureActive,
+      });
+
+      // Park the auto-captured hit list for SettingCaptureStage. The builder is a pure
+      // read of state, so the `injectedCount` / `lastInjectedRound` bump must happen in
+      // a stage that writes — and it has to be the SAME write as the rest of the round
+      // so it rolls back together. Also carried: skip reasons + budget accounting for
+      // the debug panel and the world-book settings UI.
+      capturedHits = buildResult.capturedHits ?? [];
+      worldBookSkipped = buildResult.worldBookSkipped;
+      worldBookBudget = buildResult.worldBookBudget;
+
+      // Surface the selection outcome so the world-book panel can explain a
+      // "configured but never injected" entry instead of leaving it looking broken.
+      eventBus.emit('worldbook:selection', {
+        skipped: worldBookSkipped ?? [],
+        budget: worldBookBudget,
+        hits: buildResult.worldBookHits?.map((h) => h.entryId) ?? [],
       });
 
       // Convert MessageEntry[] → AIMessage[]
@@ -658,6 +722,13 @@ export class ContextAssemblyStage implements PipelineStage {
         // P2 env-tags port: forward to BodyPolishStage so it can prepend the
         // same context block as a read-only reference when polishing narrative.
         environmentBlock,
+        // Canon Capture: auto-captured world-book entries injected this round.
+        // SettingCaptureStage folds the hit-counter bump into the round's single
+        // state write so it rolls back with everything else.
+        capturedHits,
+        settingCaptureActive,
+        worldBookSkipped,
+        worldBookBudget,
       },
     };
   }

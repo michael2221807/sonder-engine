@@ -35,6 +35,14 @@ export type EngineEventName =
   // cached format so the auto-sync path switches pipelines without a reload.
   | 'ui:cloud-format-changed'
   | 'worldbook:updated'
+  // Canon Capture round result (SettingCaptureStage → UI). Payload: SettingCaptureResult.
+  // The engine reports WHAT happened; the UI decides how to say it (i18n) and wires the
+  // undo button — keeping engine code free of both i18n and Pinia.
+  | 'settingCapture:result'
+  // World-book selection outcome for the round (ContextAssembly → UI). Lets the panel
+  // show WHY an entry was not injected; recomputing it in the UI would be a second
+  // implementation of the budget rules, and the second one is the one that drifts.
+  | 'worldbook:selection'
   // TTS playback state broadcast (TtsService → UI). Payload: TtsStateEvent.
   // Lets the play button, status-bar chip, and segment highlight stay in sync
   // without the UI holding a direct ref to the audio element.
@@ -44,6 +52,30 @@ export type EngineEventName =
   // narration audio is cached and downloadable.
   | 'tts:cache'
   | string; // allow custom events
+
+/**
+ * An actionable button inside a toast.
+ *
+ * Added for Canon Capture's one-click undo, but deliberately generic: the same
+ * capability serves any "we just did something for you — say so now or it stands"
+ * moment (cloud-sync conflicts, degraded imports, …).
+ *
+ * The callback is a closure supplied by the emitter. It MUST NOT capture objects that
+ * a rollback could invalidate — capture an id and re-read current state when clicked,
+ * otherwise the button can act on a world that no longer exists.
+ */
+export interface ToastAction {
+  /** i18n key for the button label. */
+  i18nKey: string;
+  /** Fallback label when the key is missing (engine code has no i18n runtime). */
+  label?: string;
+  /** Interpolation params for the label key. */
+  i18nParams?: Record<string, unknown>;
+  /** Invoked on click. The toast dismisses itself afterwards, success or failure. */
+  onClick: () => void | Promise<void>;
+  /** Visual weight. At most one `primary`. */
+  variant?: 'primary' | 'secondary';
+}
 
 /** Payload for 'ui:toast' events */
 export interface ToastPayload {
@@ -57,7 +89,18 @@ export interface ToastPayload {
   id?: string;
   /** Auto-dismiss duration in ms. Defaults to 4000. Set 0 to disable auto-dismiss. */
   duration?: number;
+  /**
+   * Up to two buttons rendered inside the toast.
+   *
+   * Expiry semantics: letting an actionable toast time out means DECLINING the action —
+   * nothing is invoked. That is the safe default for an undo affordance (doing nothing
+   * keeps what was already recorded).
+   */
+  actions?: ToastAction[];
 }
+
+/** Hard cap on buttons per toast — more than two turns a hint into a dialog. */
+export const MAX_TOAST_ACTIONS = 2;
 
 /** Generic event handler — receives the payload and optionally returns a Promise */
 export type EventHandler<T = unknown> = (payload: T) => void | Promise<void>;

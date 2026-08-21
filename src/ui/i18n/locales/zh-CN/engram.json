@@ -162,6 +162,7 @@
   "engram.editor.edge.sourceLabel.user": "用户编辑",
   "engram.editor.edge.sourceLabel.opening": "开局生成",
   "engram.editor.edge.sourceLabel.card-import": "卡导入",
+  "engram.editor.edge.sourceLabel.user-canon": "标记设定",
   "engram.editor.edge.sourceLabel.batch-sync": "批量同步",
 
   "engram.editor.vectorize.button": "计算所有",

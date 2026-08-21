@@ -7,6 +7,9 @@ import { useEngineStateStore } from '@/engine/stores/engine-state';
 import type { WorldBookStorage } from '@/engine/prompt/world-book-storage';
 import type { WorldBook, WorldBookEntry, WorldBookEntryType, WorldBookScope, WorldBookEntryShape, WorldBookExportData } from '@/engine/prompt/world-book';
 import { isSTLorebook, convertSTLorebook } from '@/engine/prompt/st-lorebook-converter';
+import { useRoute, useRouter } from 'vue-router';
+import { isCapturedBook } from '@/engine/prompt/world-book';
+import { useCapturedSettings } from '@/ui/composables/useCapturedSettings';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
@@ -49,8 +52,136 @@ const selectedBookId = ref<string>('');
 const selectedEntryId = ref<string>('');
 const newEntryShape = ref<WorldBookEntryShape>('normal');
 
-const selectedBook = computed(() => books.value.find((b) => b.id === selectedBookId.value) ?? null);
+// ── Canon Capture: the slot-owned auto-settings book ──
+//
+// Two homes, one panel. Profile books live in IndexedDB and are shared by every save of
+// this profile; the captured book lives INSIDE the save's state tree so it rolls back
+// with the round and travels with backups. They are shown together because to the player
+// they are all "world book", but every write has to take the right road — which is what
+// `isCaptured()` below decides.
+const captured = useCapturedSettings();
+const route = useRoute();
+const router = useRouter();
+
+/** Profile books first, then this save's captured book (when it exists). */
+const allBooks = computed<WorldBook[]>(() => [...books.value, ...captured.slotBooks.value]);
+
+function isCaptured(book: WorldBook | null | undefined): boolean {
+  return !!book && isCapturedBook(book);
+}
+
+const selectedBook = computed(() => allBooks.value.find((b) => b.id === selectedBookId.value) ?? null);
 const selectedEntry = computed(() => selectedBook.value?.entries.find((e) => e.id === selectedEntryId.value) ?? null);
+const selectedIsCaptured = computed(() => isCaptured(selectedBook.value));
+
+/** Provenance of the selected entry, when it is an auto-captured one. */
+const selectedCapture = computed(() => selectedEntry.value?.capturedSetting ?? null);
+
+/** Report a coordinator failure honestly instead of leaving the UI looking successful. */
+function reportMutation(result: { ok: boolean; reason?: string; engramDegraded?: boolean }): void {
+  if (result.ok) {
+    if (result.engramDegraded) {
+      eventBus.emit('ui:toast', {
+        type: 'warning',
+        i18nKey: 'prompt.settingCapture.engramDegraded',
+        message: t('prompt.settingCapture.engramDegraded'),
+      });
+    }
+    return;
+  }
+  const key = result.reason === 'capacity'
+    ? 'prompt.settingCapture.restoreFailedCapacity'
+    : 'prompt.settingCapture.mutationFailed';
+  eventBus.emit('ui:toast', { type: 'error', i18nKey: key, message: t(key) });
+}
+
+// ── Captured-entry operations — ALWAYS through the coordinator ──
+//
+// Never `scheduleSave` for these: that writes profile IndexedDB, which is the wrong
+// store, would not sync the Engram projection, and would not roll back with the round.
+
+async function retractCaptured(entryId: string): Promise<void> {
+  reportMutation(await captured.coordinator.retract(entryId));
+}
+
+async function restoreCaptured(entryId: string): Promise<void> {
+  reportMutation(await captured.coordinator.restore(entryId));
+}
+
+async function toggleCapturedEnabled(entry: WorldBookEntry): Promise<void> {
+  reportMutation(await captured.coordinator.setEnabled(entry.id, entry.enabled === false));
+}
+
+async function pinCaptured(entry: WorldBookEntry, pinned: boolean): Promise<void> {
+  reportMutation(await captured.coordinator.pin(entry.id, pinned));
+}
+
+async function editCaptured(
+  entry: WorldBookEntry,
+  patch: { content?: string; title?: string; keywords?: string[] },
+): Promise<void> {
+  reportMutation(await captured.coordinator.edit(entry.id, patch));
+}
+
+// ── Manual add (the post-failure fallback, design §6.4) ──
+//
+// The toast deep-links here with `?capturedDraft=…` holding the text the player wrote
+// but the pipeline could not record. Refusing to remember it because the model produced
+// malformed JSON would be the feature failing at its one job.
+const manualDraft = ref('');
+const manualDraftOpen = ref(false);
+
+/**
+ * Last round's world-book selection outcome, for the "not sent this turn" notice.
+ *
+ * Emitted by ContextAssembly rather than recomputed here: the panel must show what the
+ * PROMPT BUILDER actually decided, not a second guess at it — a second implementation
+ * would be the thing that drifts.
+ */
+const lastSkipped = ref<Array<{ entryId: string; reason: string }>>([]);
+
+/** Engram projection status of a captured entry (design §10.2). */
+function engramStatusOf(entry: WorldBookEntry): string {
+  return captured.engramStatus(entry);
+}
+
+function skipReasonFor(entryId: string): string | null {
+  const hit = lastSkipped.value.find((x) => x.entryId === entryId);
+  if (!hit) return null;
+  const key = `prompt.settingCapture.skipReason.${hit.reason}`;
+  const label = t(key);
+  return label === key ? hit.reason : label;
+}
+
+const unsubscribeSelection = eventBus.on<{ skipped?: Array<{ entryId: string; reason: string }> }>(
+  'worldbook:selection',
+  (payload) => { lastSkipped.value = payload?.skipped ?? []; },
+);
+
+function applyDraftFromQuery(): void {
+  const raw = route.query['capturedDraft'];
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (!value) return;
+  manualDraft.value = String(value);
+  manualDraftOpen.value = true;
+  selectedBookId.value = captured.capturedBook.value?.id ?? selectedBookId.value;
+  // Consume the query so a refresh does not resurrect the draft.
+  void router.replace({ path: route.path, query: { ...route.query, capturedDraft: undefined } })
+    .catch(() => { /* duplicate / guarded navigation — nothing to recover */ });
+}
+
+async function submitManualDraft(): Promise<void> {
+  const content = manualDraft.value.trim();
+  if (!content) return;
+  const result = await captured.coordinator.addManual({ content });
+  reportMutation(result);
+  if (result.ok) {
+    manualDraft.value = '';
+    manualDraftOpen.value = false;
+    selectedBookId.value = captured.capturedBook.value?.id ?? selectedBookId.value;
+    selectedEntryId.value = result.entry?.id ?? '';
+  }
+}
 
 // ─── Load ──────────────────────────────────────────────────
 
@@ -59,14 +190,17 @@ async function loadBooks() {
   const pid = engineState.activeProfileId;
   if (!pid) return;
   books.value = await worldBookStorage.loadWorldBooks(pid);
-  if (books.value.length > 0 && !selectedBookId.value) {
-    selectedBookId.value = books.value[0].id;
-    if (books.value[0].entries.length > 0) {
-      selectedEntryId.value = books.value[0].entries[0].id;
+  if (!selectedBookId.value) {
+    const first = allBooks.value[0];
+    if (first) {
+      selectedBookId.value = first.id;
+      selectedEntryId.value = first.entries[0]?.id ?? '';
     }
   }
 }
 void loadBooks();
+applyDraftFromQuery();
+watch(() => route.query['capturedDraft'], () => applyDraftFromQuery());
 watch(() => engineState.activeProfileId, () => {
   selectedBookId.value = '';
   selectedEntryId.value = '';
@@ -100,6 +234,7 @@ function notifyEngine() {
 }
 
 onUnmounted(() => {
+  unsubscribeSelection();
   for (const [bookId, timer] of saveTimers) {
     clearTimeout(timer);
     const book = books.value.find((b) => b.id === bookId);
@@ -127,6 +262,16 @@ function createBook() {
 }
 
 async function deleteBook(bookId: string) {
+  // The captured book is system-owned: deleting it wholesale would silently drop every
+  // setting the player ever marked. Individual entries are still fully retractable.
+  if (isCaptured(allBooks.value.find((b) => b.id === bookId))) {
+    eventBus.emit('ui:toast', {
+      type: 'info',
+      i18nKey: 'prompt.worldbook.cannotDeleteCapturedBook',
+      message: t('prompt.worldbook.cannotDeleteCapturedBook'),
+    });
+    return;
+  }
   if (!window.confirm(t('prompt.worldbook.confirmDeleteBook'))) return;
   if (!worldBookStorage) return;
   const pid = engineState.activeProfileId;
@@ -313,43 +458,93 @@ const injectionModeOptions = computed(() => [
       <AgaButton variant="ghost" size="sm" @click="exportBooks">{{ $t('prompt.worldbook.export') }}</AgaButton>
     </div>
 
-    <div v-if="books.length === 0" class="wb-empty">
+    <!-- Manual-add draft — arrives pre-filled from the capture-failed toast so the
+         player's words are never lost just because extraction stumbled. -->
+    <div v-if="manualDraftOpen" class="wb-manual-draft">
+      <label class="wb-manual-draft__label" for="wb-manual-draft">
+        {{ $t('mainGame.settingCapture.addManually') }}
+      </label>
+      <textarea
+        id="wb-manual-draft"
+        v-model="manualDraft"
+        class="wb-manual-draft__input"
+        rows="3"
+      />
+      <div class="wb-manual-draft__actions">
+        <AgaButton variant="primary" size="sm" @click="submitManualDraft">
+          {{ $t('prompt.modal.save') }}
+        </AgaButton>
+        <AgaButton variant="ghost" size="sm" @click="manualDraftOpen = false; manualDraft = ''">
+          {{ $t('prompt.modal.cancel') }}
+        </AgaButton>
+      </div>
+    </div>
+
+    <div v-if="allBooks.length === 0" class="wb-empty">
       {{ $t('prompt.worldbook.noBooks') }}
     </div>
 
     <div v-else class="wb-layout">
       <!-- Left: Book list + Entry list -->
       <div class="wb-sidebar">
-        <!-- Book cards -->
-        <div
-          v-for="book in books"
-          :key="book.id"
-          :class="['wb-book-card', { 'wb-book-card--selected': selectedBookId === book.id, 'wb-book-card--disabled': book.enabled === false }]"
-          @click="selectedBookId = book.id; selectedEntryId = book.entries[0]?.id ?? ''"
-        >
-          <div class="wb-book-header">
-            <input
-              class="wb-book-title-input"
-              :value="book.title"
-              @input="updateBookTitle(book, ($event.target as HTMLInputElement).value)"
-              @click.stop
-            />
-            <AgaToggle
-              :modelValue="book.enabled !== false"
-              @update:modelValue="() => toggleBookEnabled(book)"
-              :label="$t('prompt.worldbook.toggleBookEnabled')"
-              @click.stop
-            />
-            <Tooltip :text="$t('prompt.worldbook.deleteBook')" interactive>
-              <button class="wb-delete-btn" @click.stop="deleteBook(book.id)">✕</button>
-            </Tooltip>
+        <!-- Book cards. Profile books and this save's captured book are shown in one
+             list (to the player they are all "world book") but grouped, because their
+             lifetimes differ: profile books follow the character, the captured book
+             belongs to this save alone and rolls back with the round. -->
+        <template v-for="(book, i) in allBooks" :key="book.id">
+          <h4
+            v-if="i === 0 && !isCaptured(book)"
+            class="wb-group-title"
+          >{{ $t('prompt.worldbook.groupProfile') }}</h4>
+          <h4
+            v-if="isCaptured(book) && !isCaptured(allBooks[i - 1])"
+            class="wb-group-title"
+          >{{ $t('prompt.worldbook.groupSlot') }}</h4>
+
+          <div
+            :class="['wb-book-card', {
+              'wb-book-card--selected': selectedBookId === book.id,
+              'wb-book-card--disabled': book.enabled === false,
+              'wb-book-card--captured': isCaptured(book),
+            }]"
+            @click="selectedBookId = book.id; selectedEntryId = book.entries[0]?.id ?? ''"
+          >
+            <div class="wb-book-header">
+              <input
+                class="wb-book-title-input"
+                :value="book.title"
+                :readonly="isCaptured(book)"
+                @input="!isCaptured(book) && updateBookTitle(book, ($event.target as HTMLInputElement).value)"
+                @click.stop
+              />
+              <span v-if="isCaptured(book)" class="wb-auto-badge">
+                {{ $t('prompt.worldbook.capturedBadge') }}
+              </span>
+              <AgaToggle
+                v-if="!isCaptured(book)"
+                :modelValue="book.enabled !== false"
+                @update:modelValue="() => toggleBookEnabled(book)"
+                :label="$t('prompt.worldbook.toggleBookEnabled')"
+                @click.stop
+              />
+              <Tooltip
+                v-if="!isCaptured(book)"
+                :text="$t('prompt.worldbook.deleteBook')"
+                interactive
+              >
+                <button class="wb-delete-btn" @click.stop="deleteBook(book.id)">✕</button>
+              </Tooltip>
+            </div>
+            <span class="wb-book-count">{{ book.entries.length }} {{ $t('prompt.worldbook.entries') }}</span>
+            <p v-if="isCaptured(book)" class="wb-book-hint">
+              {{ $t('prompt.worldbook.capturedBookHint') }}
+            </p>
           </div>
-          <span class="wb-book-count">{{ book.entries.length }} {{ $t('prompt.worldbook.entries') }}</span>
-        </div>
+        </template>
 
         <!-- Entries of selected book -->
         <template v-if="selectedBook">
-          <div class="wb-entry-list-header">
+          <div v-if="!selectedIsCaptured" class="wb-entry-list-header">
             <AgaSelect
               class="wb-shape-select"
               :modelValue="newEntryShape"
@@ -357,6 +552,11 @@ const injectionModeOptions = computed(() => [
               @update:modelValue="v => newEntryShape = v as WorldBookEntryShape"
             />
             <AgaButton variant="ghost" size="sm" @click="createEntry">{{ $t('prompt.worldbook.createEntry') }}</AgaButton>
+          </div>
+          <div v-else class="wb-entry-list-header">
+            <AgaButton variant="ghost" size="sm" @click="manualDraftOpen = true">
+              {{ $t('mainGame.settingCapture.addManually') }}
+            </AgaButton>
           </div>
 
           <div
@@ -366,6 +566,10 @@ const injectionModeOptions = computed(() => [
             @click="selectedEntryId = entry.id"
           >
             <span class="wb-entry-title">{{ entry.title || $t('prompt.worldbook.untitled') }}</span>
+            <span
+              v-if="entry.capturedSetting?.status === 'retracted'"
+              class="wb-retracted-badge"
+            >{{ $t('prompt.settingCapture.retracted') }}</span>
             <span class="wb-type-badge" :style="{ background: `color-mix(in oklch, ${typeColor(entry.type)} 18%, transparent)`, color: typeColor(entry.type) }">
               {{ $t(TYPE_OPTIONS.find(o => o.value === entry.type)?.labelKey ?? 'prompt.type.worldLore') }}
             </span>
@@ -383,19 +587,101 @@ const injectionModeOptions = computed(() => [
           <input
             class="wb-editor-title"
             :value="selectedEntry.title"
-            @input="updateEntry(selectedEntry!, 'title', ($event.target as HTMLInputElement).value)"
+            @input="selectedIsCaptured
+              ? editCaptured(selectedEntry!, { title: ($event.target as HTMLInputElement).value })
+              : updateEntry(selectedEntry!, 'title', ($event.target as HTMLInputElement).value)"
             :placeholder="$t('prompt.worldbook.entryTitle')"
           />
           <AgaToggle
             :modelValue="selectedEntry.enabled !== false"
-            @update:modelValue="() => toggleEntryEnabled(selectedEntry!)"
+            @update:modelValue="() => selectedIsCaptured
+              ? toggleCapturedEnabled(selectedEntry!)
+              : toggleEntryEnabled(selectedEntry!)"
             :label="$t('prompt.worldbook.toggleEntryEnabled')"
           />
-          <AgaButton variant="danger" size="sm" @click="deleteEntry(selectedEntry!.id)">{{ $t('prompt.worldbook.deleteEntry') }}</AgaButton>
+          <!-- Captured entries are never hard-deleted: undo keeps the row so the player
+               can restore it, and so the Engram bridge can find the edge to invalidate. -->
+          <template v-if="selectedIsCaptured">
+            <AgaButton
+              v-if="selectedCapture?.status === 'retracted'"
+              variant="ghost" size="sm"
+              @click="restoreCaptured(selectedEntry!.id)"
+            >{{ $t('prompt.settingCapture.restore') }}</AgaButton>
+            <AgaButton
+              v-else
+              variant="danger" size="sm"
+              @click="retractCaptured(selectedEntry!.id)"
+            >{{ $t('prompt.settingCapture.retract') }}</AgaButton>
+          </template>
+          <AgaButton
+            v-else
+            variant="danger" size="sm"
+            @click="deleteEntry(selectedEntry!.id)"
+          >{{ $t('prompt.worldbook.deleteEntry') }}</AgaButton>
         </div>
 
-        <!-- Meta fields -->
-        <div class="wb-meta-grid">
+        <!-- Provenance panel — only for auto-captured entries.
+             Evidence sits next to the statement on purpose: the engine can prove the
+             quote came from inside a <设定> tag, but it cannot prove the statement means
+             the same thing. Showing both lets the player check that in one glance. -->
+        <div v-if="selectedCapture" class="wb-capture-meta">
+          <div class="wb-capture-row">
+            <span class="wb-capture-label">{{ $t('prompt.settingCapture.evidence') }}</span>
+            <q class="wb-capture-evidence">{{ selectedCapture.evidence }}</q>
+          </div>
+          <div class="wb-capture-row wb-capture-row--stats">
+            <span class="wb-capture-chip">
+              {{ $t('prompt.settingCapture.capturedAt', { round: selectedCapture.capturedRound }) }}
+            </span>
+            <span class="wb-capture-chip">
+              {{ selectedCapture.injectedCount > 0
+                ? $t('prompt.settingCapture.usage', { count: selectedCapture.injectedCount })
+                : $t('prompt.settingCapture.usageNever') }}
+            </span>
+            <span v-if="selectedCapture.lastInjectedRound !== undefined" class="wb-capture-chip">
+              {{ $t('prompt.settingCapture.lastUsed', { round: selectedCapture.lastInjectedRound }) }}
+            </span>
+            <span v-if="selectedCapture.source === 'user-edited'" class="wb-capture-chip">
+              {{ $t('prompt.settingCapture.edited') }}
+            </span>
+            <!-- Engram status. "not projected" is the NORMAL outcome for a one-entity
+                 setting, so it reads as information, not as a fault. -->
+            <Tooltip :text="$t(`prompt.settingCapture.engram.${engramStatusOf(selectedEntry!)}Hint`)" interactive>
+              <span :class="['wb-capture-chip', `wb-capture-chip--engram-${engramStatusOf(selectedEntry!)}`]">
+                {{ $t(`prompt.settingCapture.engram.${engramStatusOf(selectedEntry!)}`) }}
+              </span>
+            </Tooltip>
+          </div>
+          <div
+            v-if="selectedCapture.originalContent && selectedCapture.originalContent !== selectedEntry.content"
+            class="wb-capture-row"
+          >
+            <span class="wb-capture-label">{{ $t('prompt.settingCapture.originalContent') }}</span>
+            <span class="wb-capture-original">{{ selectedCapture.originalContent }}</span>
+          </div>
+          <label class="wb-capture-pin">
+            <input
+              type="checkbox"
+              :checked="selectedEntry.injectionMode === 'always'"
+              @change="pinCaptured(selectedEntry!, ($event.target as HTMLInputElement).checked)"
+            />
+            <span>{{ $t('prompt.settingCapture.pin') }}</span>
+            <Tooltip :text="$t('prompt.settingCapture.pinHint')" interactive>
+              <span class="wb-capture-pin-hint" aria-hidden="true">?</span>
+            </Tooltip>
+          </label>
+        </div>
+
+        <!-- Meta fields.
+             HIDDEN for captured entries: their type / scope / injection mode / priority
+             are decided deterministically by the capture pipeline (design §4.2), and the
+             panel is explicitly not allowed to change priority (§10.2). Beyond the design
+             rule there is a correctness reason — these controls call `updateEntry` +
+             `scheduleSave`, which persist into the PROFILE IndexedDB store. Doing that to
+             a slot-owned book would write a second, drifting copy of the captured book
+             into the wrong store. Injection mode has a sanctioned control: the "include
+             every turn" checkbox above, which routes through the coordinator. -->
+        <div v-if="!selectedIsCaptured" class="wb-meta-grid">
           <div class="wb-meta-field">
             <label class="wb-meta-label">{{ $t('prompt.worldbook.entryShape') }}</label>
             <AgaSelect
@@ -436,8 +722,8 @@ const injectionModeOptions = computed(() => [
           </div>
         </div>
 
-        <!-- Scope checkboxes -->
-        <div class="wb-meta-field">
+        <!-- Scope checkboxes — same reasoning as the meta grid above. -->
+        <div v-if="!selectedIsCaptured" class="wb-meta-field">
           <label class="wb-meta-label">{{ $t('prompt.worldbook.scope') }}</label>
           <div class="wb-scope-group">
             <label v-for="s in SCOPE_OPTIONS" :key="s.value" class="wb-scope-check">
@@ -453,13 +739,15 @@ const injectionModeOptions = computed(() => [
           <input
             class="wb-meta-input wb-meta-input--wide"
             :value="(selectedEntry.keywords ?? []).join(', ')"
-            @input="setKeywordsFromText(selectedEntry!, ($event.target as HTMLInputElement).value)"
+            @input="selectedIsCaptured
+              ? editCaptured(selectedEntry!, { keywords: ($event.target as HTMLInputElement).value.split(',') })
+              : setKeywordsFromText(selectedEntry!, ($event.target as HTMLInputElement).value)"
             :placeholder="$t('prompt.modal.keywordsPlaceholder')"
           />
         </div>
 
-        <!-- Timeline fields (only for time_injection) -->
-        <div v-if="selectedEntry.shape === 'time_injection'" class="wb-meta-grid">
+        <!-- Timeline fields (only for time_injection; never for captured entries). -->
+        <div v-if="!selectedIsCaptured && selectedEntry.shape === 'time_injection'" class="wb-meta-grid">
           <div class="wb-meta-field">
             <label class="wb-meta-label">{{ $t('prompt.worldbook.timeStart') }}</label>
             <input
@@ -480,13 +768,23 @@ const injectionModeOptions = computed(() => [
           </div>
         </div>
 
+        <!-- Why this entry did not reach the model last turn.
+             An entry that silently loses to the budget is indistinguishable from a
+             broken one, so the reason is shown in the panel, not just in debug. -->
+        <div v-if="skipReasonFor(selectedEntry!.id)" class="wb-skip-notice">
+          <span class="wb-skip-notice__label">{{ $t('prompt.settingCapture.notInjected') }}</span>
+          <span class="wb-skip-notice__reason">{{ skipReasonFor(selectedEntry!.id) }}</span>
+        </div>
+
         <!-- Content editor -->
         <div class="wb-content-area">
           <label class="wb-meta-label">{{ $t('prompt.worldbook.content') }}</label>
           <textarea
             class="wb-content-editor"
             :value="selectedEntry.content"
-            @input="updateEntry(selectedEntry!, 'content', ($event.target as HTMLTextAreaElement).value)"
+            @input="selectedIsCaptured
+              ? editCaptured(selectedEntry!, { content: ($event.target as HTMLTextAreaElement).value })
+              : updateEntry(selectedEntry!, 'content', ($event.target as HTMLTextAreaElement).value)"
             rows="14"
             spellcheck="false"
           />
@@ -745,5 +1043,175 @@ const injectionModeOptions = computed(() => [
 @media (max-width: 767px) {
   .wb-layout { grid-template-columns: 1fr; }
   .wb-sidebar { max-height: 200px; }
+}
+
+/* ── Canon Capture additions ── */
+
+.wb-group-title {
+  margin: 12px 0 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.wb-group-title:first-child { margin-top: 0; }
+
+.wb-book-card--captured {
+  border-left: none;
+}
+
+.wb-auto-badge {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  background: color-mix(in oklch, var(--color-amber-400) 16%, transparent);
+  color: var(--color-amber-400);
+}
+
+.wb-book-hint {
+  margin: 6px 0 0;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.wb-retracted-badge {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  background: color-mix(in oklch, var(--color-text) 8%, transparent);
+  color: var(--color-text-muted);
+}
+
+/* ── Provenance panel ── */
+.wb-capture-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--color-amber-400) 5%, transparent);
+}
+
+.wb-capture-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.wb-capture-label {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.wb-capture-evidence {
+  font-size: 0.84rem;
+  line-height: 1.6;
+  color: var(--color-text);
+  font-style: italic;
+}
+
+.wb-capture-original {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+.wb-capture-row--stats { gap: 6px; }
+
+.wb-capture-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  background: color-mix(in oklch, var(--color-text) 6%, transparent);
+  color: var(--color-text-muted);
+}
+
+.wb-capture-pin {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.wb-capture-pin-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  font-size: 0.66rem;
+  background: color-mix(in oklch, var(--color-text) 9%, transparent);
+  color: var(--color-text-muted);
+  cursor: help;
+}
+
+/* ── "not sent this turn" notice ── */
+.wb-skip-notice {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklch, var(--color-amber-400) 8%, transparent);
+  font-size: 0.78rem;
+}
+.wb-skip-notice__label {
+  flex-shrink: 0;
+  color: var(--color-amber-400);
+}
+.wb-skip-notice__reason { color: var(--color-text-muted); }
+
+/* ── Manual add draft ── */
+.wb-manual-draft {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--color-sage-400) 6%, transparent);
+}
+
+.wb-manual-draft__label {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.wb-manual-draft__input {
+  width: 100%;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.wb-manual-draft__actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Engram status chip — informational, never alarming: "not graphed" is the correct
+   outcome for a one-entity setting, not a fault. */
+.wb-capture-chip--engram-linked {
+  background: color-mix(in oklch, var(--color-success) 14%, transparent);
+  color: var(--color-success);
+}
+.wb-capture-chip--engram-pending {
+  background: color-mix(in oklch, var(--color-amber-400) 12%, transparent);
+  color: var(--color-amber-400);
 }
 </style>

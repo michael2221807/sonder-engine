@@ -200,5 +200,19 @@
   "mainGame.roundDivider.metricsTitle": "Round metadata · round {n}",
   "mainGame.roundDivider.inputTokensLabel": "Input tokens",
   "mainGame.roundDivider.durationLabel": "Duration",
-  "mainGame.roundDivider.outputTokensLabel": "Output tokens"
+  "mainGame.roundDivider.outputTokensLabel": "Output tokens",
+
+  "mainGame.settingTag.buttonAria": "Mark as setting",
+  "mainGame.settingTag.tooltip": "Mark the selected text as a long-term setting — the AI follows it this turn and remembers it from now on",
+  "mainGame.settingTag.tooltipDisabled": "World book is off, so settings will not be recorded",
+
+  "mainGame.settingCapture.recorded": "Recorded {count} setting(s)",
+  "mainGame.settingCapture.recordedPartial": "Recorded {count} · {failed} could not be recorded",
+  "mainGame.settingCapture.alreadyKnown": "That setting was already recorded",
+  "mainGame.settingCapture.failed": "This turn's setting could not be recorded",
+  "mainGame.settingCapture.capacityFull": "Auto-settings are at the {max}-entry limit — clear some before recording more.",
+  "mainGame.settingCapture.undo": "Undo",
+  "mainGame.settingCapture.view": "View",
+  "mainGame.settingCapture.addManually": "Add manually",
+  "mainGame.settingCapture.undone": "Undone"
 }

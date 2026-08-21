@@ -32,6 +32,34 @@ import { loadEngramConfig } from './engram-config';
 import type { EngramEdge } from './knowledge-edge';
 import { buildFacts, pruneEdgesV2 } from './fact-builder';
 import type { KnowledgeFact } from './fact-builder';
+import { buildCanonFacts, invalidateEdgesForEntries } from './canon-projection';
+import type { CanonMutationInput } from './canon-projection';
+
+/**
+ * Options for one `processResponse()` write.
+ *
+ * `defaultEdgeCore` / `defaultEdgeSource` are BATCH-level and stay for the callers that
+ * genuinely write a homogeneous batch (opening, card import, batch solidify). Canon
+ * Capture cannot use them — its facts ride in the same batch as the main model's, with
+ * different provenance — so those travel per-fact instead (`FactProvenance`).
+ */
+export interface ProcessResponseOptions {
+  defaultEdgeCore?: boolean;
+  defaultEdgeSource?: EngramEdge['source'];
+  includeAllNpcTypes?: boolean;
+  /**
+   * Captured settings accepted (or retracted) this round.
+   *
+   * Merged into the SAME graph write as the response's own facts — a second
+   * `processResponse()` call would rebuild every Event and Entity and re-run embedding
+   * for the round just to add one edge.
+   *
+   * ADDITIONS only. Retraction is always player-initiated and therefore happens outside
+   * a round — it goes through {@link EngramManager.invalidateCanonEntries}. Keeping one
+   * retraction path means "undo" cannot mean two different things.
+   */
+  canonMutations?: CanonMutationInput[];
+}
 // CR-8: 类型定义已迁移到 engram-types.ts
 export type {
   EngramRetrievalMode,
@@ -181,6 +209,118 @@ export class EngramManager {
     });
   }
 
+  /**
+   * Invalidate every live edge projected from the given captured entries.
+   *
+   * The out-of-round half of the Canon Capture lifecycle: undo / disable / edit happen
+   * from the panel and toast, outside any pipeline run, so they cannot ride the round's
+   * `processResponse()` write. Runs under the same write lock so it cannot interleave
+   * with a round that is mid-flight.
+   *
+   * Invalidates rather than deletes — the row stays auditable and a later restore has
+   * something to find. Vectors are left in place for the same reason; an invalidated
+   * edge is filtered out of retrieval by `isEdgeCurrentlyValid`.
+   */
+  async invalidateCanonEntries(
+    stateManager: StateManager,
+    entryIds: string[],
+  ): Promise<{ invalidated: number }> {
+    if (!Array.isArray(entryIds) || entryIds.length === 0) return { invalidated: 0 };
+    return this.withWriteLock(async () => {
+      const engram = this.loadEngram(stateManager);
+      const round = stateManager.get<number>(this.roundNumberPath) ?? 0;
+      const touched = invalidateEdgesForEntries(engram.v2Edges ?? [], entryIds, round);
+      if (touched.length > 0) stateManager.set(this.engramPath, engram, 'system');
+      return { invalidated: touched.length };
+    });
+  }
+
+  /**
+   * (Re)project a captured relationship after a restore or a semantic edit.
+   *
+   * Invalidates whatever the entry produced before, then builds a fresh edge from the
+   * current meaning. Rebuild rather than in-place update because the edge ID is derived
+   * from `source|target|fact` — changing the statement necessarily changes the id, so an
+   * "update" would silently orphan the old row.
+   *
+   * Non-relationship settings are a deliberate no-op: the world book is the authority,
+   * and inventing a second entity to make a one-entity setting fit the edge shape would
+   * put a fake node into the graph.
+   */
+  async reprojectCanonEntry(
+    stateManager: StateManager,
+    mutation: CanonMutationInput,
+  ): Promise<{ projected: boolean }> {
+    const config = loadEngramConfig();
+    if (!config.enabled || config.knowledgeEdgeMode !== 'active') return { projected: false };
+
+    return this.withWriteLock(async () => {
+      const engram = this.loadEngram(stateManager);
+      const round = stateManager.get<number>(this.roundNumberPath) ?? 0;
+      const edges = engram.v2Edges ?? [];
+
+      // Old projection goes first, whether or not a new one follows: an edit that turns a
+      // relationship into a plain character trait must not leave the old edge alive.
+      const invalidated = invalidateEdgesForEntries(edges, [mutation.entryId], round);
+
+      const facts = buildCanonFacts([mutation]);
+      if (facts.length === 0) {
+        if (invalidated.length > 0) stateManager.set(this.engramPath, engram, 'system');
+        return { projected: false };
+      }
+
+      const entityNames = new Set(engram.entities.map((e) => e.name));
+      // Same junk-name guard the in-round stub scan uses. Without it, a name the capture
+      // pipeline would have rejected as sentence-like could sneak a garbage node into the
+      // graph via the restore path — the same setting behaving differently depending on
+      // which path it took.
+      const isSentenceLike = (s: string) => s.length > 6 && /[，。了的被在过着得让把将与从]/.test(s);
+      for (const fact of facts) {
+        for (const name of [fact.sourceEntity, fact.targetEntity]) {
+          if (!name || entityNames.has(name)) continue;
+          if (isSentenceLike(name)) continue;
+          engram.entities.push({
+            name,
+            type: inferEntityType(name, new Set(
+              engram.entities.filter((e) => e.type === 'location').map((e) => e.name),
+            )),
+            summary: '',
+            attributes: {},
+            firstSeen: round,
+            lastSeen: round,
+            mentionCount: 1,
+            is_embedded: false,
+            _pendingEnrichment: true,
+          });
+          entityNames.add(name);
+        }
+      }
+
+      const result = buildFacts(
+        { knowledgeFacts: facts, entities: engram.entities, currentEventId: null, currentRound: round },
+        edges,
+        this.vectorStore,
+        {},
+        new Map(),
+        { reviewThreshold: config.edgeReviewThreshold, perFactCap: config.edgeReviewPerFactCap },
+      );
+
+      engram.v2Edges = [...edges, ...result.newEdges];
+      stateManager.set(this.engramPath, engram, 'system');
+
+      // Embed the new edge now instead of leaving it semantically unsearchable until the
+      // player's next round happens to run the pipeline's vectorization sweep. Fire and
+      // forget: an embedding failure leaves `is_embedded: false` for the normal retry,
+      // and must not fail the player's panel action.
+      if (result.newEdges.length > 0) {
+        void this.vectorizeAsync([], [], stateManager, result.newEdges)
+          .catch((err) => console.warn('[Engram] canon reproject vectorize failed (non-blocking):', err));
+      }
+
+      return { projected: result.newEdges.length > 0 || result.reinforcedIds.length > 0 };
+    });
+  }
+
   async deleteEdgeVectors(edgeIds: string[]): Promise<void> {
     const slot = this.getActiveSlot();
     if (!slot?.profileId || !slot?.slotId || edgeIds.length === 0) return;
@@ -228,7 +368,7 @@ export class EngramManager {
   async processResponse(
     response: AIResponse,
     stateManager: StateManager,
-    options?: { defaultEdgeCore?: boolean; defaultEdgeSource?: EngramEdge['source']; includeAllNpcTypes?: boolean },
+    options?: ProcessResponseOptions,
   ): Promise<EngramWriteSnapshot | null> {
     const config = loadEngramConfig();
     if (!config.enabled) return null;
@@ -240,7 +380,7 @@ export class EngramManager {
     response: AIResponse,
     stateManager: StateManager,
     config: EngramConfig,
-    options?: { defaultEdgeCore?: boolean; defaultEdgeSource?: EngramEdge['source']; includeAllNpcTypes?: boolean },
+    options?: ProcessResponseOptions,
   ): Promise<EngramWriteSnapshot | null> {
 
     const startTime = performance.now();
@@ -338,15 +478,39 @@ export class EngramManager {
       }
     }
 
+    // ── Canon Capture: fold this round's captured relationships into the same batch ──
+    //
+    // Deliberately merged into the EXISTING write rather than given its own
+    // `processResponse()` call: a second call would rebuild every Event and Entity and
+    // re-run embedding for the round, doubling the cost to add one edge.
+    // Canon facts go FIRST. When the model and the player describe the same relationship
+    // in one round, whichever is processed first becomes the edge and the other dedupes
+    // into it — so leading with canon means the surviving edge carries the PLAYER's
+    // wording (and their `canonEntryId`), not the model's paraphrase of it.
+    const canonFacts = buildCanonFacts(options?.canonMutations);
+    const combinedFacts: KnowledgeFact[] = [
+      ...canonFacts,
+      ...(response.knowledgeFacts ?? []).map((kf) => ({
+        fact: kf.fact,
+        sourceEntity: kf.sourceEntity,
+        targetEntity: kf.targetEntity,
+      })),
+    ];
+
     // ── Step 2.5: Tier 1 — 自动补桩缺失实体（事实边端点） ──
-    if (config.knowledgeEdgeMode === 'active' && response.knowledgeFacts && response.knowledgeFacts.length > 0) {
+    if (config.knowledgeEdgeMode === 'active' && combinedFacts.length > 0) {
       const entityNames = new Set(entities.map((e) => e.name));
       // Derived from EntityBuilder.build()'s pre-scan — both sites must stay in sync
       const knownLocationNames = new Set(
         entities.filter((e) => e.type === 'location').map((e) => e.name),
       );
       const isSentenceLike = (s: string) => s.length > 6 && /[，。了的被在过着得让把将与从]/.test(s);
-      for (const kf of response.knowledgeFacts) {
+      // Scans `combinedFacts`, so a captured relationship whose entity does not exist yet
+      // gets the same stub treatment as an AI-produced one. Without this the fact would
+      // be rejected outright (`buildFacts` drops facts with two unknown endpoints) and
+      // the design's "at most one live edge per canonEntryId" metric would pass vacuously
+      // by never creating an edge at all.
+      for (const kf of combinedFacts) {
         for (const name of [kf.sourceEntity, kf.targetEntity]) {
           if (!name || entityNames.has(name)) continue;
           if (isSentenceLike(name)) continue;
@@ -372,13 +536,9 @@ export class EngramManager {
     // ── Step 3b: Knowledge edge build ──
     let edgesPrunedCount = 0;
     const edgeActive = config.knowledgeEdgeMode === 'active';
-    if (edgeActive && response.knowledgeFacts && response.knowledgeFacts.length > 0) {
-      // V2 path: use FactBuilder with knowledge_facts
-      const kfacts: KnowledgeFact[] = response.knowledgeFacts.map((kf) => ({
-        fact: kf.fact,
-        sourceEntity: kf.sourceEntity,
-        targetEntity: kf.targetEntity,
-      }));
+    if (edgeActive && combinedFacts.length > 0) {
+      // V2 path: use FactBuilder with knowledge_facts + captured relationships
+      const kfacts: KnowledgeFact[] = combinedFacts;
 
       // Load edge vectors for dedup (skip embedding if no existing edges to compare against)
       let edgeVectors: Record<string, number[]> = {};
@@ -465,6 +625,7 @@ export class EngramManager {
         || isRelevant(e.targetEntity)
         || e.source === 'batch-sync'
         || e.source === 'user'
+        || e.source === 'user-canon'
         || e.source === 'opening'
         || e.source === 'card-import'
         || e.core === true,

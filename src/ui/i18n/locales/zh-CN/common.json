@@ -52,6 +52,7 @@
 
   "common.toast.ariaContainer": "通知消息",
   "common.toast.ariaClose": "关闭通知",
+  "common.toast.actionFailed": "操作失败，请重试",
   "common.toast.type.info": "提示",
   "common.toast.type.success": "成功",
   "common.toast.type.warning": "警告",

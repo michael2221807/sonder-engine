@@ -4,5 +4,11 @@
   "paceFast": "## Pacing Hint\n\nCurrent pacing is **fast pace**: lean toward generating plot-advancing options; encourage clear actions and decisions; avoid pure observation or waiting.",
   "customActionHeader": "## Custom Additional Requirements\n\n{content}",
   "bookmarkedRoundsHeader": "## Player-Bookmarked Historical Excerpts (reference only — NOT the current scene)\n\nThe following are key excerpts the player manually bookmarked from **past rounds** and wants you to keep in mind while writing this round. They **may come from much earlier in the story** and are background reference only — **do NOT mistake them for what just happened or the scene you are currently in**; the \"Round N\" prefix on each marks when it occurred.\n\n{entries}",
-  "bookmarkedRoundsEntryFormat": "[Bookmark · Round {round} · {name}] {content}"
+  "bookmarkedRoundsEntryFormat": "[Bookmark · Round {round} · {name}] {content}",
+  "settingTagNames": "setting,设定",
+  "settingBookTitle": "Captured Settings",
+  "settingKindCharacter": "Character",
+  "settingKindRelationship": "Relationship",
+  "settingKindWorldFact": "World",
+  "settingAnchorStopwords": "the a an and or but if of to in on at for with from by is are was were be been it its this that these those he she they them his her their you your i me my we our not no yes very really then so because about into over"
 }

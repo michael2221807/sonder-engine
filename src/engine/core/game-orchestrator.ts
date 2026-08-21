@@ -15,6 +15,13 @@
  * 对应 CODE_REVIEW P0 #1。
  */
 import { PipelineRunner } from '../pipeline/pipeline-runner';
+import { SettingCaptureStage } from '../pipeline/stages/setting-capture';
+import { parseSettingTagNames } from '../prompt/setting-tag-scanner';
+import { parseAnchorStopwords } from '../prompt/captured-entry-mutations';
+import { DEFAULT_PROMPT_SETTINGS } from '../prompt/world-book';
+import { FALLBACK_CAPTURED_LABELS } from '../prompt/captured-entry-mutations';
+import type { PromptSettings } from '../prompt/world-book';
+import type { CapturedSettingLabels } from '../prompt/captured-entry-mutations';
 
 /** 从 localStorage 读取 AI 生成设置（每回合调用，确保设置变更立即生效） */
 function readAISettings(): { streaming: boolean; splitGen: boolean } {
@@ -135,6 +142,62 @@ export interface SubPipelineBundle {
   plotEvaluation?: import('../plot/plot-evaluation-pipeline').PlotEvaluationPipeline;
 }
 
+export interface PreRoundSnapshotOptions {
+  /**
+   * The live round number captured immediately BEFORE `PipelineRunner.run()`.
+   *
+   * Correlation guard (code review 2026-08-21): the snapshot at
+   * `paths.preRoundSnapshot` survives across rounds, so "a snapshot exists" is NOT
+   * proof that *this* attempt dirtied anything. `PreProcessStage` writes the snapshot
+   * and THEN increments the round number, so:
+   *   - round unchanged  → PreProcess did not complete → nothing to roll back, and the
+   *                        stored snapshot may belong to an EARLIER round; rolling back
+   *                        to it would silently discard a completed round's state.
+   *   - round advanced   → PreProcess completed this attempt → the stored snapshot is
+   *                        definitionally the one it just wrote.
+   * Omit to skip the guard (used by callers that already know a round was started).
+   */
+  roundBefore?: number;
+  /** Fallback source for callers that genuinely hold a populated context. */
+  ctx?: Pick<PipelineContext, 'preRoundSnapshot'> | null;
+}
+
+/**
+ * Resolve the pre-round snapshot used by the pipeline's error auto-rollback.
+ *
+ * B0-1 (2026-08-20) — the invariant this encodes:
+ * `PipelineRunner.run()` copies the context (`let ctx = { ...initialContext }`)
+ * and every stage returns a NEW object, so the caller's `initialCtx` is never
+ * written back. Reading `initialCtx.preRoundSnapshot` therefore always yielded
+ * `undefined` and the auto-rollback branch never ran — a mid-pipeline throw left
+ * the already-incremented round number behind as dirty state.
+ *
+ * `PreProcessStage` persists the snapshot into `paths.preRoundSnapshot` BEFORE it
+ * increments the round number, so the state tree is the authoritative source.
+ * The ctx fallback is kept only for callers that do hold a populated context
+ * (e.g. future in-process reuse); it must never be the primary source.
+ *
+ * @returns the snapshot to roll back to, or `null` when this attempt left nothing
+ *          dirty (see {@link PreRoundSnapshotOptions.roundBefore}).
+ */
+export function resolvePreRoundSnapshot(
+  stateManager: Pick<StateManager, 'get'>,
+  paths: EnginePathConfig,
+  options?: PreRoundSnapshotOptions,
+): Record<string, unknown> | null {
+  if (typeof options?.roundBefore === 'number') {
+    const roundNow = stateManager.get<number>(paths.roundNumber) ?? 0;
+    if (roundNow === options.roundBefore) return null;
+  }
+
+  const fromState = stateManager.get<Record<string, unknown>>(paths.preRoundSnapshot);
+  if (fromState && typeof fromState === 'object' && !Array.isArray(fromState)) return fromState;
+
+  const fromCtx = options?.ctx?.preRoundSnapshot;
+  if (fromCtx && typeof fromCtx === 'object' && !Array.isArray(fromCtx)) return fromCtx;
+  return null;
+}
+
 export class GameOrchestrator {
   private runner: PipelineRunner;
   private abortController: AbortController | null = null;
@@ -247,6 +310,32 @@ export class GameOrchestrator {
     this.runner.addStage(new BodyPolishStage(aiService, stateManager, promptAssembler));
     this.runner.addStage(new ReasoningIngestStage(stateManager, paths));
     this.runner.addStage(new CommandExecutionStage(commandExecutor, behaviorRunner, stateManager, paths));
+    // Canon Capture — after commands are applied, before PostProcess persists history
+    // and triggers the auto-save, so the captured settings are part of the SAME round
+    // (and therefore the same rollback unit) as the narrative that introduced them.
+    this.runner.addStage(
+      new SettingCaptureStage(stateManager, paths, {
+        isEnabled: () => {
+          const settings: PromptSettings = {
+            ...DEFAULT_PROMPT_SETTINGS,
+            ...(stateManager.get<Partial<PromptSettings>>('系统.设置.prompt') ?? {}),
+          };
+          // The world-book master switch gates BOTH extraction and injection; the
+          // feature switch gates extraction only (existing entries keep working).
+          return settings.enableWorldBook !== false && settings.enableSettingCapture !== false;
+        },
+        getTagNames: () => parseSettingTagNames(pack.engineFragments?.settingTagNames),
+        getAnchorStopwords: () => parseAnchorStopwords(pack.engineFragments?.settingAnchorStopwords),
+        getLabels: (): CapturedSettingLabels => ({
+          bookTitle: pack.engineFragments?.settingBookTitle ?? FALLBACK_CAPTURED_LABELS.bookTitle,
+          kind: {
+            character: pack.engineFragments?.settingKindCharacter ?? FALLBACK_CAPTURED_LABELS.kind.character,
+            relationship: pack.engineFragments?.settingKindRelationship ?? FALLBACK_CAPTURED_LABELS.kind.relationship,
+            world_fact: pack.engineFragments?.settingKindWorldFact ?? FALLBACK_CAPTURED_LABELS.kind.world_fact,
+          },
+        }),
+      }),
+    );
     this.runner.addStage(
       new PostProcessStage(
         stateManager,
@@ -412,8 +501,17 @@ export class GameOrchestrator {
       ? (stateManager.get<string>(paths.playerLocation) ?? null)
       : null;
 
+    // B0-1 correlation guard: remember the round number BEFORE the pipeline starts, so
+    // the error path can tell "PreProcess advanced the round this attempt" (roll back)
+    // from "PreProcess never completed" (nothing dirty — a stale snapshot from an
+    // earlier round must NOT be applied). See resolvePreRoundSnapshot().
+    const roundBefore = stateManager.get<number>(this._paths.roundNumber) ?? 0;
+
     const initialCtx: PipelineContext = {
       userInput,
+      // Pristine copy for Canon Capture's evidence gate — PreProcessStage will prepend
+      // the action queue to `userInput`, and that text must never count as evidence.
+      originalUserInput: userInput,
       actionQueuePrompt: '',
       stateSnapshot: {},
       chatHistory: [],
@@ -442,9 +540,16 @@ export class GameOrchestrator {
 
       // 自动回滚：PreProcess 在 AI 调用前已递增 roundNumber，不回滚会留下脏状态。
       // preRoundSnapshot 在递增前捕获，回滚后 roundNumber 恢复到正确值。
-      const snapshot = initialCtx.preRoundSnapshot;
-      if (snapshot && typeof snapshot === 'object') {
-        stateManager.rollbackTo(snapshot as Record<string, unknown>);
+      //
+      // B0-1 修复（2026-08-20）：快照必须从**状态树**读，不能读 `initialCtx` —
+      // 详见 `resolvePreRoundSnapshot()` 的注释（Runner 值传递 → initialCtx 恒为空 →
+      // 这个分支此前从未执行过，报错回合会留下已递增的 `元数据.回合序号`）。
+      const snapshot = resolvePreRoundSnapshot(stateManager, this._paths, {
+        roundBefore,
+        ctx: initialCtx,
+      });
+      if (snapshot) {
+        stateManager.rollbackTo(snapshot);
         this.memoryManager.clearConfigCache();
         if (this.engramManager.isEnabled()) {
           this.engramManager.syncVectorsToState(stateManager).catch(() => {});

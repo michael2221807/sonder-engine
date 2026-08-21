@@ -34,7 +34,7 @@
     "assistantInjectionContract", "historyFraming", "core", "worldGen", "opening", "mainRound",
     "memorySummary", "memorySummaryInput", "midTermRefine", "midTermRefineInput",
     "longTermCompact", "longTermCompactInput", "splitGenStep1", "splitGenStep2",
-    "splitGenContext", "worldHeartbeat", "worldHeartbeatInput",
+    "splitGenContext", "settingAuthority", "settingCapture", "worldHeartbeat", "worldHeartbeatInput",
     "actionOptions", "actionOptionsStory", "privacyRepair", "privacyRepairInput",
     "npcChat",
     "cot-preamble", "cot-masquerade", "cot-judge", "cot-opening", "cot-no-thinking-guard",

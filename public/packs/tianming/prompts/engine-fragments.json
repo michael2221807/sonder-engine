@@ -4,5 +4,11 @@
   "paceFast": "## 节奏提示\n\n当前节奏为**快节奏**：倾向于生成推进剧情的选项，鼓励明确的行动和决策；避免纯观察或等待。",
   "customActionHeader": "## 自定义附加要求\n\n{content}",
   "bookmarkedRoundsHeader": "## 玩家收藏的历史片段（仅供参考，非当前场景）\n\n以下是玩家从**过往回合**中手动收藏、希望你本回合创作时记住的关键片段。它们**可能来自较早的剧情**，仅作背景参考——**切勿将其误当作刚刚发生的最新事件或当前所在场景**；每条开头的「第N回合」标明它发生的时间点。\n\n{entries}",
-  "bookmarkedRoundsEntryFormat": "〔收藏·第{round}回合·{name}〕{content}"
+  "bookmarkedRoundsEntryFormat": "〔收藏·第{round}回合·{name}〕{content}",
+  "settingTagNames": "设定,setting",
+  "settingBookTitle": "自动设定集",
+  "settingKindCharacter": "人物设定",
+  "settingKindRelationship": "关系设定",
+  "settingKindWorldFact": "世界设定",
+  "settingAnchorStopwords": "的 了 是 在 和 有 就 都 而 及 与 也 很 到 说 要 去 会 着 没有 看 好 自己 这 那 他 她 它 我 你 们 一个 什么 可以 因为 所以 但是 如果 这个 那个 一些 已经 还是 不是 就是 现在 时候 一直 非常 真的 突然 然后 于是"
 }

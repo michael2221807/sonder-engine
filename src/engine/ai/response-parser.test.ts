@@ -356,3 +356,66 @@ describe('ResponseParser.parse — malformed escape tolerance (2026-04-19)', () 
     expect(result.thinking).toContain('step 1');
   });
 });
+
+// ─── Canon Capture: setting_updates normalization (P1) ───────
+
+describe('ResponseParser · setting_updates', () => {
+  const parser = new ResponseParser();
+
+  it('extracts the field as an explicit array of raw items', () => {
+    const r = parser.parse(JSON.stringify({
+      text: 'n',
+      setting_updates: [
+        { kind: 'character', statement: 'A', evidence: 'a', anchors: ['x'], entities: [] },
+      ],
+    }));
+    expect(r.settingUpdates).toHaveLength(1);
+    expect(r.settingUpdates?.[0]).toMatchObject({ kind: 'character', statement: 'A' });
+  });
+
+  it('is undefined when the model never emitted the key', () => {
+    expect(parser.parse(JSON.stringify({ text: 'n' })).settingUpdates).toBeUndefined();
+  });
+
+  it('is undefined when the value is not an array (cannot be trusted as one)', () => {
+    expect(parser.parse(JSON.stringify({ text: 'n', setting_updates: 'oops' })).settingUpdates)
+      .toBeUndefined();
+    expect(parser.parse(JSON.stringify({ text: 'n', setting_updates: { a: 1 } })).settingUpdates)
+      .toBeUndefined();
+  });
+
+  it('distinguishes "answered with nothing" from "never answered"', () => {
+    expect(parser.parse(JSON.stringify({ text: 'n', setting_updates: [] })).settingUpdates)
+      .toEqual([]);
+  });
+
+  it('keeps malformed ITEMS so the stage can report a reason for each', () => {
+    // Dropping them here would turn a reportable rejection into an invisible one.
+    const r = parser.parse(JSON.stringify({
+      text: 'n',
+      setting_updates: [{ kind: 'nope' }, { statement: 42 }],
+    }));
+    expect(r.settingUpdates).toHaveLength(2);
+    expect(r.settingUpdates?.[0].kind).toBe('nope');
+    expect(r.settingUpdates?.[1].statement).toBe(42);
+  });
+
+  it('skips non-object items (nothing to report a reason about)', () => {
+    const r = parser.parse(JSON.stringify({
+      text: 'n',
+      setting_updates: ['string', 42, null, [], { kind: 'character' }],
+    }));
+    expect(r.settingUpdates).toHaveLength(1);
+  });
+
+  it('bounds a runaway array', () => {
+    const many = Array.from({ length: 200 }, () => ({ kind: 'character' }));
+    const r = parser.parse(JSON.stringify({ text: 'n', setting_updates: many }));
+    expect(r.settingUpdates?.length).toBe(50);
+  });
+
+  it('does NOT leak setting_updates into customFields', () => {
+    const r = parser.parse(JSON.stringify({ text: 'n', setting_updates: [{ kind: 'character' }] }));
+    expect(r.customFields?.['setting_updates']).toBeUndefined();
+  });
+});

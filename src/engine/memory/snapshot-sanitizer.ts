@@ -130,6 +130,10 @@ const PROMPT_ALWAYS_STRIP_PATHS: readonly string[] = [
   '记忆.隐式中期',
   '系统.扩展.engramMemory',
   '系统.扩展.image',
+  // Canon Capture: auto-captured settings reach the model through the world-book
+  // budget block (deduped + budgeted). Leaving them in GAME_STATE_JSON would inject
+  // every entry raw, every round, bypassing the budget entirely.
+  '系统.扩展.slotWorldBooks',
   // '系统.扩展.语义记忆' — 暂不 strip：当前无检索链路消费该路径，
   // strip 会导致旧存档 triples 静默消失。待补 retrieval 注入后再启用。
   '系统.设置',

@@ -8,6 +8,7 @@
  */
 import Toast from '@/ui/components/common/Toast.vue';
 import CloudSyncManager from '@/ui/components/cloud/CloudSyncManager.vue';
+import CapturedSettingNotifier from '@/ui/components/common/CapturedSettingNotifier.vue';
 </script>
 
 <template>
@@ -15,6 +16,10 @@ import CloudSyncManager from '@/ui/components/cloud/CloudSyncManager.vue';
   <Toast />
   <!-- App-level GitHub auto cloud-sync engine (no persistent UI; toast + conflict modal only) -->
   <CloudSyncManager />
+  <!-- Canon Capture: turns a round's capture result into the right toast (headless).
+       Lives here rather than in MainGamePanel so the undo affordance survives a route
+       change mid-round. -->
+  <CapturedSettingNotifier />
 </template>
 
 <style>

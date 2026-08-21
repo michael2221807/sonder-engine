@@ -10,6 +10,7 @@
  *   - extractNarrativeFromWrapper correctness
  */
 import { describe, it, expect, vi } from 'vitest';
+import { hasSettingUpdatesTrace } from './response-repair';
 import { ResponseRepairStage, extractNarrativeFromWrapper } from './response-repair';
 import { ResponseParser } from '../../ai/response-parser';
 import type { PipelineContext } from '../types';
@@ -186,5 +187,93 @@ describe('ResponseRepairStage', () => {
     // Narrative rescue still happened even though AI failed
     expect(result.parsedResponse?.text).toBe('backup 叙事');
     expect(result.meta.responseRepairStructureRescued).toBe(false);
+  });
+});
+
+// ─── Canon Capture provenance gate (design §5.6) ─────────────
+
+describe('hasSettingUpdatesTrace', () => {
+  it('detects the field in a malformed but recognisable output', () => {
+    expect(hasSettingUpdatesTrace('{"text":"x","setting_updates":[{')).toBe(true);
+    expect(hasSettingUpdatesTrace("{'setting_updates' : [")).toBe(true);
+    expect(hasSettingUpdatesTrace('setting_updates: [')).toBe(true);
+  });
+
+  it('is false when the output only CONTAINS narrative that could imply settings', () => {
+    // The repair model sees the whole narrative; without this gate it could invent a
+    // plausible `setting_updates` array from the prose. A prompt rule cannot stop that.
+    expect(hasSettingUpdatesTrace('林月从小怕水，她站在码头边发抖。')).toBe(false);
+    expect(hasSettingUpdatesTrace('{"text":"...","commands":[]}')).toBe(false);
+  });
+
+  it('is false for empty / non-string input', () => {
+    expect(hasSettingUpdatesTrace(undefined)).toBe(false);
+    expect(hasSettingUpdatesTrace('')).toBe(false);
+    expect(hasSettingUpdatesTrace(123 as unknown as string)).toBe(false);
+  });
+
+  it('does not fire on a mere mention without the JSON key shape', () => {
+    expect(hasSettingUpdatesTrace('the setting_updates field was missing')).toBe(false);
+  });
+});
+
+/** Read the system prompt the repair stage actually sent, without leaning on mock tuple types. */
+function systemPromptOf(ai: ReturnType<typeof makeAIService>): string {
+  const call = ai.generate.mock.calls[0] as unknown as [{ messages: Array<{ content: string }> }];
+  return call[0].messages[0].content;
+}
+
+describe('ResponseRepairStage · Canon Capture provenance gate (end-to-end)', () => {
+  const parser = new ResponseParser();
+
+  const REPAIRED = JSON.stringify({
+    text: '救回来的正文',
+    commands: [],
+    action_options: ['a', 'b', 'c'],
+    setting_updates: [{
+      kind: 'character', statement: '林月从小怕水。', evidence: '她从小怕水',
+      anchors: ['林月'], entities: ['林月'],
+    }],
+  });
+
+  it('accepts repaired settings when the malformed output really had the field', async () => {
+    const ai = makeAIService(REPAIRED);
+    const stage = new ResponseRepairStage(ai as never, parser);
+    const result = await stage.execute(makeCtx({
+      // Truncated mid-array — the field IS there, just unparseable.
+      rawResponse: '{"text":"半截", "setting_updates":[{"kind":"character","statement":"林月从小',
+      parsedResponse: { text: '半截', parseOk: false } as AIResponse,
+    }));
+    expect(result.parsedResponse?.settingUpdates).toHaveLength(1);
+  });
+
+  it('DISCARDS repaired settings when the malformed output never had the field', async () => {
+    // The repair model sees the whole narrative and can happily invent a plausible
+    // array from it. Only code can stop that — a prompt rule cannot.
+    const ai = makeAIService(REPAIRED);
+    const stage = new ResponseRepairStage(ai as never, parser);
+    const result = await stage.execute(makeCtx({
+      rawResponse: '{"text":"林月从小怕水，她站在码头边发抖。","commands":[',
+      parsedResponse: { text: '林月从小怕水…', parseOk: false } as AIResponse,
+    }));
+    expect(result.parsedResponse?.settingUpdates).toBeUndefined();
+    // The rest of the rescue still works — the gate is surgical.
+    expect(result.parsedResponse?.actionOptions).toHaveLength(3);
+  });
+
+  it('only asks the repair model for the field when it was actually present', async () => {
+    const withField = makeAIService(REPAIRED);
+    await new ResponseRepairStage(withField as never, parser).execute(makeCtx({
+      rawResponse: '{"setting_updates":[{',
+      parsedResponse: { text: 'x', parseOk: false } as AIResponse,
+    }));
+    expect(systemPromptOf(withField)).toContain('setting_updates');
+
+    const withoutField = makeAIService(REPAIRED);
+    await new ResponseRepairStage(withoutField as never, parser).execute(makeCtx({
+      rawResponse: '{"text":"普通叙事","commands":[',
+      parsedResponse: { text: 'x', parseOk: false } as AIResponse,
+    }));
+    expect(systemPromptOf(withoutField)).not.toContain('setting_updates');
   });
 });

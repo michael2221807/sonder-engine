@@ -107,6 +107,19 @@ export interface PipelineMeta {
 export interface PipelineContext {
   /** 用户输入文本（PreProcessStage 可能 prepend 了 action queue 内容） */
   userInput: string;
+  /**
+   * The player's input EXACTLY as it entered `runRound()` — never modified by any stage.
+   *
+   * Canon Capture validates every captured setting against text found inside a `<设定>`
+   * tag in THIS string. `userInput` is unusable for that: `PreProcessStage` prepends the
+   * action-queue description to it, so a panel action's text would become forgeable
+   * "player evidence". Keeping the pristine input separate is what stops a machine-
+   * generated line from being permanently recorded as something the player wrote.
+   *
+   * Optional so existing context constructors (enhanced opening) stay valid; consumers
+   * fall back to `userInput` only where evidence is NOT at stake.
+   */
+  originalUserInput?: string;
   /** action queue 消费后格式化的操作描述（空字符串表示本回合无面板操作） */
   actionQueuePrompt: string;
   /**
@@ -386,7 +399,7 @@ export interface IEngramManager {
   processResponse(
     response: AIResponse,
     stateManager: StateManager,
-    options?: { defaultEdgeCore?: boolean; defaultEdgeSource?: import('../memory/engram/knowledge-edge').EngramEdge['source'] },
+    options?: import('../memory/engram/engram-manager').ProcessResponseOptions,
   ): Promise<import('../memory/engram/engram-types').EngramWriteSnapshot | null>;
   /** 获取当前 Engram 配置（ContextAssemblyStage 用于检索模式决策） */
   getConfig(): import('../memory/engram/engram-types').EngramConfig;
@@ -524,8 +537,31 @@ export interface EnginePathConfig {
   gameTimeHour: string;
   /** 游戏时间·分钟（如 "世界.时间.分钟"） */
   gameTimeMinute: string;
+  /**
+   * 游戏时间对象的字段名映射（B0-2, 2026-08-20）
+   *
+   * `gameTime` 路径指向的是一个 `{年, 月, 日, 小时, 分钟}` 对象。世界书 timeline
+   * 过滤需要把它格式化为 `YYYY:MM:DD:HH:MM` 字符串，而 `src/engine/` 不得硬编码
+   * 中文字段名（CLAUDE.md §4 引擎/内容分离），因此和 `npcFieldNames` 一样通过
+   * 此映射注入。Game Pack 可通过 manifest 的 enginePaths 覆写。
+   */
+  gameTimeFieldNames: EngineGameTimeFieldNames;
   /** 上次对话前快照路径（用于 Rollback，如 "元数据.上次对话前快照"） */
   preRoundSnapshot: string;
+  /**
+   * Slot-owned world books (Canon Capture) — `WorldBook[]` living INSIDE the state tree
+   * (e.g. "系统.扩展.slotWorldBooks").
+   *
+   * Why the state tree and not `WorldBookStorage`: books stored in IndexedDB are keyed
+   * `profileId:book.id`, so every save slot of a profile would share them and they would
+   * NOT roll back with the round. Putting auto-captured settings in the state tree makes
+   * them slot-scoped, rollback-correct, and carried by save / backup / cloud sync for
+   * free — no second persistence path to keep in sync.
+   *
+   * Stripped from `GAME_STATE_JSON` (see `PROMPT_ALWAYS_STRIP_PATHS`): the entries reach
+   * the model through the world-book budget block, never as raw state.
+   */
+  slotWorldBooks: string;
   /**
    * 玩家已探索地点名称数组（如 "系统.探索记录"）
    * 由引擎 PostProcessStage 在每回合自动维护，无需 AI 命令写入。
@@ -640,6 +676,25 @@ export interface BookmarkedRound {
  * - 若未来 Game Pack 需要不同字段名，通过 pack manifest 的 `enginePaths.npcFieldNames`
  *   覆写（目前与其他路径一致：静态契约，`engine-paths.json` 暂未启用覆写）
  */
+/**
+ * 游戏时间对象的字段 key 映射。
+ *
+ * 默认值在 `DEFAULT_ENGINE_PATHS.gameTimeFieldNames` 中给出（中文字段名，与天命 pack
+ * 的 state-schema `世界.时间` 对齐）。消费方：`formatGameTimeForWorldBook()`。
+ */
+export interface EngineGameTimeFieldNames {
+  /** 年 key（默认 '年'） */
+  year: string;
+  /** 月 key（默认 '月'） */
+  month: string;
+  /** 日 key（默认 '日'） */
+  day: string;
+  /** 小时 key（默认 '小时'） */
+  hour: string;
+  /** 分钟 key（默认 '分钟'） */
+  minute: string;
+}
+
 export interface EngineNpcFieldNames {
   /** NPC 名称字段 key（默认 '名称'） */
   name: string;
@@ -824,7 +879,15 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
   talents: '角色.身份.天赋',
   gameTimeHour: '世界.时间.小时',
   gameTimeMinute: '世界.时间.分钟',
+  gameTimeFieldNames: {
+    year: '年',
+    month: '月',
+    day: '日',
+    hour: '小时',
+    minute: '分钟',
+  },
   preRoundSnapshot: '元数据.上次对话前快照',
+  slotWorldBooks: '系统.扩展.slotWorldBooks',
   explorationRecord: '系统.探索记录',
   reasoningHistory: '元数据.推理历史',
   storyPlan: '元数据.剧情规划',

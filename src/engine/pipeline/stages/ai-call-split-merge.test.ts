@@ -1,0 +1,110 @@
+/**
+ * Split-gen field-merge regression.
+ *
+ * `executeSplitGen` merges the two responses through a HAND-WRITTEN whitelist: the
+ * narrative comes from step1, the structured fields from step2, and anything not named
+ * in that object literal is silently dropped — in split mode only. That asymmetry has
+ * bitten this codebase before, and for Canon Capture it would mean a player's explicitly
+ * marked setting vanishes for anyone who has split generation enabled, with no error.
+ *
+ * So the whitelist gets a test.
+ */
+import { describe, it, expect } from 'vitest';
+import { AICallStage } from './ai-call';
+import { ResponseParser } from '../../ai/response-parser';
+import { DEFAULT_ENGINE_PATHS } from '../types';
+import type { PipelineContext } from '../types';
+import type { AIService } from '../../ai/ai-service';
+import type { GenerateOptions } from '../../ai/types';
+
+void DEFAULT_ENGINE_PATHS;
+
+const STEP1 = JSON.stringify({ text: '码头的风很凉，林月停在栈桥前。' });
+const STEP2 = JSON.stringify({
+  commands: [{ action: 'add', path: '世界.时间.分钟', value: 20 }],
+  action_options: ['靠近水边', '牵住她的手', '换条路走'],
+  mid_term_memory: { 相关角色: ['林月'], 事件时间: '1-01-15-08-30', 记忆主体: '带林月到码头。' },
+  knowledge_facts: [{ fact: '林月害怕靠近深水区域', source_entity: '林月', target_entity: '码头' }],
+  setting_updates: [{
+    kind: 'character',
+    statement: '林月从小怕水。',
+    evidence: '她从小怕水',
+    anchors: ['林月', '怕水'],
+    entities: ['林月'],
+  }],
+});
+
+/** Minimal AIService double: step1 vs step2 chosen by generationId suffix. */
+function fakeAiService(): AIService {
+  return {
+    generate: async (opts: GenerateOptions): Promise<string> =>
+      opts.generationId?.endsWith('_step2') ? STEP2 : STEP1,
+  } as unknown as AIService;
+}
+
+function splitCtx(): PipelineContext {
+  return {
+    userInput: '我带她去码头。<设定>她从小怕水</设定>',
+    originalUserInput: '我带她去码头。<设定>她从小怕水</设定>',
+    actionQueuePrompt: '',
+    stateSnapshot: {},
+    chatHistory: [],
+    messages: [{ role: 'system', content: 'step1 prompt' }],
+    worldEventTriggered: false,
+    roundNumber: 2,
+    generationId: 'gen-1',
+    meta: {
+      splitGen: true,
+      splitStep2Messages: [{ role: 'system', content: 'step2 prompt' }],
+    },
+  } as unknown as PipelineContext;
+}
+
+describe('AICallStage · split-gen merge whitelist', () => {
+  it('carries setting_updates from step2 into the merged response', async () => {
+    const stage = new AICallStage(fakeAiService(), new ResponseParser());
+    const out = await stage.execute(splitCtx());
+
+    expect(out.parsedResponse?.settingUpdates).toHaveLength(1);
+    expect(out.parsedResponse?.settingUpdates?.[0]).toMatchObject({
+      kind: 'character',
+      statement: '林月从小怕水。',
+    });
+  });
+
+  it('still carries the pre-existing step2 fields (no regression from the addition)', async () => {
+    const stage = new AICallStage(fakeAiService(), new ResponseParser());
+    const out = await stage.execute(splitCtx());
+
+    expect(out.parsedResponse?.text).toContain('码头的风很凉');   // from step1
+    expect(out.parsedResponse?.commands).toHaveLength(1);          // from step2
+    expect(out.parsedResponse?.actionOptions).toHaveLength(3);
+    expect(out.parsedResponse?.knowledgeFacts).toHaveLength(1);
+  });
+
+  it('leaves settingUpdates undefined when step2 did not emit the field', async () => {
+    const service = {
+      generate: async (opts: GenerateOptions): Promise<string> =>
+        opts.generationId?.endsWith('_step2')
+          ? JSON.stringify({ commands: [], action_options: ['a', 'b', 'c'] })
+          : STEP1,
+    } as unknown as AIService;
+
+    const out = await new AICallStage(service, new ResponseParser()).execute(splitCtx());
+    expect(out.parsedResponse?.settingUpdates).toBeUndefined();
+  });
+
+  it('single-call mode carries the field too', async () => {
+    const single = JSON.stringify({
+      text: 'n',
+      setting_updates: [{ kind: 'world_fact', statement: 'x', evidence: 'x', anchors: ['x'], entities: [] }],
+    });
+    const service = { generate: async (): Promise<string> => single } as unknown as AIService;
+
+    const ctx = splitCtx();
+    delete (ctx.meta as Record<string, unknown>)['splitStep2Messages'];
+    const out = await new AICallStage(service, new ResponseParser()).execute(ctx);
+
+    expect(out.parsedResponse?.settingUpdates).toHaveLength(1);
+  });
+});

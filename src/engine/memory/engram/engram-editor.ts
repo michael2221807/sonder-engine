@@ -767,6 +767,10 @@ export class EngramEditor {
     const edgesBySource = {
       opening: 0,
       user: 0,
+      // Canon Capture projections. Counted separately from `user` (hand-authored in the
+      // graph editor) because they are owned by a world-book entry — lumping them into
+      // `legacy` would have hidden the whole feature from the coverage panel.
+      'user-canon': 0,
       'batch-sync': 0,
       'card-import': 0,
       legacy: 0,
@@ -774,6 +778,7 @@ export class EngramEditor {
     for (const edge of edges) {
       if (edge.source === 'opening') edgesBySource.opening++;
       else if (edge.source === 'user') edgesBySource.user++;
+      else if (edge.source === 'user-canon') edgesBySource['user-canon']++;
       else if (edge.source === 'batch-sync') edgesBySource['batch-sync']++;
       else if (edge.source === 'card-import') edgesBySource['card-import']++;
       else edgesBySource.legacy++; // undefined or 'ai'

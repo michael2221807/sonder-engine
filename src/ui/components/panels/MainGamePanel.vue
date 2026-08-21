@@ -61,6 +61,7 @@ import type { EventBus } from '@/engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS, type BookmarkedRound } from '@/engine/pipeline/types';
 import Modal from '@/ui/components/common/Modal.vue';
 import FormattedText from '@/ui/components/common/FormattedText.vue';
+import SettingTaggedText from '@/ui/components/common/SettingTaggedText.vue';
 import RoundDivider from '@/ui/components/panels/RoundDivider.vue';
 import GameComposer from '@/ui/components/panels/GameComposer.vue';
 import ThinkingViewer from '@/ui/components/panels/ThinkingViewer.vue';
@@ -1338,7 +1339,7 @@ watch(
           <div
             v-if="msg.role === 'user'"
             class="message-text message-text--plain"
-          >{{ msg.content }}</div>
+          ><SettingTaggedText :text="msg.content" /></div>
           <div v-else class="message-text"><FormattedText :text="displayTextForAssistant(msg)" :npc-names="npcNameList" :npc-data="npcDataList" /></div>
 
           <Tooltip

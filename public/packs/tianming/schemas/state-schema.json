@@ -629,6 +629,12 @@
           "type": "object",
           "properties": {
             "engramMemory": { "type": "object", "default": {} },
+            "slotWorldBooks": {
+              "type": "array",
+              "$comment": "Canon Capture：本存档专属的世界书册（WorldBook[]）。与 profile 世界书（IndexedDB，键 profileId:book.id）分开存放，因此随回合 rollback、随存档/备份/云同步走。DEFAULT_ENGINE_PATHS.slotWorldBooks 指向此路径；已加入 PROMPT_ALWAYS_STRIP_PATHS，只经世界书预算块注入。",
+              "default": [],
+              "items": { "type": "object" }
+            },
             "语义记忆": {
               "type": "object",
               "$comment": "语义三元组知识库。TripleBuilder 从 AI response 的 semantic_memory.triples 追加；UnifiedRetriever 按 keyword+importance+recency 评分检索。独立于 engramMemory 的 events/entities/relations。",

@@ -28,11 +28,39 @@ import type {
   BookmarkedRound,
 } from '../types';
 import type { StateManager } from '../../core/state-manager';
+import type { CanonMutationInput } from '../../memory/engram/canon-projection';
 import type { SaveManager } from '../../persistence/save-manager';
 import { eventBus } from '../../core/event-bus';
 import { deduplicateLocations } from '../../behaviors/location-dedup';
 import { estimateMessagesTokens, estimateTextTokens } from '../../core/metrics-helpers';
 import { extractPlotEvaluation } from '../../plot/types';
+
+/**
+ * Pull this round's accepted captures out of `ctx.meta` in the shape the graph needs.
+ *
+ * Reads defensively: `SettingCaptureStage` is fail-soft and may have written a partial
+ * result, and a shape surprise here must not sink an otherwise complete round.
+ */
+export function collectCanonMutations(ctx: PipelineContext): CanonMutationInput[] {
+  const result = ctx.meta?.['settingCapture'] as
+    | { accepted?: Array<{ entryId?: unknown; candidate?: { kind?: unknown; statement?: unknown; entities?: unknown } }> }
+    | undefined;
+  const accepted = result?.accepted;
+  if (!Array.isArray(accepted) || accepted.length === 0) return [];
+
+  const out: CanonMutationInput[] = [];
+  for (const item of accepted) {
+    const entryId = typeof item?.entryId === 'string' ? item.entryId : '';
+    const kind = typeof item?.candidate?.kind === 'string' ? item.candidate.kind : '';
+    const statement = typeof item?.candidate?.statement === 'string' ? item.candidate.statement : '';
+    const entities = Array.isArray(item?.candidate?.entities)
+      ? item.candidate.entities.filter((e): e is string => typeof e === 'string')
+      : [];
+    if (!entryId || !kind || !statement) continue;
+    out.push({ entryId, kind, statement, entities, op: 'add' });
+  }
+  return out;
+}
 
 export class PostProcessStage implements PipelineStage {
   name = 'PostProcess';
@@ -111,12 +139,17 @@ export class PostProcessStage implements PipelineStage {
 
     // ── 4. 更新 Engram（事件提取 → 实体构建 → 事实边构建 → 向量化） ──
     if (this.engramManager.isEnabled()) {
+      // Canon Capture rides along in the SAME write. A separate `processResponse()` for
+      // captured settings would rebuild every Event and Entity and re-run the round's
+      // embedding just to add one relationship edge.
+      const canonMutations = collectCanonMutations(ctx);
+
       const engramWriteSnapshot = await this.engramManager.processResponse(
         ctx.parsedResponse,
         this.stateManager,
         ctx.meta?.isEnhancedOpening
-          ? { defaultEdgeCore: true, defaultEdgeSource: 'opening' }
-          : undefined,
+          ? { defaultEdgeCore: true, defaultEdgeSource: 'opening', canonMutations }
+          : (canonMutations.length > 0 ? { canonMutations } : undefined),
       );
       if (engramWriteSnapshot) {
         ctx.meta['engramWrite'] = engramWriteSnapshot;

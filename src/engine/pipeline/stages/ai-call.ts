@@ -193,6 +193,11 @@ export class AICallStage implements PipelineStage {
       actionOptions: parsedStep2.actionOptions ?? [],
       midTermMemory: parsedStep2.midTermMemory,
       knowledgeFacts: parsedStep2.knowledgeFacts,
+      // Canon Capture: step2 is where the structured fields are produced, so the
+      // captured settings ride along with them. This whitelist is hand-written —
+      // omitting the field here would silently drop the player's marked settings in
+      // split-gen mode only, which is exactly the class of bug this merge causes.
+      settingUpdates: parsedStep2.settingUpdates,
       customFields: parsedStep2.customFields,
       thinking: parsedStep1.thinking,
       raw: rawStep1,

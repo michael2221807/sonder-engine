@@ -18,6 +18,7 @@
  * any string leaf that matches a namespaced asset id, so it needs no Chinese field names.
  */
 import { namespacedAssetId } from '../image/asset-cache';
+import { normalizeImportedWorldBook } from './captured-settings-card';
 import { SETTINGS_EXPORT_WHITELIST } from './settings-export-whitelist';
 import type {
   CardImageAssetEntry,
@@ -156,7 +157,15 @@ export async function applyWorldBooks(
   worldBooks: WorldBookExportData | undefined,
 ): Promise<number> {
   if (!worldBooks) return 0;
-  return wb.importWorldBooks(profileId, worldBooks);
+  // Defence in depth: a card built by an older or hand-edited exporter could still carry
+  // `ownership: 'slot'` / `origin: 'system-captured'`. Profile IndexedDB has no notion of
+  // slot ownership, so such a book would render under the wrong panel group AND be
+  // budgeted as auto-captured content the recipient never captured.
+  const normalized: WorldBookExportData = {
+    ...worldBooks,
+    books: worldBooks.books.map(normalizeImportedWorldBook),
+  };
+  return wb.importWorldBooks(profileId, normalized);
 }
 
 // ─── Global opt-in (default OFF; only when the player ticked) ─────

@@ -60,6 +60,28 @@ export function extractNarrativeFromWrapper(raw: string): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+/**
+ * Canon Capture provenance gate (design §5.6).
+ *
+ * `ResponseRepairStage` hands the model the ENTIRE malformed output — narrative
+ * included — and asks it to rebuild the JSON. A prompt rule saying "do not infer
+ * settings from the narrative" cannot be enforced: the repair model is perfectly
+ * capable of inventing a plausible `setting_updates` array from the prose.
+ *
+ * So the gate is code, not prompt: unless the original malformed output actually
+ * contains the field, anything the repair returns for it is discarded outright.
+ * (Candidates that DO pass still go through every `SettingCaptureStage` check —
+ * repair is not a back door around the evidence rule.)
+ */
+export function hasSettingUpdatesTrace(raw: string | undefined): boolean {
+  if (!raw || typeof raw !== 'string') return false;
+  return /["']?setting_updates["']?\s*:/u.test(raw);
+}
+
+const SETTING_UPDATES_REPAIR_FIELD =
+  '- `setting_updates` —— 玩家本回合用 `<设定>` 标记的长期设定数组，' +
+  '**只能从畸形原文中原样提取**，绝对不允许从叙事正文推断或补写；找不到就输出 `[]`';
+
 const REPAIR_SYSTEM_PROMPT = [
   '你是一个 JSON 修复助手。',
   '用户会给你一段 **畸形** 的 LLM 输出（包含叙事正文 + 本应是 JSON 的结构化字段，但 JSON 被破坏了）。',
@@ -102,11 +124,22 @@ export class ResponseRepairStage implements PipelineStage {
     let recoveredMemory = parsed.midTermMemory;
     let recoveredOptions = parsed.actionOptions;
     let recoveredKnowledgeFacts = parsed.knowledgeFacts;
+    let recoveredSettingUpdates = parsed.settingUpdates;
     let structureRescued = false;
 
     try {
+      // Only ask for `setting_updates` when the malformed output actually had it —
+      // asking for a field that was never there invites the model to invent one.
+      const wantSettingUpdates = hasSettingUpdatesTrace(ctx.rawResponse);
+      const systemPrompt = wantSettingUpdates
+        ? REPAIR_SYSTEM_PROMPT.replace(
+            '\n\n**硬规则**：',
+            `\n${SETTING_UPDATES_REPAIR_FIELD}\n\n**硬规则**：`,
+          )
+        : REPAIR_SYSTEM_PROMPT;
+
       const messages: AIMessage[] = [
-        { role: 'system', content: REPAIR_SYSTEM_PROMPT },
+        { role: 'system', content: systemPrompt },
         {
           role: 'user',
           content: `<畸形输出>\n${ctx.rawResponse}\n</畸形输出>\n\n请输出修复后的合法 JSON 对象。`,
@@ -152,6 +185,11 @@ export class ResponseRepairStage implements PipelineStage {
           recoveredOptions = repaired.actionOptions;
         }
         if (repaired.knowledgeFacts) recoveredKnowledgeFacts = repaired.knowledgeFacts;
+        // Provenance gate: accept repaired settings ONLY if the original output
+        // carried the field. Otherwise discard, however plausible they look.
+        if (wantSettingUpdates && repaired.settingUpdates) {
+          recoveredSettingUpdates = repaired.settingUpdates;
+        }
         // If <正文> wasn't found but repair gave clean text, use it.
         if (!recoveredText && repaired.text && repaired.text.trim()) {
           recoveredText = repaired.text;
@@ -176,6 +214,7 @@ export class ResponseRepairStage implements PipelineStage {
         midTermMemory: recoveredMemory,
         actionOptions: recoveredOptions,
         knowledgeFacts: recoveredKnowledgeFacts,
+        settingUpdates: recoveredSettingUpdates,
         parseOk: structureRescued,
       },
       meta: {

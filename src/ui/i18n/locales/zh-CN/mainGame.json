@@ -200,5 +200,19 @@
   "mainGame.roundDivider.metricsTitle": "本回合元信息 · 第 {n} 回合",
   "mainGame.roundDivider.inputTokensLabel": "输入 tokens",
   "mainGame.roundDivider.durationLabel": "耗时",
-  "mainGame.roundDivider.outputTokensLabel": "输出 tokens"
+  "mainGame.roundDivider.outputTokensLabel": "输出 tokens",
+
+  "mainGame.settingTag.buttonAria": "标记为设定",
+  "mainGame.settingTag.tooltip": "把选中的文字标记为长期设定，AI 本回合就会遵守，并且以后一直记得",
+  "mainGame.settingTag.tooltipDisabled": "世界书已关闭，设定不会被记录",
+
+  "mainGame.settingCapture.recorded": "已记住 {count} 条设定",
+  "mainGame.settingCapture.recordedPartial": "已记住 {count} 条设定 · 另有 {failed} 条没记下",
+  "mainGame.settingCapture.alreadyKnown": "这条设定之前已经记过了",
+  "mainGame.settingCapture.failed": "本回合的设定没能记下",
+  "mainGame.settingCapture.capacityFull": "自动设定已达上限（{max} 条），先清理一些再记新的。",
+  "mainGame.settingCapture.undo": "撤回",
+  "mainGame.settingCapture.view": "查看",
+  "mainGame.settingCapture.addManually": "手动添加",
+  "mainGame.settingCapture.undone": "已撤回"
 }

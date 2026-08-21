@@ -69,5 +69,9 @@ export type {
 export type {
   EngineEventName,
   ToastPayload,
+  ToastAction,
   EventHandler,
 } from './event-bus';
+// Runtime value, so it needs a VALUE export — a `export type` re-export compiles fine
+// but resolves to nothing at runtime.
+export { MAX_TOAST_ACTIONS } from './event-bus';

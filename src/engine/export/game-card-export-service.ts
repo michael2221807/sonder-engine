@@ -20,6 +20,8 @@ import { gzipCompress, sha256String } from '../sync/chunked-bundle-packer';
 import { collectAssetIdsFromTree } from '../persistence/backup-service';
 import { stripStateTreeForCard, getByPath, isRecord, collectStringsAtPath } from './card-stripper';
 import { buildDefaultCardStripPaths, type CardStripPaths } from './card-export-paths';
+import { convertCapturedBookForCard, extractCapturedBookFromTree } from './captured-settings-card';
+import type { WorldBookExportData } from '../prompt/world-book';
 import {
   CARD_FORMAT_VERSION,
   type GameCardBundle,
@@ -57,6 +59,29 @@ export class GameCardExportService {
   ) {}
 
   /**
+   * Profile world books + the converted captured-settings book.
+   *
+   * Provenance is dropped and the ids are regenerated during conversion — see
+   * `convertCapturedBookForCard`. The id regeneration matters: `importWorldBooks` saves
+   * under the incoming id keyed `profileId:book.id`, so shipping the fixed
+   * `system_captured_settings` id would overwrite the recipient's own captured book.
+   */
+  private async collectWorldBooks(
+    profileId: string,
+    originalTree: Record<string, unknown>,
+    cardTitle: string,
+  ): Promise<WorldBookExportData> {
+    const data = await this.worldBookStorage.exportWorldBooks(profileId);
+    const captured = extractCapturedBookFromTree(originalTree, this.stripPaths.capturedSettings);
+    if (!captured || captured.entries.length === 0) return data;
+
+    const converted = convertCapturedBookForCard(captured, cardTitle);
+    if (converted.entries.length === 0) return data;
+
+    return { ...data, books: [...data.books, converted] };
+  }
+
+  /**
    * Trim a save into a shareable game card and serialize it to a single gzip blob.
    * Read-only: loads the persisted save, deep-clones, never writes back.
    */
@@ -86,8 +111,15 @@ export class GameCardExportService {
     const imageAssets = await this.collectImages(stateTree, flags.includedReferenceGallery);
 
     // 4. Optional creative assets (each gated by a checklist flag).
+    // World books: the author's profile books, plus — when they opted in — this save's
+    // captured-settings book converted into an ordinary profile book.
+    //
+    // The captured book is read from the ORIGINAL tree (same pattern as engram above),
+    // because `stripStateTreeForCard` has already removed it from the exported copy. If
+    // it were only stripped and never re-added, ticking "include world books" would
+    // silently do nothing for it.
     const worldBooks = flags.includedWorldBooks
-      ? await this.worldBookStorage.exportWorldBooks(profileId)
+      ? await this.collectWorldBooks(profileId, original, options.cardMeta.title)
       : undefined;
 
     const builtinPromptOverrides = flags.includedBuiltinOverrides

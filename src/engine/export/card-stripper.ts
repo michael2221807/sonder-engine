@@ -193,6 +193,11 @@ export function stripStateTreeForCard(
   deletePaths(t, paths.gameplayHistory);
   deletePaths(t, paths.secrets);
   deleteByPath(t, paths.engramMemory.split('.'));
+  // Canon Capture: ALWAYS leaves the state tree. When the author opted into world books
+  // the service re-adds it to the `worldBooks` payload (converted to a profile book);
+  // leaving it here as well would ship the same content twice AND smuggle it past the
+  // author's own "include world books" decision.
+  deleteByPath(t, paths.capturedSettings.split('.'));
 
   // 2. UI settings: capture promptSettings (游戏设定) if kept, strip 系统.设置 wholesale, restore.
   let keptPromptSettings: unknown;

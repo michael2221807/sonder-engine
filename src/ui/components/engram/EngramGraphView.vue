@@ -275,6 +275,7 @@ function initGraph(): void {
     'opening': t('engram.editor.edge.sourceLabel.opening'),
     'batch-sync': t('engram.editor.edge.sourceLabel.batch-sync'),
     'card-import': t('engram.editor.edge.sourceLabel.card-import'),
+    'user-canon': t('engram.editor.edge.sourceLabel.user-canon'),
   };
 
   cyInstance.on('mouseover', 'node', (evt) => {

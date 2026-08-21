@@ -12,7 +12,8 @@
  * - 导入（选择 JSON，合并不清空）
  * - 权重持久化到 localStorage
  */
-import { ref, computed, inject } from 'vue';
+import { ref, computed, inject, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import Modal from '@/ui/components/common/Modal.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
@@ -24,7 +25,7 @@ const { t } = useI18n();
 import { eventBus } from '@/engine/core/event-bus';
 import type { GamePack } from '@/engine/types/game-pack';
 import { useGameState } from '@/ui/composables/useGameState';
-import { DEFAULT_PROMPT_SETTINGS, type PromptSettings } from '@/engine/prompt/world-book';
+import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio, type PromptSettings } from '@/engine/prompt/world-book';
 import { BUILTIN_SLOTS } from '@/engine/prompt/builtin-slots';
 import { createEmptyHeroinePlan, type HeroinePlan, type HeroineEntry, type HeroineInteractionEvent } from '@/engine/story/heroine-plan';
 import type { PromptRegistry } from '@/engine/prompt/prompt-registry';
@@ -36,7 +37,42 @@ const { get, setValue } = useGameState();
 
 // ─── Tab state ──────────────────────────────────────────────
 type PanelTab = 'prompts' | 'settings' | 'heroine' | 'worldbook';
-const activeTab = ref<PanelTab>('prompts');
+const route = useRoute();
+
+/**
+ * Opening tab, honouring `?tab=` so other surfaces can deep-link here.
+ *
+ * Canon Capture's toast uses it to land the player directly on the captured-settings
+ * book: an "undo / view" affordance that dumps you on the wrong tab is barely better
+ * than no affordance.
+ */
+const TAB_IDS: readonly PanelTab[] = ['prompts', 'settings', 'heroine', 'worldbook'];
+function initialTab(): PanelTab {
+  const requested = route.query['tab'];
+  const value = Array.isArray(requested) ? requested[0] : requested;
+  return TAB_IDS.includes(value as PanelTab) ? (value as PanelTab) : 'prompts';
+}
+
+const activeTab = ref<PanelTab>(initialTab());
+
+// Deep-links can arrive while the panel is already mounted (router keeps it alive).
+watch(() => route.query['tab'], () => { activeTab.value = initialTab(); });
+
+/**
+ * Canon Capture budget share, shown as a whole percentage.
+ *
+ * Stored as a 0-1 ratio (`PromptSettings.capturedEntryBudgetRatio`) and clamped by
+ * `resolveCapturedBudgetRatio` on read, so a hand-edited save with a nonsense value
+ * still renders a sane slider instead of an empty track.
+ */
+const capturedBudgetPercent = computed(() =>
+  Math.round(resolveCapturedBudgetRatio(promptSettings.value.capturedEntryBudgetRatio) * 100));
+
+function onCapturedBudgetInput(event: Event): void {
+  const percent = Number((event.target as HTMLInputElement).value);
+  if (!Number.isFinite(percent)) return;
+  updatePromptSetting('capturedEntryBudgetRatio', resolveCapturedBudgetRatio(percent / 100));
+}
 
 // ─── Prompt Settings (from state tree) ──────────────────────
 const promptSettings = computed<PromptSettings>(() => {
@@ -754,6 +790,41 @@ function previewContent(content: string, maxLen = 100): string {
             />
           </div>
           <p class="settings-desc">{{ $t('prompt.settings.enableWorldBookDesc') }}</p>
+
+          <!-- Canon Capture: extraction switch. Nested under the world-book group
+               because the master switch above gates it — turning world books off stops
+               capture too, and the disabled state says so instead of failing silently. -->
+          <div class="settings-row">
+            <AgaToggle
+              :modelValue="promptSettings.enableSettingCapture !== false"
+              :disabled="promptSettings.enableWorldBook === false"
+              :label="$t('prompt.settingCapture.enable')"
+              show-label
+              @update:modelValue="v => updatePromptSetting('enableSettingCapture', v)"
+            />
+          </div>
+          <p class="settings-desc">{{ $t('prompt.settingCapture.enableDesc') }}</p>
+
+          <!-- Budget share. Hand-written entries are always admitted first; this caps
+               how much of what remains auto-captured settings may take. -->
+          <div class="settings-row settings-row--slider">
+            <label class="settings-slider-label" for="captured-budget-ratio">
+              {{ $t('prompt.settingCapture.budgetTitle') }}
+            </label>
+            <input
+              id="captured-budget-ratio"
+              type="range"
+              class="settings-slider"
+              min="20" max="80" step="5"
+              :disabled="promptSettings.enableWorldBook === false"
+              :value="capturedBudgetPercent"
+              @input="onCapturedBudgetInput"
+            />
+            <span class="settings-slider-value">
+              {{ $t('prompt.settingCapture.budgetValue', { percent: capturedBudgetPercent }) }}
+            </span>
+          </div>
+          <p class="settings-desc">{{ $t('prompt.settingCapture.budgetDesc') }}</p>
         </div>
 
         <div class="settings-group">
@@ -1466,5 +1537,33 @@ function previewContent(content: string, maxLen = 100): string {
 
 @media (max-width: 767px) {
   .prompt-panel { padding-left: var(--space-md); padding-right: var(--space-md); transition: none; }
+}
+
+/* ── Canon Capture: budget share slider ── */
+.settings-row--slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-slider-label {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+
+.settings-slider {
+  flex: 1;
+  min-width: 120px;
+  max-width: 260px;
+}
+
+.settings-slider-value {
+  flex-shrink: 0;
+  min-width: 3.2em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
 }
 </style>
