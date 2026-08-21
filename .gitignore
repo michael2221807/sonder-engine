@@ -28,8 +28,21 @@ dist-ssr
 .cursor/
 .agents/
 .claude/
+.agent-bridge/
+.codex/
+.mcp.json
+AGENTS.md
+CODEX.md
 skills-lock.json
 .impeccable.md
+
+# Local agent orchestration tooling
+portable/
+scripts/co-agent-bridge.mjs
+scripts/co-agent-delegate.mjs
+scripts/co-agent-mcp.mjs
+scripts/install-co-agent.mjs
+tools/vscode-coagent/
 
 # E2E tests — screenshots and artifacts are local-only.
 # ALL Playwright MCP verify artifacts (screenshots, snapshot dumps, console/page logs)
