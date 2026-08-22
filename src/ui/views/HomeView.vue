@@ -737,12 +737,14 @@ onMounted(async () => {
   opacity: 0.75;
 }
 
+/* letter-spacing leaves a trailing gap after the last glyph; the negative
+   right margin swallows it so the glyphs stay optically centered. */
 .brand-title {
   font-family: var(--font-serif-cjk);
   font-size: clamp(2.4rem, 4.5vw, 3.1rem);
   font-weight: 600;
   letter-spacing: 0.14em;
-  text-indent: 0.14em;
+  margin-right: -0.14em;
   color: var(--color-text);
   text-shadow: 0 0 40px color-mix(in oklch, var(--color-sage-400) 15%, transparent), 0 0 40px color-mix(in oklch, var(--color-amber-400) 10%, transparent);
 }
@@ -751,7 +753,7 @@ onMounted(async () => {
   font-size: 0.78rem;
   font-weight: 500;
   letter-spacing: 0.6em;
-  text-indent: 0.6em;
+  margin-right: -0.6em;
   text-transform: uppercase;
   color: color-mix(in oklch, var(--color-sage-400) 75%, var(--color-text-secondary));
 }

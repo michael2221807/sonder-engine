@@ -54,13 +54,13 @@ the same discipline you'd expect from a game engine, applied to LLM-driven narra
 
 ## A Look Inside
 
-<img src=".github/assets/screen-game.png" alt="Main narrative panel — streaming prose with inline skill checks, dialogue, and inner thoughts" width="100%">
+<img src=".github/assets/screen-game-en.png" alt="Main narrative panel — streaming prose with dialogue, inner thoughts, and environment beats" width="100%">
 
 <table>
   <tr>
-    <td width="33%"><img src=".github/assets/screen-home.png" alt="Sanctuary home screen"></td>
-    <td width="33%"><img src=".github/assets/screen-social.png" alt="NPC relationship roster and detail"></td>
-    <td width="33%"><img src=".github/assets/screen-map.png" alt="Interactive world map with exploration states"></td>
+    <td width="33%"><img src=".github/assets/screen-home-en.png" alt="Sanctuary home screen"></td>
+    <td width="33%"><img src=".github/assets/screen-social-en.png" alt="NPC relationship roster and detail"></td>
+    <td width="33%"><img src=".github/assets/screen-map-en.png" alt="Interactive world map with exploration states"></td>
   </tr>
   <tr align="center">
     <td><em>A home that feels like a sanctuary</em></td>
