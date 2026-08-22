@@ -4,7 +4,7 @@
  * HomeView — Application entry screen.
  *
  * Responsibilities:
- * 1. Display the AutoGameAgent brand and the active Game Pack information
+ * 1. Display the 众生 Sonder brand and the active Game Pack information
  * 2. Offer three primary actions: New Character, Continue Game, Manage Saves
  * 3. List recently played profiles (sourced from ProfileManager) so the
  *    user can jump back into a previous session with one click
@@ -84,13 +84,13 @@ function onCardImported(): void {
 /** Pack display info — falls back to sensible defaults when no pack is loaded */
 const packInfo = computed(() => {
   if (!gamePack?.manifest) {
-    return { name: 'AutoGameAgent', version: '', description: 'AI Game Engine' };
+    return { name: 'Sonder', version: '', description: 'AI Narrative Engine' };
   }
   const m: GamePackManifest = gamePack.manifest;
   return {
-    name: m.name ?? m.id ?? 'AutoGameAgent',
+    name: m.name ?? m.id ?? 'Sonder',
     version: m.version ?? '',
-    description: m.description ?? 'AI Game Engine',
+    description: m.description ?? 'AI Narrative Engine',
   };
 });
 
@@ -367,14 +367,22 @@ onMounted(async () => {
 
 <template>
   <div class="home-view">
-    <!-- Brand header -->
+    <!-- Brand header — 众生 Sonder bilingual lockup (the 众-mark: 众 = three 人) -->
     <header class="home-header">
-      <h1 class="brand-title">AutoGameAgent</h1>
-      <p class="brand-subtitle">{{ packInfo.description }}</p>
-      <div v-if="packInfo.version" class="pack-badge">
-        <span class="pack-name">{{ packInfo.name }}</span>
-        <span class="pack-version">v{{ packInfo.version }}</span>
-      </div>
+      <svg class="brand-mark" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <path d="M15 19 L24 7 L33 19" class="brand-mark__lit" />
+        <path d="M4.5 41 L13.5 29 L22.5 41" class="brand-mark__many" />
+        <path d="M25.5 41 L34.5 29 L43.5 41" class="brand-mark__many" />
+      </svg>
+      <h1 class="brand-title">众生</h1>
+      <p class="brand-latin" aria-hidden="true">Sonder</p>
+      <p class="brand-tagline">{{ $t('home.brand.tagline') }}</p>
+      <Tooltip v-if="packInfo.version" :text="packInfo.description">
+        <div class="pack-badge">
+          <span class="pack-name">{{ packInfo.name }}</span>
+          <span class="pack-version">v{{ packInfo.version }}</span>
+        </div>
+      </Tooltip>
     </header>
 
     <!-- Primary action buttons -->
@@ -704,22 +712,55 @@ onMounted(async () => {
 }
 
 /*
- * Brand title — solid serif. The old gradient-fill-text (indigo → #a78bfa)
- * was the signature AI-slop violation in .impeccable.md §absolute_bans;
- * removed entirely. Solid warm-bone + literary serif carries the identity.
+ * Brand lockup — the 众-mark above a bilingual 众生 / SONDER pair.
+ * Solid warm-bone + literary serif carries the identity (the old
+ * gradient-fill-text ban from .impeccable.md §absolute_bans still holds).
  */
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 0.35rem;
+}
+
+.brand-mark path {
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.brand-mark__lit {
+  stroke: var(--color-amber-400);
+}
+
+.brand-mark__many {
+  stroke: var(--color-sage-400);
+  opacity: 0.75;
+}
+
 .brand-title {
   font-family: var(--font-serif-cjk);
-  font-size: clamp(2.2rem, 4vw, 2.8rem);
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  font-size: clamp(2.4rem, 4.5vw, 3.1rem);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-indent: 0.14em;
   color: var(--color-text);
   text-shadow: 0 0 40px color-mix(in oklch, var(--color-sage-400) 15%, transparent), 0 0 40px color-mix(in oklch, var(--color-amber-400) 10%, transparent);
 }
 
-.brand-subtitle {
+.brand-latin {
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.6em;
+  text-indent: 0.6em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--color-sage-400) 75%, var(--color-text-secondary));
+}
+
+.brand-tagline {
+  font-family: var(--font-serif-cjk);
   color: var(--color-text-secondary);
-  font-size: 1rem;
+  font-size: 0.95rem;
+  margin-top: 0.35rem;
 }
 
 .pack-badge {

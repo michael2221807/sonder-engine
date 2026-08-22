@@ -2035,7 +2035,7 @@ onBeforeUnmount(() => {
         </div>
         <div class="about-row">
           <span class="about-label">{{ $t('settings.about.engine') }}</span>
-          <span class="about-value">AutoGameAgent</span>
+          <span class="about-value">众生 Sonder</span>
         </div>
       </div>
     </section>

@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: "🎮 Play 众生 Sonder / 在线试玩"
+    url: "https://michael2221807.github.io/sonder-engine/"
+    about: "Try the engine in your browser before filing an issue. / 提 issue 前可以先在浏览器里试玩。"

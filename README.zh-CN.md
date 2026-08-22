@@ -2,239 +2,220 @@
 
 [English](README.md) | **中文**
 
-<img src="public/favicon.svg" alt="AutoGameAgent" width="80" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-dark.svg">
+  <img src=".github/assets/banner-light.svg" alt="众生 Sonder — 会记住一切的世界" width="100%">
+</picture>
 
-# AutoGameAgent
+<br>
 
-**AI 驱动的交互式叙事游戏引擎**
+> ***sonder*** *（生造词）—— 突然意识到，每一个路人都有和你一样鲜活而完整的一生。*
 
-用大语言模型构建沉浸式、持久化的故事世界。
+**众生（Sonder）是一个开源 AI 叙事引擎。**
+它构建持久存在的故事世界：每个角色都有自己的传记、记忆与生活——
+而你做过的一切，永远不会被遗忘。
 
-[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
-[![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vuedotjs&logoColor=white)](https://vuejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Pinia](https://img.shields.io/badge/Pinia-2-FFD859?logo=vuedotjs&logoColor=black)](https://pinia.vuejs.org/)
-[![Vitest](https://img.shields.io/badge/Vitest-4-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-2a2822.svg?labelColor=4f7a58)](LICENSE)
+[![Vue](https://img.shields.io/badge/Vue-3.5-2a2822?logo=vuedotjs&logoColor=a8cfae&labelColor=4f7a58)](https://vuejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-2a2822?logo=typescript&logoColor=a8cfae&labelColor=4f7a58)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-6-2a2822?logo=vite&logoColor=a8cfae&labelColor=4f7a58)](https://vitejs.dev/)
+[![Tests](https://img.shields.io/badge/Tests-3100%2B_passing-2a2822?logo=vitest&logoColor=a8cfae&labelColor=4f7a58)](https://vitest.dev/)
 
----
+### [立即开始 → michael2221807.github.io/sonder-engine](https://michael2221807.github.io/sonder-engine/)
 
-一个运行在浏览器中的游戏引擎，利用大语言模型（Claude、GPT、Ollama 等）生成丰富的叙事体验。支持持久化世界状态、深度角色系统和语义记忆。玩家可以创建角色、探索 AI 生成的世界、与 NPC 建立关系，并通过自然语言塑造涌现式故事。
+完全运行在你的浏览器里。自带 API key 即玩——你的数据永远不会发送到我们的服务器。
 
-### [立即游玩 &rarr; michael2221807.github.io/AutoGameAgent](https://michael2221807.github.io/AutoGameAgent/)
-
-无需安装，自带 API Key 即可秒开。
-
----
-
-[快速开始](#快速开始) ·
-[功能特性](#功能特性) ·
-[系统架构](#系统架构) ·
-[Game Pack 系统](#game-pack-系统) ·
-[开发指南](#开发指南) ·
-[开源协议](#开源协议)
+[为什么是众生](#为什么是众生) ·
+[功能](#功能) ·
+[快速上手](#快速上手) ·
+[架构](#架构) ·
+[游戏包系统](#游戏包系统) ·
+[开发](#开发)
 
 </div>
 
 ---
 
-## 快速开始
+## 为什么是众生
+
+大多数"AI 讲故事"应用只是一个患有健忘症的聊天窗口：模型会忘、世界会重置、角色是纸片人。
+众生按照**游戏引擎**的工程纪律来构建 LLM 驱动的叙事，而不是做一层聊天套壳：
+
+| | 聊天套壳 | **众生 Sonder** |
+|---|---|---|
+| 世界状态 | 埋在聊天记录里 | **响应式状态树**，AI 通过类型化的点路径指令修改 |
+| 记忆 | 滑动上下文窗口 | **四层递进式记忆** + 语义知识图谱 |
+| 角色 | 提示词里的一个名字 | 传记、性格、关系网、私聊、立绘 |
+| 剧情控制 | 听天由命 | **剧情导向系统**：故事弧、路标、进度仪表 |
+| 你的创作 | 被锁死 | 游戏卡——整个世界可导出、分享、导入 |
+| 持久化 | 顶多存在本地 | 分块 SHA-256 双重校验备份 + GitHub 云同步 |
+
+## 界面一瞥
+
+<img src=".github/assets/screen-game.png" alt="主叙事面板——流式叙事，内联判定、对话与内心独白" width="100%">
+
+<table>
+  <tr>
+    <td width="33%"><img src=".github/assets/screen-home.png" alt="庇护所首页"></td>
+    <td width="33%"><img src=".github/assets/screen-social.png" alt="NPC 关系名册与详情"></td>
+    <td width="33%"><img src=".github/assets/screen-map.png" alt="随探索生长的世界地图"></td>
+  </tr>
+  <tr align="center">
+    <td><em>像庇护所一样的首页</em></td>
+    <td><em>有传记与好感的 NPC</em></td>
+    <td><em>随探索生长的世界地图</em></td>
+  </tr>
+</table>
+
+## 功能
+
+**🧠 会记住一切的世界**
+四层记忆（短期 → 隐式中期 → 中期 → 长期）自动 AI 压缩，配合 **Engram** 知识图谱
+（实体节点 + 事实边，Cosine + BM25 + RRF + 图扩展混合检索）。输入时加上 `<设定>`
+标记，引擎自动把它沉淀为永久世界观。
+
+**👥 有完整人生的角色**
+NPC 拥有传记、六维性格、持续演化的关系网络、AI 生成的立绘——你可以随时把任何一个
+拉进一对一私聊，对话结果回流进共享世界。
+
+**🎭 有骨架的故事**
+每回合经过 8 阶段管线（上下文组装 → AI 调用 → 响应修复 → 指令执行 → 后处理，
+每一段都有降级兜底），逐字流式输出并实时排版。故事弧、路标与 AI 评估的进度仪表
+让长篇战役不散架。
+
+**🖼️ 看得见的世界**
+多后端生图——NovelAI、Civitai（LoRA 书架 + 触发词词典）、DALL-E、SD-WebUI、ComfyUI。
+角色视觉锚点保持面容一致，场景壁纸跟随叙事，img2img 与 AI 反推标注闭环。
+
+**🎙️ 听得见的世界**
+流式 TTS 配音 + 实时语音输入（2-pass 流式听写，支持专有名词热词词典），
+基于本地 CosyVoice 后端。
+
+**🃏 世界即卡带**
+引擎 100% 内容无关。所有游戏内容都在**游戏包**里（schema、提示词、预设、创角流程）。
+任何存档可导出为游戏卡分享；导入别人的卡，继续他们的世界。
+
+**☁️ 永不丢失**
+每回合自动存档、分块压缩 + 双层 SHA-256 校验的全量备份、按档案分插槽的 GitHub
+云存档、多设备冲突检测、任意回合回滚。
+
+## 快速上手
 
 ### 在线游玩（推荐）
 
-访问 **[michael2221807.github.io/AutoGameAgent](https://michael2221807.github.io/AutoGameAgent/)**，按以下步骤操作：
+打开 **[michael2221807.github.io/sonder-engine](https://michael2221807.github.io/sonder-engine/)**：
 
-1. 在主页点击 **API 配置**
-2. 添加至少一个 LLM API（OpenAI、Anthropic、Ollama、SiliconFlow 等），并将其分配给 `main` 用途类型
-3. 点击 **新建角色** 创建你的第一个角色
-4. 跟随创建向导，然后点击 **开始游戏**
-
-> 所有数据均存储在本地浏览器中（IndexedDB + localStorage），不会发送到任何服务器。
+1. 点击**API 配置**，添加至少一个 LLM API（OpenAI 兼容、Anthropic、Ollama、SiliconFlow 等），指派给 `main` 用途
+2. 点击**新建角色**，跟随创角向导
+3. **开始游戏。** 所有数据只存在你的浏览器里（IndexedDB + localStorage）
 
 ### 本地运行
 
 ```bash
-git clone https://github.com/michael2221807/AutoGameAgent.git
-cd AutoGameAgent
+git clone https://github.com/michael2221807/sonder-engine.git
+cd sonder-engine
 npm install
 npm run dev
 ```
 
----
+## 架构
 
-## 功能特性
-
-### 叙事引擎
-
-- **8 阶段流水线** &mdash; 每个游戏回合依次经过 PreProcess、ContextAssembly、AICall、ResponseRepair、BodyPolish、ReasoningIngest、CommandExecution、PostProcess
-- **实时流式输出** &mdash; AI 叙事逐 token 流式呈现，实时格式化
-- **富文本格式** &mdash; 环境描写、内心独白、对话、判定检定各有独立视觉样式
-- **回退** &mdash; 可回退到任意上一回合的状态
-
-### 世界与角色
-
-- **响应式状态树** &mdash; 所有游戏状态存储在单一响应式对象中，由 AI 通过 dot-path 指令修改
-- **角色创建向导** &mdash; 多步骤、由 Game Pack 定义的创建流程，支持 AI 预设生成
-- **深度 NPC 系统** &mdash; 传记、性格、关系、一对一私聊、肖像生成、AI 辅助编辑
-- **交互式世界地图** &mdash; 基于 Cytoscape.js 的图谱，支持下钻、探索状态和空间导航
-
-### 记忆与知识
-
-- **4 层渐进式记忆** &mdash; 短期、隐式中期、中期、长期，自动 AI 压缩
-- **Engram 知识图谱** &mdash; 对齐 Graphiti 架构的语义图谱，包含实体、事实边和混合检索（Cosine + BM25 + RRF + BFS 扩展）
-- **实体修复** &mdash; 两层系统自动创建缺失实体桩并通过 AI 充实内容
-
-### 剧情编排
-
-- **故事弧线与节点** &mdash; 通过弧线、节点和完成信号构建叙事结构
-- **进度仪表** &mdash; AI 每回合更新的数值计量器（如"怀疑度"）
-- **AI 评估** &mdash; 每回合置信度评分，附带证据文本和连续达标追踪
-
-### 图像生成
-
-- **多后端支持** &mdash; NovelAI、OpenAI DALL-E、SD-WebUI、ComfyUI
-- **角色视觉锚点** &mdash; AI 为每个角色提取视觉提示词，保证生成一致性
-- **场景壁纸** &mdash; AI 生成与叙事匹配的背景图
-- **自动生成规则** &mdash; 可配置的自动图像生成触发条件
-
-### 存档与持久化
-
-- **自动存档** &mdash; 每回合可配置间隔自动保存
-- **完整备份** &mdash; 所有存档、向量、配置、提示词、设置和图片打包为单一分块压缩包，SHA-256 双层校验
-- **云同步** &mdash; 基于 GitHub 的上传/下载
-- **Demo 导入** &mdash; 转换旧版格式
-
----
-
-## 系统架构
-
-```
-+----------------------------------------------------------+
-|                     Browser (SPA)                        |
-+---------------+--------------------------+---------------+
-|  UI 层        |     引擎层               |  持久化层     |
-|  Vue 3 +      |  纯 TypeScript           |  IndexedDB +  |
-|  Pinia        |                          |  localStorage |
-|               |  Game Orchestrator       |               |
-|  4 视图       |  +-- 8 流水线阶段        |  IDB 存储:    |
-|  18 面板      |  +-- 9+ 子流水线         |  - 存档       |
-|  50+ 组件     |                          |  - 向量       |
-|               |  状态管理器              |  - 配置       |
-|               |  记忆管理器 (4层)        |  - 提示词     |
-|               |  Engram (知识图谱)       |               |
-|               |  提示词组装器            |  localStorage: |
-|               |  图像服务                |  - API 密钥   |
-|               |  剧情编排                |  - 设置       |
-+---------------+--------------------------+---------------+
-|               AI 服务层                                  |
-|  OpenAI | Anthropic | Ollama | SiliconFlow | 自定义      |
-|  功能: LLM | Embedding | Rerank | 图像生成              |
-+----------------------------------------------------------+
+```mermaid
+flowchart LR
+    subgraph UI["UI · Vue 3 + Pinia"]
+        V["4 视图 · 18 面板<br>50+ 组件"]
+    end
+    subgraph Engine["引擎 · 纯 TypeScript"]
+        O["游戏编排器<br>8 管线阶段 · 9+ 子管线"]
+        S["状态管理器<br>响应式状态树 + 点路径指令"]
+        M["记忆管理器<br>四层记忆 + Engram 知识图谱"]
+        P["提示词组装 · 剧情导向<br>图像服务 · TTS / STT"]
+    end
+    subgraph Persist["持久化"]
+        D["IndexedDB + localStorage<br>分块备份 · GitHub 同步"]
+    end
+    AI["AI 服务层<br>LLM · 向量化 · 重排 · 生图 · 语音"]
+    UI --> Engine --> Persist
+    Engine --> AI
 ```
 
-**核心设计原则：**
+**不可动摇的设计铁律：**
 
-- **引擎/内容分离** &mdash; 引擎代码不包含任何游戏特定内容；所有游戏数据通过 Game Pack 系统流入
-- **响应式状态树** &mdash; 单一响应式对象，由 AI 通过 dot-path 指令修改
-- **流水线架构** &mdash; 8 个顺序阶段，带容错处理
-- **渐进式记忆** &mdash; 4 层记忆系统，自动压缩与语义知识图谱
+- **引擎 / 内容分离** —— 引擎代码永不包含具体游戏内容；换游戏包，就是换一个游戏
+- **单一响应式状态树** —— AI 只能通过类型化点路径指令改世界，绝无自由发挥
+- **降级式管线** —— 任何阶段都能优雅降级，绝不吃掉你的存档
+- **存档神圣不可侵犯** —— 每个状态变更都有备份/恢复往返测试门守着
 
----
-
-## Game Pack 系统
-
-所有游戏内容通过模块化 Pack 交付。引擎与内容无关 &mdash; 更换 Pack 即可切换整个游戏世界。
+## 游戏包系统
 
 ```
 packs/{packId}/
-+-- manifest.json              # 元数据 + 文件引用
-+-- schemas/state-schema.json
-+-- creation-flow.json         # 角色创建步骤
-+-- prompt-flows/*.json        # 提示词组合配置
-+-- prompts/*.md               # 提示词内容，含 {{变量}}
-+-- presets/*.json             # 世界/出身/天赋数据
-+-- rules/*.json               # 引擎路径、必填字段、行为规则
+├── manifest.json              # 元数据 + 文件引用
+├── schemas/state-schema.json  # 世界的形状
+├── creation-flow.json         # 创角步骤
+├── prompt-flows/*.json        # 提示词组装配置
+├── prompts/*.md               # 带 {{变量}} 的提示词内容
+├── presets/*.json             # 世界 / 出身 / 天赋数据
+└── rules/*.json               # 引擎路径与行为
 ```
 
----
+内置游戏包**《天命》**提供 4+4 世界、六维创角、56 出身、48 特质、77 天赋——
+而它本身只是数据。
 
-## 开发指南
+## 支持的 AI 服务商
+
+| 服务商 | LLM | 向量化 | 重排 | 生图 | 语音 |
+|--------|:---:|:------:|:----:|:----:|:----:|
+| OpenAI / 兼容 | ✓ | ✓ | — | ✓ | — |
+| Anthropic | ✓ | — | — | — | — |
+| Ollama | ✓ | ✓ | — | — | — |
+| SiliconFlow | ✓ | ✓ | ✓ | — | — |
+| NovelAI | — | — | — | ✓ | — |
+| Civitai | — | — | — | ✓ | — |
+| SD-WebUI / ComfyUI | — | — | — | ✓ | — |
+| CosyVoice（本地） | — | — | — | — | TTS + STT |
+| 自定义端点 | ✓ | ✓ | ✓ | ✓ | — |
+
+## 开发
 
 | 命令 | 用途 |
 |------|------|
-| `npm run dev` | 开发服务器，支持 HMR（局域网可访问） |
+| `npm run dev` | 开发服务器（支持局域网访问） |
 | `npm run build` | 类型检查 + 生产构建 |
-| `npm test` | 运行测试套件 |
-| `npm run test:coverage` | 覆盖率报告 |
-| `npm run typecheck` | 仅类型检查 |
-
-### 项目结构
+| `npm test` | 运行测试套件（3100+ 测试） |
+| `npm run typecheck` | `vue-tsc --noEmit` |
 
 ```
 src/
-+-- engine/           # 纯 TypeScript 引擎（无 Vue 依赖）
-|   +-- core/         # StateManager, CommandExecutor, Orchestrator
-|   +-- ai/           # AIService, ResponseParser
-|   +-- memory/       # 4 层记忆 + Engram 子系统
-|   +-- pipeline/     # 8 阶段 + 9 子流水线
-|   +-- prompt/       # Assembler, Registry, TemplateEngine
-|   +-- persistence/  # Save/Profile/Backup 管理器
-|   +-- image/        # 图像生成 Provider
-|   +-- plot/         # 剧情编排系统
-|   +-- behaviors/    # 时间、效果、NPC 行为
-+-- ui/
-|   +-- views/        # 4 视图（Home, Creation, Game, Management）
-|   +-- components/   # 50+ 组件
-|   +-- composables/  # Vue composables
-+-- main.ts           # 10 阶段启动引导
+├── engine/           # 纯 TypeScript 引擎（零 Vue 依赖）
+│   ├── core/         # 状态管理器、指令执行器、编排器
+│   ├── pipeline/     # 8 阶段 + 子管线
+│   ├── memory/       # 四层记忆 + Engram 知识图谱
+│   ├── prompt/       # 组装器、注册表、模板引擎
+│   ├── persistence/  # 存档 / 档案 / 备份管理
+│   ├── image/        # 生图 provider
+│   ├── tts/ stt/     # 语音输入与输出
+│   └── plot/         # 剧情导向系统
+└── ui/               # Vue 3 视图、面板、composables
 ```
 
-### 部署
+推送到 `main` 自动触发：测试 → 类型检查 → 构建 → 部署到 GitHub Pages。
 
-推送到 `main` 分支自动触发：test &rarr; typecheck &rarr; build &rarr; 部署到 GitHub Pages。
+## 贡献
 
----
+欢迎贡献——请先开 issue 讨论你想改的内容。
 
-## 支持的 AI 提供商
+## 许可证
 
-| 提供商 | LLM | Embedding | Rerank | 图像 |
-|--------|:---:|:---------:|:------:|:----:|
-| OpenAI / 兼容 | Yes | Yes | &mdash; | Yes (DALL-E) |
-| Anthropic | Yes | &mdash; | &mdash; | &mdash; |
-| Ollama | Yes | Yes | &mdash; | &mdash; |
-| SiliconFlow | Yes | Yes | Yes | &mdash; |
-| NovelAI | &mdash; | &mdash; | &mdash; | Yes |
-| SD-WebUI | &mdash; | &mdash; | &mdash; | Yes |
-| ComfyUI | &mdash; | &mdash; | &mdash; | Yes |
-| 自定义端点 | Yes | Yes | Yes | Yes |
-
----
-
-## 参与贡献
-
-欢迎贡献代码。请先开 issue 讨论你想做的改动。
-
-1. Fork 本仓库
-2. 创建功能分支 (`git checkout -b feature/my-feature`)
-3. 提交你的改动
-4. 推送到分支 (`git push origin feature/my-feature`)
-5. 发起 Pull Request
-
----
-
-## 开源协议
-
-本项目基于 **GNU Affero General Public License v3.0** 开源 &mdash; 详见 [LICENSE](LICENSE) 文件。
-
-这意味着：
-- 你可以自由使用、修改和分发本软件
-- 如果你修改并将本软件部署为网络服务，你必须以相同协议开源你的源代码
-- 所有衍生作品也必须使用 AGPL-3.0 协议
+**GNU AGPL-3.0** —— 自由使用、修改、分发；若你把修改后的版本部署为网络服务，
+必须以同样的许可证公开源码。详见 [LICENSE](LICENSE)。
 
 ---
 
 <div align="center">
 
-Made with persistence and late-night sessions.
+*曾用名 **AutoGameAgent**，2026 年 8 月更名。旧仓库链接会自动重定向。*
+
+以执着与无数个深夜写成。
 
 </div>

@@ -1,0 +1,60 @@
+name: "🐛 Bug Report / 缺陷报告"
+description: "Something broke in the engine or UI / 引擎或界面出了问题"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. The more precise the report, the faster the fix.
+        感谢报告问题——描述越精确，修复越快。
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: "What happened? / 发生了什么？"
+      description: "What did you see, and what did you expect instead? / 你看到了什么？你期望看到什么？"
+      placeholder: "e.g. After importing a game card, the opening narration never renders…"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Steps to reproduce / 复现步骤"
+      placeholder: |
+        1. Open …
+        2. Click …
+        3. See error
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: "Area / 出问题的模块"
+      options:
+        - "Narrative round / 主回合叙事"
+        - "Character creation / 创角"
+        - "Memory & Engram / 记忆与知识图谱"
+        - "NPC & social / NPC 与社交"
+        - "Image generation / 生图"
+        - "Voice (TTS / STT) / 语音"
+        - "Saves & cloud sync / 存档与云同步"
+        - "Game cards / 游戏卡"
+        - "UI & theming / 界面"
+        - "Other / 其它"
+    validations:
+      required: true
+  - type: input
+    id: provider
+    attributes:
+      label: "LLM provider & model / 使用的 LLM 服务与模型"
+      placeholder: "e.g. SiliconFlow · deepseek-v3"
+  - type: input
+    id: environment
+    attributes:
+      label: "Browser & OS / 浏览器与系统"
+      placeholder: "e.g. Chrome 139 · Windows 11"
+  - type: textarea
+    id: console
+    attributes:
+      label: "Console errors (F12) / 控制台报错"
+      description: "Paste any red errors from the browser devtools console. / 粘贴浏览器控制台里的红色报错。"
+      render: text

@@ -4,7 +4,7 @@
   "version": "0.5.0",
   "engineVersion": "1.0.0",
   "description": "天命 Game Pack — 六维创角系统，4+4 世界，七档天资，56 出身，48 特质，77 天赋",
-  "author": "AutoGameAgent",
+  "author": "Sonder Project",
   "entrySchema": "schemas/state-schema.json",
   "creationFlow": "creation-flow.json",
   "promptFlows": {

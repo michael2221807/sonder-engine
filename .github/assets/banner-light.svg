@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="340" viewBox="0 0 1200 340">
+  <defs>
+    <radialGradient id="gSageL" cx="50%" cy="-20%" r="90%">
+      <stop offset="0%" stop-color="#d8e4d6" stop-opacity="0.8"/>
+      <stop offset="60%" stop-color="#f3f1ea" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gAmberL" cx="88%" cy="115%" r="60%">
+      <stop offset="0%" stop-color="#ecdcbd" stop-opacity="0.7"/>
+      <stop offset="70%" stop-color="#f3f1ea" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="340" fill="#f3f1ea"/>
+  <rect width="1200" height="340" fill="url(#gSageL)"/>
+  <rect width="1200" height="340" fill="url(#gAmberL)"/>
+  <rect x="0.5" y="0.5" width="1199" height="339" fill="none" stroke="#ddd8ca" stroke-width="1"/>
+
+  <!-- 众-mark -->
+  <g transform="translate(576, 52) scale(1.65)">
+    <path d="M15 19 L24 7 L33 19" stroke="#b08340" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M4.5 41 L13.5 29 L22.5 41" stroke="#4f7a58" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.8"/>
+    <path d="M25.5 41 L34.5 29 L43.5 41" stroke="#4f7a58" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.8"/>
+  </g>
+
+  <text x="600" y="196" text-anchor="middle" fill="#2a2822"
+        font-family="Avenir Next, Segoe UI, Helvetica Neue, Arial, sans-serif"
+        font-size="40" font-weight="500" letter-spacing="22">SONDER</text>
+  <text x="611" y="240" text-anchor="middle" fill="#6f6a5a"
+        font-family="Source Han Serif SC, Noto Serif SC, Songti SC, SimSun, serif"
+        font-size="19" letter-spacing="14">众　生</text>
+  <text x="600" y="290" text-anchor="middle" fill="#4f7a58"
+        font-family="Avenir Next, Segoe UI, Helvetica Neue, Arial, sans-serif"
+        font-size="15" letter-spacing="3">Worlds that remember. Characters that live.</text>
+</svg>

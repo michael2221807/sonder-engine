@@ -1,4 +1,4 @@
-# AutoGameAgent — CI + GitHub Pages Deploy
+# 众生 Sonder (sonder-engine) — CI + GitHub Pages Deploy
 #
 # Triggers on every push to main and manual dispatch.
 # Pipeline: install → test → build → deploy

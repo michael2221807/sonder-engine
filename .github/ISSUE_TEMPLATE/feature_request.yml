@@ -1,0 +1,33 @@
+name: "✨ Feature Request / 功能建议"
+description: "Propose an improvement or new capability / 提出改进或新能力"
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: "What problem does this solve? / 这解决什么问题？"
+      description: "Describe the situation where the current engine falls short. / 描述现在的引擎在哪种场景下不够用。"
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: "Proposed solution / 你设想的方案"
+      description: "How should it work, from the player's point of view? / 从玩家视角看，它应该怎么运作？"
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "Alternatives considered / 考虑过的替代方案"
+  - type: dropdown
+    id: scope
+    attributes:
+      label: "Scope / 影响范围"
+      options:
+        - "Engine (content-agnostic) / 引擎层"
+        - "Game Pack (天命 content) / 游戏包内容"
+        - "UI / 界面"
+        - "Not sure / 不确定"
+    validations:
+      required: true

@@ -22,7 +22,7 @@ test.describe('Visual regression baseline — Home', () => {
   test('homepage renders without crash', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-    await expect(page).toHaveTitle(/AutoGameAgent/);
+    await expect(page).toHaveTitle(/Sonder/);
     await expect(page.locator('#app')).toBeVisible();
     await page.screenshot({ path: `e2e/screenshots/${test.info().project.name}-home.png`, fullPage: true });
   });
