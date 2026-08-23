@@ -54,19 +54,21 @@ describe('plotStore save-load isolation', () => {
   it('clears via the real StateManager.loadTree emit (integration)', () => {
     const sm = new StateManager();
     store.pushEvalLog(makeLogEntry(1));
-    store.pendingConfirmation = { arcId: 'a1', nodeId: 'n1', evidence: 'e', round: 3 };
+    store.pendingConfirmations = [{ arcId: 'a1', nodeId: 'n1', evidence: 'e', round: 3 }];
 
     sm.loadTree({ 元数据: {} });
 
     expect(store.evaluationLog).toHaveLength(0);
+    expect(store.pendingConfirmations).toEqual([]);
     expect(store.pendingConfirmation).toBeNull();
   });
 
   it('clears stale pendingConfirmation when a save is loaded', () => {
-    store.pendingConfirmation = { arcId: 'a1', nodeId: 'n1', evidence: 'e', round: 3 };
+    store.pendingConfirmations = [{ arcId: 'a1', nodeId: 'n1', evidence: 'e', round: 3 }];
 
     eventBus.emit('engine:state-changed', { type: 'load' });
 
+    expect(store.pendingConfirmations).toEqual([]);
     expect(store.pendingConfirmation).toBeNull();
   });
 
@@ -96,10 +98,11 @@ describe('plotStore save-load isolation', () => {
   });
 
   it('loadFromState(undefined) clears pendingConfirmation', () => {
-    store.pendingConfirmation = { arcId: 'a1', nodeId: 'n1', evidence: 'e', round: 3 };
+    store.pendingConfirmations = [{ arcId: 'a1', nodeId: 'n1', evidence: 'e', round: 3 }];
 
     store.loadFromState(undefined);
 
+    expect(store.pendingConfirmations).toEqual([]);
     expect(store.pendingConfirmation).toBeNull();
   });
 

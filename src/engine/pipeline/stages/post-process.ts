@@ -33,7 +33,7 @@ import type { SaveManager } from '../../persistence/save-manager';
 import { eventBus } from '../../core/event-bus';
 import { deduplicateLocations } from '../../behaviors/location-dedup';
 import { estimateMessagesTokens, estimateTextTokens } from '../../core/metrics-helpers';
-import { extractPlotEvaluation } from '../../plot/types';
+import { extractPlotEvaluations } from '../../plot/types';
 
 /**
  * Pull this round's accepted captures out of `ctx.meta` in the shape the graph needs.
@@ -201,19 +201,23 @@ export class PostProcessStage implements PipelineStage {
     // Always run the pipeline when an active arc exists, even if AI omits plot_evaluation.
     // This ensures autoDecrement ticks, maxRounds timeouts fire, and consecutiveReachedCount
     // resets correctly on rounds without AI evaluation.
+    // Plot Threads: "active" is derived from arc status (several threads may be
+    // active), and the pipeline must also run when every thread is merely
+    // `scheduled` — otherwise a `round_reached` trigger could never fire.
     {
-      const plotState = this.stateManager.get<{ activeArcIndex?: number | null }>(this.paths.plotDirection);
-      const hasActiveArc = plotState != null && plotState.activeArcIndex != null;
+      const plotState = this.stateManager.get<{ arcs?: Array<{ status?: string }> }>(this.paths.plotDirection);
+      const needsPipeline = Array.isArray(plotState?.arcs)
+        && plotState.arcs.some(a => a?.status === 'active' || a?.status === 'scheduled');
 
-      if (hasActiveArc) {
-        // Write evaluation if AI provided one; otherwise pipeline reads null
+      if (needsPipeline) {
+        // Write every per-thread verdict (array) if the AI provided any; otherwise the pipeline reads an empty list
         try {
           if (ctx.parsedResponse?.customFields) {
-            const plotEval = extractPlotEvaluation(ctx.parsedResponse.customFields);
-            if (plotEval) {
+            const plotEvals = extractPlotEvaluations(ctx.parsedResponse.customFields);
+            if (plotEvals.length > 0) {
               this.stateManager.set(
                 this.paths.plotDirection + '._lastEvaluation',
-                plotEval,
+                plotEvals,
                 'system',
               );
             }

@@ -20,6 +20,7 @@ import type {
   PromptSettings,
 } from './world-book';
 import { formatHeroinePlanForContext, type HeroinePlan } from '../story/heroine-plan';
+import { buildPlotFocusCorpusTexts } from '../plot/plot-corpus';
 import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio } from './world-book';
 import { BUILTIN_SLOTS } from './builtin-slots';
 import type { EnginePathConfig } from '../pipeline/types';
@@ -353,6 +354,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
     // world-book keyword containing a short numeric substring ("01", "15", …) match
     // unconditionally, forever. The corpus keeps its previous behavior here (the raw
     // object is coerced to '' by `textOf()`), so B0-2 changes timeline matching only.
+    const plotFocusTexts = buildPlotFocusCorpusTexts(stateManager, paths);
     const corpus = buildCorpus({
       environment: {
         location: currentLocation,
@@ -372,7 +374,9 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
       // state and PAST narrative, so a keyword the player just typed could not match
       // until the next round. `userInput` (action-queue prefix included — panel
       // actions are real round content) closes that gap for BOTH corpora.
-      extraTexts: [userInput],
+      // Plot Threads §7.3: the focus thread's active node text joins both corpora
+      // so Canon entries keyed on plot nouns ride along while that node is live.
+      extraTexts: [userInput, ...plotFocusTexts],
     });
 
     // Focused corpus — only this round's signal. Auto-captured entries match against
@@ -386,7 +390,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
         paths.npcFieldNames?.name ?? '名称',
         paths.npcFieldNames?.isPresent ?? '是否在场',
       ),
-      triggeredEventTexts: params.triggeredEventTexts,
+      triggeredEventTexts: [...(params.triggeredEventTexts ?? []), ...plotFocusTexts],
     });
 
     const selection = selectActiveEntriesDetailed({

@@ -43,15 +43,31 @@ function makeTree(): Record<string, unknown> {
       剧情导向: {
         activeArcIndex: 2,
         pendingConfirmation: { pending: true },
+        focusArcId: 'arc-a',
+        pendingConfirmations: [{ arcId: 'arc-a', nodeId: 'n1', evidence: 'e', round: 5 }],
         arcs: [
           {
+            id: 'arc-a',
             status: 'active',
             nodes: [
-              { status: 'completed', activatedAtRound: 3, completedAtRound: 5, consecutiveReachedCount: 4 },
+              {
+                id: 'n1',
+                status: 'completed', activatedAtRound: 3, completedAtRound: 5, consecutiveReachedCount: 4,
+                activatedAtTime: { year: 1, month: 3, day: 1 }, completedAtTime: { year: 1, month: 3, day: 4 },
+                completionEvidence: 'the AI said so',
+                premise: 'authored premise', stakes: 'authored stakes',
+              },
             ],
             gauges: [
               { initialValue: 10, current: 80, boundaryFiredAtRound: 5, lastAutoDecrementRound: 6 },
             ],
+          },
+          {
+            id: 'arc-b',
+            status: 'scheduled',
+            activation: { mode: 'auto', triggers: [{ type: 'node_completed', arcId: 'arc-a', nodeId: 'n1' }] },
+            nodes: [{ id: 'm1', status: 'pending', consecutiveReachedCount: 0 }],
+            gauges: [],
           },
         ],
       },
@@ -180,6 +196,28 @@ describe('stripStateTreeForCard — heroine plan + plot direction', () => {
     expect(gauge.current).toBe(10); // reset to initialValue
     expect(gauge.boundaryFiredAtRound).toBeUndefined();
     expect(gauge.lastAutoDecrementRound).toBeUndefined();
+  });
+
+  it('Plot Threads: resets multi-thread runtime fields but keeps authored triggers, ids and premise/stakes', () => {
+    const out = stripStateTreeForCard(makeTree(), PATHS, flags({ includedPlotDirection: true }), 'fixed');
+    expect(getByPath(out, '元数据.剧情导向.focusArcId')).toBeNull();
+    expect(getByPath(out, '元数据.剧情导向.pendingConfirmations')).toEqual([]);
+
+    const node = getByPath(out, '元数据.剧情导向.arcs.0.nodes.0') as Record<string, unknown>;
+    expect(node.id).toBe('n1'); // ids are never regenerated — triggers must still resolve after import
+    expect(node.activatedAtTime).toBeUndefined();
+    expect(node.completedAtTime).toBeUndefined();
+    expect(node.completionEvidence).toBeUndefined();
+    expect(node.premise).toBe('authored premise');
+    expect(node.stakes).toBe('authored stakes');
+
+    const scheduled = getByPath(out, '元数据.剧情导向.arcs.1') as Record<string, unknown>;
+    expect(scheduled.id).toBe('arc-b');
+    expect(scheduled.status).toBe('draft');
+    expect(scheduled.activation).toEqual({
+      mode: 'auto',
+      triggers: [{ type: 'node_completed', arcId: 'arc-a', nodeId: 'n1' }],
+    });
   });
 });
 

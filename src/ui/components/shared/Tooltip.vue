@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// App doc: docs/user-guide/pages/game-overview.md §设计系统原语 (Tooltip · fixed 模式)
 /**
  * Tooltip — the project's single hover-hint primitive (Story 5 / U12).
  *
@@ -22,7 +23,7 @@
  *     <button @click="open">⚙</button>
  *   </Tooltip>
  */
-import { computed, useId } from 'vue';
+import { computed, ref, useId, watch, onBeforeUnmount } from 'vue';
 
 const props = withDefaults(
   defineProps<{
@@ -34,26 +35,90 @@ const props = withDefaults(
     delay?: number;
     /** Set when the slot is a focusable control (button/a/input). */
     interactive?: boolean;
+    /**
+     * Render the bubble teleported to <body>, viewport-fixed and clamped to the
+     * viewport. Use inside clipping/scrolling containers (overflow:hidden/auto)
+     * or under sticky/z-indexed siblings where the in-flow bubble would be cut
+     * off or covered (plot timeline track, 2026-08-23). Reveal is still the
+     * CSS delay — only the position is measured in JS, on hover/focus start.
+     */
+    fixed?: boolean;
+    /** Suppress the hint entirely (e.g. while the wrapped control is mid-drag). */
+    disabled?: boolean;
   }>(),
-  { position: 'top', delay: 800, interactive: false },
+  { position: 'top', delay: 800, interactive: false, fixed: false, disabled: false },
 );
 
 // Vue 3.5 useId() → collision-free, SSR/HMR-safe id for aria-describedby (no globalThis mutation).
 const tipId = `tt-${useId()}`;
 
 const styleVars = computed(() => ({ '--tt-delay': `${props.delay}ms` }));
+
+// ─── fixed mode ───
+const wrapEl = ref<HTMLElement | null>(null);
+const hot = ref(false);
+const fixedSide = ref<'top' | 'bottom'>('top');
+const fixedPos = ref({ x: 0, y: 0 });
+const MARGIN = 8;
+const FIXED_MAX_W = 240;
+/** Room needed above the trigger for a two-line bubble (2 × 12px × 1.45 + padding) plus the gap. */
+const MIN_ROOM_ABOVE = 72;
+function place(): void {
+  const r = wrapEl.value?.getBoundingClientRect();
+  if (!r) return;
+  const vw = window.innerWidth;
+  // Horizontal centre on the trigger, kept inside the viewport so the bubble is
+  // never squeezed against an edge (it keeps its natural width).
+  const half = FIXED_MAX_W / 2;
+  const cx = Math.max(MARGIN + half, Math.min(vw - MARGIN - half, r.left + r.width / 2));
+  // Prefer above; drop below when there is no room above.
+  const above = r.top > MIN_ROOM_ABOVE;
+  fixedSide.value = above ? 'top' : 'bottom';
+  fixedPos.value = { x: cx, y: above ? r.top - 6 : r.bottom + 6 };
+}
+function enter(): void { if (!props.fixed) return; place(); hot.value = true; }
+function leave(): void { hot.value = false; }
+function onScroll(): void { if (hot.value) hot.value = false; }
+function onResize(): void { if (hot.value) place(); }
+watch(hot, (on) => {
+  if (!props.fixed) return;
+  if (on) {
+    window.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    window.addEventListener('resize', onResize);
+  } else {
+    window.removeEventListener('scroll', onScroll, { capture: true });
+    window.removeEventListener('resize', onResize);
+  }
+});
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', onScroll, { capture: true });
+  window.removeEventListener('resize', onResize);
+});
+const fixedStyle = computed(() => ({
+  left: `${fixedPos.value.x}px`,
+  top: `${fixedPos.value.y}px`,
+  transform: fixedSide.value === 'top' ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
+}));
 </script>
 
 <template>
   <span
+    ref="wrapEl"
     class="tt-wrap"
-    :class="[`tt-wrap--${position}`, { 'tt-wrap--interactive': interactive }]"
+    :class="[`tt-wrap--${position}`, { 'tt-wrap--interactive': interactive, 'tt-wrap--fixed': fixed, 'tt-wrap--off': disabled }]"
     :tabindex="interactive ? undefined : 0"
     :aria-describedby="tipId"
     :style="styleVars"
+    @pointerenter="enter"
+    @pointerleave="leave"
+    @focusin="enter"
+    @focusout="leave"
   >
     <slot />
-    <span :id="tipId" class="tt-bubble" role="tooltip">{{ text }}</span>
+    <Teleport v-if="fixed" to="body">
+      <span :id="tipId" class="tt-bubble tt-bubble--fixed" :class="{ 'tt-bubble--hot': hot && !disabled }" :style="[styleVars, fixedStyle]" role="tooltip">{{ text }}</span>
+    </Teleport>
+    <span v-else :id="tipId" class="tt-bubble" role="tooltip">{{ text }}</span>
   </span>
 </template>
 
@@ -102,6 +167,22 @@ const styleVars = computed(() => ({ '--tt-delay': `${props.delay}ms` }));
     visibility 0s linear var(--tt-delay, 800ms);
 }
 
+/* fixed mode: the bubble lives on <body>, positioned from the trigger rect
+   (see `place()`); same chip surface, same CSS reveal delay via the class. */
+.tt-bubble--fixed {
+  position: fixed;
+  z-index: var(--z-floating, 9100);
+}
+.tt-bubble--fixed.tt-bubble--hot {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.14s var(--ease-out) var(--tt-delay, 800ms),
+    visibility 0s linear var(--tt-delay, 800ms);
+}
+
+.tt-wrap--off .tt-bubble { display: none; }
+
 .tt-wrap--top .tt-bubble    { bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); }
 .tt-wrap--bottom .tt-bubble { top: calc(100% + 6px);    left: 50%; transform: translateX(-50%); }
 .tt-wrap--left .tt-bubble   { right: calc(100% + 6px);  top: 50%;  transform: translateY(-50%); }
@@ -111,7 +192,8 @@ const styleVars = computed(() => ({ '--tt-delay': `${props.delay}ms` }));
   .tt-bubble,
   .tt-wrap:hover .tt-bubble,
   .tt-wrap:focus-visible .tt-bubble,
-  .tt-wrap--interactive:focus-within .tt-bubble {
+  .tt-wrap--interactive:focus-within .tt-bubble,
+  .tt-bubble--fixed.tt-bubble--hot {
     transition: none;
   }
 }

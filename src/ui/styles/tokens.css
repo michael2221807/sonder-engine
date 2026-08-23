@@ -272,6 +272,10 @@
   --z-modal:     50;
   --z-toast:     100;
   --z-tooltip:   110;  /* above modals/toasts — hover hints must never be occluded */
+  /* Body-teleported floating layers (AgaSelect list, Tooltip `fixed` mode). Modal
+     backdrops are hard-coded at 9000 (Modal.vue / BaseModal.vue) and the loading
+     overlay at 9500 — a teleported popover must clear the modal it was opened from. */
+  --z-floating:  9100;
 
   /* ─────────────────────────────────────────────────────────────
      LAYOUT — unchanged

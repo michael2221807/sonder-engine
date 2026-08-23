@@ -343,8 +343,8 @@ export class ContextAssemblyStage implements PipelineStage {
       if (plotEnabled !== false) {
         const splitGen = ctx.meta['splitGen'] === true;
         const plotVars = splitGen
-          ? PlotInjector.buildStep1Variables(this.stateManager, this.paths)
-          : PlotInjector.buildAllVariables(this.stateManager, this.paths);
+          ? PlotInjector.buildStep1Variables(this.stateManager, this.paths, this.pack.engineFragments)
+          : PlotInjector.buildAllVariables(this.stateManager, this.paths, this.pack.engineFragments);
         Object.assign(variables, plotVars);
       }
     }
@@ -556,7 +556,7 @@ export class ContextAssemblyStage implements PipelineStage {
       if (splitGen) {
         const step2Vars = {
           ...variables,
-          ...PlotInjector.buildStep2Variables(this.stateManager, this.paths),
+          ...PlotInjector.buildStep2Variables(this.stateManager, this.paths, this.pack.engineFragments),
         };
 
         const step2OverrideId = ctx.meta.step2FlowOverride as string | undefined;
@@ -601,7 +601,7 @@ export class ContextAssemblyStage implements PipelineStage {
         const s1 = this.promptAssembler.assemble(step1Flow, variables, chatHistory);
         const step2Vars = {
           ...variables,
-          ...PlotInjector.buildStep2Variables(this.stateManager, this.paths),
+          ...PlotInjector.buildStep2Variables(this.stateManager, this.paths, this.pack.engineFragments),
         };
         const s2 = this.promptAssembler.assemble(step2Flow, step2Vars, chatHistory);
         messages = s1.messages;

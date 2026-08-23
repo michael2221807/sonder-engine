@@ -29,7 +29,26 @@ const ALL_SECRETS = [IMAGE_API_KEY, PROVIDER_API_KEY, GITHUB_TOKEN, NPC_PRIVATE]
 
 function makeTree(): Record<string, unknown> {
   return {
-    元数据: { 叙事历史: [{ round: 1 }], 剧情导向: { activeArcIndex: 0, arcs: [] } },
+    元数据: {
+      叙事历史: [{ round: 1 }],
+      // Plot Threads fixture: 2 active threads (one focus) + 1 scheduled thread gated on the first.
+      剧情导向: {
+        activeArcIndex: 0,
+        focusArcId: 'arc-a',
+        pendingConfirmations: [{ arcId: 'arc-b', nodeId: 'b1', evidence: 'ev', round: 9 }],
+        arcs: [
+          { id: 'arc-a', title: 'A', synopsis: '', status: 'active', lane: 0, gauges: [],
+            nodes: [{ id: 'a1', arcId: 'arc-a', title: 'a1', status: 'completed', activatedAtRound: 1, completedAtRound: 3,
+              activatedAtTime: { year: 1, month: 1, day: 1 }, completionEvidence: 'done', premise: 'pre', stakes: 'stk', consecutiveReachedCount: 2 },
+              { id: 'a2', arcId: 'arc-a', title: 'a2', status: 'active', activatedAtRound: 4, consecutiveReachedCount: 0 }] },
+          { id: 'arc-b', title: 'B', synopsis: '', status: 'active', lane: 1, gauges: [],
+            nodes: [{ id: 'b1', arcId: 'arc-b', title: 'b1', status: 'active', activatedAtRound: 2, consecutiveReachedCount: 1 }] },
+          { id: 'arc-s', title: 'S', synopsis: '', status: 'scheduled', lane: 2, gauges: [],
+            activation: { mode: 'auto', triggers: [{ type: 'node_completed', arcId: 'arc-a', nodeId: 'a2' }] },
+            nodes: [{ id: 's1', arcId: 'arc-s', title: 's1', status: 'pending', consecutiveReachedCount: 0 }] },
+        ],
+      },
+    },
     角色: {
       基础信息: { 姓名: '萧寒' },
       属性: { 体质: 12, 悟性: 9 },
@@ -144,6 +163,31 @@ describe('export → import round-trip (real services)', () => {
     expect(_get(decoded.mergedTree, '角色.属性.体质')).toBe(12);        // kept (not default 5)
     expect(_get(decoded.mergedTree, '角色.属性.身法')).toBe(5);          // schema default (absent in card)
     expect(_get(decoded.mergedTree, '世界.描述')).toBe('烟雨江湖');      // world setup kept
+  });
+
+  it('Plot Threads 往返：2 活跃线 + 1 排期线 → 进度全部归零、触发器与 id 原样保留', async () => {
+    const svc = makeExportService(makeTree());
+    const { blob } = await svc.exportCard('p', 's', makeOptions());
+    const decoded = await decodeAndValidateCard(blob, mockPack);
+    expect(decoded.ok).toBe(true);
+    if (!decoded.ok) return;
+    const plot = _get(decoded.mergedTree, '元数据.剧情导向') as Record<string, unknown>;
+    expect(plot.activeArcIndex).toBeNull();
+    expect(plot.focusArcId).toBeNull();
+    expect(plot.pendingConfirmations).toEqual([]);
+    const arcs = plot.arcs as Array<Record<string, unknown>>;
+    expect(arcs.map(a => a.id)).toEqual(['arc-a', 'arc-b', 'arc-s']);
+    expect(arcs.map(a => a.status)).toEqual(['draft', 'draft', 'draft']);
+    expect(arcs.map(a => a.lane)).toEqual([0, 1, 2]);
+    const a1 = (arcs[0].nodes as Array<Record<string, unknown>>)[0];
+    expect(a1.status).toBe('pending');
+    expect(a1.activatedAtTime).toBeUndefined();
+    expect(a1.completionEvidence).toBeUndefined();
+    expect(a1.premise).toBe('pre');
+    expect(a1.stakes).toBe('stk');
+    // the scheduled thread's trigger still points at a surviving node id
+    expect(arcs[2].activation).toEqual({ mode: 'auto', triggers: [{ type: 'node_completed', arcId: 'arc-a', nodeId: 'a2' }] });
+    expect((arcs[0].nodes as Array<Record<string, unknown>>).some(n => n.id === 'a2')).toBe(true);
   });
 
   it('★SC-9 往返：真实导出→导入后的 bundle JSON 不含任何密钥/私密', async () => {

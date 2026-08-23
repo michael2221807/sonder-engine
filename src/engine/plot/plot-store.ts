@@ -1,10 +1,12 @@
 // Design: docs/design/plot-direction-system.md
+// Design (threads): docs/design/plot-parallel-threads-scheduler.md §4.1
 // App doc: docs/user-guide/pages/game-plot.md §节点链 (Node Chain) — moveNode/insertNode back the drag-reorder + gap-insert UI
 /**
  * Plot Direction System — Pinia Store
  *
- * Manages arc CRUD, single-active-arc constraint, hot-swap operations,
- * gauge management, and evaluation log ring buffer.
+ * Manages arc (thread) CRUD, the multi-active constraint (`maxActiveThreads`),
+ * focus thread, scheduling via triggers, hot-swap operations, gauge management,
+ * and the evaluation log ring buffer.
  *
  * Persistent state lives in the game state tree (元数据.剧情导向).
  * Evaluation logs are in-memory only (non-persisted).
@@ -17,53 +19,122 @@ import type {
   PlotGauge,
   PlotEvalLog,
   PlotDirectionState,
+  PendingNodeConfirmation,
+  ThreadActivation,
+  GameTimeStamp,
 } from './types';
-import { generatePlotId, DEFAULT_GAUGE_MAX_DELTA } from './types';
+import { generatePlotId, DEFAULT_GAUGE_MAX_DELTA, DEFAULT_MAX_ACTIVE_THREADS, normalizePlotState, pickFocusArc } from './types';
+import { pruneDanglingTriggers } from './thread-trigger';
 import { eventBus } from '../core/event-bus';
 
 const EVAL_LOG_MAX = 30;
 
+export { DEFAULT_MAX_ACTIVE_THREADS };
+
+export interface ActivateArcOptions {
+  /** Current round — stamped onto the first node. */
+  round?: number;
+  /** Game-time snapshot from `readGameTimeStamp()` — stamped onto the first node. */
+  time?: GameTimeStamp;
+  /** Concurrency cap (`系统.设置.plot.maxActiveThreads`). */
+  maxActiveThreads?: number;
+  /**
+   * Focus rule (D2 ①/②): a user-initiated activation takes focus; an
+   * automatic (trigger) activation only becomes focus when there is none.
+   */
+  takeFocus?: boolean;
+}
+
 export const usePlotStore = defineStore('plot-direction', () => {
   // ─── Reactive state ───
   const arcs = ref<PlotArc[]>([]);
-  const activeArcIndex = ref<number | null>(null);
-  const pendingConfirmation = ref<import('./types').PendingNodeConfirmation | null>(null);
+  const focusArcId = ref<string | null>(null);
+  const pendingConfirmations = ref<PendingNodeConfirmation[]>([]);
   const evaluationLog = ref<PlotEvalLog[]>([]);
   let _evaluating = false;
   let _pendingOps: Array<() => void> = [];
 
   // ─── Computed ───
-  const activeArc = computed<PlotArc | null>(() =>
-    activeArcIndex.value !== null ? arcs.value[activeArcIndex.value] ?? null : null,
-  );
+  const activeArcs = computed<PlotArc[]>(() => arcs.value.filter(a => a.status === 'active'));
 
+  /**
+   * The focus thread (D2). Name kept from the single-thread era so existing
+   * panel code keeps reading "the" arc — it is now the one injected in full.
+   */
+  const activeArc = computed<PlotArc | null>(() => {
+    const byId = focusArcId.value ? arcs.value.find(a => a.id === focusArcId.value) : undefined;
+    if (byId && byId.status === 'active') return byId;
+    return pickFocusArc(arcs.value);
+  });
+
+  /** Active node of the focus thread. */
   const activeNode = computed<PlotNode | null>(() => {
     const arc = activeArc.value;
     if (!arc) return null;
     return arc.nodes.find(n => n.status === 'active') ?? null;
   });
 
-  const hasActiveArc = computed(() => activeArc.value?.status === 'active');
+  /** Every active thread's active node — one entry per thread. */
+  const activeNodes = computed<Array<{ arc: PlotArc; node: PlotNode }>>(() =>
+    activeArcs.value.flatMap(arc => {
+      const node = arc.nodes.find(n => n.status === 'active');
+      return node ? [{ arc, node }] : [];
+    }),
+  );
+
+  const hasActiveArc = computed(() => activeArcs.value.length > 0);
+
+  /**
+   * @deprecated Single-gate accessor kept for the transition; returns the gate
+   * of the focus thread (or the first gate). New code iterates `pendingConfirmations`.
+   */
+  const pendingConfirmation = computed<PendingNodeConfirmation | null>(() => {
+    const focus = activeArc.value;
+    return (focus && pendingConfirmations.value.find(g => g.arcId === focus.id))
+      ?? pendingConfirmations.value[0]
+      ?? null;
+  });
+
+  // ─── Focus helpers ───
+
+  /** D2 rule ④/⑤: focus must be an active thread; fall back to the first active (lane order). */
+  function _repairFocus(): void {
+    const cur = focusArcId.value ? arcs.value.find(a => a.id === focusArcId.value) : undefined;
+    if (cur && cur.status === 'active') return;
+    focusArcId.value = pickFocusArc(arcs.value)?.id ?? null;
+  }
+
+  function setFocus(arcId: string): boolean {
+    const arc = arcs.value.find(a => a.id === arcId);
+    if (!arc || arc.status !== 'active') return false;
+    focusArcId.value = arcId;
+    return true;
+  }
 
   // ─── State tree sync ───
 
   function loadFromState(state: PlotDirectionState | undefined): void {
     if (!state) {
       arcs.value = [];
-      activeArcIndex.value = null;
-      pendingConfirmation.value = null;
+      focusArcId.value = null;
+      pendingConfirmations.value = [];
       return;
     }
-    arcs.value = state.arcs ?? [];
-    activeArcIndex.value = state.activeArcIndex ?? null;
-    pendingConfirmation.value = state.pendingConfirmation ?? null;
+    const n = normalizePlotState(state);
+    arcs.value = n.arcs;
+    focusArcId.value = n.focusArcId;
+    pendingConfirmations.value = n.pendingConfirmations;
   }
 
   function toStateSnapshot(): PlotDirectionState {
+    const focus = activeArc.value;
     return {
       arcs: arcs.value,
-      activeArcIndex: activeArcIndex.value,
-      pendingConfirmation: pendingConfirmation.value,
+      // Written for older builds only (deprecated field) — index of the focus thread.
+      activeArcIndex: focus ? arcs.value.indexOf(focus) : null,
+      focusArcId: focus?.id ?? null,
+      pendingConfirmations: pendingConfirmations.value,
+      pendingConfirmation: null,
     };
   }
 
@@ -88,17 +159,31 @@ export const usePlotStore = defineStore('plot-direction', () => {
     const arc = arcs.value[idx];
     if (arc.status === 'active') return false;
     arcs.value.splice(idx, 1);
-    if (activeArcIndex.value !== null) {
-      if (idx < activeArcIndex.value) activeArcIndex.value--;
-      else if (idx === activeArcIndex.value) activeArcIndex.value = null;
+    const pruned = pruneDanglingTriggers(arcs.value, arcId);
+    if (pruned > 0) {
+      console.warn(`[PlotStore] deleteArc "${arc.title}": removed ${pruned} trigger(s) on other threads that pointed at it`);
     }
+    pendingConfirmations.value = pendingConfirmations.value.filter(g => g.arcId !== arcId);
+    if (focusArcId.value === arcId) focusArcId.value = null;
+    _repairFocus();
     return true;
   }
 
-  function activateArc(arcId: string, currentRound?: number): boolean {
-    if (arcs.value.some(a => a.status === 'active')) return false;
+  /**
+   * Activate a draft / scheduled / abandoned thread.
+   * Returns false when the thread is not activatable, has no nodes, or the
+   * concurrency cap is reached (callers surface the reason via `activeArcs.length`).
+   */
+  function activateArc(arcId: string, options: ActivateArcOptions | number = {}): boolean {
+    // Legacy positional signature `activateArc(id, round)` → user-initiated.
+    const opts: ActivateArcOptions = typeof options === 'number'
+      ? { round: options, takeFocus: true }
+      : options;
+    const cap = opts.maxActiveThreads ?? DEFAULT_MAX_ACTIVE_THREADS;
+    if (activeArcs.value.length >= cap) return false;
     const arc = arcs.value.find(a => a.id === arcId);
-    if (!arc || (arc.status !== 'draft' && arc.status !== 'abandoned')) return false;
+    if (!arc) return false;
+    if (arc.status !== 'draft' && arc.status !== 'scheduled' && arc.status !== 'abandoned') return false;
     if (arc.nodes.length === 0) return false;
 
     // When reactivating an abandoned arc, restore skipped nodes to pending
@@ -111,16 +196,42 @@ export const usePlotStore = defineStore('plot-direction', () => {
       }
     }
 
+    // Evaluate "is there a focus thread right now" BEFORE this arc becomes
+    // active — `activeArc` falls back to the first active thread, which would
+    // be this very arc once its status flips.
+    const hadFocus = !!focusArcId.value
+      && arcs.value.some(a => a.id === focusArcId.value && a.status === 'active');
+
     arc.status = 'active';
-    activeArcIndex.value = arcs.value.indexOf(arc);
 
     const first = arc.nodes.find(n => n.status === 'pending');
     if (first) {
       first.status = 'active';
-      if (currentRound != null) {
-        first.activatedAtRound = currentRound;
-      }
+      if (opts.round != null) first.activatedAtRound = opts.round;
+      if (opts.time) first.activatedAtTime = opts.time;
     }
+
+    const takeFocus = opts.takeFocus ?? true;
+    if (takeFocus || !hadFocus) focusArcId.value = arc.id;
+    return true;
+  }
+
+  /** D3: `draft → scheduled` with its triggers. Empty trigger lists are rejected. */
+  function scheduleArc(arcId: string, activation: ThreadActivation): boolean {
+    const arc = arcs.value.find(a => a.id === arcId);
+    if (!arc) return false;
+    if (arc.status !== 'draft' && arc.status !== 'scheduled') return false;
+    if (activation.triggers.length === 0) return false;
+    arc.activation = { mode: activation.mode, triggers: [...activation.triggers] };
+    arc.status = 'scheduled';
+    return true;
+  }
+
+  /** `scheduled → draft`; the triggers are kept as authored content. */
+  function unscheduleArc(arcId: string): boolean {
+    const arc = arcs.value.find(a => a.id === arcId);
+    if (!arc || arc.status !== 'scheduled') return false;
+    arc.status = 'draft';
     return true;
   }
 
@@ -131,7 +242,8 @@ export const usePlotStore = defineStore('plot-direction', () => {
     arc.nodes.forEach(n => {
       if (n.status === 'active') n.status = 'skipped';
     });
-    activeArcIndex.value = null;
+    pendingConfirmations.value = pendingConfirmations.value.filter(g => g.arcId !== arcId);
+    _repairFocus();
     return true;
   }
 
@@ -139,15 +251,21 @@ export const usePlotStore = defineStore('plot-direction', () => {
     const arc = arcs.value.find(a => a.id === arcId);
     if (!arc || arc.status !== 'active') return false;
     arc.status = 'completed';
-    activeArcIndex.value = null;
+    pendingConfirmations.value = pendingConfirmations.value.filter(g => g.arcId !== arcId);
+    _repairFocus();
     return true;
   }
 
-  function updateArc(arcId: string, updates: { title?: string; synopsis?: string }): boolean {
+  function updateArc(
+    arcId: string,
+    updates: { title?: string; synopsis?: string; lane?: number; color?: string },
+  ): boolean {
     const arc = arcs.value.find(a => a.id === arcId);
     if (!arc) return false;
     if (updates.title !== undefined) arc.title = updates.title;
     if (updates.synopsis !== undefined) arc.synopsis = updates.synopsis;
+    if (updates.lane !== undefined) arc.lane = updates.lane;
+    if (updates.color !== undefined) arc.color = updates.color;
     return true;
   }
 
@@ -159,6 +277,9 @@ export const usePlotStore = defineStore('plot-direction', () => {
       node.status = 'pending';
       node.activatedAtRound = undefined;
       node.completedAtRound = undefined;
+      node.activatedAtTime = undefined;
+      node.completedAtTime = undefined;
+      node.completionEvidence = undefined;
       node.consecutiveReachedCount = 0;
     }
     // Re-activate first pending if arc is active and no active node
@@ -234,6 +355,8 @@ export const usePlotStore = defineStore('plot-direction', () => {
         importance: node.importance ?? 'skippable',
         opportunityTiers: node.opportunityTiers ?? [],
         emotionalTone: node.emotionalTone,
+        premise: node.premise,
+        stakes: node.stakes,
         onComplete: node.onComplete,
         onActivate: node.onActivate,
         onSkip: node.onSkip,
@@ -348,31 +471,39 @@ export const usePlotStore = defineStore('plot-direction', () => {
     return true;
   }
 
-  // ─── Confirmation gate (critical nodes) ───
+  // ─── Confirmation gates (critical nodes, one per thread) ───
+
+  function _resolveGateArcId(arcId?: string): string | null {
+    if (arcId) return pendingConfirmations.value.some(g => g.arcId === arcId) ? arcId : null;
+    return pendingConfirmation.value?.arcId ?? null;
+  }
 
   /**
-   * Player confirms critical node advancement.
-   * Sets a `_confirmed` transient flag — the PlotEvaluationPipeline reads this
-   * on the next execution and performs the actual advanceNode() with full
-   * side-effects (onComplete, onActivate events, activationConditions check).
-   * This avoids duplicating advancement logic between store and pipeline.
+   * Player confirms critical node advancement for one thread.
+   * Sets the gate's `confirmed` flag — the PlotEvaluationPipeline
+   * (`applyConfirmedAdvancement` immediately, or `execute()` next round) performs
+   * the actual advanceNode() with full side-effects.
+   * @param arcId thread whose gate to confirm; defaults to the focus thread's gate.
    */
-  function confirmNodeAdvancement(): boolean {
-    if (!pendingConfirmation.value) return false;
-    // Mark as confirmed — pipeline will handle the actual transition
-    pendingConfirmation.value = { ...pendingConfirmation.value, confirmed: true } as typeof pendingConfirmation.value;
+  function confirmNodeAdvancement(arcId?: string): boolean {
+    const id = _resolveGateArcId(arcId);
+    if (!id) return false;
+    pendingConfirmations.value = pendingConfirmations.value.map(g =>
+      g.arcId === id ? { ...g, confirmed: true } : g,
+    );
     return true;
   }
 
-  function rejectNodeAdvancement(): void {
-    const pc = pendingConfirmation.value;
-    if (!pc) return;
-    const arc = arcs.value.find(a => a.id === pc.arcId);
-    if (arc) {
-      const node = arc.nodes.find(n => n.id === pc.nodeId);
+  function rejectNodeAdvancement(arcId?: string): void {
+    const id = _resolveGateArcId(arcId);
+    if (!id) return;
+    const gate = pendingConfirmations.value.find(g => g.arcId === id);
+    const arc = arcs.value.find(a => a.id === id);
+    if (arc && gate) {
+      const node = arc.nodes.find(n => n.id === gate.nodeId);
       if (node) node.consecutiveReachedCount = 0;
     }
-    pendingConfirmation.value = null;
+    pendingConfirmations.value = pendingConfirmations.value.filter(g => g.arcId !== id);
   }
 
   // ─── Evaluation log (in-memory only) ───
@@ -413,7 +544,7 @@ export const usePlotStore = defineStore('plot-direction', () => {
     evaluationLog.value = [];
     // Also cleared defensively here: loadFromState fully reassigns it too, but
     // that only runs while PlotPanel is mounted (its watcher owns the call).
-    pendingConfirmation.value = null;
+    pendingConfirmations.value = [];
     _evaluating = false;
     _pendingOps = [];
   });
@@ -425,8 +556,8 @@ export const usePlotStore = defineStore('plot-direction', () => {
 
   function $reset(): void {
     arcs.value = [];
-    activeArcIndex.value = null;
-    pendingConfirmation.value = null;
+    focusArcId.value = null;
+    pendingConfirmations.value = [];
     evaluationLog.value = [];
     _evaluating = false;
     _pendingOps = [];
@@ -434,11 +565,14 @@ export const usePlotStore = defineStore('plot-direction', () => {
 
   return {
     arcs,
-    activeArcIndex,
+    focusArcId,
+    pendingConfirmations,
     pendingConfirmation,
     evaluationLog,
+    activeArcs,
     activeArc,
     activeNode,
+    activeNodes,
     hasActiveArc,
 
     loadFromState,
@@ -447,6 +581,9 @@ export const usePlotStore = defineStore('plot-direction', () => {
     createArc,
     deleteArc,
     activateArc,
+    scheduleArc,
+    unscheduleArc,
+    setFocus,
     abandonArc,
     completeArc,
     reviseArc,

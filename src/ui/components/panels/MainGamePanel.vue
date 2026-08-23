@@ -194,6 +194,7 @@ async function downloadTtsForMessage(round: number): Promise<void> {
 const narrativeHistory = useValue<ChatMessage[]>(DEFAULT_ENGINE_PATHS.narrativeHistory);
 
 import type { NpcBrief } from '@/ui/components/common/FormattedText.vue';
+import PlotGaugeStrip from '@/ui/components/panels/plot/PlotGaugeStrip.vue';
 
 const relationships = useValue<NpcBrief[]>(DEFAULT_ENGINE_PATHS.relationships);
 const npcNameList = computed(() => {
@@ -1108,6 +1109,8 @@ watch(
         <span class="round-counter">{{ roundDisplay }}</span>
         <WeatherBadge :weather="weather" />
         <EnvironmentChips :tags="environmentTags" />
+        <!-- Plot Threads: focus-thread gauges (honours 设置→剧情导向→主面板显示度量值 + per-gauge flag) -->
+        <PlotGaugeStrip />
       </div>
       <div class="status-bar__right">
         <Tooltip :text="$t('mainGame.search.toggleTitle')" interactive>

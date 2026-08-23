@@ -156,6 +156,28 @@ describe('buildSystemPrompt · world book pools & corpora (P0)', () => {
     entries,
   });
 
+  // Plot Threads §7.3 — WIRING: the focus node's text must reach both corpora so a
+  // Canon entry keyed on a plot noun is selected while that node is active.
+  it('the focus plot node text feeds the world-book corpora (focused + broad)', () => {
+    const plotTree = (title: string) => ({
+      元数据: { 剧情导向: { activeArcIndex: 0, focusArcId: 'f', arcs: [{
+        id: 'f', title: 'T', synopsis: '', status: 'active', gauges: [],
+        nodes: [{ id: 'n', arcId: 'f', title, narrativeGoal: '', directive: '', completionHint: '', completionConditions: [],
+          completionMode: 'hint_only', activationConditions: [], importance: 'skippable', opportunityTiers: [], status: 'active', consecutiveReachedCount: 0 }],
+      }] } },
+    });
+    const captured = capturedBookOf([{ ...lore({ id: 'cap', keywords: ['禁药'], injectionMode: 'match_any' }), matchSource: 'focused' }]);
+    const manual: WorldBook = { id: 'm', title: 'M', enabled: true, entries: [lore({ id: 'man', keywords: ['禁药'], injectionMode: 'match_any' })] };
+
+    const { sm: off } = createMockStateManager({ ...plotTree('模拟考异常'), 系统: { 设置: { prompt: { enableWorldBook: true } } }, 世界: { 时间: {}, 信息: {}, 描述: 'w' }, 社交: { 关系: [] }, 角色: { 基础信息: { 姓名: '主角', 当前位置: '城南' } } });
+    const without = buildSystemPrompt({ stateManager: off as unknown as StateManager, paths: DEFAULT_ENGINE_PATHS, packPrompts: {}, builtinOverrides: [], worldBooks: [captured, manual], userInput: '走路', playerName: '主角', cotEnabled: false, cotJudgeEnabled: false, splitGen: false, cotPseudoEnabled: false });
+    expect(without.worldBookHits?.map((h) => h.entryId) ?? []).toEqual([]);
+
+    const { sm: on } = createMockStateManager({ ...plotTree('发现禁药秘密'), 系统: { 设置: { prompt: { enableWorldBook: true } } }, 世界: { 时间: {}, 信息: {}, 描述: 'w' }, 社交: { 关系: [] }, 角色: { 基础信息: { 姓名: '主角', 当前位置: '城南' } } });
+    const withNode = buildSystemPrompt({ stateManager: on as unknown as StateManager, paths: DEFAULT_ENGINE_PATHS, packPrompts: {}, builtinOverrides: [], worldBooks: [captured, manual], userInput: '走路', playerName: '主角', cotEnabled: false, cotJudgeEnabled: false, splitGen: false, cotPseudoEnabled: false });
+    expect([...(withNode.worldBookHits?.map((h) => h.entryId) ?? [])].sort()).toEqual(['cap', 'man']);
+  });
+
   it('a keyword typed THIS round matches immediately (no more one-round lag)', () => {
     const r = build({
       worldBooks: [{ id: 'b', title: 'B', entries: [

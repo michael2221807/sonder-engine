@@ -19,6 +19,9 @@ import type { ProfileManager } from '@/engine/persistence/profile-manager';
 import type { SaveManager } from '@/engine/persistence/save-manager';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
+import { DEFAULT_MAX_ACTIVE_THREADS } from '@/engine/plot/types';
+import type { AxisMode as PlotTimelineAxis } from '@/ui/components/panels/plot/scheduler-layout';
+import { writePlotTimelineAxis } from '@/ui/composables/usePlotTimelineAxis';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import { useLocale } from '@/ui/composables/useLocale';
@@ -259,7 +262,7 @@ watch(memorySettings, () => {
 
 // ─── B.2.2 Heartbeat advanced settings (game state) ──────────
 
-const { isLoaded, get, setValue } = useGameState();
+const { isLoaded, get, setValue, useValue } = useGameState();
 
 // ─── Action Options → state tree sync (bugfix 2026-04-11) ───
 //
@@ -480,6 +483,15 @@ interface PlotSettings {
   opportunityMaxTier: 1 | 2 | 3;
   autoAdvanceSkippable: boolean;
   showEvalLog: boolean;
+  /** Plot Threads D2: how many threads may be active at once (1-5). */
+  maxActiveThreads: number;
+  /**
+   * Plot Threads D4: scheduler view axis. Persisted in this blob for reload, but
+   * the LIVE value is the state tree (`系统.设置.plot.timelineAxis`) — both this
+   * panel and the scheduler's own toggle write it through `writePlotTimelineAxis`,
+   * so the two controls never hold two copies (review fix, 2026-08-22).
+   */
+  timelineAxis: PlotTimelineAxis;
 }
 
 const defaultPlotSettings: PlotSettings = {
@@ -490,14 +502,34 @@ const defaultPlotSettings: PlotSettings = {
   opportunityMaxTier: 3,
   autoAdvanceSkippable: true,
   showEvalLog: false,
+  maxActiveThreads: DEFAULT_MAX_ACTIVE_THREADS,
+  timelineAxis: 'round',
 };
 
 const plotSettings = ref<PlotSettings>({ ...defaultPlotSettings });
 
+const timelineAxisOptions = computed<Array<{ value: PlotTimelineAxis; label: string }>>(() => [
+  { value: 'round', label: t('settings.plot.timelineAxis.round') },
+  { value: 'date',  label: t('settings.plot.timelineAxis.date') },
+]);
+/** Live axis value — the state tree is the single source of truth (scheduler toggle writes the same key). */
+const timelineAxisLive = useValue<PlotTimelineAxis | undefined>('系统.设置.plot.timelineAxis');
+const timelineAxisValue = computed<PlotTimelineAxis>(() => timelineAxisLive.value === 'date' ? 'date' : plotSettings.value.timelineAxis);
+function setTimelineAxisSetting(mode: PlotTimelineAxis): void {
+  plotSettings.value.timelineAxis = mode;            // keeps the persisted blob + this panel in step
+  writePlotTimelineAxis(setValue, mode);             // state tree + localStorage blob (shared writer)
+}
+
 function loadPlotSettings(): void {
   try {
     const raw = JSON.parse(localStorage.getItem(PLOT_SETTINGS_KEY) ?? '{}') as Partial<PlotSettings>;
-    plotSettings.value = { ...defaultPlotSettings, ...raw };
+    // Plot Threads: validate on load (same discipline as loadLowLoadSettings) — a
+    // NaN cap would silently disable the concurrency limit in plot-store.activateArc.
+    const cap = typeof raw.maxActiveThreads === 'number' && Number.isFinite(raw.maxActiveThreads)
+      ? Math.max(1, Math.min(5, Math.round(raw.maxActiveThreads)))
+      : defaultPlotSettings.maxActiveThreads;
+    const axis: PlotTimelineAxis = raw.timelineAxis === 'date' ? 'date' : 'round';
+    plotSettings.value = { ...defaultPlotSettings, ...raw, maxActiveThreads: cap, timelineAxis: axis };
   } catch { plotSettings.value = { ...defaultPlotSettings }; }
 }
 
@@ -509,9 +541,17 @@ function syncPlotSettingsToStateTree(): void {
   setValue('系统.设置.plot.opportunityMaxTier', plotSettings.value.opportunityMaxTier);
   setValue('系统.设置.plot.autoAdvanceSkippable', plotSettings.value.autoAdvanceSkippable);
   setValue('系统.设置.plot.showEvalLog', plotSettings.value.showEvalLog);
+  setValue('系统.设置.plot.maxActiveThreads', plotSettings.value.maxActiveThreads);
+  setValue('系统.设置.plot.timelineAxis', plotSettings.value.timelineAxis);
 }
 
 watch(plotSettings, () => {
+  // Merge over the on-disk blob: the scheduler's axis toggle may have written a
+  // fresher `timelineAxis` while this panel sat inactive under <KeepAlive>.
+  try {
+    const onDisk = JSON.parse(localStorage.getItem(PLOT_SETTINGS_KEY) ?? '{}') as Partial<PlotSettings>;
+    if (onDisk.timelineAxis === 'date' || onDisk.timelineAxis === 'round') plotSettings.value.timelineAxis = onDisk.timelineAxis;
+  } catch { /* ignore a corrupt blob; defaults apply */ }
   localStorage.setItem(PLOT_SETTINGS_KEY, JSON.stringify(plotSettings.value));
   if (isLoaded.value) syncPlotSettingsToStateTree();
 }, { deep: true });
@@ -1727,6 +1767,32 @@ onBeforeUnmount(() => {
           <AgaToggle
             :model-value="plotSettings.showEvalLog"
             @update:model-value="plotSettings.showEvalLog = $event"
+          />
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">{{ $t('settings.plot.maxActiveThreads.label') }}</span>
+            <span class="setting-desc">{{ $t('settings.plot.maxActiveThreads.desc') }}</span>
+          </div>
+          <input
+            type="number"
+            class="number-input"
+            min="1" max="5" step="1"
+            :value="plotSettings.maxActiveThreads"
+            @change="plotSettings.maxActiveThreads = Math.max(1, Math.min(5, Math.round(Number(($event.target as HTMLInputElement).value)) || 1))"
+          />
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">{{ $t('settings.plot.timelineAxis.label') }}</span>
+            <span class="setting-desc">{{ $t('settings.plot.timelineAxis.desc') }}</span>
+          </div>
+          <AgaSelect
+            :model-value="timelineAxisValue"
+            :options="timelineAxisOptions"
+            @update:model-value="setTimelineAxisSetting($event as PlotTimelineAxis)"
           />
         </div>
       </template>

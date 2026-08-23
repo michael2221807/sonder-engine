@@ -613,6 +613,13 @@ export interface EnginePathConfig {
    * 接收剧情信息，不需要看原始数据模型。
    */
   plotDirection: string;
+  /**
+   * 中期记忆数组路径（如 "记忆.中期"）— Plot Threads §7.1：PlotDecomposer 记忆段。
+   * 条目形状 `{记忆主体, …}[]`（memory-system.md §3）。
+   */
+  memoryMidTerm: string;
+  /** 长期记忆数组路径（如 "记忆.长期"）— 同上。 */
+  memoryLongTerm: string;
 
   /**
    * 收藏楼层路径（如 "元数据.收藏楼层"）— 玩家手动收藏的重要回合书签数组。
@@ -892,6 +899,8 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
   reasoningHistory: '元数据.推理历史',
   storyPlan: '元数据.剧情规划',
   plotDirection: '元数据.剧情导向',
+  memoryMidTerm: '记忆.中期',
+  memoryLongTerm: '记忆.长期',
   bookmarkedRounds: '元数据.收藏楼层',
   locationFieldNames: {
     name: '名称',

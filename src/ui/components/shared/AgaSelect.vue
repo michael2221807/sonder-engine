@@ -1,11 +1,12 @@
 <script setup lang="ts">
+// App doc: docs/user-guide/pages/game-overview.md §设计系统原语 (AgaSelect · 列表 Teleport 到 body)
 /**
  * AgaSelect — custom dropdown select with keyboard navigation.
  *
  * Generic over option type via `options` + `optionLabel` + `optionValue`.
  * Supports: keyboard nav (↑↓ + Enter + Escape), click-outside close, ARIA.
  */
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 export interface SelectOption {
@@ -48,8 +49,42 @@ function toggle() {
   isOpen.value = !isOpen.value;
   if (isOpen.value) {
     highlightIdx.value = props.options.findIndex((o) => o.value === props.modelValue);
+    measure();
   }
 }
+
+// ─── Floating list (2026-08-23) ───
+// The list is teleported to <body> and positioned `fixed` from the trigger's
+// rect. An in-flow absolute list was clipped by any scrolling ancestor — most
+// visibly inside Modal's `.modal-body { overflow-y: auto }`, where a select near
+// the bottom of a short dialog showed NO options at all (plot create dialog,
+// trigger picker). Position is re-measured on scroll/resize while open.
+const LIST_MAX_H = 240;
+const GAP = 4;
+const rect = ref({ left: 0, top: 0, bottom: 0, width: 0 });
+function measure(): void {
+  const r = triggerRef.value?.getBoundingClientRect();
+  if (r) rect.value = { left: r.left, top: r.top, bottom: r.bottom, width: r.width };
+}
+const listStyle = computed(() => {
+  const r = rect.value;
+  const vh = typeof window === 'undefined' ? 0 : window.innerHeight;
+  const roomBelow = vh - r.bottom - GAP;
+  const flipUp = roomBelow < Math.min(LIST_MAX_H, 120) && r.top > roomBelow;
+  const maxH = Math.max(80, Math.min(LIST_MAX_H, (flipUp ? r.top - GAP : roomBelow) - 8));
+  return flipUp
+    ? { left: `${r.left}px`, bottom: `${vh - r.top + GAP}px`, width: `${r.width}px`, maxHeight: `${maxH}px` }
+    : { left: `${r.left}px`, top: `${r.bottom + GAP}px`, width: `${r.width}px`, maxHeight: `${maxH}px` };
+});
+watch(isOpen, (open) => {
+  if (open) {
+    window.addEventListener('scroll', measure, { capture: true, passive: true });
+    window.addEventListener('resize', measure);
+  } else {
+    window.removeEventListener('scroll', measure, { capture: true });
+    window.removeEventListener('resize', measure);
+  }
+});
 
 // silent=true skips the close emit (Escape: let the host run its own cancel handler
 // instead of committing — selection/click-outside still emit so click-away commits).
@@ -89,7 +124,11 @@ function onClickOutside(e: MouseEvent) {
 }
 
 onMounted(() => document.addEventListener('click', onClickOutside, true));
-onUnmounted(() => document.removeEventListener('click', onClickOutside, true));
+onUnmounted(() => {
+  document.removeEventListener('click', onClickOutside, true);
+  window.removeEventListener('scroll', measure, { capture: true });
+  window.removeEventListener('resize', measure);
+});
 </script>
 
 <template>
@@ -109,26 +148,28 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside, true));
       <span class="aga-select__label">{{ selectedLabel }}</span>
       <span class="aga-select__arrow">▾</span>
     </button>
-    <Transition name="aga-dropdown">
-      <ul v-if="isOpen" ref="listRef" class="aga-select__list" role="listbox" @keydown="onKeydown">
-        <li
-          v-for="(opt, i) in options"
-          :key="opt.value"
-          class="aga-select__option"
-          :class="{
-            'aga-select__option--selected': opt.value === modelValue,
-            'aga-select__option--highlight': i === highlightIdx,
-            'aga-select__option--disabled': opt.disabled,
-          }"
-          role="option"
-          :aria-selected="opt.value === modelValue"
-          @click="select(opt)"
-          @mouseenter="highlightIdx = i"
-        >
-          {{ opt.label }}
-        </li>
-      </ul>
-    </Transition>
+    <Teleport to="body">
+      <Transition name="aga-dropdown">
+        <ul v-if="isOpen" ref="listRef" class="aga-select__list" :style="listStyle" role="listbox" @keydown="onKeydown">
+          <li
+            v-for="(opt, i) in options"
+            :key="opt.value"
+            class="aga-select__option"
+            :class="{
+              'aga-select__option--selected': opt.value === modelValue,
+              'aga-select__option--highlight': i === highlightIdx,
+              'aga-select__option--disabled': opt.disabled,
+            }"
+            role="option"
+            :aria-selected="opt.value === modelValue"
+            @click="select(opt)"
+            @mouseenter="highlightIdx = i"
+          >
+            {{ opt.label }}
+          </li>
+        </ul>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -180,11 +221,10 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside, true));
   color: var(--color-sage-300);
 }
 
+/* Teleported to <body> (see `listStyle`): viewport-fixed so no scrolling
+   ancestor — modal bodies, panels, the plot timeline track — can clip it. */
 .aga-select__list {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
+  position: fixed;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -193,7 +233,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside, true));
   box-shadow: var(--glass-shadow);
   max-height: 240px;
   overflow-y: auto;
-  z-index: var(--z-dropdown);
+  z-index: var(--z-floating, 9100);
   list-style: none;
   padding: var(--space-2xs) 0;
   margin: 0;

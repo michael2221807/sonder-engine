@@ -264,6 +264,13 @@ export const BUILTIN_SLOTS: Record<string, BuiltinSlotDefinition> = {
     description: '将玩家大纲拆解为节点链的 AI 指令（P1.5 启用）',
     defaultPromptId: 'plotDecompose',
   },
+  plot_decompose_threads: {
+    id: 'plot_decompose_threads',
+    title: '多线拆解',
+    category: '剧情导向',
+    description: '将玩家大纲一次拆成 2-4 条剧情线及其先后关系（并行剧情线 epic）',
+    defaultPromptId: 'plotDecomposeThreads',
+  },
 } as const;
 
 /**

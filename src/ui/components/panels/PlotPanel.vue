@@ -9,13 +9,22 @@ const { t } = useI18n();
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import { eventBus } from '@/engine/core/event-bus';
 import { DEFAULT_GAUGE_MAX_DELTA } from '@/engine/plot/types';
+import { DEFAULT_MAX_ACTIVE_THREADS } from '@/engine/plot/plot-store';
+import { toGameTimeStamp } from '@/engine/plot/game-time-stamp';
 import type { PlotDirectionState, PlotArc, PlotNode } from '@/engine/plot/types';
-import type { PlotDecomposer } from '@/engine/plot/plot-decomposer';
+import type { PlotDecomposer, MultiDecomposeResult, DecomposedThread } from '@/engine/plot/plot-decomposer';
+import { commitDecomposedThreads, unresolvedThreadRefs, overCapThreadTitles } from '@/engine/plot/plot-threads-commit';
 import Modal from '@/ui/components/common/Modal.vue';
 import GaugeBar from './plot/GaugeBar.vue';
 import PlotNodeList from './plot/PlotNodeList.vue';
+import PlotScheduler from './plot/PlotScheduler.vue';
+import PlotTriggerPicker from './plot/PlotTriggerPicker.vue';
+import type { AxisMode } from './plot/scheduler-layout';
+import { writePlotTimelineAxis } from '@/ui/composables/usePlotTimelineAxis';
+import type { ThreadActivation } from '@/engine/plot/types';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
+import AgaLoader from '@/ui/components/shared/AgaLoader.vue';
 
 import { usePlotEditor } from '@/ui/composables/editors';
 
@@ -85,6 +94,9 @@ const newArcSynopsis = ref('');
 
 const decomposing = ref(false);
 const decomposeError = ref('');
+/** Thread being decomposed right now — drives the header strip (both views) and its lane's placeholder. */
+const decomposingArcId = ref<string | null>(null);
+const decomposingTitle = computed(() => plotStore.arcs.find(a => a.id === decomposingArcId.value)?.title ?? '');
 
 async function createArc(): Promise<void> {
   if (!newArcTitle.value.trim()) return;
@@ -103,9 +115,13 @@ async function createArc(): Promise<void> {
   selectedArcId.value = arc.id;
   persist();
 
-  // AI decomposition runs in background with progress shown in main panel
+  // AI decomposition runs in the background. Progress is visible in BOTH views
+  // (header strip + the thread's lane placeholder) and the outcome lands as a toast —
+  // before 2026-08-23 the only indicator lived in the list view's arc header, so a
+  // player on the timeline saw nothing happen for the whole call.
   if (synopsis && plotDecomposer) {
     decomposing.value = true;
+    decomposingArcId.value = arc.id;
     decomposeError.value = '';
     try {
       const result = await plotDecomposer.decompose(synopsis);
@@ -128,15 +144,115 @@ async function createArc(): Promise<void> {
           });
         }
         persist();
+        eventBus.emit('ui:toast', {
+          type: 'success',
+          i18nKey: 'plot.arc.decomposeDone',
+          i18nParams: { title, n: result.nodes.length },
+          message: `"${title}": ${result.nodes.length} nodes generated`,
+          duration: 3000,
+        });
       } else {
         decomposeError.value = t('plot.arc.decomposeNoResult');
+        eventBus.emit('ui:toast', { type: 'warning', i18nKey: 'plot.arc.decomposeNoResult', message: 'AI returned no usable nodes', duration: 4000 });
       }
     } catch (err) {
-      decomposeError.value = t('plot.arc.decomposeFailed', { error: err instanceof Error ? err.message : String(err) });
+      const error = err instanceof Error ? err.message : String(err);
+      decomposeError.value = t('plot.arc.decomposeFailed', { error });
+      eventBus.emit('ui:toast', { type: 'error', i18nKey: 'plot.arc.decomposeFailed', i18nParams: { error }, message: `Decompose failed: ${error}`, duration: 5000 });
     } finally {
       decomposing.value = false;
+      decomposingArcId.value = null;
     }
   }
+}
+
+// ─── Plot Threads P5: multi-thread decomposition (design §7.4) ───
+type DecomposeMode = 'single' | 'multi';
+const decomposeMode = ref<DecomposeMode>('single');
+const decomposeModeOptions = computed<Array<{ value: DecomposeMode; label: string }>>(() => [
+  { value: 'single', label: t('plot.arc.decomposeSingle') },
+  { value: 'multi', label: t('plot.arc.decomposeMulti') },
+]);
+const decomposingThreads = ref(false);
+const threadsPreview = ref<MultiDecomposeResult | null>(null);
+const threadsError = ref('');
+
+/** Human-readable "when does it start" for the preview list (titles only — ids don't exist yet). */
+function describeThreadActivation(thread: DecomposedThread): string {
+  if (!thread.activation || thread.activation.length === 0) return t('plot.arc.threadStartsNow');
+  return thread.activation.map(ref => {
+    if ('at_round' in ref) return t('plot.arc.threadAtRound', { round: ref.at_round });
+    if ('after_thread' in ref) return t('plot.arc.threadAfter', { target: ref.after_thread });
+    return t('plot.arc.threadAfter', { target: ref.after_node.replace('/', '·') });
+  }).join(' + ');
+}
+/** Preview parity with the commit: refs may point into the batch OR existing threads. */
+function unresolvedRefs(thread: DecomposedThread, all: DecomposedThread[]): string[] {
+  return unresolvedThreadRefs(thread, all, plotStore.arcs);
+}
+/** Immediate threads beyond the free active slots — shown in the preview, left as draft on commit. */
+const overCapTitles = computed(() => threadsPreview.value
+  ? overCapThreadTitles(threadsPreview.value.threads, plotStore.activeArcs.length, maxActiveThreads.value)
+  : []);
+
+async function runThreadsDecompose(): Promise<void> {
+  const outline = newArcSynopsis.value.trim();
+  if (!outline || !plotDecomposer) return;
+  decomposingThreads.value = true;
+  threadsError.value = '';
+  threadsPreview.value = null;
+  try {
+    const result = await plotDecomposer.decomposeThreads(outline, { maxActiveThreads: maxActiveThreads.value });
+    if (result) {
+      threadsPreview.value = result;
+      eventBus.emit('ui:toast', {
+        type: 'success',
+        i18nKey: 'plot.arc.decomposeThreadsDone',
+        i18nParams: { n: result.threads.length },
+        message: `${result.threads.length} threads proposed`,
+        duration: 2500,
+      });
+    } else {
+      threadsError.value = t('plot.arc.decomposeThreadsNoResult');
+    }
+  } catch (err) {
+    threadsError.value = t('plot.arc.decomposeFailed', { error: err instanceof Error ? err.message : String(err) });
+  } finally {
+    decomposingThreads.value = false;
+  }
+}
+
+/**
+ * Write the proposal into the store (engine-level `commitDecomposedThreads`
+ * owns the ordering rules and is unit-tested), persist once, report what was
+ * left as draft, and switch to the timeline so the result is seen in place.
+ */
+function commitThreads(): void {
+  const proposal = threadsPreview.value;
+  if (!proposal) return;
+  const res = commitDecomposedThreads(plotStore, proposal, {
+    round: currentRound.value ?? 0,
+    time: toGameTimeStamp(gameTimeRaw.value, DEFAULT_ENGINE_PATHS.gameTimeFieldNames),
+    maxActiveThreads: maxActiveThreads.value,
+  });
+  persist();
+  const leftover = [...res.stranded, ...Object.keys(res.unresolved)];
+  if (leftover.length > 0) {
+    eventBus.emit('ui:toast', {
+      type: 'warning',
+      i18nKey: 'plot.arc.threadsCommittedPartial',
+      i18nParams: { leftover: leftover.join('、') },
+      message: `${res.createdIds.length} threads written; left as draft: ${leftover.join(', ')}`,
+      duration: 4500,
+    });
+  } else {
+    eventBus.emit('ui:toast', { type: 'success', i18nKey: 'plot.arc.threadsCommitted', message: `${res.createdIds.length} threads written`, duration: 2500 });
+  }
+  threadsPreview.value = null;
+  newArcTitle.value = '';
+  newArcSynopsis.value = '';
+  showCreateArc.value = false;
+  plotView.value = 'timeline';
 }
 
 const displayArc = computed<PlotArc | null>(() => {
@@ -152,20 +268,149 @@ function selectArc(arcId: string): void {
   selectedArcId.value = arcId;
 }
 
-function activateCurrentArc(): void {
-  const arc = displayArc.value;
-  if (!arc) return;
-  const ok = plotStore.activateArc(arc.id, currentRound.value ?? 0);
+// Plot Threads: concurrency cap + game-time stamp for the scheduler's date axis.
+const maxActiveThreadsSetting = useValue<number | undefined>('系统.设置.plot.maxActiveThreads');
+const maxActiveThreads = computed(() => maxActiveThreadsSetting.value ?? DEFAULT_MAX_ACTIVE_THREADS);
+const gameTimeRaw = useValue<unknown>(DEFAULT_ENGINE_PATHS.gameTime);
+
+// ─── Plot Threads: view switch (list ↔ timeline) + axis setting ───
+const PLOT_VIEW_KEY = 'aga_plot_view';
+type PlotView = 'list' | 'timeline';
+function readStoredView(): PlotView {
+  try { return localStorage.getItem(PLOT_VIEW_KEY) === 'timeline' ? 'timeline' : 'list'; } catch { return 'list'; }
+}
+const plotView = ref<PlotView>(readStoredView());
+watch(plotView, (v) => { try { localStorage.setItem(PLOT_VIEW_KEY, v); } catch { /* storage unavailable */ } });
+
+const timelineAxisSetting = useValue<AxisMode | undefined>('系统.设置.plot.timelineAxis');
+const timelineAxis = computed<AxisMode>(() => timelineAxisSetting.value === 'date' ? 'date' : 'round');
+/** The in-view toggle writes the same setting SettingsPanel owns, through the shared writer. */
+function setTimelineAxis(mode: AxisMode): void {
+  writePlotTimelineAxis(setValue, mode);
+}
+
+const canActivateMore = computed(() => plotStore.activeArcs.length < maxActiveThreads.value);
+
+function activateArcById(arcId: string): void {
+  const ok = plotStore.activateArc(arcId, {
+    round: currentRound.value ?? 0,
+    time: toGameTimeStamp(gameTimeRaw.value, DEFAULT_ENGINE_PATHS.gameTimeFieldNames),
+    maxActiveThreads: maxActiveThreads.value,
+    takeFocus: true, // user-initiated → becomes the focus thread (D2 rule ①)
+  });
   if (ok) {
     persist();
   } else {
-    // The activate button only shows for draft/abandoned arcs with nodes, so the
-    // only realistic failure is the single-active-arc constraint. Surface it
-    // instead of silently no-opping (otherwise the button looks broken).
     eventBus.emit('ui:toast', {
       type: 'info',
       i18nKey: 'plot.arc.activeBlocked',
-      message: 'An arc is already active. Complete or abandon it before activating another.',
+      message: `Already ${maxActiveThreads.value} threads active. Complete or abandon one before activating another.`,
+      duration: 3500,
+    });
+  }
+}
+
+function handleSetFocus(arcId: string): void {
+  if (plotStore.setFocus(arcId)) persist();
+}
+
+function handleSchedulerSelectNode(arcId: string, nodeId: string): void {
+  selectedArcId.value = arcId;
+  selectedNodeId.value = nodeId;
+  showNodeDetail.value = true;
+}
+
+function handleSchedulerSelectArc(arcId: string): void {
+  selectedArcId.value = arcId;
+  plotView.value = 'list';
+}
+
+/** Block drag (reorder role): same store rule as the list view's drag. */
+function handleSchedulerReorderNode(arcId: string, nodeId: string, toIndex: number): void {
+  if (plotStore.moveNode(arcId, nodeId, toIndex)) persist();
+}
+
+/**
+ * Block drag (schedule role, design §5.3): dragging a draft/scheduled thread's
+ * first block to a round sets — or rewrites — its `round_reached` trigger while
+ * keeping any other triggers the player authored in the picker.
+ */
+function handleScheduleAtRound(arcId: string, round: number): void {
+  const arc = plotStore.arcs.find(a => a.id === arcId);
+  if (!arc || (arc.status !== 'draft' && arc.status !== 'scheduled')) return;
+  const kept = (arc.activation?.triggers ?? []).filter(tr => tr.type !== 'round_reached');
+  const ok = plotStore.scheduleArc(arcId, {
+    mode: arc.activation?.mode ?? 'auto',
+    triggers: [{ type: 'round_reached', round: Math.max(1, Math.round(round)) }, ...kept],
+  });
+  if (ok) persist();
+}
+
+/** Lane reorder: rewrite `lane` for every thread from the new display order. */
+function handleReorderLane(arcId: string, toIndex: number): void {
+  const ordered = [...plotStore.arcs].sort((p, q) => (p.lane ?? Infinity) - (q.lane ?? Infinity));
+  const from = ordered.findIndex(a => a.id === arcId);
+  if (from === -1) return;
+  const [moved] = ordered.splice(from, 1);
+  ordered.splice(Math.max(0, Math.min(toIndex, ordered.length)), 0, moved);
+  ordered.forEach((a, i) => plotStore.updateArc(a.id, { lane: i }));
+  persist();
+}
+
+// ─── Trigger picker (D3) ───
+const showTriggerPicker = ref(false);
+const triggerArcId = ref<string | null>(null);
+const triggerArc = computed<PlotArc | null>(() => plotStore.arcs.find(a => a.id === triggerArcId.value) ?? null);
+function openTriggerPicker(arcId: string): void {
+  triggerArcId.value = arcId;
+  showTriggerPicker.value = true;
+}
+function handleTriggerSave(activation: ThreadActivation): void {
+  if (!triggerArcId.value) return;
+  if (plotStore.scheduleArc(triggerArcId.value, activation)) persist();
+}
+function handleUnschedule(): void {
+  if (!triggerArcId.value) return;
+  if (plotStore.unscheduleArc(triggerArcId.value)) persist();
+}
+
+function confirmAdvancementFor(arcId: string): void {
+  plotStore.confirmNodeAdvancement(arcId);
+  persist();
+  if (plotEvaluation) {
+    plotEvaluation.applyConfirmedAdvancement(arcId);
+    eventBus.emit('engine:request-save');
+  }
+}
+function rejectAdvancementFor(arcId: string): void {
+  plotStore.rejectNodeAdvancement(arcId);
+  persist();
+}
+
+function arcTitleById(arcId: string | undefined): string {
+  if (!arcId) return '';
+  return plotStore.arcs.find(a => a.id === arcId)?.title ?? '';
+}
+
+function activateCurrentArc(): void {
+  const arc = displayArc.value;
+  if (!arc) return;
+  const ok = plotStore.activateArc(arc.id, {
+    round: currentRound.value ?? 0,
+    time: toGameTimeStamp(gameTimeRaw.value, DEFAULT_ENGINE_PATHS.gameTimeFieldNames),
+    maxActiveThreads: maxActiveThreads.value,
+    takeFocus: true, // user-initiated → becomes the focus thread (D2 rule ①)
+  });
+  if (ok) {
+    persist();
+  } else {
+    // The activate button only shows for draft/scheduled/abandoned arcs with
+    // nodes, so the only realistic failure is the maxActiveThreads cap.
+    // Surface it instead of silently no-opping (otherwise the button looks broken).
+    eventBus.emit('ui:toast', {
+      type: 'info',
+      i18nKey: 'plot.arc.activeBlocked',
+      message: `Already ${maxActiveThreads.value} threads active. Complete or abandon one before activating another.`,
       duration: 3500,
     });
   }
@@ -331,6 +576,8 @@ function handleSelectNode(nodeId: string): void {
 const editingDirective = ref('');
 const editingHint = ref('');
 const editingGoal = ref('');
+const editingPremise = ref('');
+const editingStakes = ref('');
 const editingMaxRounds = ref<number | undefined>(undefined);
 const editingImportance = ref<'critical' | 'skippable'>('critical');
 const editingCompletionMode = ref<import('@/engine/plot/types').CompletionMode>('hint_only');
@@ -350,6 +597,8 @@ watch(selectedNode, (n) => {
     editingDirective.value = n.directive;
     editingHint.value = n.completionHint;
     editingGoal.value = n.narrativeGoal;
+    editingPremise.value = n.premise ?? '';
+    editingStakes.value = n.stakes ?? '';
     editingMaxRounds.value = n.maxRounds;
     editingImportance.value = n.importance;
     editingCompletionMode.value = n.completionMode;
@@ -364,6 +613,8 @@ function saveNodeEdits(): void {
     directive: editingDirective.value,
     completionHint: editingHint.value,
     narrativeGoal: editingGoal.value,
+    premise: editingPremise.value.trim() || undefined,
+    stakes: editingStakes.value.trim() || undefined,
     maxRounds: editingMaxRounds.value,
     importance: editingImportance.value,
     completionMode: editingCompletionMode.value,
@@ -459,32 +710,10 @@ function addGauge(): void {
   persist();
 }
 
-// ─── Critical node confirmation gate ───
-const hasPendingConfirmation = computed(() => plotStore.pendingConfirmation !== null);
-const pendingConfirmNode = computed(() => {
-  const pc = plotStore.pendingConfirmation;
-  if (!pc || !displayArc.value) return null;
-  return displayArc.value.nodes.find(n => n.id === pc.nodeId) ?? null;
-});
-
-function confirmAdvancement(): void {
-  plotStore.confirmNodeAdvancement();
-  // Push the `confirmed` flag into the state tree first…
-  persist();
-  // …then advance the node right away so the player sees it complete + the
-  // next node activate immediately, instead of waiting for the next main round.
-  // Falls back to the deferred path (pipeline consumes the flag next round) if
-  // the evaluation pipeline isn't available (e.g. no active game pack).
-  if (plotEvaluation) {
-    plotEvaluation.applyConfirmedAdvancement();
-    eventBus.emit('engine:request-save');
-  }
-}
-
-function rejectAdvancement(): void {
-  plotStore.rejectNodeAdvancement();
-  persist();
-}
+// Critical-node confirmation gates: one card per thread, see confirmAdvancementFor /
+// rejectAdvancementFor above. The confirm path pushes the `confirmed` flag into the
+// state tree first, then advances immediately via the pipeline so the player sees
+// the node complete right away (falls back to next-round consumption without a pipeline).
 </script>
 
 <template>
@@ -499,6 +728,14 @@ function rejectAdvancement(): void {
           {{ $t('plot.title') }}
         </h2>
         <div class="header-actions">
+          <div class="view-seg" role="group">
+            <Tooltip :text="$t('plot.view.list')" interactive>
+              <button :class="['view-seg__btn', { 'view-seg__btn--on': plotView === 'list' }]" type="button" data-testid="plot-view-list" :aria-label="$t('plot.view.list')" @click="plotView = 'list'">☰</button>
+            </Tooltip>
+            <Tooltip :text="$t('plot.view.timeline')" interactive>
+              <button :class="['view-seg__btn', { 'view-seg__btn--on': plotView === 'timeline' }]" type="button" data-testid="plot-view-timeline" :aria-label="$t('plot.view.timeline')" @click="plotView = 'timeline'">⫼</button>
+            </Tooltip>
+          </div>
           <Tooltip :text="$t('plot.arc.newArcBtn')" interactive>
             <button
               class="header-btn"
@@ -508,8 +745,38 @@ function rejectAdvancement(): void {
         </div>
       </header>
 
-      <!-- Active Arc Display -->
-      <template v-if="displayArc">
+      <!-- AI decomposition in flight — visible in both views -->
+      <div v-if="decomposing" class="decompose-strip" data-testid="plot-decompose-strip" role="status">
+        <AgaLoader size="sm" />
+        <span>{{ $t('plot.arc.decomposing') }}</span>
+        <span v-if="decomposingTitle" class="decompose-strip__title">{{ decomposingTitle }}</span>
+      </div>
+
+      <!-- Timeline view (Plot Threads scheduler) -->
+      <PlotScheduler
+        v-if="plotView === 'timeline'"
+        :arcs="plotStore.arcs"
+        :focus-arc-id="plotStore.focusArcId"
+        :current-round="currentRound ?? 0"
+        :axis="timelineAxis"
+        :pending-confirmations="plotStore.pendingConfirmations"
+        :max-active-threads="maxActiveThreads"
+        :generating-arc-id="decomposingArcId"
+        @update:axis="setTimelineAxis"
+        @reorder-node="handleSchedulerReorderNode"
+        @schedule-at="handleScheduleAtRound"
+        @select-node="handleSchedulerSelectNode"
+        @set-focus="handleSetFocus"
+        @select-arc="handleSchedulerSelectArc"
+        @open-trigger="openTriggerPicker"
+        @activate="activateArcById"
+        @confirm="confirmAdvancementFor"
+        @reject="rejectAdvancementFor"
+        @reorder-lane="handleReorderLane"
+      />
+
+      <!-- List view: selected arc -->
+      <template v-else-if="displayArc">
         <!-- Arc switcher: browse/switch between multiple arcs (single-active still enforced) -->
         <nav v-if="plotStore.arcs.length >= 2" class="arc-switcher" :aria-label="$t('plot.arc.switcherLabel')">
           <button
@@ -559,12 +826,12 @@ function rejectAdvancement(): void {
               @blur="commitArcSynopsis"
             />
           </template>
-          <Tooltip v-else-if="displayArc.synopsis" :text="$t('plot.arc.editSynopsis')">
+          <Tooltip v-else-if="displayArc.synopsis" :text="$t('plot.arc.editSynopsis')" class="arc-synopsis-tt">
             <p class="arc-synopsis arc-synopsis--editable" @click="startEditArcSynopsis">
               {{ displayArc.synopsis }} <span class="arc-edit-icon">✏</span>
             </p>
           </Tooltip>
-          <Tooltip v-else :text="$t('plot.arc.editSynopsis')">
+          <Tooltip v-else :text="$t('plot.arc.editSynopsis')" class="arc-synopsis-tt">
             <p class="arc-synopsis arc-synopsis--empty" @click="startEditArcSynopsis">
               {{ $t('plot.arc.synopsisPlaceholder') }} <span class="arc-edit-icon">✏</span>
             </p>
@@ -572,8 +839,11 @@ function rejectAdvancement(): void {
 
           <div class="arc-actions">
             <button
-              v-if="(displayArc.status === 'draft' || displayArc.status === 'abandoned') && displayArc.nodes.length > 0"
+              v-if="(displayArc.status === 'draft' || displayArc.status === 'scheduled' || displayArc.status === 'abandoned') && displayArc.nodes.length > 0"
               class="arc-btn arc-btn--activate"
+              :disabled="!canActivateMore"
+              :title="!canActivateMore ? $t('plot.arc.activeBlocked') : undefined"
+              data-testid="plot-activate-arc"
               @click="activateCurrentArc"
             >{{ displayArc.status === 'abandoned' ? $t('plot.arc.reactivate') : $t('plot.arc.activate') }}</button>
             <button
@@ -631,22 +901,30 @@ function rejectAdvancement(): void {
           />
         </section>
 
-        <!-- Critical Node Confirmation Gate -->
-        <section v-if="hasPendingConfirmation && pendingConfirmNode" class="confirm-gate">
+        <!-- Critical Node Confirmation Gates — one card per thread (Plot Threads G7) -->
+        <section
+          v-for="gate in plotStore.pendingConfirmations"
+          :key="gate.arcId"
+          class="confirm-gate"
+          data-testid="plot-confirm-gate"
+        >
           <div class="confirm-gate__icon">&#10003;</div>
           <div class="confirm-gate__body">
             <p class="confirm-gate__title">
-              {{ pendingConfirmNode.title }}
+              {{ plotStore.arcs.find(a => a.id === gate.arcId)?.nodes.find(n => n.id === gate.nodeId)?.title ?? gate.nodeId }}
+            </p>
+            <p v-if="plotStore.arcs.length > 1" class="confirm-gate__thread">
+              {{ $t('plot.confirm.threadLabel', { title: arcTitleById(gate.arcId) }) }}
             </p>
             <p class="confirm-gate__evidence">
-              {{ plotStore.pendingConfirmation?.evidence }}
+              {{ gate.evidence }}
             </p>
           </div>
           <div class="confirm-gate__actions">
-            <button class="arc-btn arc-btn--activate" @click="confirmAdvancement">
+            <button class="arc-btn arc-btn--activate" @click="confirmAdvancementFor(gate.arcId)">
               {{ $t('plot.confirm.title') }}
             </button>
-            <button class="arc-btn arc-btn--delete" @click="rejectAdvancement">
+            <button class="arc-btn arc-btn--delete" @click="rejectAdvancementFor(gate.arcId)">
               {{ $t('plot.confirm.notYet') }}
             </button>
           </div>
@@ -668,6 +946,7 @@ function rejectAdvancement(): void {
                 class="eval-log-item"
               >
                 <span class="eval-log-round">R{{ log.round }}</span>
+                <span v-if="plotStore.arcs.length > 1 && log.arcId" class="eval-log-thread">{{ arcTitleById(log.arcId) }}</span>
                 <span class="eval-log-action">{{ log.action }}</span>
                 <span v-if="log.evaluation" class="eval-log-conf">
                   {{ log.evaluation.confidence.toFixed(2) }}
@@ -682,27 +961,75 @@ function rejectAdvancement(): void {
       </template>
 
       <!-- Empty State -->
-      <div v-else class="empty-state">
+      <div v-else-if="plotView === 'list'" class="empty-state">
         <p>{{ $t('plot.empty.noArc') }}</p>
         <button class="arc-btn arc-btn--activate" @click="showCreateArc = true">
           {{ $t('plot.empty.createFirst') }}
         </button>
       </div>
 
+      <!-- Trigger picker (Plot Threads D3) -->
+      <PlotTriggerPicker
+        v-model="showTriggerPicker"
+        :arc="triggerArc"
+        :arcs="plotStore.arcs"
+        :max-active-threads="maxActiveThreads"
+        @save="handleTriggerSave"
+        @unschedule="handleUnschedule"
+      />
+
       <!-- Create Arc Modal -->
-      <Modal v-model="showCreateArc" :title="$t('plot.arc.createTitle')" width="460px">
+      <Modal v-model="showCreateArc" :title="$t('plot.arc.createTitle')" width="520px">
         <div class="modal-form">
-          <label class="form-label">
+          <label v-if="decomposeMode === 'single'" class="form-label">
             {{ $t('plot.arc.arcTitle') }}
             <input v-model="newArcTitle" class="form-input" :placeholder="$t('plot.arc.arcTitlePlaceholder')" />
           </label>
           <label class="form-label">
             {{ $t('plot.arc.synopsis') }}
-            <textarea v-model="newArcSynopsis" class="form-textarea" rows="3" :placeholder="$t('plot.arc.synopsisPlaceholder')" />
+            <textarea v-model="newArcSynopsis" class="form-textarea" rows="4" :placeholder="$t('plot.arc.synopsisPlaceholder')" />
           </label>
+          <!-- Plot Threads P5: one thread (legacy) or several threads with their sequencing -->
+          <div v-if="plotDecomposer" class="form-label decompose-mode">
+            {{ $t('plot.arc.decomposeMode') }}
+            <AgaSelect :model-value="decomposeMode" :options="decomposeModeOptions" data-testid="plot-decompose-mode" @update:model-value="decomposeMode = $event as DecomposeMode" />
+            <span v-if="decomposeMode === 'multi'" class="form-hint">{{ $t('plot.arc.decomposeMultiHint') }}</span>
+          </div>
+
+          <template v-if="decomposeMode === 'multi'">
+            <p v-if="decomposingThreads" class="decompose-status">{{ $t('plot.arc.decomposingThreads') }}</p>
+            <p v-else-if="threadsError" class="decompose-status decompose-status--error">{{ threadsError }}</p>
+            <section v-if="threadsPreview" class="threads-preview" data-testid="plot-threads-preview">
+              <h4 class="threads-preview__title">{{ $t('plot.arc.threadsPreviewTitle') }}</h4>
+              <p class="form-hint">{{ $t('plot.arc.threadsPreviewHint', { max: maxActiveThreads }) }}</p>
+              <ul class="threads-preview__list">
+                <li v-for="thread in threadsPreview.threads" :key="thread.title" class="threads-preview__item">
+                  <span class="threads-preview__dot" :style="{ background: thread.color ?? 'var(--color-sage-600)' }" />
+                  <span class="threads-preview__name">{{ thread.title }}</span>
+                  <span class="threads-preview__nodes">{{ $t('plot.arc.threadNodes', { n: thread.nodes.length }) }} · {{ thread.nodes.map(n => n.title).join(' → ') }}</span>
+                  <span :class="['threads-preview__when', { 'threads-preview__when--warn': unresolvedRefs(thread, threadsPreview.threads).length > 0 || overCapTitles.includes(thread.title) }]">
+                    {{ unresolvedRefs(thread, threadsPreview.threads).length > 0
+                      ? $t('plot.arc.threadUnresolved', { ref: unresolvedRefs(thread, threadsPreview.threads).join(', ') })
+                      : overCapTitles.includes(thread.title)
+                        ? $t('plot.arc.threadOverCap', { max: maxActiveThreads })
+                        : describeThreadActivation(thread) }}
+                  </span>
+                </li>
+              </ul>
+            </section>
+          </template>
         </div>
         <template #footer>
-          <button class="arc-btn arc-btn--activate" :disabled="!newArcTitle.trim()" @click="createArc">
+          <template v-if="decomposeMode === 'multi'">
+            <button class="arc-btn arc-btn--busy" :disabled="!newArcSynopsis.trim() || decomposingThreads" data-testid="plot-decompose-threads" @click="runThreadsDecompose">
+              <AgaLoader v-if="decomposingThreads" size="sm" />
+              {{ decomposingThreads ? $t('plot.arc.decomposingThreads') : $t('plot.arc.decomposeMulti') }}
+            </button>
+            <button class="arc-btn arc-btn--activate" :disabled="!threadsPreview" data-testid="plot-threads-commit" @click="commitThreads">
+              {{ $t('plot.arc.threadsCommit') }}
+            </button>
+          </template>
+          <button v-else class="arc-btn arc-btn--activate" :disabled="!newArcTitle.trim()" @click="createArc">
             {{ $t('plot.arc.create') }}
           </button>
         </template>
@@ -742,12 +1069,20 @@ function rejectAdvancement(): void {
             <span>{{ $t('plot.node.detailStatus', { status: selectedNode.status }) }}</span>
           </div>
           <label class="form-label">
+            {{ $t('plot.node.premise') }}
+            <textarea v-model="editingPremise" class="form-textarea" rows="2" :placeholder="$t('plot.node.premisePlaceholder')" data-testid="plot-node-premise" />
+          </label>
+          <label class="form-label">
             {{ $t('plot.node.narrativeGoal') }}
             <textarea v-model="editingGoal" class="form-textarea" rows="2" />
           </label>
           <label class="form-label">
             {{ $t('plot.node.directive') }}
             <textarea v-model="editingDirective" class="form-textarea" rows="4" />
+          </label>
+          <label class="form-label">
+            {{ $t('plot.node.stakes') }}
+            <textarea v-model="editingStakes" class="form-textarea" rows="2" :placeholder="$t('plot.node.stakesPlaceholder')" data-testid="plot-node-stakes" />
           </label>
           <label class="form-label">
             {{ $t('plot.node.completionHint') }}
@@ -867,6 +1202,12 @@ function rejectAdvancement(): void {
   gap: 14px;
   padding: 20px var(--sidebar-right-reserve, 40px) 20px var(--sidebar-left-reserve, 40px);
   height: 100%;
+  /* Plot Threads: the timeline track scrolls sideways INSIDE the panel. Without
+     min-width:0 the panel (a flex item) grows to the track's content width and
+     the whole page scrolls horizontally (2026-08-21 横滑 lesson). */
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
   overflow-y: auto;
   transition: padding-left var(--duration-open, 0.25s) var(--ease-droplet, ease),
               padding-right var(--duration-open, 0.25s) var(--ease-droplet, ease);
@@ -962,6 +1303,50 @@ function rejectAdvancement(): void {
 .arc-chip__dot--active    { background: var(--color-sage-400, #8cb88c); box-shadow: 0 0 5px color-mix(in oklch, var(--color-sage-400) 50%, transparent); }
 .arc-chip__dot--completed { background: var(--color-amber-400, #f59e0b); }
 .arc-chip__dot--abandoned { background: var(--color-danger, #c0392b); }
+.arc-chip__dot--scheduled { background: transparent; border: 1.5px dashed var(--color-text-muted, #888); box-sizing: border-box; }
+
+/* Plot Threads: list ↔ timeline view switch (icon-only, tooltip explains) */
+.view-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: 10px;
+  margin-right: 6px;
+}
+.view-seg__btn {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted, #888);
+  width: 28px;
+  height: 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  transition: all 0.2s var(--ease-out, ease-out);
+}
+.view-seg__btn--on {
+  color: var(--color-text, #e0e0e6);
+  background: var(--glass-bg, rgba(255, 255, 255, 0.04));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.confirm-gate__thread {
+  margin: 0 0 4px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  color: var(--color-text-muted, #888);
+}
+.eval-log-thread {
+  font-family: var(--font-serif-cjk, serif);
+  font-size: 11px;
+  color: var(--color-text-secondary, #aaa);
+  max-width: 7em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.arc-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .arc-chip__title {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1004,11 +1389,17 @@ function rejectAdvancement(): void {
 .arc-status--completed { background: rgba(245,158,11,0.15); color: var(--color-amber-400, #f59e0b); text-shadow: 0 0 4px color-mix(in oklch, var(--color-amber-400) 30%, transparent); }
 .arc-status--abandoned { background: rgba(192,57,43,0.15); color: var(--color-danger, #c0392b); text-shadow: 0 0 4px color-mix(in oklch, var(--color-danger) 20%, transparent); }
 
+/* The Tooltip wrapper is inline-flex by default, which turned the synopsis <p>
+   into a max-content flex item: a long synopsis ran off the card in one line and
+   its hover bubble was squeezed (2026-08-23). Block wrapper + wrapping text. */
+.arc-header .arc-synopsis-tt { display: block; width: 100%; min-width: 0; }
 .arc-synopsis {
   margin: 8px 0 0;
   font-size: 12px;
   color: var(--color-text-secondary);
   line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .arc-actions {
@@ -1026,7 +1417,44 @@ function rejectAdvancement(): void {
   cursor: pointer;
   transition: opacity 0.15s;
 }
-.arc-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+/* Plot Threads P5: multi-thread decomposition preview inside the create modal */
+.decompose-mode { gap: 6px; }
+.decompose-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: color-mix(in oklch, var(--color-sage-400, #8cb88c) 8%, transparent);
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-sage-300, #a9cca9);
+  animation: decompose-strip-in 0.25s var(--ease-out, ease-out);
+}
+.decompose-strip__title { font-family: var(--font-serif-cjk, serif); color: var(--color-text, #e0e0e6); }
+@keyframes decompose-strip-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.arc-btn--busy { display: inline-flex; align-items: center; gap: 8px; }
+.form-hint { font-size: var(--font-size-xs, 12px); color: var(--color-text-muted, #888); line-height: 1.5; }
+.decompose-status { margin: 4px 0 0; font-size: var(--font-size-xs, 12px); color: var(--color-sage-300, #a9cca9); }
+.decompose-status--error { color: var(--color-danger, #b85c4a); }
+.threads-preview { margin-top: 4px; }
+.threads-preview__title { margin: 0 0 4px; font-size: var(--font-size-xs, 12px); letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted, #888); font-weight: 500; }
+.threads-preview__list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.threads-preview__item {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  grid-template-areas: 'dot name when' 'dot nodes when';
+  column-gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: var(--font-size-sm, 13px);
+}
+.threads-preview__dot { grid-area: dot; width: 10px; height: 10px; border-radius: 3px; }
+.threads-preview__name { grid-area: name; font-family: var(--font-serif-cjk, serif); color: var(--color-text, #e0e0e6); }
+.threads-preview__nodes { grid-area: nodes; font-size: var(--font-size-xs, 12px); color: var(--color-text-muted, #888); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.threads-preview__when { grid-area: when; font-family: var(--font-mono, monospace); font-size: 11px; color: var(--color-text-secondary, #aaa); white-space: nowrap; }
+.threads-preview__when--warn { color: var(--color-amber-400, #d9a85c); }
 .arc-btn--activate { background: var(--color-sage-400, #8cb88c); color: #1a1a1a; }
 .arc-btn--abandon  { background: var(--color-danger, #c0392b); color: #fff; }
 .arc-btn--delete   { background: rgba(255,255,255,0.06); color: var(--color-text-secondary); }

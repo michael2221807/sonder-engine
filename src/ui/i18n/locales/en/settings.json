@@ -189,6 +189,12 @@
   "settings.plot.showGauges.desc": "Display gauge progress bars at the top of the main game panel",
   "settings.plot.showEvalLog.label": "Evaluation Log",
   "settings.plot.showEvalLog.desc": "Show evaluation log at the bottom of the Plot Panel",
+  "settings.plot.maxActiveThreads.label": "Max concurrent plot threads",
+  "settings.plot.maxActiveThreads.desc": "How many plot threads may run at once (1-5); scheduled threads beyond this wait for a slot",
+  "settings.plot.timelineAxis.label": "Timeline axis",
+  "settings.plot.timelineAxis.desc": "Lay the scheduler view out by round or by in-game date",
+  "settings.plot.timelineAxis.round": "Rounds",
+  "settings.plot.timelineAxis.date": "Game date",
 
   "settings.memory.sectionTitle": "Memory System Thresholds",
   "settings.memory.sectionDesc": "Adjust capacity and trigger points for short-term/mid-term/long-term memory. Default values are optimized for most games; only modify if you deeply understand the memory system.",

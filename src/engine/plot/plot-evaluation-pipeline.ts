@@ -1,33 +1,48 @@
 // Design: docs/design/plot-direction-system.md
+// Design (threads): docs/design/plot-parallel-threads-scheduler.md §4.2 / §8 (joint context · independent verdicts · deterministic sequencing)
 // App doc: docs/user-guide/pages/game-plot.md
 /**
  * Plot Direction System — Evaluation Sub-Pipeline
  *
- * Dispatched by GameOrchestrator after each main round. Reads the AI's
- * plot_evaluation from the state tree transient path, applies gauge updates,
- * checks boundary events, evaluates completion conditions, and advances
- * the node chain when appropriate.
+ * Dispatched by GameOrchestrator after each main round. For EVERY active
+ * thread it reads that thread's verdict from the AI's `plot_evaluation`
+ * array, applies gauge updates, checks boundary events, evaluates completion
+ * conditions and advances the node chain. Then it scans `scheduled` threads
+ * and activates those whose triggers hold (design D3) — cross-thread
+ * sequencing is decided here, never by the AI (§8.1).
  *
  * All mutations are performed on a deep-cloned working copy and written
  * back atomically at the end to avoid partial-state reactive emissions.
- *
- * Sprint Plot-1 P3
  */
 import type { StateManager } from '../core/state-manager';
 import type { EnginePathConfig } from '../pipeline/types';
 import type {
   PlotDirectionState,
+  NormalizedPlotState,
   PlotArc,
   PlotNode,
+  PlotGauge,
   PlotEvaluation,
   PlotEvalLog,
   PlotNodeEvent,
+  GameTimeStamp,
+  GaugeCondition,
 } from './types';
-import { evaluateGaugeCondition } from './types';
+import {
+  evaluateGaugeCondition,
+  normalizePlotState,
+  coerceStoredEvaluations,
+  resolveFocusArc,
+  getActiveArcs,
+  DEFAULT_MAX_ACTIVE_THREADS,
+} from './types';
+import { collectActiveGauges, evaluateThreadActivation } from './thread-trigger';
+import { readGameTimeStamp } from './game-time-stamp';
 import _cloneDeep from 'lodash-es/cloneDeep';
 
 const DEFAULT_CONFIDENCE_THRESHOLD = 0.7;
 const DEFAULT_OPPORTUNITY_MAX_TIER = 3;
+const EVAL_LOG_MAX = 30;
 
 interface PlotSettingsFromState {
   enabled?: boolean;
@@ -35,6 +50,20 @@ interface PlotSettingsFromState {
   confidenceThreshold?: number;
   opportunityMaxTier?: number;
   autoAdvanceSkippable?: boolean;
+  maxActiveThreads?: number;
+}
+
+/** Per-run working context shared by the private steps. */
+interface RunCtx {
+  state: NormalizedPlotState;
+  round: number;
+  time: GameTimeStamp | undefined;
+  logs: PlotEvalLog[];
+}
+
+/** Lane order, array order as tie-break — the order threads are evaluated and reported. */
+function byLane(arcs: PlotArc[]): PlotArc[] {
+  return [...arcs].sort((p, q) => (p.lane ?? Infinity) - (q.lane ?? Infinity));
 }
 
 export class PlotEvaluationPipeline {
@@ -54,46 +83,132 @@ export class PlotEvaluationPipeline {
     if (settings.enabled === false) return false;
 
     const rawState = this.stateManager.get<PlotDirectionState>(this.paths.plotDirection);
-    if (!rawState || rawState.activeArcIndex == null) return false;
+    if (!rawState) return false;
 
-    // Deep clone to avoid partial-state reactive emissions (R-Issue2)
-    const state = _cloneDeep(rawState);
+    // Deep clone to avoid partial-state reactive emissions (R-Issue2); fold
+    // legacy single-thread fields into the multi-thread shape.
+    const state: NormalizedPlotState = normalizePlotState(_cloneDeep(rawState));
+    const activeArcs = byLane(getActiveArcs(state));
+    const hasScheduled = state.arcs.some(a => a.status === 'scheduled');
+    if (activeArcs.length === 0 && !hasScheduled) return false;
 
-    const arcIdx = state.activeArcIndex;
-    if (arcIdx == null) return false;
-    const arc = state.arcs[arcIdx];
-    if (!arc || arc.status !== 'active') return false;
+    const ctx: RunCtx = {
+      state,
+      round: this.stateManager.get<number>(this.paths.roundNumber) ?? 0,
+      time: readGameTimeStamp(this.stateManager, this.paths),
+      logs: [],
+    };
 
+    // Verdicts written by post-process (array; legacy saves may hold one object).
+    const storedEvals = coerceStoredEvaluations(
+      this.stateManager.get<unknown>(this.paths.plotDirection + '._lastEvaluation'),
+    );
+
+    // ── Per-thread evaluation: joint context, independent verdicts (§8) ──
+    // Note on order: threads are evaluated sequentially in lane order. A later
+    // thread's gaugeEffects may push an EARLIER thread's gauge past a boundary;
+    // that boundary event then fires on the next round (single pass, accepted
+    // by design — do not add a second pass without revisiting §4.2).
+    const consumed = new Set<PlotEvaluation>();
+    for (const arc of activeArcs) {
+      this.evaluateThread(ctx, arc, storedEvals, activeArcs, consumed, settings);
+    }
+
+    // §8.4 ② / §9 risk 1: verdicts that matched no active thread (AI typo'd a
+    // title, or a duplicate title shadowed them) are dropped — visibly.
+    for (const orphan of storedEvals) {
+      if (consumed.has(orphan)) continue;
+      console.warn(`[PlotEval] dropped plot_evaluation item for unknown thread "${orphan.thread ?? '(none)'}": ${orphan.evidence.slice(0, 60)}`);
+      ctx.logs.push({ round: ctx.round, nodeId: '', evaluation: orphan, opportunityTier: null, action: 'none' });
+    }
+
+    // ── 9. Scheduled threads: deterministic triggers (D3) ──
+    // Runs even when no thread is active so `round_reached` can fire.
+    this.activateScheduledThreads(ctx, settings.maxActiveThreads ?? DEFAULT_MAX_ACTIVE_THREADS);
+
+    // ── 10/11. Focus repair + atomic write-back ──
+    this.writeBack(state);
+
+    // Transient fields via sub-paths (outside the persisted PlotDirectionState type)
+    this.stateManager.set(this.paths.plotDirection + '._lastEvaluation', null, 'system');
+
+    if (ctx.logs.length > 0) {
+      const logPath = this.paths.plotDirection + '._evalLog';
+      const existingLog = this.stateManager.get<PlotEvalLog[]>(logPath) ?? [];
+      const newLog = [...existingLog, ...ctx.logs];
+      if (newLog.length > EVAL_LOG_MAX) newLog.splice(0, newLog.length - EVAL_LOG_MAX);
+      this.stateManager.set(logPath, newLog, 'system');
+    }
+
+    return true;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  One thread
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * Pick this thread's verdict. Id match first, then title — but a title that
+   * several ACTIVE threads share is ambiguous and is not trusted (warned once
+   * per thread). Each stored item is consumed at most once, so two threads can
+   * never apply the same verdict. An item WITHOUT a `thread` key (legacy
+   * single-object contract) is only accepted when exactly one thread is active
+   * — with several, an unattributed verdict is dropped rather than guessed (§8.4 ②).
+   */
+  private pickVerdict(
+    storedEvals: PlotEvaluation[],
+    arc: PlotArc,
+    activeArcs: PlotArc[],
+    consumed: Set<PlotEvaluation>,
+  ): PlotEvaluation | null {
+    const free = storedEvals.filter(e => !consumed.has(e));
+    let hit = free.find(e => e.thread === arc.id);
+    if (!hit) {
+      const titleShared = activeArcs.filter(a => a.title === arc.title).length > 1;
+      if (titleShared) {
+        console.warn(`[PlotEval] thread title "${arc.title}" is shared by several active threads — verdicts for it are matched by id only`);
+      } else {
+        hit = free.find(e => e.thread === arc.title);
+      }
+    }
+    if (!hit && activeArcs.length === 1) hit = free.find(e => e.thread === undefined);
+    if (hit) consumed.add(hit);
+    return hit ?? null;
+  }
+
+  private evaluateThread(
+    ctx: RunCtx,
+    arc: PlotArc,
+    storedEvals: PlotEvaluation[],
+    activeArcs: PlotArc[],
+    consumed: Set<PlotEvaluation>,
+    settings: PlotSettingsFromState,
+  ): void {
+    const { state, round } = ctx;
     const node = arc.nodes.find((n: PlotNode) => n.status === 'active');
-    if (!node) return false;
-
-    const round = this.stateManager.get<number>(this.paths.roundNumber) ?? 0;
+    if (!node) return;
 
     if (node.activatedAtRound == null) {
       node.activatedAtRound = round;
     }
 
-    // ── 0. Check for pending player confirmation (GAP-03 review fix) ──
+    // ── 0. Pending player confirmation for THIS thread (GAP-03 review fix) ──
     // Shared with the immediate UI path (applyConfirmedAdvancement) so both
     // advance identically. A confirmed-and-matched node consumes this round's
     // evaluation; a stale confirmation is discarded and normal evaluation runs.
-    if (state.pendingConfirmation?.confirmed) {
-      const advanced = this.consumeConfirmation(state, arc, node, round);
-      if (advanced) {
-        // Write back and return — this round's evaluation is consumed by the advancement
-        this.stateManager.set(this.paths.plotDirection, state, 'system');
-        return true;
+    if (state.pendingConfirmations.some(g => g.arcId === arc.id && g.confirmed)) {
+      const gate = state.pendingConfirmations.find(g => g.arcId === arc.id);
+      if (this.consumeConfirmation(ctx, arc, node, gate?.evidence)) {
+        ctx.logs.push({ round, arcId: arc.id, nodeId: node.id, evaluation: null, opportunityTier: null, action: 'advance' });
+        return;
       }
     }
 
-    // Read and clear transient evaluation
-    const lastEval = this.stateManager.get<PlotEvaluation | null>(
-      this.paths.plotDirection + '._lastEvaluation',
-    ) ?? null;
+    const lastEval = this.pickVerdict(storedEvals, arc, activeArcs, consumed);
 
     // ── 1. Apply gauge updates from AI ──
     if (lastEval?.gauge_updates) {
-      this.applyGaugeUpdates(arc, lastEval.gauge_updates);
+      this.applyGaugeUpdates(state, arc, lastEval.gauge_updates);
     }
 
     // ── 2. Apply autoDecrement ──
@@ -116,9 +231,10 @@ export class PlotEvaluationPipeline {
       }
     }
 
-    // ── 4. Check advancement conditions ──
+    // ── 4. Check advancement conditions (gauge conditions may reference any active thread, G13) ──
+    const allGauges = collectActiveGauges(state.arcs);
     const gaugesMet = node.completionConditions.length === 0 ||
-      node.completionConditions.every((c: import('./types').GaugeCondition) => evaluateGaugeCondition(c, arc.gauges));
+      node.completionConditions.every((c: GaugeCondition) => evaluateGaugeCondition(c, allGauges));
 
     const hintMet = node.completionMode === 'gauges_only'
       ? true
@@ -135,15 +251,14 @@ export class PlotEvaluationPipeline {
         // User disabled auto-advance for skippable nodes — treat like critical
         action = 'none';
       } else if (node.importance === 'critical' && (settings.criticalConfirmGate !== false)) {
-        state.pendingConfirmation = {
-          arcId: arc.id,
-          nodeId: node.id,
-          evidence: lastEval?.evidence ?? '',
-          round,
-        };
+        // One gate per thread (G7): replace any stale gate for this arc.
+        state.pendingConfirmations = [
+          ...state.pendingConfirmations.filter(g => g.arcId !== arc.id),
+          { arcId: arc.id, nodeId: node.id, evidence: lastEval?.evidence ?? '', round },
+        ];
         action = 'advance';
       } else {
-        this.advanceNode(state, arc, node, round);
+        this.advanceNode(ctx, arc, node, lastEval?.evidence);
         action = 'advance';
       }
     }
@@ -151,7 +266,7 @@ export class PlotEvaluationPipeline {
     // ── 5. Check maxRounds timeout ──
     if (action === 'none' && node.maxRounds && elapsed >= node.maxRounds) {
       if (node.importance === 'skippable') {
-        this.skipNode(state, arc, node, round);
+        this.skipNode(ctx, arc, node);
         action = 'skip';
       } else {
         action = 'timeout';
@@ -159,7 +274,7 @@ export class PlotEvaluationPipeline {
     }
 
     // ── 6. Check gauge boundary events (after all gauge mutations including onComplete effects) ──
-    this.checkBoundaryEvents(arc, round);
+    this.checkBoundaryEvents(ctx, arc);
 
     // ── 7. Determine current opportunity tier ──
     const maxTier = (settings.opportunityMaxTier ?? DEFAULT_OPPORTUNITY_MAX_TIER) as 1 | 2 | 3;
@@ -167,38 +282,72 @@ export class PlotEvaluationPipeline {
     const activeElapsed = activeNode?.activatedAtRound != null ? round - activeNode.activatedAtRound : 0;
     const opportunityTier = activeNode ? this.getCurrentTier(activeNode, activeElapsed, maxTier) : null;
 
-    // ── 8. Build log entry ──
-    const logEntry: PlotEvalLog = {
-      round,
-      nodeId: node.id,
-      evaluation: lastEval,
-      opportunityTier,
-      action,
-    };
+    // ── 8. Log entry ──
+    ctx.logs.push({ round, arcId: arc.id, nodeId: node.id, evaluation: lastEval, opportunityTier, action });
+  }
 
-    // ── 9. Atomic write-back ──
-    this.stateManager.set(this.paths.plotDirection, state, 'system');
+  // ═══════════════════════════════════════════════════════════════
+  //  Scheduled threads (D3)
+  // ═══════════════════════════════════════════════════════════════
 
-    // Write transient fields via sub-paths (outside the persisted PlotDirectionState type)
-    this.stateManager.set(this.paths.plotDirection + '._lastEvaluation', null, 'system');
+  private activateScheduledThreads(ctx: RunCtx, maxActiveThreads: number): void {
+    const { state, round } = ctx;
+    const scheduled = byLane(state.arcs.filter(a => a.status === 'scheduled'));
+    for (const arc of scheduled) {
+      if (arc.activation?.mode !== 'auto') continue;
+      const verdict = evaluateThreadActivation(arc.activation, { arcs: state.arcs, currentRound: round });
+      if (!verdict.satisfied) continue;
+      if (arc.nodes.length === 0) continue;
 
-    // Append eval log as sub-path ring buffer (use copy to avoid mutating live ref)
-    const logPath = this.paths.plotDirection + '._evalLog';
-    const existingLog = this.stateManager.get<PlotEvalLog[]>(logPath) ?? [];
-    const newLog = [...existingLog, logEntry];
-    if (newLog.length > 30) newLog.splice(0, newLog.length - 30);
-    this.stateManager.set(logPath, newLog, 'system');
+      const firstPending = arc.nodes.find(n => n.status === 'pending');
+      if (getActiveArcs(state).length >= maxActiveThreads) {
+        // Triggers hold but the cap is full — stay scheduled, retry next round.
+        ctx.logs.push({ round, arcId: arc.id, nodeId: firstPending?.id ?? '', evaluation: null, opportunityTier: null, action: 'thread_blocked' });
+        continue;
+      }
 
-    return true;
+      arc.status = 'active';
+      if (firstPending) {
+        firstPending.status = 'active';
+        firstPending.activatedAtRound = round;
+        if (ctx.time) firstPending.activatedAtTime = ctx.time;
+        if (firstPending.onActivate) this.fireNodeEvent(ctx, arc, firstPending.onActivate);
+      }
+      // D2 rule ②: automatic activation never steals focus; writeBack() assigns
+      // one only if there is none.
+      ctx.logs.push({ round, arcId: arc.id, nodeId: firstPending?.id ?? '', evaluation: null, opportunityTier: null, action: 'thread_activated' });
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Gauges
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * Resolve a gauge reference for a thread: this thread's gauges first (by
+   * name or id); otherwise another active thread's — but only when the name
+   * is unique across all active threads (§4.2 step 1 / §8.4 ④).
+   */
+  private resolveGauge(state: NormalizedPlotState, arc: PlotArc, ref: string): PlotGauge | null {
+    const own = arc.gauges.find(g => g.name === ref || g.id === ref);
+    if (own) return own;
+    const others = collectActiveGauges(state.arcs).filter(g => g.name === ref || g.id === ref);
+    if (others.length === 1) return others[0];
+    if (others.length > 1) {
+      console.warn(`[PlotEval] gauge "${ref}" is ambiguous across active threads — update dropped`);
+    } else {
+      console.debug(`[PlotEval] gauge "${ref}" not found on any active thread (thread "${arc.title}") — update dropped`);
+    }
+    return null;
   }
 
   private applyGaugeUpdates(
+    state: NormalizedPlotState,
     arc: PlotArc,
     updates: NonNullable<PlotEvaluation['gauge_updates']>,
   ): void {
     for (const update of updates) {
-      // Match by name (what the model sees) OR by id (internal fallback)
-      const gauge = arc.gauges.find(g => g.name === update.gauge_id || g.id === update.gauge_id);
+      const gauge = this.resolveGauge(state, arc, update.gauge_id);
       if (!gauge || !gauge.aiUpdatable) continue;
 
       const clampedDelta = Math.max(
@@ -226,28 +375,31 @@ export class PlotEvaluationPipeline {
     }
   }
 
-  private checkBoundaryEvents(arc: PlotArc, round: number): void {
+  private checkBoundaryEvents(ctx: RunCtx, arc: PlotArc): void {
+    const { round } = ctx;
     for (const gauge of arc.gauges) {
       if (gauge.boundaryFiredAtRound != null && gauge.boundaryFiredAtRound >= round) continue;
 
       if (gauge.current <= gauge.min && gauge.onMinReached) {
-        this.fireNodeEvent(arc, gauge.onMinReached, round);
+        this.fireNodeEvent(ctx, arc, gauge.onMinReached);
         gauge.boundaryFiredAtRound = round;
       } else if (gauge.current >= gauge.max && gauge.onMaxReached) {
-        this.fireNodeEvent(arc, gauge.onMaxReached, round);
+        this.fireNodeEvent(ctx, arc, gauge.onMaxReached);
         gauge.boundaryFiredAtRound = round;
       }
     }
   }
 
   /**
-   * Fires a PlotNodeEvent: applies gauge effects and writes world events.
-   * Uses EnginePathConfig for world event path — no hardcoded Chinese field names.
+   * Fires a PlotNodeEvent: applies gauge effects (own thread first, then any
+   * active thread by unique id — §8.4 ⑤) and writes world events.
    */
-  private fireNodeEvent(arc: PlotArc, event: PlotNodeEvent, round: number): void {
+  private fireNodeEvent(ctx: RunCtx, arc: PlotArc, event: PlotNodeEvent): void {
+    const { state, round } = ctx;
     if (event.gaugeEffects) {
       for (const effect of event.gaugeEffects) {
-        const gauge = arc.gauges.find(g => g.id === effect.gaugeId);
+        const gauge = arc.gauges.find(g => g.id === effect.gaugeId)
+          ?? collectActiveGauges(state.arcs).find(g => g.id === effect.gaugeId);
         if (!gauge) continue;
         if (effect.action === 'set') {
           gauge.current = Math.max(gauge.min, Math.min(gauge.max, effect.value));
@@ -258,10 +410,12 @@ export class PlotEvaluationPipeline {
     }
 
     if (event.worldEvent) {
-      // GAP-13 fix: use field names matching EventPanel.normalizeEvent()
+      // GAP-13 fix: field names match EventPanel.normalizeEvent(); the date
+      // text is built from the pack's configured time keys.
+      const f = this.paths.gameTimeFieldNames;
       const gameTime = this.stateManager.get<Record<string, unknown>>(this.paths.gameTime);
       const timeStr = gameTime
-        ? `${gameTime['年'] ?? ''}年${gameTime['月'] ?? ''}月${gameTime['日'] ?? ''}日`
+        ? `${gameTime[f.year] ?? ''}年${gameTime[f.month] ?? ''}月${gameTime[f.day] ?? ''}日`
         : '';
       this.stateManager.push(this.paths.worldEvents, {
         id: `plot_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
@@ -274,33 +428,45 @@ export class PlotEvaluationPipeline {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  //  Confirmation gate
+  // ═══════════════════════════════════════════════════════════════
+
   /**
-   * Consume a confirmed player confirmation against the given working state.
+   * Consume a confirmed player confirmation for `arc` against the working state.
    *
-   * Returns true and advances the node when the confirmation is both
-   * `confirmed` and still points at the active node; otherwise discards a
-   * stale/mismatched confirmation and returns false. Always mutates `state`
-   * in place — the caller is responsible for writing `state` back.
+   * Returns true and advances the node when the gate is both `confirmed` and
+   * still points at the active node; otherwise discards a stale/mismatched
+   * gate and returns false. Always mutates `ctx.state` in place — the caller
+   * is responsible for writing it back.
    *
    * Shared by both the per-round `execute()` step-0 and the immediate UI path
    * (`applyConfirmedAdvancement`) so the two never diverge.
    */
-  private consumeConfirmation(
-    state: PlotDirectionState,
-    arc: PlotArc,
-    node: PlotNode | null,
-    round: number,
-  ): boolean {
-    const pc = state.pendingConfirmation;
+  private consumeConfirmation(ctx: RunCtx, arc: PlotArc, node: PlotNode | null, evidence?: string): boolean {
+    const { state } = ctx;
+    const pc = state.pendingConfirmations.find(g => g.arcId === arc.id);
     if (!pc?.confirmed) return false;
+    // Either way this thread's gate is consumed — a stale/mismatched one is
+    // discarded so the gate cannot re-stick.
+    state.pendingConfirmations = state.pendingConfirmations.filter(g => g.arcId !== arc.id);
     if (node && pc.nodeId === node.id) {
-      this.advanceNode(state, arc, node, round);
-      state.pendingConfirmation = null;
+      this.advanceNode(ctx, arc, node, evidence ?? pc.evidence);
       return true;
     }
-    // Stale or mismatched confirmation — discard it so the gate cannot re-stick.
-    state.pendingConfirmation = null;
     return false;
+  }
+
+  /**
+   * D2 focus rule ④/⑤ + deprecated `activeArcIndex` mirror, then one atomic set.
+   * Always writes the normalized shape (`pendingConfirmation: null`).
+   */
+  private writeBack(state: NormalizedPlotState): void {
+    const focus = resolveFocusArc(state);
+    state.focusArcId = focus?.id ?? null;
+    state.activeArcIndex = focus ? state.arcs.indexOf(focus) : null;
+    state.pendingConfirmation = null;
+    this.stateManager.set(this.paths.plotDirection, state, 'system');
   }
 
   /**
@@ -314,70 +480,87 @@ export class PlotEvaluationPipeline {
    * onActivate side-effects and next-node activation are identical to the
    * deferred path. Idempotent: a stale confirmation is cleared, not advanced.
    *
+   * @param arcId thread whose gate to apply; defaults to the first confirmed gate.
    * @returns true if a node was advanced, false otherwise.
    */
-  applyConfirmedAdvancement(): boolean {
+  applyConfirmedAdvancement(arcId?: string): boolean {
     const rawState = this.stateManager.get<PlotDirectionState>(this.paths.plotDirection);
-    if (!rawState || rawState.activeArcIndex == null) return false;
+    if (!rawState) return false;
 
-    const state = _cloneDeep(rawState);
-    const arcIdx = state.activeArcIndex;
-    if (arcIdx == null) return false;
-    const arc = state.arcs[arcIdx];
+    const state = normalizePlotState(_cloneDeep(rawState));
+    const gate = arcId
+      ? state.pendingConfirmations.find(g => g.arcId === arcId)
+      : state.pendingConfirmations.find(g => g.confirmed);
+    if (!gate?.confirmed) return false;
+    const arc = state.arcs.find(a => a.id === gate.arcId);
     if (!arc || arc.status !== 'active') return false;
-    if (!state.pendingConfirmation?.confirmed) return false;
 
     const node = arc.nodes.find((n: PlotNode) => n.status === 'active') ?? null;
-    const round = this.stateManager.get<number>(this.paths.roundNumber) ?? 0;
+    const ctx: RunCtx = {
+      state,
+      round: this.stateManager.get<number>(this.paths.roundNumber) ?? 0,
+      time: readGameTimeStamp(this.stateManager, this.paths),
+      logs: [],
+    };
 
-    const advanced = this.consumeConfirmation(state, arc, node, round);
+    const advanced = this.consumeConfirmation(ctx, arc, node);
     // Write back whether we advanced or just cleared a stale confirmation,
     // so the gate closes and the UI store re-syncs from the state tree.
-    this.stateManager.set(this.paths.plotDirection, state, 'system');
+    this.writeBack(state);
     return advanced;
   }
 
-  private advanceNode(state: PlotDirectionState, arc: PlotArc, node: PlotNode, round: number): void {
+  // ═══════════════════════════════════════════════════════════════
+  //  Node transitions
+  // ═══════════════════════════════════════════════════════════════
+
+  private advanceNode(ctx: RunCtx, arc: PlotArc, node: PlotNode, evidence?: string): void {
     node.status = 'completed';
-    node.completedAtRound = round;
+    node.completedAtRound = ctx.round;
+    if (ctx.time) node.completedAtTime = ctx.time;
+    if (evidence) node.completionEvidence = evidence;
 
     // Fire onComplete event (R-Issue6)
     if (node.onComplete) {
-      this.fireNodeEvent(arc, node.onComplete, round);
+      this.fireNodeEvent(ctx, arc, node.onComplete);
     }
 
-    this.activateNextPending(state, arc, node, round);
+    this.activateNextPending(ctx, arc, node);
   }
 
-  private skipNode(state: PlotDirectionState, arc: PlotArc, node: PlotNode, round: number): void {
+  private skipNode(ctx: RunCtx, arc: PlotArc, node: PlotNode): void {
     node.status = 'skipped';
-    node.completedAtRound = round;
+    node.completedAtRound = ctx.round;
+    if (ctx.time) node.completedAtTime = ctx.time;
 
     // Fire onSkip event (R-Issue6)
     if (node.onSkip) {
-      this.fireNodeEvent(arc, node.onSkip, round);
+      this.fireNodeEvent(ctx, arc, node.onSkip);
     }
 
-    this.activateNextPending(state, arc, node, round);
+    this.activateNextPending(ctx, arc, node);
   }
 
-  private activateNextPending(state: PlotDirectionState, arc: PlotArc, currentNode: PlotNode, round: number): void {
+  private activateNextPending(ctx: RunCtx, arc: PlotArc, currentNode: PlotNode): void {
+    const { state, round } = ctx;
     const nextIdx = arc.nodes.indexOf(currentNode) + 1;
+    const allGauges = collectActiveGauges(state.arcs);
     let activated = false;
     for (let i = nextIdx; i < arc.nodes.length; i++) {
       const next = arc.nodes[i];
       if (next.status !== 'pending') continue;
 
       const condsMet = next.activationConditions.length === 0 ||
-        next.activationConditions.every((c: import('./types').GaugeCondition) => evaluateGaugeCondition(c, arc.gauges));
+        next.activationConditions.every((c: GaugeCondition) => evaluateGaugeCondition(c, allGauges));
 
       if (condsMet) {
         next.status = 'active';
         next.activatedAtRound = round;
+        if (ctx.time) next.activatedAtTime = ctx.time;
 
         // Fire onActivate event
         if (next.onActivate) {
-          this.fireNodeEvent(arc, next.onActivate, round);
+          this.fireNodeEvent(ctx, arc, next.onActivate);
         }
 
         activated = true;
@@ -385,12 +568,14 @@ export class PlotEvaluationPipeline {
       }
     }
 
-    // Check if all nodes are done → complete arc (R-Issue4: use state param)
+    // Check if all nodes are done → complete thread (R-Issue4: use state param).
+    // Focus / deprecated activeArcIndex are repaired in writeBack().
     if (!activated) {
       const allDone = arc.nodes.every((n: PlotNode) => n.status === 'completed' || n.status === 'skipped');
       if (allDone) {
         arc.status = 'completed';
-        state.activeArcIndex = null;
+        state.pendingConfirmations = state.pendingConfirmations.filter(g => g.arcId !== arc.id);
+        ctx.logs.push({ round, arcId: arc.id, nodeId: currentNode.id, evaluation: null, opportunityTier: null, action: 'thread_completed' });
       }
     }
   }

@@ -189,6 +189,12 @@
   "settings.plot.showGauges.desc": "在主游戏面板顶部显示 gauge 进度条",
   "settings.plot.showEvalLog.label": "评估日志",
   "settings.plot.showEvalLog.desc": "在 PlotPanel 底部显示评估日志",
+  "settings.plot.maxActiveThreads.label": "同时活跃的剧情线上限",
+  "settings.plot.maxActiveThreads.desc": "最多几条剧情线可以同时推进 (1-5)；超出的排期线会等待名额",
+  "settings.plot.timelineAxis.label": "时间线横轴",
+  "settings.plot.timelineAxis.desc": "排程视图按回合还是按游戏日期排列",
+  "settings.plot.timelineAxis.round": "回合",
+  "settings.plot.timelineAxis.date": "游戏日期",
 
   "settings.memory.sectionTitle": "记忆系统阈值",
   "settings.memory.sectionDesc": "调整短期/中期/长期记忆的容量与触发点。默认值已针对大多数游戏调优，仅在你对记忆系统有深入理解时修改。",

@@ -114,11 +114,20 @@ export function collectStringsAtPath(root: unknown, segments: string[]): string[
 
 // ─── Resets ──────────────────────────────────────────────────────
 
-/** Reset plot arcs/nodes/gauges to their authored baseline (progress → not-started). */
+/**
+ * Reset plot arcs/nodes/gauges to their authored baseline (progress → not-started).
+ *
+ * Plot Threads epic: every thread goes back to `draft` — including `scheduled`
+ * ones — but its `activation` triggers are AUTHORED content and are kept. Ids
+ * are never regenerated here, so `node_completed` / `thread_completed`
+ * triggers still resolve after import (design §3.2 / §9.5).
+ */
 function resetPlotProgress(plot: unknown): void {
   if (!isRecord(plot)) return;
   plot['activeArcIndex'] = null;
   if ('pendingConfirmation' in plot) plot['pendingConfirmation'] = null;
+  if ('focusArcId' in plot) plot['focusArcId'] = null;
+  if ('pendingConfirmations' in plot) plot['pendingConfirmations'] = [];
 
   const arcs = plot['arcs'];
   if (!Array.isArray(arcs)) return;
@@ -133,6 +142,9 @@ function resetPlotProgress(plot: unknown): void {
         node['status'] = 'pending';
         delete node['activatedAtRound'];
         delete node['completedAtRound'];
+        delete node['activatedAtTime'];
+        delete node['completedAtTime'];
+        delete node['completionEvidence'];
         node['consecutiveReachedCount'] = 0;
       }
     }

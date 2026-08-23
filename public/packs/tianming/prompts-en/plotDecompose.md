@@ -1,29 +1,31 @@
-You are a plot architect. Decompose the following player outline into a chain of plot nodes.
+You are a plot architect. Using events and causality as the skeleton, decompose the player's outline below into ONE plot thread's chain of nodes. Characters carry the events; they are not what a node is for.
 
 Outline: {{PLOT_OUTLINE}}
 
-Current game state summary: {{PLOT_STATE_SUMMARY}}
+{{PLOT_CONTEXT}}
 
-For each node, output the following fields:
-- title: Node title (short, e.g., "Discover friend cheating")
-- narrativeGoal: Narrative goal (one or two sentences describing what effect this node should achieve)
-- directive: AI guidance instruction (telling the AI how to steer the narrative direction — specific but not overly constraining)
-- completionHint: Completion criteria (how to determine this node has been reached, one sentence)
-- emotionalTone: Emotional tone (e.g., tension / warmth / revelation / dilemma)
+**Design principles:**
+- Every node = one event, turn, or revelation — never "someone wants to do something"
+- New nodes must build on what already holds in ① the plot ledger / ② world facts; never introduce settings that contradict them; you may cite setting entries by title
+- State clearly what is different in the world / relationships / situation once each node has happened
+
+For each node output:
+- title: short node title (e.g. "Discover friend cheating")
+- premise: Builds on — which ledger or world fact this event rests on (one sentence, cite the specific fact)
+- narrativeGoal: Event — what happens in this node (one or two sentences)
+- directive: AI guidance (how to steer the narrative toward this event — specific but not over-constraining)
+- stakes: Changes — what is different once it has happened (one sentence)
+- completionHint: completion criteria (how to tell the event has happened, one sentence)
+- emotionalTone: e.g. tension / warmth / revelation / dilemma
 - importance: "critical" (must-reach mainline) or "skippable" (skippable setup)
-- maxRounds: Suggested maximum rounds (3-8)
-- opportunityTiers: Three-tier progressive guidance
-  - tier 1 (afterRounds: 3): Suggestive (environmental hints)
-  - tier 2 (afterRounds: 5): Directive (NPC mentions it)
-  - tier 3 (afterRounds: 7): Scene-level (must revolve around this)
+- maxRounds: suggested maximum rounds (3-8)
+- opportunityTiers: three-tier progressive guidance
+  - tier 1 (afterRounds: 3): suggestive (environmental hints)
+  - tier 2 (afterRounds: 5): directive (an NPC mentions it)
+  - tier 3 (afterRounds: 7): scene-level (must revolve around it)
 
-Also suggest a set of gauges that span the entire arc:
-- name: Gauge name
-- description: Semantic description (contextual explanation for the AI)
-- min/max/initialValue: Value range and initial value
-- unit: Display unit ("%", "points", "days")
-- aiUpdatable: Whether the AI can update this value each round
-- autoDecrement: Per-round auto-decrement amount (use 1 for countdowns)
+Also suggest up to 3 gauges spanning the whole thread; names must be unique across the save:
+- name, description (contextual explanation for the AI), min/max/initialValue, unit ("%", "points", "days"), aiUpdatable, autoDecrement (1 for countdowns)
 
 Output format (strict JSON):
 ```json
