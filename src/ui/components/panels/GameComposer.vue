@@ -164,8 +164,9 @@ defineExpose({
       {{ $t('mainGame.composer.cancelLabel') }}
     </button>
 
-    <div class="input-row">
+    <div :class="['input-row', { 'input-row--recording': micRecording }]">
       <Tooltip
+        class="rollback-slot"
         :text="props.canRollback ? $t('mainGame.composer.rollbackTitle') : $t('mainGame.composer.rollbackUnavailable')"
         interactive
       >
@@ -193,32 +194,37 @@ defineExpose({
         @keydown="onKeydown"
         @input="autoResizeTextarea"
       />
-      <AddLexiconTermButton />
-      <SettingTagButton
-        v-model="userInput"
-        :textarea="textareaRef"
-        :disabled="props.isGenerating"
-      />
-      <MicInputButton
-        v-model="userInput"
-        :textarea="textareaRef"
-        :disabled="props.isGenerating"
-        @recording-change="micRecording = $event"
-        @update:model-value="nextTick(autoResizeTextarea)"
-      />
-      <Tooltip :text="$t('mainGame.composer.sendAriaLabel')" interactive>
-        <button
-          class="send-btn"
-          :disabled="!canSend"
-          @click="sendMessage"
-          :aria-label="$t('mainGame.composer.sendAriaLabel')"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <line x1="22" y1="2" x2="11" y2="13" />
-            <polygon points="22 2 15 22 11 13 2 9 22 2" />
-          </svg>
-        </button>
-      </Tooltip>
+      <!-- Grouped so mobile can move all trailing controls onto their own row
+           below the textarea; desktop flattens the wrapper via display:contents. -->
+      <div class="composer-actions">
+        <AddLexiconTermButton />
+        <SettingTagButton
+          class="setting-tag-slot"
+          v-model="userInput"
+          :textarea="textareaRef"
+          :disabled="props.isGenerating"
+        />
+        <MicInputButton
+          v-model="userInput"
+          :textarea="textareaRef"
+          :disabled="props.isGenerating"
+          @recording-change="micRecording = $event"
+          @update:model-value="nextTick(autoResizeTextarea)"
+        />
+        <Tooltip :text="$t('mainGame.composer.sendAriaLabel')" interactive>
+          <button
+            class="send-btn"
+            :disabled="!canSend"
+            @click="sendMessage"
+            :aria-label="$t('mainGame.composer.sendAriaLabel')"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+          </button>
+        </Tooltip>
+      </div>
     </div>
   </div>
 </template>
@@ -437,6 +443,12 @@ defineExpose({
   gap: 0.5rem;
 }
 
+/* Desktop: the wrapper dissolves so the flex row lays out exactly as before.
+   Mobile (below) turns it into the second-row control cluster. */
+.composer-actions {
+  display: contents;
+}
+
 .message-input {
   flex: 1;
   box-sizing: border-box;
@@ -561,6 +573,75 @@ defineExpose({
     padding-right: var(--space-sm);
     padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
   }
+
+  /* Two-row composer: the textarea takes the full first row, all controls drop
+     to a second row (rollback far left, tools + send far right). Five 34-42px
+     controls beside the textarea left it ~110px wide on a 390px phone. */
+  .input-row {
+    flex-wrap: wrap;
+  }
+  .message-input {
+    /* order pulls the textarea ahead of the rollback button (which precedes it
+       in the DOM) so the full-width field forms row 1 and every control wraps
+       onto row 2 together. Trade-off: mobile tab order (rollback → textarea →
+       tools) no longer matches the visual rows; DOM order stays aligned with
+       the desktop layout, where keyboard traversal actually happens. */
+    order: -1;
+    flex-basis: 100%;
+    /* 16px floor: below that iOS Safari auto-zooms the page on focus. */
+    font-size: 1rem;
+    min-height: 46px;
+  }
+  .composer-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+    min-width: 0;
+  }
+  /* Uniform 44px touch targets. */
+  .rollback-btn,
+  .send-btn {
+    width: 44px;
+    height: 44px;
+  }
+  .composer-actions :deep(.add-lex__btn),
+  .composer-actions :deep(.mic-btn),
+  .composer-actions :deep(.setting-tag-btn) {
+    width: 44px;
+    height: 44px;
+  }
+  /* Send is the primary action on this row — give it a filled resting state so
+     the eye lands on it (desktop keeps the quiet outline; hover isn't a cue on touch). */
+  .send-btn:not(:disabled) {
+    background: color-mix(in oklch, var(--color-sage-400) 14%, var(--color-surface-input));
+  }
+
+  /* Recording: the compact rec-control (cancel/level/timer/stop) needs the whole
+     row — hide the idle-only helpers and let the meter breathe. */
+  /* Hide each helper at its outermost wrapper (Tooltip root / component root)
+     so no empty flex item lingers to double the row gap. */
+  .input-row--recording .rollback-slot,
+  .input-row--recording .setting-tag-slot,
+  .input-row--recording .composer-actions :deep(.add-lex) {
+    display: none;
+  }
+  .input-row--recording .composer-actions {
+    flex: 1;
+    margin-left: 0;
+  }
+  .input-row--recording .composer-actions :deep(.mic-input),
+  .input-row--recording .composer-actions :deep(.rec-control) {
+    flex: 1;
+    min-width: 0;
+  }
+  .input-row--recording .composer-actions :deep(.wave),
+  .input-row--recording .composer-actions :deep(.shimmer) {
+    flex: 1;
+    width: auto;
+    min-width: 24px;
+  }
+
   .action-btn {
     min-height: 44px;
   }

@@ -106,24 +106,29 @@ function insertTag(): void {
 </template>
 
 <style scoped>
+/* Sized and bordered to sit flush with its composer-row siblings
+   (AddLexiconTermButton / MicInputButton / rollback); amber is this key's
+   accent, mirroring the rollback button's hover treatment. */
 .setting-tag-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 42px;
   flex-shrink: 0;
-  border: none;
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
               background var(--duration-fast) var(--ease-out);
 }
 
 .setting-tag-btn:hover:not(:disabled) {
   color: var(--color-amber-400);
+  border-color: color-mix(in oklch, var(--color-amber-400) 45%, transparent);
   background: color-mix(in oklch, var(--color-amber-400) 10%, transparent);
 }
 
