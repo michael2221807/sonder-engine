@@ -215,6 +215,12 @@ export class AICallStage implements PipelineStage {
       customFields: parsedStep2.customFields,
       thinking: parsedStep1.thinking,
       raw: rawStep1,
+      // The structured fields all come from step2, so step2's parse verdict is the
+      // round's verdict. Round-62 incident (2026-08-25): this was omitted, the merged
+      // response carried parseOk: undefined, and ResponseRepairStage's `parseOk !==
+      // false` guard treated a shattered step2 JSON as healthy — commands, memory AND
+      // the player's marked settings were silently dropped with no repair attempt.
+      parseOk: parsedStep2.parseOk,
     };
 
     // Phase 1 (2026-04-19): persist step2 raw on ctx.meta so PostProcess can

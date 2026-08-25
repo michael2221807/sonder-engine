@@ -116,7 +116,16 @@ export class ResponseRepairStage implements PipelineStage {
 
     ctx.onProgress?.({ i18nKey: 'engine.progress.responseRepair', message: '[ResponseRepair:救援中]' });
 
-    // Step 1: 正文抢救 —— 零成本
+    // Which raw carries the BROKEN STRUCTURE? Single call: ctx.rawResponse. Split-gen:
+    // ctx.rawResponse is step1's NARRATIVE (ai-call sets it so for the raw viewer) and
+    // the structured JSON lives in meta.rawResponseStep2 — repairing the narrative
+    // would reinvent commands from prose and the provenance gate would read a raw that
+    // can never contain setting_updates. Round-62 incident (2026-08-25).
+    const metaStep2Raw = ctx.meta.rawResponseStep2;
+    const structureRaw =
+      typeof metaStep2Raw === 'string' && metaStep2Raw.trim() ? metaStep2Raw : ctx.rawResponse;
+
+    // Step 1: 正文抢救 —— 零成本（narrative always lives in ctx.rawResponse）
     let recoveredText: string | null = extractNarrativeFromWrapper(ctx.rawResponse);
 
     // Step 2: 结构救援 —— AI 调用
@@ -130,7 +139,7 @@ export class ResponseRepairStage implements PipelineStage {
     try {
       // Only ask for `setting_updates` when the malformed output actually had it —
       // asking for a field that was never there invites the model to invent one.
-      const wantSettingUpdates = hasSettingUpdatesTrace(ctx.rawResponse);
+      const wantSettingUpdates = hasSettingUpdatesTrace(structureRaw);
       const systemPrompt = wantSettingUpdates
         ? REPAIR_SYSTEM_PROMPT.replace(
             '\n\n**硬规则**：',
@@ -142,7 +151,7 @@ export class ResponseRepairStage implements PipelineStage {
         { role: 'system', content: systemPrompt },
         {
           role: 'user',
-          content: `<畸形输出>\n${ctx.rawResponse}\n</畸形输出>\n\n请输出修复后的合法 JSON 对象。`,
+          content: `<畸形输出>\n${structureRaw}\n</畸形输出>\n\n请输出修复后的合法 JSON 对象。`,
         },
       ];
 

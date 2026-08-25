@@ -17,10 +17,12 @@
 import type { AIResponse, RawSettingUpdate } from './types';
 import { MAX_RAW_SETTING_UPDATES } from './types';
 import type { Command } from '../types';
-import { sanitizeJsonEscapes } from './json-escape-sanitize';
+import { sanitizeJsonEscapes, healUnescapedQuotes } from './json-escape-sanitize';
 
 /**
- * 尝试用原生 JSON.parse；失败就把字符串过一遍 escape sanitizer 再试。
+ * 尝试用原生 JSON.parse；失败就把字符串过一遍 escape sanitizer 再试；
+ * 仍失败则做未转义引号愈合后最后一搏（round-62 事故：evidence 逐字引用
+ * 玩家原文中的英文直引号炸掉整个 step2 JSON —— 见 healUnescapedQuotes）。
  * 返回解析出的对象或 null。
  */
 function tryParseWithSanitizer(src: string): Record<string, unknown> | null {
@@ -29,8 +31,14 @@ function tryParseWithSanitizer(src: string): Record<string, unknown> | null {
   } catch {
     // 继续走 sanitizer
   }
+  const sanitized = sanitizeJsonEscapes(src);
   try {
-    return JSON.parse(sanitizeJsonEscapes(src)) as Record<string, unknown>;
+    return JSON.parse(sanitized) as Record<string, unknown>;
+  } catch {
+    // 继续走 quote healer
+  }
+  try {
+    return JSON.parse(healUnescapedQuotes(sanitized)) as Record<string, unknown>;
   } catch {
     return null;
   }

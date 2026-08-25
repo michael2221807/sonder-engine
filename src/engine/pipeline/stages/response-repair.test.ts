@@ -192,6 +192,72 @@ describe('ResponseRepairStage', () => {
 
 // ─── Canon Capture provenance gate (design §5.6) ─────────────
 
+describe('ResponseRepairStage · split-gen structure source (round-62, 2026-08-25)', () => {
+  // In split mode ctx.rawResponse is step1's NARRATIVE; the broken structured JSON
+  // lives in meta.rawResponseStep2. Repair must feed THAT to the repair model and
+  // read the provenance gate from it — otherwise setting_updates is unrecoverable
+  // (step1 prose never carries the field) and commands get reinvented from prose.
+  const STEP1_PROSE = '<正文>夜色沉沉，她抱着外衣走进宿舍楼。</正文>';
+  const BROKEN_STEP2 =
+    '{"commands":[{"action":"set","path":"世界.天气","value":"晴"}],"setting_updates":[{"kind":"world_fact","statement":"x","evidence":"看上去"养尊处优"的女性"}]';
+
+  function splitRepairCtx(): PipelineContext {
+    return makeCtx({
+      rawResponse: STEP1_PROSE,
+      parsedResponse: { text: '夜色沉沉。', commands: [], actionOptions: [], parseOk: false, raw: STEP1_PROSE } as AIResponse,
+      meta: { rawResponseStep2: BROKEN_STEP2 },
+    });
+  }
+
+  it('feeds meta.rawResponseStep2 (not step1 prose) to the repair model', async () => {
+    const service = makeAIService(
+      '{"commands":[{"action":"set","path":"世界.天气","value":"晴"}],"action_options":["a","b","c"],"setting_updates":[{"kind":"world_fact","statement":"x","evidence":"e"}]}',
+    );
+    await new ResponseRepairStage(
+      service as never, new ResponseParser(),
+    ).execute(splitRepairCtx());
+
+    const call = (service.generate.mock.calls as unknown[][])[0][0] as { messages: Array<{ content: string }> };
+    const userMsg = call.messages[call.messages.length - 1].content;
+    expect(userMsg).toContain(BROKEN_STEP2);
+    expect(userMsg).not.toContain('夜色沉沉，她抱着外衣');
+  });
+
+  it('provenance gate reads step2 raw: repaired setting_updates are ACCEPTED when step2 carried the field', async () => {
+    const service = makeAIService(
+      '{"commands":[],"action_options":["a","b","c"],"setting_updates":[{"kind":"world_fact","statement":"x","evidence":"e"}]}',
+    );
+    const out = await new ResponseRepairStage(
+      service as never, new ResponseParser(),
+    ).execute(splitRepairCtx());
+    expect(out.parsedResponse?.settingUpdates).toHaveLength(1);
+  });
+
+  it('provenance gate still REJECTS when step2 raw never had the field', async () => {
+    const service = makeAIService(
+      '{"commands":[],"action_options":["a","b","c"],"setting_updates":[{"kind":"world_fact","statement":"invented","evidence":"e"}]}',
+    );
+    const ctx = makeCtx({
+      rawResponse: STEP1_PROSE,
+      parsedResponse: { text: 'x', commands: [], actionOptions: [], parseOk: false, raw: STEP1_PROSE } as AIResponse,
+      meta: { rawResponseStep2: '{"commands":[{"action":"set"' },
+    });
+    const out = await new ResponseRepairStage(service as never, new ResponseParser()).execute(ctx);
+    expect(out.parsedResponse?.settingUpdates).toBeUndefined();
+  });
+
+  it('single-call mode is unchanged: structure comes from ctx.rawResponse', async () => {
+    const raw = '正文...{"commands":[{"action":"set"'; // broken single-call output
+    const service = makeAIService('{"commands":[],"action_options":["a","b","c"]}');
+    await new ResponseRepairStage(service as never, new ResponseParser()).execute(makeCtx({
+      rawResponse: raw,
+      parsedResponse: { text: '', commands: [], actionOptions: [], parseOk: false, raw } as AIResponse,
+    }));
+    const call = (service.generate.mock.calls as unknown[][])[0][0] as { messages: Array<{ content: string }> };
+    expect(call.messages[call.messages.length - 1].content).toContain(raw);
+  });
+});
+
 describe('hasSettingUpdatesTrace', () => {
   it('detects the field in a malformed but recognisable output', () => {
     expect(hasSettingUpdatesTrace('{"text":"x","setting_updates":[{')).toBe(true);

@@ -26,6 +26,65 @@
 const VALID_ESCAPE_CHARS = '"\\/bfnrtu';
 
 /**
+ * 愈合字符串字面量内部的**未转义双引号** — 2026-08-25
+ *
+ * 事故背景（round-62 设定捕获）：设定提取协议要求 evidence 逐字引用玩家标记原文，
+ * 玩家原文里带英文直引号（`看上去"养尊处优"的女性`），模型忠实照抄进 JSON 字符串值
+ * 却没有转义 → 整个 step2 响应 JSON 非法 → 五个结构化字段全部丢失。"逐字引用"是
+ * 产品要求，玩家文本含英文引号是常态，所以这必须在解析器层治好，不能指望模型转义。
+ *
+ * 启发式（业界通行的 LLM quote-healing）：字符串内部遇到 `"` 时向后看第一个非空白
+ * 字符——是 `,` `}` `]` `:` 或到达结尾 → 视为真正的闭引号；否则视为内容，改写成 `\"`。
+ * 只作为解析失败后的最后一搏调用（合法 JSON 走不到这里），最坏情况是依旧解析失败，
+ * 不会把本来能解析的输入改坏。
+ */
+export function healUnescapedQuotes(src: string): string {
+  if (!src || typeof src !== 'string') return src;
+
+  const n = src.length;
+  let out = '';
+  let i = 0;
+  let inString = false;
+
+  while (i < n) {
+    const c = src[i];
+
+    if (!inString) {
+      if (c === '"') inString = true;
+      out += c;
+      i++;
+      continue;
+    }
+
+    if (c === '\\' && i + 1 < n) {
+      // 已合法化的转义对（本函数在 sanitizeJsonEscapes 之后运行）——原样搬走
+      out += c + src[i + 1];
+      i += 2;
+      continue;
+    }
+
+    if (c === '"') {
+      let j = i + 1;
+      while (j < n && /\s/.test(src[j])) j++;
+      const next = j < n ? src[j] : '';
+      if (next === '' || next === ',' || next === '}' || next === ']' || next === ':') {
+        inString = false;
+        out += c;
+      } else {
+        out += '\\"';
+      }
+      i++;
+      continue;
+    }
+
+    out += c;
+    i++;
+  }
+
+  return out;
+}
+
+/**
  * 清洗 JSON 源字符串里字符串字面量内部的非法 `\X` 转义
  *
  * 对于 `\uXXXX` 这种需要 4 位 hex follow 的转义，若 `u` 后面 4 位不是合法

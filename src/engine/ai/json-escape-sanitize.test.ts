@@ -117,3 +117,42 @@ describe('sanitizeJsonEscapes', () => {
     });
   });
 });
+
+// ── healUnescapedQuotes（2026-08-25 round-62 事故回归） ──
+import { healUnescapedQuotes } from '@/engine/ai/json-escape-sanitize';
+
+describe('healUnescapedQuotes', () => {
+  it('heals the REAL round-62 evidence payload (unescaped ASCII quotes copied verbatim from player input)', () => {
+    // 逐字截取自 2026-08-25 真实 step2 响应：模型按协议逐字引用玩家原文，
+    // 原文里的英文直引号未转义，整个 step2 JSON 在此断裂。
+    const src = '{"setting_updates":[{"kind":"world_fact","statement":"男性虽承担更重劳动却欣然接受条例。","evidence":"男人有合法权利去使用那些看上去"养尊处优"的女性，因此女性打扮的越好看他们征服的快感就越高","anchors":["男性","使用权"],"entities":[]}]}';
+    expect(() => JSON.parse(src)).toThrow();
+
+    const healed = healUnescapedQuotes(src);
+    const obj = JSON.parse(healed) as { setting_updates: Array<{ evidence: string }> };
+    expect(obj.setting_updates).toHaveLength(1);
+    // 引号以内容形式保留 —— 证据文本不丢字
+    expect(obj.setting_updates[0].evidence).toContain('"养尊处优"');
+  });
+
+  it('leaves valid JSON semantically identical', () => {
+    const src = '{"a":"他说：\\"好\\"","b":[1,2],"c":{"d":"x"}}';
+    expect(JSON.parse(healUnescapedQuotes(src))).toEqual(JSON.parse(src));
+  });
+
+  it('heals multiple content quotes in one string value', () => {
+    const src = '{"t":"评语是"奶香"和"手感极品"级别"}';
+    const obj = JSON.parse(healUnescapedQuotes(src)) as { t: string };
+    expect(obj.t).toBe('评语是"奶香"和"手感极品"级别');
+  });
+
+  it('a quote legitimately followed by a comma still closes the string', () => {
+    const src = '{"a":"x","b":"y"}';
+    expect(healUnescapedQuotes(src)).toBe(src);
+  });
+
+  it('closing quote before ] and } is untouched', () => {
+    const src = '{"arr":["one","two"],"obj":{"k":"v"}}';
+    expect(healUnescapedQuotes(src)).toBe(src);
+  });
+});

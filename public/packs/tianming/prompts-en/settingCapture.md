@@ -36,6 +36,7 @@ The marked content **may be any length** — one sentence or an entire essay. Yo
 - `kind`: exactly one of `character` / `relationship` (between two entities) / `world_fact`.
 - `statement`: one self-contained sentence, **at most 200 characters** (anything over 240 is rejected outright). A long marked passage MUST be split into several entries, one claim each. You may resolve pronouns to concrete names ("she" → "Linyue", "I" → "the player"), but **must not add any information that is not inside the marker**.
 - `evidence`: **must be copied verbatim from inside the `<setting>` marker** — the exact fragment `statement` came from. Keep it to a **short locating snippet** (10–60 characters is ideal, **stay under 150**; over 180 is rejected). Do not copy whole paragraphs, do not paraphrase, and never stitch text across two different `<setting>` segments.
+- **JSON safety**: if `evidence` / `statement` contains a double quote `"`, escape it as `\"` or pick a quote-free snippet — an unescaped quote shatters the whole JSON output. (Punctuation differences like quotes do not affect evidence verification.)
 - `anchors`: 1-5 activation words used for later retrieval; each must appear in `statement` or `evidence`.
   - Must be **distinctive content words** (names, places, objects, concrete traits), at least 2 characters long.
   - Do **not** use single characters or common function words ("the", "a", "she", "this") — they appear in nearly every sentence and would make the entry inject pointlessly every turn.

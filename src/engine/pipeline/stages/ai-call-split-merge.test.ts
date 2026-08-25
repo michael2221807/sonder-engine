@@ -145,6 +145,25 @@ describe('AICallStage · split-gen merge whitelist', () => {
     );
   });
 
+  it('propagates step2 parseOk so ResponseRepair can trigger (round-62: shattered step2 JSON)', async () => {
+    // Truncated beyond any sanitizer's help. Before the fix the merge dropped parseOk
+    // entirely (undefined), ResponseRepair's `parseOk !== false` guard saw "healthy",
+    // and commands + memory + the player's marked settings vanished with no repair.
+    const service = {
+      generate: async (opts: GenerateOptions): Promise<string> =>
+        opts.generationId?.endsWith('_step2') ? '{"commands": [' : STEP1,
+    } as unknown as AIService;
+
+    const out = await new AICallStage(service, new ResponseParser()).execute(splitCtx());
+    expect(out.parsedResponse?.parseOk).toBe(false);
+    expect(out.meta.rawResponseStep2).toBe('{"commands": [');
+  });
+
+  it('healthy step2 merges with parseOk true', async () => {
+    const out = await new AICallStage(fakeAiService(), new ResponseParser()).execute(splitCtx());
+    expect(out.parsedResponse?.parseOk).toBe(true);
+  });
+
   it('single-call mode carries the field too', async () => {
     const single = JSON.stringify({
       text: 'n',
