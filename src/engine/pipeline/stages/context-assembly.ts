@@ -42,6 +42,38 @@ interface NarrativeEntry {
   content: string;
 }
 
+/**
+ * Append the current-round input as a `user` turn WITHOUT ever stacking two
+ * consecutive `user` messages.
+ *
+ * When `chatHistory` is empty (round 1, or the `single_assistant_block`
+ * short-term injection style) and every flow module is `system`, the
+ * assembler's safety guard has already appended a placeholder user turn
+ * ("请根据以上设定开始。", source `placeholder`). A blind push after it produces
+ * user→user, which the Anthropic-native provider rejects with a 400 (strict
+ * alternation, no merging — see `claude-provider.ts` and the CR-R12 note in
+ * `ai-call.ts`). The real input REPLACES that placeholder — both exist for the
+ * same reason (end the prefix on a user turn), and the real one does it better.
+ * A trailing genuine user message (defensive case) gets the input merged into
+ * it instead.
+ */
+function appendUserTurn(messages: AIMessage[], sources: string[], content: string): void {
+  const lastIdx = messages.length - 1;
+  const last = messages[lastIdx];
+  if (last?.role === 'user' && sources[lastIdx] === 'placeholder') {
+    messages[lastIdx] = { role: 'user', content };
+    sources[lastIdx] = 'current_input';
+    return;
+  }
+  if (last?.role === 'user') {
+    messages[lastIdx] = { role: 'user', content: `${last.content}\n\n${content}` };
+    sources[lastIdx] = `${sources[lastIdx]}+current_input`;
+    return;
+  }
+  messages.push({ role: 'user', content });
+  sources.push('current_input');
+}
+
 export class ContextAssemblyStage implements PipelineStage {
   name = 'ContextAssembly';
 
@@ -577,13 +609,15 @@ export class ContextAssemblyStage implements PipelineStage {
           // settingCapture protocol demands evidence quoted verbatim from the tagged
           // input — with the original nowhere in context, the model could only
           // paraphrase from step1's thinking, and every candidate died in the evidence
-          // gate ("引文与标记原文对不上×6"). Appended as `user` so the final shape
-          // stays alternating: user(input) → assistant(step1) → user(followup).
-          splitStep2Messages.push({
-            role: 'user',
-            content: `<玩家输入>\n${ctx.userInput}\n</玩家输入>`,
-          });
-          splitStep2Sources.push('current_input');
+          // gate ("引文与标记原文对不上×6"). Ends the base as a `user` turn so the
+          // final shape stays alternating: user(input) → assistant(step1) → user(followup).
+          //
+          // `ctx.userInput` (action-queue-prefixed), not `originalUserInput`: step2 also
+          // generates commands/action_options and needs the panel-action context. The
+          // evidence gate matches against originalUserInput's tag segments only, and the
+          // tag substring is byte-identical in both, so no forged-acceptance surface.
+          appendUserTurn(splitStep2Messages, splitStep2Sources,
+            `<玩家输入>\n${ctx.userInput}\n</玩家输入>`);
         }
       }
 
@@ -649,11 +683,9 @@ export class ContextAssemblyStage implements PipelineStage {
           ? `${enforcement}\n\n<玩家输入>\n${ctx.userInput}\n</玩家输入>`
           : ctx.userInput,
       };
-      messages.push(userMessage);
-      messageSources.push('current_input');
-      if (splitStep2Messages) {
-        splitStep2Messages.push({ ...userMessage });
-        splitStep2Sources?.push('current_input');
+      appendUserTurn(messages, messageSources, userMessage.content);
+      if (splitStep2Messages && splitStep2Sources) {
+        appendUserTurn(splitStep2Messages, splitStep2Sources, userMessage.content);
       }
 
       console.debug('[ContextAssembly][Legacy] Messages:', messages.length);

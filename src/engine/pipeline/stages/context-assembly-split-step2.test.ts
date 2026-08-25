@@ -23,8 +23,14 @@ import { createMockStateManager, createMockPromptRegistry } from '../../__test-u
 const TAGGED_INPUT = '我回宿舍睡觉。<设定>林月从小怕水，从不去泳池。</设定>';
 
 function makeStage(): ContextAssemblyStage {
+  return makeStageWithHistory([]);
+}
+
+function makeStageWithHistory(
+  narrativeHistory: Array<{ role: string; content: string }>,
+): ContextAssemblyStage {
   const { sm } = createMockStateManager({
-    元数据: { 回合序号: 62, 叙事历史: [] },
+    元数据: { 回合序号: 62, 叙事历史: narrativeHistory },
     世界: { 时间: { 年: 1, 月: 1, 日: 1, 小时: 8, 分钟: 0 }, 信息: {}, 描述: 'w' },
     角色: { 基础信息: { 姓名: '主角' } },
     系统: { 设置: { prompt: { enableWorldBook: true, enableSettingCapture: true } } },
@@ -92,24 +98,55 @@ function makeCtx(): PipelineContext {
   } as unknown as PipelineContext;
 }
 
+/** No two adjacent non-system messages may share a role (Anthropic-native contract). */
+function assertAlternating(msgs: Array<{ role: string }>): void {
+  const turns = msgs.filter((m) => m.role !== 'system');
+  for (let i = 1; i < turns.length; i++) {
+    expect(turns[i].role, `adjacent same-role turns at conversation index ${i}`)
+      .not.toBe(turns[i - 1].role);
+  }
+}
+
 describe('ContextAssembly · split-gen step2 player-input parity', () => {
-  it('step2 messages contain the verbatim tagged input as a user message', async () => {
+  it('empty history: the input REPLACES the assembler placeholder — exact wire shape, no double user', async () => {
+    // Empty chatHistory + all-system flow modules trigger PromptAssembler's
+    // placeholder-user guard. A blind push after it stacks user→user, which the
+    // Anthropic-native provider 400s on (review of 2ef0c60, Critical).
     const out = await makeStage().execute(makeCtx());
 
     const step2 = out.meta.splitStep2Messages;
+    const sources = out.meta.splitStep2Sources ?? [];
     expect(step2, 'splitStep2Messages must be assembled').toBeDefined();
 
-    const inputMsg = step2!.find((m) => m.content.includes(TAGGED_INPUT));
-    expect(inputMsg, 'the raw tagged input must be present in step2').toBeDefined();
-    expect(inputMsg!.role).toBe('user');
+    expect(step2!.map((m) => m.role)).toEqual(['system', 'system', 'user']);
+    expect(sources).not.toContain('placeholder');
+    expect(sources[sources.length - 1]).toBe('current_input');
+    assertAlternating(step2!);
+
+    const inputMsg = step2![step2!.length - 1];
     // Verbatim — the evidence gate matches against this exact text.
-    expect(inputMsg!.content).toContain('<设定>林月从小怕水，从不去泳池。</设定>');
+    expect(inputMsg.content).toContain('<设定>林月从小怕水，从不去泳池。</设定>');
+    // ai-call later appends assistant(step1) + user(followup): the base must end
+    // on a user turn for the final shape to alternate.
+    expect(inputMsg.role).toBe('user');
   });
 
-  it('the input message is labeled current_input for the debug panel', async () => {
-    const out = await makeStage().execute(makeCtx());
+  it('non-empty history: the input is appended after history, still alternating', async () => {
+    const stage = makeStageWithHistory([
+      { role: 'user', content: '上一回合的输入' },
+      { role: 'assistant', content: '上一回合的正文。' },
+    ]);
+    const out = await stage.execute(makeCtx());
+
+    const step2 = out.meta.splitStep2Messages ?? [];
     const sources = out.meta.splitStep2Sources ?? [];
-    expect(sources).toContain('current_input');
+
+    const last = step2[step2.length - 1];
+    expect(last.role).toBe('user');
+    expect(last.content).toContain(TAGGED_INPUT);
+    expect(sources[sources.length - 1]).toBe('current_input');
+    expect(sources).not.toContain('placeholder');
+    assertAlternating(step2);
   });
 
   it('step2 still receives the settingCapture module on tagged rounds', async () => {
