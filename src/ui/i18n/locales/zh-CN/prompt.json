@@ -308,5 +308,6 @@
   "prompt.settingCapture.rejectReason.bad_entity": "实体名无效",
   "prompt.settingCapture.rejectReason.capacity": "设定数量已达上限",
   "prompt.settingCapture.rejectReason.overflow": "超出单回合条数上限",
-  "prompt.settingCapture.rejectReason.internal_error": "内部错误"
+  "prompt.settingCapture.rejectReason.internal_error": "内部错误",
+  "prompt.settingCapture.manualTooLong": "超过 240 字。手动添加适合一条简短设定——长段内容建议重新用「设定」按钮标记发送，让 AI 归纳拆条。"
 }

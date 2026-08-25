@@ -308,5 +308,6 @@
   "prompt.settingCapture.rejectReason.bad_entity": "unusable entity name",
   "prompt.settingCapture.rejectReason.capacity": "setting limit reached",
   "prompt.settingCapture.rejectReason.overflow": "over the per-turn limit",
-  "prompt.settingCapture.rejectReason.internal_error": "internal error"
+  "prompt.settingCapture.rejectReason.internal_error": "internal error",
+  "prompt.settingCapture.manualTooLong": "Over 240 characters. Manual add is for one short setting — for a long passage, re-send it wrapped with the Setting button so the AI summarises and splits it."
 }

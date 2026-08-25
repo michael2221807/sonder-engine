@@ -201,9 +201,20 @@ function applyDraftFromQuery(): void {
     .catch(() => { /* duplicate / guarded navigation — nothing to recover */ });
 }
 
+/**
+ * Manual add is the NO-MODEL fallback for one short setting. The engine clamps content
+ * at 240 chars, and clamping an 800-character essay silently would throw away three
+ * quarters of what the player wrote — the design's rule is "reject, never silently
+ * truncate". So the UI refuses to submit an over-long draft and tells the player to
+ * split it (or better: re-send it inside a <设定> tag so the MODEL does the splitting
+ * and summarising, which is the feature's actual main path).
+ */
+const manualDraftLength = computed(() => manualDraft.value.trim().length);
+const manualDraftTooLong = computed(() => manualDraftLength.value > 240);
+
 async function submitManualDraft(): Promise<void> {
   const content = manualDraft.value.trim();
-  if (!content) return;
+  if (!content || manualDraftTooLong.value) return;
   const result = await captured.coordinator.addManual({ content });
   reportMutation(result);
   if (result.ok) {
@@ -501,8 +512,16 @@ const injectionModeOptions = computed(() => [
         class="wb-manual-draft__input"
         rows="3"
       />
+      <div class="wb-manual-draft__meta">
+        <span :class="['wb-manual-draft__count', { 'wb-manual-draft__count--over': manualDraftTooLong }]">
+          {{ manualDraftLength }} / 240
+        </span>
+        <span v-if="manualDraftTooLong" class="wb-manual-draft__warn">
+          {{ $t('prompt.settingCapture.manualTooLong') }}
+        </span>
+      </div>
       <div class="wb-manual-draft__actions">
-        <AgaButton variant="primary" size="sm" @click="submitManualDraft">
+        <AgaButton variant="primary" size="sm" :disabled="manualDraftTooLong || manualDraftLength === 0" @click="submitManualDraft">
           {{ $t('prompt.modal.save') }}
         </AgaButton>
         <AgaButton variant="ghost" size="sm" @click="manualDraftOpen = false; manualDraft = ''">
@@ -1326,4 +1345,14 @@ const injectionModeOptions = computed(() => [
 .wb-book-card--placeholder .wb-book-title-input {
   pointer-events: none;
 }
+
+.wb-manual-draft__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 0.72rem;
+}
+.wb-manual-draft__count { color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.wb-manual-draft__count--over { color: var(--color-danger); }
+.wb-manual-draft__warn { color: var(--color-danger); }
 </style>
