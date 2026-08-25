@@ -135,7 +135,10 @@ onUnmounted(() => { document.removeEventListener('keydown', onKeydown); });
 
 <template>
   <Teleport to="body">
-    <div class="regen-overlay" @click.self="cancel">
+    <!-- No backdrop click-to-close: the dialog holds editable prompts —
+         misclicks / drag-releases outside must not destroy them (2026-08-25).
+         Close via ✕ or Escape. -->
+    <div class="regen-overlay">
       <div ref="dialogRef" class="regen-dialog" role="dialog" :aria-label="$t('image.regenerate.dialogAriaLabel')">
         <header class="regen-header">
           <div class="regen-title-col">

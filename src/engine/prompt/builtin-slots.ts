@@ -271,6 +271,20 @@ export const BUILTIN_SLOTS: Record<string, BuiltinSlotDefinition> = {
     description: '将玩家大纲一次拆成 2-4 条剧情线及其先后关系（并行剧情线 epic）',
     defaultPromptId: 'plotDecomposeThreads',
   },
+  plot_revise: {
+    id: 'plot_revise',
+    title: '续写/改写',
+    category: '剧情导向',
+    description: '按玩家要求续写或改写一条剧情线尚未发生的部分（续写/改写 epic）',
+    defaultPromptId: 'plotRevise',
+  },
+  plot_revise_node: {
+    id: 'plot_revise_node',
+    title: '单节点重写',
+    category: '剧情导向',
+    description: '按玩家要求重写改写预览中的一个节点，保持与前后节点衔接（续写/改写 epic）',
+    defaultPromptId: 'plotReviseNode',
+  },
 } as const;
 
 /**

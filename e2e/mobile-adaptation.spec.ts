@@ -167,7 +167,9 @@ test.describe('Phase 4 P0 — Home/Creation/Management mobile views', () => {
     // In-SPA nav (a direct goto('/creation') reloads and races the pack bootstrap → redirect).
     await home.newCharacter();
     await expect(page.locator('.progress-bar')).toBeVisible();
-    const navBtns = page.locator('.creation-nav .btn');
+    // Creation nav migrated to AgaButton (root class .aga-btn) — the old
+    // native `.btn` selector matched nothing and the count guard tripped.
+    const navBtns = page.locator('.creation-nav .aga-btn');
     const count = await navBtns.count();
     expect(count).toBeGreaterThan(0);
     for (let i = 0; i < count; i++) {

@@ -12,6 +12,8 @@ const props = defineProps<{
   gauges: PlotGauge[];
   currentRound: number;
   lastEvalLog?: PlotEvalLog | null;
+  /** Show ✓/⏭ on the active row (requires the evaluation pipeline — parent passes false when it is unavailable so the controls are never dead). */
+  forceEnabled?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -20,6 +22,9 @@ const emit = defineEmits<{
   (e: 'insert-at', gapIndex: number | null): void;
   (e: 'remove', nodeId: string): void;
   (e: 'select', nodeId: string): void;
+  /** Manual node resolution (design plot-arc-revise-extend §4.2) — parent opens the confirm layer. */
+  (e: 'force-complete', nodeId: string): void;
+  (e: 'force-skip', nodeId: string): void;
 }>();
 
 function statusIcon(status: PlotNode['status']): string {
@@ -338,6 +343,24 @@ function onHandleKeydown(e: KeyboardEvent, node: PlotNode, idx: number): void {
         </div>
 
         <div class="node-item__actions">
+          <template v-if="node.status === 'active' && forceEnabled">
+            <Tooltip :text="$t('plot.node.forceComplete')" interactive>
+              <button
+                class="node-action-btn node-action-btn--force-complete"
+                data-testid="plot-force-complete"
+                :aria-label="$t('plot.node.forceComplete')"
+                @click.stop="emit('force-complete', node.id)"
+              >✓</button>
+            </Tooltip>
+            <Tooltip :text="$t('plot.node.forceSkip')" interactive>
+              <button
+                class="node-action-btn node-action-btn--force-skip"
+                data-testid="plot-force-skip"
+                :aria-label="$t('plot.node.forceSkip')"
+                @click.stop="emit('force-skip', node.id)"
+              >⏭</button>
+            </Tooltip>
+          </template>
           <Tooltip v-if="node.status === 'pending'" :text="$t('plot.node.removeNode')" interactive>
             <button
               class="node-action-btn node-action-btn--remove"
@@ -639,6 +662,10 @@ function onHandleKeydown(e: KeyboardEvent, node: PlotNode, idx: number): void {
   flex-shrink: 0;
   display: flex;
   align-items: flex-start;
+  /* The gap-strip insert overlay covers the row's top 8px (top:-8px + height
+     16px, z-index 2, spanning to right:4px). Start the action buttons below
+     that band, or a click aimed at them hits the invisible strip instead. */
+  padding-top: 8px;
 }
 
 .node-action-btn {
@@ -657,6 +684,12 @@ function onHandleKeydown(e: KeyboardEvent, node: PlotNode, idx: number): void {
 }
 .node-action-btn--remove:hover {
   color: var(--color-danger, #c0392b);
+}
+.node-action-btn--force-complete:hover {
+  color: var(--color-sage-400, #8cb88c);
+}
+.node-action-btn--force-skip:hover {
+  color: var(--color-amber-400, #d9a85c);
 }
 
 .insert-btn {

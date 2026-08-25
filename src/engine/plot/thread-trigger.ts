@@ -97,3 +97,87 @@ export function pruneDanglingTriggers(arcs: PlotArc[], removedArcId: string): nu
   }
   return removed;
 }
+
+/**
+ * Drop `node_completed` triggers that point at nodes removed from `arcId` by a
+ * revise commit (plot-arc-revise-extend §3.4-4). A dangling node trigger is
+ * `target_missing` forever — the waiting thread would silently never start —
+ * so it is removed and REPORTED, never left in place. Mutates `arcs` in place.
+ */
+export function pruneDanglingNodeTriggers(
+  arcs: PlotArc[],
+  arcId: string,
+  removedNodeIds: string[],
+): Array<{ arcTitle: string; removed: number }> {
+  const gone = new Set(removedNodeIds);
+  const report: Array<{ arcTitle: string; removed: number }> = [];
+  if (gone.size === 0) return report;
+  for (const arc of arcs) {
+    if (!arc.activation) continue;
+    const before = arc.activation.triggers.length;
+    arc.activation.triggers = arc.activation.triggers.filter(t =>
+      !(t.type === 'node_completed' && t.arcId === arcId && gone.has(t.nodeId)),
+    );
+    if (arc.activation.triggers.length < before) {
+      report.push({ arcTitle: arc.title, removed: before - arc.activation.triggers.length });
+    }
+  }
+  return report;
+}
+
+export interface DanglingGaugeReport {
+  /** `gauge`-type thread triggers removed (would be `target_missing` forever). */
+  triggers: number;
+  /** Node activation/completion conditions removed (an unmet-able condition deadlocks the node). */
+  conditions: number;
+  /** gaugeEffects entries that now point at nothing — left in place (fireNodeEvent skips them), counted for the report. */
+  effects: number;
+  /** Titles of arcs that lost a trigger or condition. */
+  affected: string[];
+}
+
+/**
+ * Clean references to gauges removed by a revise commit (plot-arc-revise-extend
+ * §3.4-5, D4 full gauge freedom). Trigger/condition references are REMOVED
+ * (they can never be satisfied again); event gaugeEffects are only counted —
+ * they already fail soft at fire time. Mutates `arcs` in place.
+ */
+export function pruneDanglingGaugeRefs(arcs: PlotArc[], removedGaugeIds: string[]): DanglingGaugeReport {
+  const gone = new Set(removedGaugeIds);
+  const report: DanglingGaugeReport = { triggers: 0, conditions: 0, effects: 0, affected: [] };
+  if (gone.size === 0) return report;
+  const touch = (title: string) => { if (!report.affected.includes(title)) report.affected.push(title); };
+
+  for (const arc of arcs) {
+    if (arc.activation) {
+      const before = arc.activation.triggers.length;
+      arc.activation.triggers = arc.activation.triggers.filter(t =>
+        !(t.type === 'gauge' && gone.has(t.condition.gaugeId)),
+      );
+      if (arc.activation.triggers.length < before) {
+        report.triggers += before - arc.activation.triggers.length;
+        touch(arc.title);
+      }
+    }
+    for (const node of arc.nodes) {
+      const beforeAct = node.activationConditions.length;
+      node.activationConditions = node.activationConditions.filter(c => !gone.has(c.gaugeId));
+      const beforeComp = node.completionConditions.length;
+      node.completionConditions = node.completionConditions.filter(c => !gone.has(c.gaugeId));
+      const dropped = (beforeAct - node.activationConditions.length) + (beforeComp - node.completionConditions.length);
+      if (dropped > 0) {
+        report.conditions += dropped;
+        touch(arc.title);
+      }
+      for (const ev of [node.onComplete, node.onActivate, node.onSkip]) {
+        report.effects += ev?.gaugeEffects?.filter(e => gone.has(e.gaugeId)).length ?? 0;
+      }
+    }
+    for (const g of arc.gauges) {
+      for (const ev of [g.onMinReached, g.onMaxReached]) {
+        report.effects += ev?.gaugeEffects?.filter(e => gone.has(e.gaugeId)).length ?? 0;
+      }
+    }
+  }
+  return report;
+}

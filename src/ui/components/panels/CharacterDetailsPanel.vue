@@ -14,6 +14,7 @@ import { ref, reactive, computed, inject, watch, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useGameState } from '@/ui/composables/useGameState';
 import { useConfig } from '@/ui/composables/useConfig';
+import { useBackdropClose } from '@/ui/composables/useBackdropClose';
 import Modal from '@/ui/components/common/Modal.vue';
 import SchemaForm from '@/ui/components/editing/SchemaForm.vue';
 import ImageDisplay from '@/ui/components/image/ImageDisplay.vue';
@@ -1153,6 +1154,7 @@ const playerSecretStatusText = ref('');
 
 const playerSecretViewerOpen = ref(false);
 const playerSecretViewerSrc = ref('');
+const secretViewerBackdrop = useBackdropClose(() => { playerSecretViewerOpen.value = false; });
 
 async function openPlayerSecretViewer(assetId: string) {
   if (!imageService) return;
@@ -2239,8 +2241,13 @@ const avatarInitial = computed<string>(() => {
 
           <!-- Image viewer for secret part close-ups -->
           <teleport to="body">
-            <div v-if="playerSecretViewerOpen" class="secret-viewer-overlay" @click="playerSecretViewerOpen = false">
-              <img :src="playerSecretViewerSrc" class="secret-viewer-img" @click.stop />
+            <div
+              v-if="playerSecretViewerOpen"
+              class="secret-viewer-overlay"
+              @pointerdown="secretViewerBackdrop.onPointerdown"
+              @pointerup="secretViewerBackdrop.onPointerup"
+            >
+              <img :src="playerSecretViewerSrc" class="secret-viewer-img" />
               <Tooltip :text="$t('common.actions.close')" interactive>
                 <button class="secret-viewer-close" :aria-label="$t('common.actions.close')" @click="playerSecretViewerOpen = false">&times;</button>
               </Tooltip>

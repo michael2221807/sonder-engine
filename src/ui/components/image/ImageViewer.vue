@@ -8,6 +8,7 @@
 import { onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
+import { useBackdropClose } from '@/ui/composables/useBackdropClose';
 
 const { t } = useI18n();
 
@@ -26,11 +27,17 @@ function onKeydown(e: KeyboardEvent) {
 
 onMounted(() => document.addEventListener('keydown', onKeydown));
 onUnmounted(() => document.removeEventListener('keydown', onKeydown));
+
+const backdrop = useBackdropClose(() => emit('close'));
 </script>
 
 <template>
   <Teleport to="body">
-    <div class="image-viewer-overlay" @click.self="emit('close')">
+    <div
+      class="image-viewer-overlay"
+      @pointerdown="backdrop.onPointerdown"
+      @pointerup="backdrop.onPointerup"
+    >
       <Tooltip :text="t('common.actions.close')" class="image-viewer-close-tt" position="bottom" interactive>
         <button class="image-viewer-close" @click="emit('close')" :aria-label="t('common.actions.close')">&times;</button>
       </Tooltip>

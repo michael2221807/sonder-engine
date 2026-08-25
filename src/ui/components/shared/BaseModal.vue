@@ -3,7 +3,9 @@
  * BaseModal — 通用模态对话框组件。
  *
  * 提供遮罩层 + 居中面板，支持标题、内容插槽和底部操作栏。
- * 点击遮罩或按 Escape 关闭（可通过 persistent 禁用）。
+ * 按 Escape 或 ✕ 关闭（可通过 persistent 禁用）。遮罩点击关闭默认禁用
+ * （2026-08-25：误点/拖出遮罩曾导致用户输入丢失），只读内容可用
+ * backdropClose 按消费方开启；开启后按下与松开都须落在遮罩上才关闭。
  *
  * 用法:
  *   <BaseModal v-model="open" title="编辑">
@@ -13,6 +15,7 @@
  */
 import { watch, onMounted, onBeforeUnmount } from 'vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
+import { useBackdropClose } from '@/ui/composables/useBackdropClose';
 
 const props = withDefaults(defineProps<{
   /** 控制对话框显示/隐藏（v-model） */
@@ -23,10 +26,13 @@ const props = withDefaults(defineProps<{
   maxWidth?: string;
   /** 持久模式 — 禁用遮罩点击和 Escape 关闭 */
   persistent?: boolean;
+  /** 允许（受守卫的）遮罩点击关闭 — 仅只读内容开启，含输入的弹窗保持 false */
+  backdropClose?: boolean;
 }>(), {
   title: '',
   maxWidth: '540px',
   persistent: false,
+  backdropClose: false,
 });
 
 const emit = defineEmits<{
@@ -44,6 +50,10 @@ function close(): void {
 function onKeydown(e: KeyboardEvent): void {
   if (e.key === 'Escape') close();
 }
+
+const backdrop = useBackdropClose(() => {
+  if (props.backdropClose) close();
+});
 
 watch(() => props.modelValue, (open) => {
   if (open) {
@@ -67,7 +77,12 @@ onBeforeUnmount(() => {
 <template>
   <Teleport to="body">
     <Transition name="modal-fade">
-      <div v-if="modelValue" class="modal-overlay" @click.self="close">
+      <div
+        v-if="modelValue"
+        class="modal-overlay"
+        @pointerdown="backdrop.onPointerdown"
+        @pointerup="backdrop.onPointerup"
+      >
         <div class="modal-panel" :style="{ maxWidth }">
           <!-- 头部 -->
           <header v-if="title || $slots.header" class="modal-header">

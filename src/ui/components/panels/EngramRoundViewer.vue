@@ -128,6 +128,7 @@ function fmtScore(n: number): string {
     :model-value="props.modelValue"
     :title="title"
     width="720px"
+    backdrop-close
     @update:model-value="$emit('update:modelValue', $event)"
   >
     <div class="erv">

@@ -75,6 +75,7 @@ function title(): string {
     :model-value="props.modelValue"
     :title="title()"
     width="720px"
+    backdrop-close
     @update:model-value="(v) => $emit('update:modelValue', v)"
   >
     <!-- Tabs -->

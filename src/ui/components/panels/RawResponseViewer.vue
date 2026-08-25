@@ -64,6 +64,7 @@ function title(): string {
     :model-value="props.modelValue"
     :title="title()"
     width="800px"
+    backdrop-close
     @update:model-value="(v) => $emit('update:modelValue', v)"
   >
     <!-- Tab switcher — only when split-gen has two payloads -->

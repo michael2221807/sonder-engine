@@ -132,14 +132,76 @@ export class PlotEvaluationPipeline {
     // Transient fields via sub-paths (outside the persisted PlotDirectionState type)
     this.stateManager.set(this.paths.plotDirection + '._lastEvaluation', null, 'system');
 
-    if (ctx.logs.length > 0) {
-      const logPath = this.paths.plotDirection + '._evalLog';
-      const existingLog = this.stateManager.get<PlotEvalLog[]>(logPath) ?? [];
-      const newLog = [...existingLog, ...ctx.logs];
-      if (newLog.length > EVAL_LOG_MAX) newLog.splice(0, newLog.length - EVAL_LOG_MAX);
-      this.stateManager.set(logPath, newLog, 'system');
-    }
+    this.appendEvalLogs(ctx.logs);
 
+    return true;
+  }
+
+  /** Append to the ring-buffered `_evalLog` sub-path (shared by execute() and the manual paths). */
+  private appendEvalLogs(logs: PlotEvalLog[]): void {
+    if (logs.length === 0) return;
+    const logPath = this.paths.plotDirection + '._evalLog';
+    const existingLog = this.stateManager.get<PlotEvalLog[]>(logPath) ?? [];
+    const newLog = [...existingLog, ...logs];
+    if (newLog.length > EVAL_LOG_MAX) newLog.splice(0, newLog.length - EVAL_LOG_MAX);
+    this.stateManager.set(logPath, newLog, 'system');
+  }
+
+  /**
+   * Manually resolve the ACTIVE node of one thread (design plot-arc-revise-extend §4.1, D2).
+   *
+   * `complete` = the player judges the event happened: identical side-effects to
+   * a confirmed critical advancement (onComplete event, next-node activation,
+   * thread completion + `thread_completed` log when it was the last node).
+   * `skip` = "don't play this beat": identical to a maxRounds skip (onSkip
+   * event, next-node activation). No `completionEvidence` is written — the
+   * ledger line falls back to the node's narrativeGoal, and the engine never
+   * hardcodes display language. A pending confirmation gate for the thread is
+   * superseded either way (manual resolution outranks "AI says it's done").
+   *
+   * Only the active node of an active thread can be resolved (the in-arc
+   * linear invariant forbids out-of-order completion of pending nodes).
+   *
+   * @param nodeId when given, the resolution only applies if this is still the
+   * thread's active node — the confirm dialog named a specific node, and the
+   * pipeline may have advanced past it in between (same identity check as
+   * `consumeConfirmation`).
+   */
+  forceNodeResolution(arcId: string, mode: 'complete' | 'skip', nodeId?: string): boolean {
+    const rawState = this.stateManager.get<PlotDirectionState>(this.paths.plotDirection);
+    if (!rawState) return false;
+
+    const state = normalizePlotState(_cloneDeep(rawState));
+    const arc = state.arcs.find(a => a.id === arcId);
+    if (!arc || arc.status !== 'active') return false;
+    const node = arc.nodes.find((n: PlotNode) => n.status === 'active');
+    if (!node) return false;
+    if (nodeId !== undefined && node.id !== nodeId) return false;
+
+    const ctx: RunCtx = {
+      state,
+      round: this.stateManager.get<number>(this.paths.roundNumber) ?? 0,
+      time: readGameTimeStamp(this.stateManager, this.paths),
+      logs: [],
+    };
+
+    state.pendingConfirmations = state.pendingConfirmations.filter(g => g.arcId !== arc.id);
+
+    if (mode === 'complete') this.advanceNode(ctx, arc, node);
+    else this.skipNode(ctx, arc, node);
+    // Pushed after the transition so a terminal `thread_completed` entry keeps
+    // the same relative order as the execute() path (step 8 logs after advance).
+    ctx.logs.push({
+      round: ctx.round,
+      arcId: arc.id,
+      nodeId: node.id,
+      evaluation: null,
+      opportunityTier: null,
+      action: mode === 'complete' ? 'advance' : 'skip',
+    });
+
+    this.writeBack(state);
+    this.appendEvalLogs(ctx.logs);
     return true;
   }
 
@@ -504,9 +566,15 @@ export class PlotEvaluationPipeline {
     };
 
     const advanced = this.consumeConfirmation(ctx, arc, node);
+    if (advanced && node) {
+      // Mirror execute()'s step-0 branch — without this the immediate UI path
+      // dropped its eval-log entry (and the terminal `thread_completed` one).
+      ctx.logs.push({ round: ctx.round, arcId: arc.id, nodeId: node.id, evaluation: null, opportunityTier: null, action: 'advance' });
+    }
     // Write back whether we advanced or just cleared a stale confirmation,
     // so the gate closes and the UI store re-syncs from the state tree.
     this.writeBack(state);
+    this.appendEvalLogs(ctx.logs);
     return advanced;
   }
 

@@ -1,7 +1,11 @@
 <template>
   <!--
-    Reusable modal dialog with focus trap, backdrop click-to-close,
-    Escape key support, and a fade + scale entrance animation.
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
 
     Polanyi principle: the modal draws focal awareness to its content
     while the backdrop dims everything else to subsidiary awareness.
@@ -14,7 +18,8 @@
         role="dialog"
         :aria-modal="true"
         :aria-label="title"
-        @click.self="handleBackdropClick"
+        @pointerdown="backdrop.onPointerdown"
+        @pointerup="backdrop.onPointerup"
         @keydown="handleKeydown"
       >
         <div
@@ -53,20 +58,39 @@
   </Teleport>
 </template>
 
+<script lang="ts">
+/*
+ * TRUE module scope, shared by every <Modal> instance. Do not move this into
+ * <script setup>: that block compiles into per-instance setup() code, so a
+ * stack declared there would always contain only the instance's own id and
+ * the top-of-stack check would pass for EVERY open modal — one Escape with
+ * focus on <body> would then close all stacked modals at once.
+ */
+const openModalStack: symbol[] = [];
+</script>
+
 <script setup lang="ts">
-import { ref, watch, nextTick, onUnmounted } from 'vue';
+import { ref, watch, nextTick, onUnmounted, onActivated, onDeactivated } from 'vue';
+import { useBackdropClose } from '@/ui/composables/useBackdropClose';
 
 interface ModalProps {
   modelValue: boolean;
   title?: string;
   width?: string;
   closable?: boolean;
+  /**
+   * Allow a (guarded) backdrop press to close the modal. Default false:
+   * most modals host user input, and an accidental press outside must not
+   * destroy it. Opt in only for read-only surfaces (viewers/popovers).
+   */
+  backdropClose?: boolean;
 }
 
 const props = withDefaults(defineProps<ModalProps>(), {
   title: '',
   width: '480px',
   closable: true,
+  backdropClose: false,
 });
 
 const emit = defineEmits<{
@@ -86,9 +110,41 @@ function close(): void {
   emit('update:modelValue', false);
 }
 
-function handleBackdropClick(): void {
+/*
+ * Document-level Escape fallback (2026-08-25). The backdrop's own keydown
+ * only fires while focus is INSIDE the dialog — an async failure that
+ * replaces the focused button (v-if flip) drops focus back to <body>, and
+ * Escape stopped reaching the modal entirely. The module-scope stack (see
+ * the plain <script> block below — <script setup> top level is PER-INSTANCE,
+ * a stack declared here would never see other instances) keeps stacked
+ * modals closing one at a time, top-most first; the backdrop handler's
+ * stopPropagation prevents the two paths from double-firing when focus IS
+ * inside the dialog.
+ */
+const modalId = Symbol('modal');
+
+function onDocumentKeydown(e: KeyboardEvent): void {
+  if (e.key !== 'Escape') return;
+  if (openModalStack[openModalStack.length - 1] !== modalId) return;
   if (props.closable) close();
 }
+
+/** Idempotent: release-then-arm, so KeepAlive re-activation can never double-push. */
+function armEscapeFallback(): void {
+  releaseEscapeFallback();
+  openModalStack.push(modalId);
+  document.addEventListener('keydown', onDocumentKeydown);
+}
+
+function releaseEscapeFallback(): void {
+  const i = openModalStack.indexOf(modalId);
+  if (i !== -1) openModalStack.splice(i, 1);
+  document.removeEventListener('keydown', onDocumentKeydown);
+}
+
+const backdrop = useBackdropClose(() => {
+  if (props.closable && props.backdropClose) close();
+});
 
 function handleKeydown(e: KeyboardEvent): void {
   if (e.key === 'Escape' && props.closable) {
@@ -141,23 +197,43 @@ function unlockBodyScroll(): void {
   document.body.style.overflow = '';
 }
 
+/* immediate: some consumers mount with modelValue already true (e.g.
+   SaveToCardFlow gates CardExportFlow behind `v-if="modelValue"`), and a
+   lazy watch would never arm the scroll lock / Escape fallback for them. */
 watch(() => props.modelValue, async (isOpen) => {
   if (isOpen) {
     previouslyFocusedElement = document.activeElement as HTMLElement | null;
     lockBodyScroll();
+    armEscapeFallback();
     await nextTick();
     /* Focus the modal container so keyboard events are captured */
     modalContentRef.value?.focus();
   } else {
     unlockBodyScroll();
+    releaseEscapeFallback();
     /* Restore focus to the element that triggered the modal */
     previouslyFocusedElement?.focus();
     previouslyFocusedElement = null;
+  }
+}, { immediate: true });
+
+/* Game panels live under <KeepAlive>: tab navigation DEACTIVATES a panel
+   without unmounting it, so an open modal's document listener, stack entry
+   and body scroll-lock would leak forever without these hooks. */
+onDeactivated(() => {
+  unlockBodyScroll();
+  releaseEscapeFallback();
+});
+onActivated(() => {
+  if (props.modelValue) {
+    lockBodyScroll();
+    armEscapeFallback();
   }
 });
 
 onUnmounted(() => {
   unlockBodyScroll();
+  releaseEscapeFallback();
 });
 </script>
 

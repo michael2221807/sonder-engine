@@ -233,14 +233,27 @@ export class PlotDecomposer {
     const maxActive = opts.maxActiveThreads
       ?? this.stateManager.get<number>('系统.设置.plot.maxActiveThreads')
       ?? DEFAULT_MAX_ACTIVE_THREADS;
-    const vars: Record<string, string> = {
+    return this.invoke(promptContent, outline, {
       PLOT_OUTLINE: outline,
       // Legacy placeholder: the shipped templates use PLOT_CONTEXT, but user-edited
       // prompt overrides from Sprint Plot-1 may still reference PLOT_STATE_SUMMARY.
       PLOT_STATE_SUMMARY: this.buildStateSummary(),
       PLOT_CONTEXT: this.buildContext(),
       PLOT_MAX_ACTIVE: String(maxActive),
-    };
+    }, opts);
+  }
+
+  /**
+   * Render `vars` into a pack prompt and run one `plot_decompose`-typed call
+   * (jailbreak + system + user, JSON fallback parsing). Shared by the
+   * decomposition modes and by PlotReviser (plot-arc-revise-extend §3.3).
+   */
+  async invoke(
+    promptContent: string,
+    userMessage: string,
+    vars: Record<string, string>,
+    opts: DecomposeOptions,
+  ): Promise<Record<string, unknown> | null> {
     const rendered = promptContent.replace(/\{\{(\w+)\}\}/g, (_, k: string) => (k in vars ? vars[k] : ''));
 
     const messages: { role: 'system' | 'user'; content: string }[] = [];
@@ -248,7 +261,7 @@ export class PlotDecomposer {
     const jailbreak = this.pack.prompts?.['assistantJailbreak']?.trim();
     if (jailbreak) messages.push({ role: 'system', content: jailbreak });
     messages.push({ role: 'system', content: rendered });
-    messages.push({ role: 'user', content: outline });
+    messages.push({ role: 'user', content: userMessage });
 
     try {
       const rawResponse = await this.aiService.generate({ messages, usageType: 'plot_decompose', signal: opts.signal });
@@ -436,7 +449,8 @@ export class PlotDecomposer {
     return { refs: out.length > 0 ? out : null, malformed };
   }
 
-  private normalizeNodes(raw: unknown[]): DecomposeResult['nodes'] {
+  /** Public: PlotReviser reuses the exact node contract (plot-arc-revise-extend §3.2). */
+  normalizeNodes(raw: unknown[]): DecomposeResult['nodes'] {
     return raw
       .filter((item): item is Record<string, unknown> =>
         item !== null && typeof item === 'object')

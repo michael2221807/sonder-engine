@@ -2,9 +2,12 @@
 /**
  * AgaConfirmModal — replaces window.confirm with an AGA-styled dialog.
  *
- * Teleports to <body>; traps focus; Escape to cancel; click-outside to cancel.
+ * Teleports to <body>; traps focus; Escape to cancel; guarded backdrop press
+ * to cancel (pointerdown AND pointerup must both land on the backdrop — a drag
+ * that starts inside the dialog can never dismiss it).
  */
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { useBackdropClose } from '@/ui/composables/useBackdropClose';
 defineProps<{
   title?: string;
   message: string;
@@ -22,6 +25,8 @@ const dialogRef = ref<HTMLElement | null>(null);
 
 function confirm() { emit('confirm'); }
 function cancel() { emit('cancel'); }
+
+const backdrop = useBackdropClose(cancel);
 
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') cancel();
@@ -41,7 +46,11 @@ onUnmounted(() => {
 
 <template>
   <Teleport to="body">
-    <div class="aga-confirm-overlay" @click.self="cancel">
+    <div
+      class="aga-confirm-overlay"
+      @pointerdown="backdrop.onPointerdown"
+      @pointerup="backdrop.onPointerup"
+    >
       <div ref="dialogRef" class="aga-confirm-dialog" role="dialog" :aria-label="title ?? $t('modal.confirm.ariaDialog')">
         <h3 v-if="title" class="aga-confirm__title">{{ title }}</h3>
         <p class="aga-confirm__message">{{ message }}</p>

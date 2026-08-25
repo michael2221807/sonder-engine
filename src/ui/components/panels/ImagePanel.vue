@@ -30,6 +30,7 @@ import AgaProgressBar from '@/ui/components/shared/AgaProgressBar.vue';
 import AgaConfirmModal from '@/ui/components/shared/AgaConfirmModal.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import { useGameState } from '@/ui/composables/useGameState';
+import { useBackdropClose } from '@/ui/composables/useBackdropClose';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import { eventBus } from '@/engine/core/event-bus';
 import { extractAnchorViaAI } from '@/engine/image/anchor-extractor';
@@ -493,6 +494,8 @@ function cancelConfirm() {
   if (manualFlowStage.value === 'submitting') return;
   manualFlowStage.value = 'idle';
 }
+
+const confirmBackdrop = useBackdropClose(cancelConfirm);
 
 function cancelSubmitting() {
   if (manualFlowStage.value !== 'submitting') return;
@@ -5455,7 +5458,12 @@ function clearNpcImages() {
 
     <!-- ─── 前台提交确认 overlay ─── -->
     <Transition name="fade">
-      <div v-if="manualFlowStage !== 'idle'" class="confirm-overlay" @click.self="cancelConfirm">
+      <div
+        v-if="manualFlowStage !== 'idle'"
+        class="confirm-overlay"
+        @pointerdown="confirmBackdrop.onPointerdown"
+        @pointerup="confirmBackdrop.onPointerup"
+      >
         <!--
           Confirm modal — shows a portrait thumbnail, character vitals,
           visual archive preview, and every active generation parameter so the

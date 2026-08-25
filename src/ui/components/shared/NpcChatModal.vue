@@ -282,7 +282,10 @@ function affinityColor(value: number | undefined): string {
 <template>
   <Teleport to="body">
     <Transition name="fade">
-      <div v-if="modelValue && npc" class="npc-chat-overlay" @click.self="close">
+      <!-- No backdrop click-to-close: the chat draft input must survive
+           misclicks / drag-releases outside the panel (2026-08-25). Close
+           via the ✕ button only. -->
+      <div v-if="modelValue && npc" class="npc-chat-overlay">
         <div class="npc-chat-modal" role="dialog" aria-labelledby="npc-chat-title">
           <!-- ─── Header ─── -->
           <header class="chat-header">

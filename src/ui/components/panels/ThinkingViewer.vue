@@ -45,6 +45,7 @@ function title(): string {
     :model-value="props.modelValue"
     :title="title()"
     width="720px"
+    backdrop-close
     @update:model-value="(v) => $emit('update:modelValue', v)"
   >
     <pre v-if="props.text && props.text.trim().length > 0" class="thinking-viewer__body">{{ props.text }}</pre>

@@ -24,6 +24,7 @@ defineEmits<{
     :model-value="modelValue"
     :title="$t('mainGame.env.festival.popoverTitle')"
     width="360px"
+    backdrop-close
     @update:model-value="(v) => $emit('update:modelValue', v)"
   >
     <div class="festival-popover__item">

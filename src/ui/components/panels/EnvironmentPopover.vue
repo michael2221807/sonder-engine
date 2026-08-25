@@ -35,6 +35,7 @@ defineEmits<{
     :model-value="modelValue"
     :title="title ?? $t('mainGame.env.environment.popoverTitle')"
     width="360px"
+    backdrop-close
     @update:model-value="(v) => $emit('update:modelValue', v)"
   >
     <div v-if="tags.length === 0" class="env-popover__empty">

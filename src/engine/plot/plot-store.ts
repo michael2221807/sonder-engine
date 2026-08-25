@@ -247,14 +247,11 @@ export const usePlotStore = defineStore('plot-direction', () => {
     return true;
   }
 
-  function completeArc(arcId: string): boolean {
-    const arc = arcs.value.find(a => a.id === arcId);
-    if (!arc || arc.status !== 'active') return false;
-    arc.status = 'completed';
-    pendingConfirmations.value = pendingConfirmations.value.filter(g => g.arcId !== arcId);
-    _repairFocus();
-    return true;
-  }
+  // NOTE (2026-08-24, plot-arc-revise-extend §9): the old `completeArc` and
+  // `reviseArc` store methods were removed as unconsumed dead code — thread
+  // completion is the evaluation pipeline's job (activateNextPending), and
+  // "progress rollback" was never a shipped feature. Re-add deliberately if a
+  // future epic needs them; do not resurrect by copy-paste.
 
   function updateArc(
     arcId: string,
@@ -266,27 +263,6 @@ export const usePlotStore = defineStore('plot-direction', () => {
     if (updates.synopsis !== undefined) arc.synopsis = updates.synopsis;
     if (updates.lane !== undefined) arc.lane = updates.lane;
     if (updates.color !== undefined) arc.color = updates.color;
-    return true;
-  }
-
-  function reviseArc(arcId: string, fromNodeIndex: number): boolean {
-    const arc = arcs.value.find(a => a.id === arcId);
-    if (!arc) return false;
-    for (let i = fromNodeIndex; i < arc.nodes.length; i++) {
-      const node = arc.nodes[i];
-      node.status = 'pending';
-      node.activatedAtRound = undefined;
-      node.completedAtRound = undefined;
-      node.activatedAtTime = undefined;
-      node.completedAtTime = undefined;
-      node.completionEvidence = undefined;
-      node.consecutiveReachedCount = 0;
-    }
-    // Re-activate first pending if arc is active and no active node
-    if (arc.status === 'active' && !arc.nodes.some(n => n.status === 'active')) {
-      const first = arc.nodes.find(n => n.status === 'pending');
-      if (first) first.status = 'active';
-    }
     return true;
   }
 
@@ -415,6 +391,29 @@ export const usePlotStore = defineStore('plot-direction', () => {
       moved = true;
     });
     return moved;
+  }
+
+  /**
+   * Replace the whole pending region (everything after `_reachableFloor`) in
+   * one operation — the revise commit's structural step (plot-arc-revise-extend
+   * §3.4-3/6). `region` nodes must already be fully formed (`status: 'pending'`,
+   * matching `arcId`); kept nodes arrive with their original ids so
+   * cross-thread `node_completed` triggers stay valid.
+   *
+   * Unlike the single-node ops this REJECTS during an evaluation instead of
+   * queueing through `_withMutex`: a queued replacement would fire on
+   * `setEvaluating(false)` detached from the rest of the revise transaction
+   * (synopsis, gauges, dangling-reference pruning and its report) — a silent
+   * partial commit. False here is a true no-op the caller can retry.
+   */
+  function replacePendingRegion(arcId: string, region: PlotNode[]): boolean {
+    if (_evaluating) return false;
+    const arc = arcs.value.find(a => a.id === arcId);
+    if (!arc) return false;
+    if (region.some(n => n.arcId !== arcId || n.status !== 'pending')) return false;
+    const floor = _reachableFloor(arc.nodes);
+    arc.nodes = [...arc.nodes.slice(0, floor + 1), ...region];
+    return true;
   }
 
   function updateNode(arcId: string, nodeId: string, updates: Partial<PlotNode>): boolean {
@@ -585,8 +584,6 @@ export const usePlotStore = defineStore('plot-direction', () => {
     unscheduleArc,
     setFocus,
     abandonArc,
-    completeArc,
-    reviseArc,
     updateArc,
 
     addNode,
@@ -594,6 +591,7 @@ export const usePlotStore = defineStore('plot-direction', () => {
     removeNode,
     moveNode,
     updateNode,
+    replacePendingRegion,
 
     addGauge,
     removeGauge,

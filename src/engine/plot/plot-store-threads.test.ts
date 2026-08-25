@@ -107,11 +107,13 @@ describe('plotStore — multi-active threads (P0)', () => {
       store.activateArc(b.id, { takeFocus: false });
       store.activateArc(c.id, { takeFocus: false });
       expect(store.focusArcId).toBe(a.id);
-      store.completeArc(a.id);
+      // abandonArc exercises the same _repairFocus path completion does
+      // (store-level completeArc was removed as dead code, design §9).
+      store.abandonArc(a.id);
       expect(store.focusArcId).toBe(c.id); // lane 2 < lane 5
       store.abandonArc(c.id);
       expect(store.focusArcId).toBe(b.id);
-      store.completeArc(b.id);
+      store.abandonArc(b.id);
       expect(store.focusArcId).toBeNull();
       expect(store.activeArc).toBeNull();
     });

@@ -75,6 +75,7 @@ import { PrivacyProfileRepairPipeline } from './engine/pipeline/sub-pipelines/pr
 import { FieldRepairPipeline } from './engine/pipeline/sub-pipelines/field-repair';
 import { PlotEvaluationPipeline } from './engine/plot/plot-evaluation-pipeline';
 import { PlotDecomposer } from './engine/plot/plot-decomposer';
+import { PlotReviser } from './engine/plot/plot-reviser';
 import { NpcMemorySummarizer } from './engine/social/npc-memory-summarizer';
 import { ImageService } from './engine/image/image-service';
 import { ImageProviderRegistry } from './engine/image/provider-registry';
@@ -607,6 +608,7 @@ async function bootstrap(): Promise<void> {
   // Sprint Plot-1 P4: PlotEvaluationPipeline — 剧情节点评估
   let plotEvaluationPipeline: PlotEvaluationPipeline | undefined;
   let plotDecomposer: PlotDecomposer | undefined;
+  let plotReviser: PlotReviser | undefined;
   if (pack) {
     plotEvaluationPipeline = new PlotEvaluationPipeline(
       stateManager,
@@ -615,6 +617,13 @@ async function bootstrap(): Promise<void> {
     plotDecomposer = new PlotDecomposer(
       aiService,
       responseParser,
+      stateManager,
+      pack,
+      DEFAULT_ENGINE_PATHS,
+    );
+    // Plot Revise & Extend epic — AI revision of an existing thread's pending region
+    plotReviser = new PlotReviser(
+      plotDecomposer,
       stateManager,
       pack,
       DEFAULT_ENGINE_PATHS,
@@ -780,6 +789,7 @@ async function bootstrap(): Promise<void> {
   app.provide('saveManager', saveManager);
   app.provide('promptStorage', promptStorage);
   if (plotDecomposer) app.provide('plotDecomposer', plotDecomposer);
+  if (plotReviser) app.provide('plotReviser', plotReviser);
   // Lets the PlotPanel confirmation gate advance a confirmed critical node
   // immediately, instead of waiting for the next main round's evaluation pass.
   if (plotEvaluationPipeline) app.provide('plotEvaluation', plotEvaluationPipeline);

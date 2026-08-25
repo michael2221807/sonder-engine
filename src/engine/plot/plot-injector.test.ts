@@ -77,9 +77,53 @@ describe('PlotInjector.buildStep1Variables (focus + background, P2)', () => {
     expect(bg).not.toContain('《A》');
   });
 
+  it('lookahead: the first pending node after the current one is previewed; goal falls back to premise; last node has none', () => {
+    const a = arc('a', 'A');
+    a.nodes = [
+      node('a1', 'a', { status: 'active', activatedAtRound: 3 }),
+      node('a2', 'a', { title: '主动退赛', narrativeGoal: '她在誓师大会上宣布退赛' }),
+      node('a3', 'a'),
+    ];
+    const v = PlotInjector.buildStep1Variables(sm({ arcs: [a], activeArcIndex: 0 }), DEFAULT_ENGINE_PATHS);
+    expect(v.PLOT_DIRECTIVE).toContain('【下一节点（预告）】《主动退赛》 — 她在誓师大会上宣布退赛');
+    expect(v.PLOT_DIRECTIVE).toContain('但本回合不要让它发生');
+    expect(v.PLOT_NEXT_NODE_TITLE).toBe('主动退赛');
+    expect(v.PLOT_NEXT_NODE_GOAL).toBe('她在誓师大会上宣布退赛');
+
+    // narrativeGoal empty → premise; both empty → bare title, no dangling separator.
+    a.nodes[1].narrativeGoal = '';
+    a.nodes[1].premise = '承接誓师大会';
+    let v2 = PlotInjector.buildStep1Variables(sm({ arcs: [a], activeArcIndex: 0 }), DEFAULT_ENGINE_PATHS);
+    expect(v2.PLOT_NEXT_NODE_GOAL).toBe('承接誓师大会');
+    a.nodes[1].premise = undefined;
+    v2 = PlotInjector.buildStep1Variables(sm({ arcs: [a], activeArcIndex: 0 }), DEFAULT_ENGINE_PATHS);
+    expect(v2.PLOT_DIRECTIVE).toContain('【下一节点（预告）】《主动退赛》\n');
+
+    // Active node is the last one → no preview section, empty sub-variables.
+    const last = arc('z', 'Z');
+    last.nodes = [node('z0', 'z', { status: 'completed' }), node('z1', 'z', { status: 'active', activatedAtRound: 3 })];
+    const v3 = PlotInjector.buildStep1Variables(sm({ arcs: [last], activeArcIndex: 0 }), DEFAULT_ENGINE_PATHS);
+    expect(v3.PLOT_DIRECTIVE).not.toContain('下一节点');
+    expect(v3.PLOT_NEXT_NODE_TITLE).toBe('');
+  });
+
+  it('lookahead stays out of the background lines and out of Step 2', () => {
+    const focus = arc('f', 'F', { lane: 0 });
+    focus.nodes.push(node('f2', 'f', { title: 'F未来' }));
+    const bg = arc('b', 'B', { lane: 1 });
+    bg.nodes.push(node('b2', 'b', { title: 'B未来' }));
+    const s = sm({ arcs: [focus, bg], activeArcIndex: 0, focusArcId: 'f' });
+    const v1 = PlotInjector.buildStep1Variables(s, DEFAULT_ENGINE_PATHS);
+    expect(v1.PLOT_DIRECTIVE).toContain('《F未来》');
+    expect(v1.PLOT_BACKGROUND_THREADS).not.toContain('B未来');
+    const v2 = PlotInjector.buildStep2Variables(s, DEFAULT_ENGINE_PATHS);
+    expect(JSON.stringify(v2)).not.toContain('未来');
+  });
+
   it('labels come from engineFragments (EN pack renders no Chinese scaffolding)', () => {
     const focus = arc('f', 'Exam Arc', { gauges: [gauge('Suspicion')] });
     focus.nodes[0].premise = 'after the pills';
+    focus.nodes.push(node('f2', 'f', { title: 'Withdrawal', narrativeGoal: 'she quits the contest' }));
     const bg = arc('b', 'Club Arc');
     const en = {
       plotCurrentNodeLabel: '[Current node: {title}]', plotPremiseLabel: 'Builds on: {text}', plotDirectiveLabel: 'Guidance: {text}',
@@ -88,6 +132,7 @@ describe('PlotInjector.buildStep1Variables (focus + background, P2)', () => {
       plotEvalThreadHeader: '[Thread {index}: {title}]', plotEvalNodeLabel: 'Current node: {title}', plotEvalEventLabel: 'Node event: {text}', plotEvalHintLabel: 'Criteria: "{text}"',
       plotGaugeInstrHeaderMulti: 'report per thread:', plotGaugeInstrThread: '[{title}]', plotGaugeInstrLine: '- "{name}": now {current}/{max}{unit}{desc}',
       plotGaugeInstrFormat: 'fmt', plotGaugeInstrNote: 'note', plotThreadTitleSep: ', ',
+      plotNextNodeLabel: '[Next node (preview)] "{title}"{goal}', plotNextNodeHint: 'foreshadow only', plotBackgroundGoalSep: ' — ',
     };
     const s = sm({ arcs: [focus, bg], activeArcIndex: 0, focusArcId: 'f' });
     const v1 = PlotInjector.buildStep1Variables(s, DEFAULT_ENGINE_PATHS, en);

@@ -49,6 +49,7 @@ import { useEngineStateStore } from '@/engine/stores/engine-state';
 import { useAPIManagementStore } from '@/engine/stores/engine-api';
 import { useActionQueueStore } from '@/engine/stores/engine-action-queue';
 import { useLocale } from '@/ui/composables/useLocale';
+import { useBackdropClose } from '@/ui/composables/useBackdropClose';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 
@@ -141,6 +142,8 @@ function requestDelete(profileId: string): void {
 function cancelDelete(): void {
   pendingDeleteId.value = null;
 }
+
+const deleteBackdrop = useBackdropClose(cancelDelete);
 
 /**
  * Confirm and execute the deletion.
@@ -717,7 +720,8 @@ function triggerImportRawStateTree(): void {
         <div
           v-if="pendingDeleteProfile"
           class="modal-overlay"
-          @click.self="cancelDelete"
+          @pointerdown="deleteBackdrop.onPointerdown"
+          @pointerup="deleteBackdrop.onPointerup"
           role="dialog"
           aria-modal="true"
           :aria-label="$t('management.modals.deleteAriaLabel', { name: pendingDeleteProfile.characterName })"

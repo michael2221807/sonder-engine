@@ -19,6 +19,8 @@ import GaugeBar from './plot/GaugeBar.vue';
 import PlotNodeList from './plot/PlotNodeList.vue';
 import PlotScheduler from './plot/PlotScheduler.vue';
 import PlotTriggerPicker from './plot/PlotTriggerPicker.vue';
+import PlotReviseFlow from './plot/PlotReviseFlow.vue';
+import type { CommitReviseReport } from '@/engine/plot/plot-revise-commit';
 import type { AxisMode } from './plot/scheduler-layout';
 import { writePlotTimelineAxis } from '@/ui/composables/usePlotTimelineAxis';
 import type { ThreadActivation } from '@/engine/plot/types';
@@ -33,6 +35,8 @@ const plotStore = usePlotStore();
 const plotEditor = usePlotEditor();
 const plotDecomposer = inject<PlotDecomposer | null>('plotDecomposer', null);
 const plotEvaluation = inject<import('@/engine/plot/plot-evaluation-pipeline').PlotEvaluationPipeline | null>('plotEvaluation', null);
+// Only used for the revise button's visibility — the flow modal injects its own.
+const plotReviser = inject<import('@/engine/plot/plot-reviser').PlotReviser | null>('plotReviser', null);
 
 const plotState = useValue<PlotDirectionState | undefined>(DEFAULT_ENGINE_PATHS.plotDirection);
 const currentRound = useValue<number>(DEFAULT_ENGINE_PATHS.roundNumber);
@@ -592,8 +596,12 @@ const completionModeOptions = computed(() => [
   { label: t('plot.node.completionMode.gaugesOnly'), value: 'gauges_only' },
 ]);
 
-watch(selectedNode, (n) => {
-  if (n) {
+// Keyed on modal visibility too: closing without saving DISCARDS the draft
+// (hand-typed or AI-filled), so reopening the same node must re-pull truth —
+// with `selectedNode` alone the reference is unchanged on reopen and the
+// stale draft would silently survive into the next 保存 (review 2026-08-24 I1).
+watch([selectedNode, showNodeDetail], ([n, open]) => {
+  if (n && open) {
     editingDirective.value = n.directive;
     editingHint.value = n.completionHint;
     editingGoal.value = n.narrativeGoal;
@@ -623,6 +631,140 @@ function saveNodeEdits(): void {
   persist();
 }
 
+// ─── Node force resolution (design plot-arc-revise-extend §4.1/§4.2, D2) ───
+// Both entry points (node-detail footer, list-row quick buttons) route through
+// one confirm layer; the actual advance/skip runs in the pipeline so the
+// side-effects are identical to a confirmed critical advancement.
+const confirmForceMode = ref<'complete' | 'skip' | null>(null);
+const forceTargetNode = computed<PlotNode | null>(() => {
+  if (!selectedNodeId.value) return null;
+  for (const a of plotStore.arcs) {
+    const n = a.nodes.find(x => x.id === selectedNodeId.value);
+    if (n) return n;
+  }
+  return null;
+});
+/** Resolving this node ends the thread → the confirm text adds the hand-off note. */
+const forceTargetIsLast = computed(() => {
+  const n = forceTargetNode.value;
+  if (!n) return false;
+  const a = plotStore.arcs.find(x => x.id === n.arcId);
+  return !!a && a.nodes.every(x => x.id === n.id || x.status === 'completed' || x.status === 'skipped');
+});
+
+function requestForceResolve(nodeId: string, mode: 'complete' | 'skip'): void {
+  selectedNodeId.value = nodeId;
+  showNodeDetail.value = false;
+  confirmForceMode.value = mode;
+}
+
+function confirmForceResolve(): void {
+  const mode = confirmForceMode.value;
+  const node = forceTargetNode.value;
+  confirmForceMode.value = null;
+  if (!mode || !node || !plotEvaluation) return;
+  if (plotEvaluation.forceNodeResolution(node.arcId, mode, node.id)) {
+    // writeBack already updated the state tree (store re-syncs via the
+    // plotState watcher) — just schedule the autosave, like confirmAdvancementFor.
+    eventBus.emit('engine:request-save');
+    eventBus.emit('ui:toast', {
+      type: 'success',
+      i18nKey: mode === 'complete' ? 'plot.node.forceCompletedToast' : 'plot.node.forceSkippedToast',
+      i18nParams: { title: node.title },
+      message: mode === 'complete' ? `"${node.title}" marked complete` : `"${node.title}" skipped`,
+      duration: 2500,
+    });
+  }
+}
+
+// ─── Node detail: AI rewrite of a saved, unfinished node (user request
+// 2026-08-24: the preview-only rewrite, brought down to committed nodes).
+// The result lands in the EDIT FORM, not the store — the player reviews and
+// hits 保存, so ids/status/progress are untouched by construction. ───
+const detailAiOpen = ref(false);
+const detailAiRequest = ref('');
+const detailAiBusy = ref(false);
+const detailAiError = ref('');
+/** The reply landed in the form — remind the player it only persists on save. */
+const detailAiFilled = ref(false);
+let detailAiAbort: AbortController | null = null;
+
+const canAiRewriteSelected = computed(() => {
+  const n = selectedNode.value;
+  return !!plotReviser && !!n && (n.status === 'pending' || n.status === 'active');
+});
+
+function resetDetailAi(): void {
+  detailAiAbort?.abort();
+  detailAiAbort = null;
+  detailAiOpen.value = false;
+  detailAiRequest.value = '';
+  detailAiBusy.value = false;
+  detailAiError.value = '';
+  detailAiFilled.value = false;
+}
+watch([selectedNode, showNodeDetail], resetDetailAi);
+
+async function runDetailAiRewrite(): Promise<void> {
+  const arc = displayArc.value;
+  const node = selectedNode.value;
+  const req = detailAiRequest.value.trim();
+  if (!arc || !node || !req || !plotReviser || detailAiBusy.value) return;
+  detailAiBusy.value = true;
+  detailAiError.value = '';
+  detailAiFilled.value = false;
+  const ctrl = new AbortController();
+  detailAiAbort = ctrl;
+  try {
+    const chain: import('@/engine/plot/plot-reviser').ReviseNodeChainItem[] = arc.nodes.map(n => ({
+      title: n.title,
+      premise: n.premise,
+      narrativeGoal: n.narrativeGoal,
+      directive: n.directive,
+      stakes: n.stakes,
+      completionHint: n.completionHint,
+      emotionalTone: n.emotionalTone,
+      importance: n.importance,
+      maxRounds: n.maxRounds,
+      kind: n.status === 'completed' || n.status === 'skipped' ? 'done'
+        : n.status === 'active' ? 'active' : 'planned',
+      evidence: n.completionEvidence,
+    }));
+    const targetIndex = arc.nodes.findIndex(n => n.id === node.id);
+    const res = await plotReviser.reviseNode(
+      { title: arc.title, synopsis: arc.synopsis, status: arc.status },
+      chain, targetIndex, req, { signal: ctrl.signal },
+    );
+    if (ctrl.signal.aborted) return;
+    if (res) {
+      // Fill the form (title stays — the form has no title field and the
+      // prompt forbids unrequested title changes anyway).
+      editingGoal.value = res.narrativeGoal;
+      editingDirective.value = res.directive;
+      editingHint.value = res.completionHint;
+      editingPremise.value = res.premise ?? '';
+      editingStakes.value = res.stakes ?? '';
+      editingImportance.value = res.importance;
+      editingMaxRounds.value = res.maxRounds;
+      detailAiFilled.value = true;
+    } else {
+      detailAiError.value = t('plot.revise.errNoResult');
+    }
+  } catch (err) {
+    if (!ctrl.signal.aborted) {
+      detailAiError.value = t('plot.revise.errFailed', { error: err instanceof Error ? err.message : String(err) });
+    }
+  } finally {
+    if (!ctrl.signal.aborted) detailAiBusy.value = false;
+    if (detailAiAbort === ctrl) detailAiAbort = null;
+  }
+}
+
+function cancelDetailAi(): void {
+  detailAiAbort?.abort();
+  detailAiBusy.value = false;
+}
+
 const plotSettingsFromState = useValue<{ showEvalLog?: boolean } | undefined>('系统.设置.plot');
 const showEvalLog = ref(false);
 // Sync from settings panel
@@ -631,6 +773,47 @@ watch(plotSettingsFromState, (s) => {
 }, { immediate: true });
 
 const showConfirmAbandon = ref(false);
+
+// ─── Revise & Extend flow (design plot-arc-revise-extend §3.5) ───
+const showReviseFlow = ref(false);
+const canRevise = computed(() => {
+  const a = displayArc.value;
+  return !!plotReviser && !!a
+    && (a.status === 'draft' || a.status === 'scheduled' || a.status === 'active')
+    && a.nodes.length > 0;
+});
+
+function handleReviseApplied(report: CommitReviseReport): void {
+  persist();
+  eventBus.emit('ui:toast', {
+    type: 'success',
+    i18nKey: 'plot.revise.appliedToast',
+    i18nParams: { kept: report.keptNodeIds.length, added: report.newNodeIds.length, removed: report.removedNodeIds.length },
+    message: `Revision applied: ${report.keptNodeIds.length} kept, ${report.newNodeIds.length} new, ${report.removedNodeIds.length} removed`,
+    duration: 3000,
+  });
+  // Dangling references were pruned — say so loudly, never silently (§3.4-4/5).
+  if (report.danglingTriggers.length > 0) {
+    const arcs = report.danglingTriggers.map(d => d.arcTitle).join(t('plot.revise.listSep'));
+    eventBus.emit('ui:toast', {
+      type: 'warning',
+      i18nKey: 'plot.revise.danglingTriggersToast',
+      i18nParams: { arcs },
+      message: `Start conditions on ${arcs} referenced removed nodes and were cleared — please re-schedule them`,
+      duration: 6000,
+    });
+  }
+  if (report.danglingGaugeRefs.triggers + report.danglingGaugeRefs.conditions > 0) {
+    const arcs = report.danglingGaugeRefs.affected.join(t('plot.revise.listSep'));
+    eventBus.emit('ui:toast', {
+      type: 'warning',
+      i18nKey: 'plot.revise.danglingGaugesToast',
+      i18nParams: { arcs },
+      message: `Conditions on ${arcs} referenced removed gauges and were cleared`,
+      duration: 6000,
+    });
+  }
+}
 
 // ─── Gauge management (GAP-06) ───
 const showAddGauge = ref(false);
@@ -846,6 +1029,13 @@ function addGauge(): void {
               data-testid="plot-activate-arc"
               @click="activateCurrentArc"
             >{{ displayArc.status === 'abandoned' ? $t('plot.arc.reactivate') : $t('plot.arc.activate') }}</button>
+            <Tooltip v-if="canRevise" :text="$t('plot.revise.buttonTip')" interactive>
+              <button
+                class="arc-btn arc-btn--revise"
+                data-testid="plot-revise-open"
+                @click="showReviseFlow = true"
+              >{{ $t('plot.revise.button') }}</button>
+            </Tooltip>
             <button
               v-if="displayArc.status === 'active'"
               class="arc-btn arc-btn--abandon"
@@ -894,10 +1084,13 @@ function addGauge(): void {
             :gauges="displayArc.gauges"
             :current-round="currentRound ?? 0"
             :last-eval-log="latestEvalLog"
+            :force-enabled="!!plotEvaluation && displayArc.status === 'active'"
             @insert-at="handleInsertAt"
             @reorder="handleReorder"
             @remove="handleRemoveNode"
             @select="handleSelectNode"
+            @force-complete="id => requestForceResolve(id, 'complete')"
+            @force-skip="id => requestForceResolve(id, 'skip')"
           />
         </section>
 
@@ -1110,8 +1303,64 @@ function addGauge(): void {
               <input v-model.number="editingMaxRounds" type="number" class="form-input form-input--narrow" min="1" max="50" inputmode="numeric" />
             </label>
           </div>
+
+          <!-- AI rewrite of this saved, unfinished node (plot-arc-revise-extend §3.5 修订 5) -->
+          <div v-if="canAiRewriteSelected" class="detail-ai">
+            <Tooltip :text="$t('plot.node.aiRewriteTip')" fixed interactive>
+              <button
+                class="arc-btn arc-btn--revise"
+                data-testid="plot-detail-ai-rewrite"
+                @click="detailAiOpen = !detailAiOpen"
+              >✎ {{ $t('plot.node.aiRewrite') }}</button>
+            </Tooltip>
+            <template v-if="detailAiOpen">
+              <textarea
+                v-model="detailAiRequest"
+                class="form-textarea"
+                rows="2"
+                :placeholder="$t('plot.revise.nodeEditPlaceholder')"
+                :disabled="detailAiBusy"
+                data-testid="plot-detail-ai-request"
+              />
+              <div class="detail-ai__actions">
+                <template v-if="!detailAiBusy">
+                  <button
+                    class="arc-btn arc-btn--activate"
+                    :disabled="!detailAiRequest.trim()"
+                    data-testid="plot-detail-ai-run"
+                    @click="runDetailAiRewrite"
+                  >{{ $t('plot.revise.nodeEditRun') }}</button>
+                </template>
+                <template v-else>
+                  <AgaLoader size="sm" />
+                  <span class="detail-ai__running">{{ $t('plot.revise.nodeEditRunning') }}</span>
+                  <button class="arc-btn arc-btn--delete" @click="cancelDetailAi">{{ $t('plot.revise.cancel') }}</button>
+                </template>
+              </div>
+              <p v-if="detailAiError" class="decompose-error">{{ detailAiError }}</p>
+              <p v-if="detailAiFilled" class="detail-ai__filled" data-testid="plot-detail-ai-filled">
+                {{ $t('plot.node.aiRewriteFilled') }}
+              </p>
+            </template>
+          </div>
         </div>
         <template #footer>
+          <template v-if="selectedNode?.status === 'active' && plotEvaluation && displayArc?.status === 'active'">
+            <Tooltip :text="$t('plot.node.forceCompleteText')" fixed interactive>
+              <button
+                class="arc-btn arc-btn--force-complete"
+                data-testid="plot-detail-force-complete"
+                @click="requestForceResolve(selectedNode.id, 'complete')"
+              >{{ $t('plot.node.forceComplete') }}</button>
+            </Tooltip>
+            <Tooltip :text="$t('plot.node.forceSkipText')" fixed interactive>
+              <button
+                class="arc-btn arc-btn--force-skip"
+                data-testid="plot-detail-force-skip"
+                @click="requestForceResolve(selectedNode.id, 'skip')"
+              >{{ $t('plot.node.forceSkip') }}</button>
+            </Tooltip>
+          </template>
           <button class="arc-btn arc-btn--activate" @click="saveNodeEdits">
             {{ $t('plot.node.save') }}
           </button>
@@ -1185,6 +1434,35 @@ function addGauge(): void {
           <button class="arc-btn arc-btn--abandon" @click="abandonCurrentArc(); showConfirmAbandon = false">
             {{ $t('plot.arc.confirmAbandonBtn') }}
           </button>
+        </template>
+      </Modal>
+
+      <!-- Revise & Extend flow (design plot-arc-revise-extend §3.5) -->
+      <PlotReviseFlow
+        v-model="showReviseFlow"
+        :arc="displayArc"
+        @applied="handleReviseApplied"
+      />
+
+      <!-- Confirm node force resolution (design plot-arc-revise-extend §4.2) -->
+      <Modal
+        :model-value="confirmForceMode !== null"
+        :title="confirmForceMode === 'skip' ? $t('plot.node.forceSkipTitle') : $t('plot.node.forceCompleteTitle')"
+        width="380px"
+        @update:model-value="v => { if (!v) confirmForceMode = null }"
+      >
+        <p class="confirm-text">
+          {{ confirmForceMode === 'skip' ? $t('plot.node.forceSkipText') : $t('plot.node.forceCompleteText') }}
+        </p>
+        <p v-if="forceTargetIsLast" class="confirm-text confirm-text--note">
+          {{ $t('plot.node.forceLastNote') }}
+        </p>
+        <template #footer>
+          <button
+            :class="['arc-btn', confirmForceMode === 'skip' ? 'arc-btn--force-skip' : 'arc-btn--activate']"
+            data-testid="plot-force-confirm"
+            @click="confirmForceResolve"
+          >{{ confirmForceMode === 'skip' ? $t('plot.node.forceSkip') : $t('plot.node.forceComplete') }}</button>
         </template>
       </Modal>
     </template>
@@ -1461,6 +1739,26 @@ function addGauge(): void {
 .arc-btn--activate:hover { opacity: 0.85; }
 .arc-btn--abandon:hover  { opacity: 0.85; }
 .arc-btn--delete:hover   { background: rgba(255,255,255,0.1); }
+.arc-btn--revise {
+  background: rgba(217, 168, 92, 0.10);
+  color: var(--color-amber-400, #d9a85c);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-amber-400, #d9a85c) 55%, transparent);
+}
+.arc-btn--revise:hover { opacity: 0.85; }
+/* Node force resolution (plot-arc-revise-extend §4.2): outlined, calmer than
+   the primary save — a deliberate action, not the default one. */
+.arc-btn--force-complete {
+  background: rgba(140, 184, 140, 0.12);
+  color: var(--color-sage-400, #8cb88c);
+  box-shadow: inset 0 0 0 1px var(--color-sage-400, #8cb88c);
+}
+.arc-btn--force-skip {
+  background: rgba(217, 168, 92, 0.10);
+  color: var(--color-amber-400, #d9a85c);
+  box-shadow: inset 0 0 0 1px var(--color-amber-400, #d9a85c);
+}
+.arc-btn--force-complete:hover,
+.arc-btn--force-skip:hover { opacity: 0.85; }
 
 /* Gauges */
 .gauges-section {
@@ -1702,6 +2000,35 @@ function addGauge(): void {
   font-size: 13px;
   margin: 0;
   line-height: 1.6;
+}
+.confirm-text--note {
+  margin-top: 8px;
+  color: var(--color-amber-400, #d9a85c);
+}
+
+/* Node detail — AI rewrite block (plot-arc-revise-extend §3.5 修订 5) */
+.detail-ai {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border-subtle, rgba(255,255,255,0.06));
+}
+.detail-ai .form-textarea { width: 100%; }
+.detail-ai__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.detail-ai__running {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.detail-ai__filled {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-sage-400, #8cb88c);
 }
 
 .gauge-edit-grid {

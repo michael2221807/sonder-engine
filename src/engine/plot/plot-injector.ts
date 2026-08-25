@@ -46,6 +46,8 @@ export const DEFAULT_PLOT_LABELS = {
   plotDirectiveLabel: '引导：{text}',
   plotStakesLabel: '改变：{text}',
   plotToneLabel: '基调：{text}',
+  plotNextNodeLabel: '【下一节点（预告）】《{title}》{goal}',
+  plotNextNodeHint: '可为其自然铺垫、埋下伏笔，但本回合不要让它发生。',
   plotGaugesHeader: '【剧情度量值】',
   plotGaugeLine: '- {name}: {current}/{max}{unit} ({range}){desc}',
   plotGaugeDescSep: ' — ',
@@ -132,6 +134,17 @@ function buildCompletedSummary(arc: PlotArc, L: PlotPromptLabels): string {
     .join(L.plotCompletedSep);
 }
 
+/**
+ * First pending node after the current one — the "most likely next beat"
+ * (plot-arc-revise-extend §5.1 lookahead). Nodes gated by unmet
+ * activationConditions still qualify: the preview is a foreshadowing cue,
+ * not a promise, and Step 2 never sees it.
+ */
+function getNextPendingNode(arc: PlotArc, current: PlotNode): PlotNode | null {
+  const idx = arc.nodes.indexOf(current);
+  return arc.nodes.slice(idx + 1).find(n => n.status === 'pending') ?? null;
+}
+
 function getCurrentOpportunity(node: PlotNode, currentRound: number): string {
   if (!node.activatedAtRound || node.opportunityTiers.length === 0) return '';
   const elapsed = currentRound - node.activatedAtRound;
@@ -178,6 +191,20 @@ function buildDirectiveBlock(arc: PlotArc, node: PlotNode, round: number, L: Plo
   sections.push(fmt(L.plotDirectiveLabel, { text: node.directive }));
   if (node.stakes) sections.push(fmt(L.plotStakesLabel, { text: node.stakes }));
   if (node.emotionalTone) sections.push(fmt(L.plotToneLabel, { text: node.emotionalTone }));
+
+  // Lookahead (§5.1, always on): one-line preview of the next beat so the
+  // model can foreshadow instead of writing the current node into a dead end.
+  const next = getNextPendingNode(arc, node);
+  if (next) {
+    const goal = next.narrativeGoal || next.premise || '';
+    sections.push(
+      '',
+      // plotBackgroundGoalSep is deliberately shared with the background-thread
+      // line: both are "title — one-line goal" summaries and should read alike.
+      fmt(L.plotNextNodeLabel, { title: next.title, goal: goal ? L.plotBackgroundGoalSep + goal : '' }),
+      L.plotNextNodeHint,
+    );
+  }
 
   const gaugeBlock = buildGaugeContext(arc.gauges, L);
   if (gaugeBlock) {
@@ -281,6 +308,7 @@ export class PlotInjector {
     const L = resolvePlotLabels(fragments);
     const round = stateManager.get<number>(paths.roundNumber) ?? 0;
     const background = getActiveThreads(state).filter(t => t.arc.id !== arc.id);
+    const next = getNextPendingNode(arc, node);
 
     return {
       PLOT_DIRECTIVE: buildDirectiveBlock(arc, node, round, L),
@@ -297,6 +325,8 @@ export class PlotInjector {
       PLOT_OPPORTUNITY: getCurrentOpportunity(node, round),
       PLOT_COMPLETED_SUMMARY: buildCompletedSummary(arc, L),
       PLOT_IS_FIRST_ROUND: node.activatedAtRound === round ? 'true' : '',
+      PLOT_NEXT_NODE_TITLE: next?.title ?? '',
+      PLOT_NEXT_NODE_GOAL: next ? (next.narrativeGoal || next.premise || '') : '',
     };
   }
 

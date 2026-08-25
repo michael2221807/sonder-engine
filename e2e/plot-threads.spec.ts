@@ -99,6 +99,134 @@ test.describe('Plot Threads — parallel threads & scheduler (offline)', () => {
       await page.screenshot({ path: '.playwright-mcp/plot-threads-list.png' });
     });
 
+  test('node force resolution: complete advances the chain, skip too, last node completes the thread (plot-arc-revise-extend P0)',
+    { tag: ['@regression', '@plot', '@plot-threads'] },
+    async ({ page, gameShell }) => {
+      test.slow(); // three modal round-trips — parallel workers push it past the default budget
+      await seedSave(page, { tree: treeWithThreads() });
+      await enterSeededGame(page);
+      await gameShell.goTab('plot');
+      await page.getByTestId('plot-view-list').click();
+      await page.locator('.arc-switcher .arc-chip', { hasText: '高考冲刺篇' }).click();
+
+      const row = (title: string) => page.getByTestId('plot-node-item').filter({ hasText: title });
+
+      // ── 1. Force-complete the active node from the row quick button ──
+      await expect(row('模拟考异常')).toHaveClass(/node-item--active/);
+      await row('模拟考异常').hover();
+      await row('模拟考异常').getByTestId('plot-force-complete').click();
+      await expect(page.getByText('视为已发生：将触发该节点的完成效果，并进入下一节点。')).toBeVisible();
+      await page.getByTestId('plot-force-confirm').click();
+      await expect(row('模拟考异常')).toHaveClass(/node-item--completed/);
+      await expect(row('道德抉择')).toHaveClass(/node-item--active/);
+
+      // ── 2. Skip the next one from the node-detail footer ──
+      await row('道德抉择').click();
+      await page.getByTestId('plot-detail-force-skip').click();
+      await expect(page.getByText('不演这段：直接进入下一节点，不触发完成效果。')).toBeVisible();
+      await page.getByTestId('plot-force-confirm').click();
+      await expect(row('道德抉择')).toHaveClass(/node-item--skipped/);
+      await expect(row('放榜')).toHaveClass(/node-item--active/);
+
+      // ── 3. Last node: the confirm layer warns the thread will complete; confirming ends it ──
+      await row('放榜').hover();
+      await row('放榜').getByTestId('plot-force-complete').click();
+      await expect(page.getByText('这条剧情线将随之完成')).toBeVisible();
+      await page.getByTestId('plot-force-confirm').click();
+      await expect(row('放榜')).toHaveClass(/node-item--completed/);
+      // The thread is completed → its "abandon" action is gone and the row buttons with it.
+      await expect(page.locator('.arc-btn--abandon')).toHaveCount(0);
+      await expect(row('放榜').getByTestId('plot-force-complete')).toHaveCount(0);
+      await page.screenshot({ path: '.playwright-mcp/plot-force-node.png' });
+    });
+
+  test('revise flow: entry button gating, modal states, offline degradation with zero egress (the LLM step is not offline-testable — preview/apply rules live in plot-revise-commit tests)',
+    { tag: ['@regression', '@plot', '@plot-threads'] },
+    async ({ page, gameShell }) => {
+      test.slow(); // modal + offline AI failure round-trip under parallel workers
+      await seedSave(page, { tree: treeWithThreads() });
+      await enterSeededGame(page);
+      await gameShell.goTab('plot');
+      await page.getByTestId('plot-view-list').click();
+
+      // Active thread → button shown; scheduled too; abandoned/completed have none (seed has neither — draft covers the negative-of-active case).
+      await page.locator('.arc-switcher .arc-chip', { hasText: '高考冲刺篇' }).click();
+      await expect(page.getByTestId('plot-revise-open')).toBeVisible();
+      await page.locator('.arc-switcher .arc-chip', { hasText: '修罗场' }).click();
+      await expect(page.getByTestId('plot-revise-open')).toBeVisible();
+
+      // Scheduled thread (no in-progress node): the active-node switch is hidden.
+      await page.getByTestId('plot-revise-open').click();
+      await expect(page.getByTestId('plot-revise-allow-active')).toHaveCount(0);
+      await page.keyboard.press('Escape');
+
+      await page.locator('.arc-switcher .arc-chip', { hasText: '高考冲刺篇' }).click();
+      await page.getByTestId('plot-revise-open').click();
+
+      // Active thread: the per-run switch shows, defaults ON, and toggles.
+      const scopeSwitch = page.getByTestId('plot-revise-allow-active');
+      await expect(scopeSwitch).toBeVisible();
+      await expect(scopeSwitch).toHaveAttribute('aria-checked', 'true');
+      await scopeSwitch.click();
+      await expect(scopeSwitch).toHaveAttribute('aria-checked', 'false');
+
+      // Empty request → generate gated; apply gated until a proposal exists.
+      const generate = page.getByTestId('plot-revise-generate');
+      await expect(generate).toBeDisabled();
+      await expect(page.getByTestId('plot-revise-apply')).toBeDisabled();
+      await page.getByTestId('plot-revise-request').fill('后半段改成她主动退赛');
+      await expect(generate).toBeEnabled();
+
+      // Offline: the AI call fails fast; the flow surfaces the error and stays applicable-free.
+      await generate.click();
+      await expect(page.getByTestId('plot-revise-error')).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByTestId('plot-revise-apply')).toBeDisabled();
+      await page.screenshot({ path: '.playwright-mcp/plot-revise-flow.png' });
+      // Regression for the document-level Escape fallback (Modal.vue 2026-08-25):
+      // the failed call replaced the focused button (v-if flip) so focus fell
+      // back to <body> — Escape must STILL close the modal.
+      await page.keyboard.press('Escape');
+      await expect(page.locator('.modal-backdrop')).toHaveCount(0);
+
+      // ── Node-detail AI rewrite (saved nodes): shown for unfinished nodes, hidden for history ──
+      const row = (title: string) => page.getByTestId('plot-node-item').filter({ hasText: title });
+      await row('道德抉择').click(); // pending
+      await expect(page.getByTestId('plot-detail-ai-rewrite')).toBeVisible();
+      await page.getByTestId('plot-detail-ai-rewrite').click();
+      const aiRun = page.getByTestId('plot-detail-ai-run');
+      await expect(aiRun).toBeDisabled();
+      await page.getByTestId('plot-detail-ai-request').fill('把它改成误会');
+      await expect(aiRun).toBeEnabled();
+      await aiRun.click(); // offline → error surfaces inside the block
+      await expect(page.locator('.detail-ai .decompose-error')).toBeVisible({ timeout: 10_000 });
+      await page.locator('.modal-close').click();
+      await row('模拟考异常').click(); // active (in progress) → entry shown too (D1)
+      await expect(page.getByTestId('plot-detail-ai-rewrite')).toBeVisible();
+      await page.locator('.modal-close').click();
+      await row('组建学习小组').click(); // completed → no AI rewrite entry
+      await expect(page.getByTestId('plot-detail-ai-rewrite')).toHaveCount(0);
+    });
+
+  test('lookahead injection reaches the assembled prompt: the focus directive previews the next node (plot-arc-revise-extend P1; snapshot is written before the offline AI call fails)',
+    { tag: ['@regression', '@plot', '@plot-threads'] },
+    async ({ page, gameShell }) => {
+      test.slow(); // full main-round assembly + offline failure under parallel workers
+      await seedSave(page, { tree: treeWithThreads() });
+      await enterSeededGame(page);
+
+      // Submit a round: the AI call fails offline, but context-assembly emits
+      // its prompt snapshot BEFORE the call (ui:debug-prompt), so the panel has data.
+      await page.locator('.message-input').fill('继续复习');
+      await page.locator('.send-btn').click();
+      await page.waitForTimeout(1500); // let assembly run; the call itself errors out
+
+      await gameShell.goTab('prompt-assembly');
+      // Focus thread arc_a: active node 模拟考异常, next pending 道德抉择.
+      await expect(page.getByText('【下一节点（预告）】《道德抉择》').first()).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByText('但本回合不要让它发生').first()).toBeVisible();
+      await page.screenshot({ path: '.playwright-mcp/plot-lookahead-assembly.png' });
+    });
+
   test('timeline view: lanes, focus, scheduled hint, gate badge, focus switch, axis toggle',
     { tag: ['@regression', '@plot', '@plot-threads'] },
     async ({ page, gameShell }) => {
