@@ -34,9 +34,15 @@ const VALID_ESCAPE_CHARS = '"\\/bfnrtu';
  * 产品要求，玩家文本含英文引号是常态，所以这必须在解析器层治好，不能指望模型转义。
  *
  * 启发式（业界通行的 LLM quote-healing）：字符串内部遇到 `"` 时向后看第一个非空白
- * 字符——是 `,` `}` `]` `:` 或到达结尾 → 视为真正的闭引号；否则视为内容，改写成 `\"`。
- * 只作为解析失败后的最后一搏调用（合法 JSON 走不到这里），最坏情况是依旧解析失败，
- * 不会把本来能解析的输入改坏。
+ * 字符——是 `}` `]` `:` 或到达结尾 → 视为真正的闭引号；是 `,` 时再多看一步，逗号后的
+ * 非空白字符必须是合法的 JSON 值起始（`"` `{` `[` 数字 `-` t/f/n）才算闭合，否则
+ * （如 `他说"你好", 然后走了`）判为内容引号。否则视为内容，改写成 `\"`。
+ *
+ * 诚实的边界说明（2026-08-25 review）：这是启发式，不是解析器。本来就能解析的输入
+ * 绝不会被改坏（只在两级解析都失败后调用）；但对**本来就非法**的输入，极端形态
+ * （内容引号后紧跟 ASCII 逗号 + 恰似 JSON 值起始的内容）理论上可能愈合出"合法但
+ * 语义损坏"的结果而非解析失败。证据字段有下游逐字校验门兜底（损坏必被拒）；
+ * commands 无此门，属已知残余风险——若真实出现，应升级为按字段作用域的愈合。
  */
 export function healUnescapedQuotes(src: string): string {
   if (!src || typeof src !== 'string') return src;
@@ -67,7 +73,16 @@ export function healUnescapedQuotes(src: string): string {
       let j = i + 1;
       while (j < n && /\s/.test(src[j])) j++;
       const next = j < n ? src[j] : '';
-      if (next === '' || next === ',' || next === '}' || next === ']' || next === ':') {
+      let closes = next === '' || next === '}' || next === ']' || next === ':';
+      if (!closes && next === ',') {
+        // A real closing-quote-then-comma is followed by the NEXT value or key —
+        // which must start like JSON (`"` `{` `[` digit `-` true/false/null).
+        // Content like `他说"你好", 然后走了` fails this and stays inside the string.
+        let k = j + 1;
+        while (k < n && /\s/.test(src[k])) k++;
+        closes = k < n && /["{[\-0-9tfn]/.test(src[k]);
+      }
+      if (closes) {
         inString = false;
         out += c;
       } else {

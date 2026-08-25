@@ -156,3 +156,19 @@ describe('healUnescapedQuotes', () => {
     expect(healUnescapedQuotes(src)).toBe(src);
   });
 });
+
+describe('healUnescapedQuotes · premature-closure guard (review of 9226845, Important #1)', () => {
+  it('content quote followed by ASCII comma + prose does NOT close the string', () => {
+    // Reviewer's hand-traced pathological shape: without the comma lookahead the
+    // healer closed the string at 你好", leaving bare CJK tokens outside.
+    const src = '{"evidence": "他说"你好", 然后走了", "kind":"character"}';
+    const obj = JSON.parse(healUnescapedQuotes(src)) as { evidence: string; kind: string };
+    expect(obj.evidence).toBe('他说"你好", 然后走了');
+    expect(obj.kind).toBe('character');
+  });
+
+  it('a genuine close-quote + comma + next value still closes', () => {
+    const src = '{"a":"x", "n": 5, "arr": [1], "t": true}';
+    expect(healUnescapedQuotes(src)).toBe(src);
+  });
+});

@@ -343,3 +343,39 @@ describe('ResponseRepairStage · Canon Capture provenance gate (end-to-end)', ()
     expect(systemPromptOf(withoutField)).not.toContain('setting_updates');
   });
 });
+
+describe('ResponseRepairStage · split-gen text is never clobbered (review of 9226845, Important #2)', () => {
+  it('real step1 shape ({"text":...}, no <正文> tag): repair-model text is DISCARDED, step1 narrative survives', async () => {
+    // Production splitGenStep1 outputs {"text":"..."} — extractNarrativeFromWrapper
+    // finds no <正文> and returns null, so before this guard the repair model's
+    // fabricated text silently replaced step1's genuinely good narrative.
+    const service = makeAIService(JSON.stringify({
+      text: '修复模型编造的正文，绝不能出现在最终输出里',
+      commands: [],
+      action_options: ['a', 'b', 'c'],
+    }));
+    const step1Raw = '{"text":"夜色沉沉，她抱着外衣走进宿舍楼。"}';
+    const out = await new ResponseRepairStage(service as never, new ResponseParser()).execute(makeCtx({
+      rawResponse: step1Raw,
+      parsedResponse: {
+        text: '夜色沉沉，她抱着外衣走进宿舍楼。',
+        commands: [], actionOptions: [], parseOk: false, raw: step1Raw,
+      } as AIResponse,
+      meta: { rawResponseStep2: '{"commands":[{"action":"set"' },
+    }));
+    expect(out.parsedResponse?.text).toBe('夜色沉沉，她抱着外衣走进宿舍楼。');
+    expect(out.parsedResponse?.actionOptions).toEqual(['a', 'b', 'c']); // structure still rescued
+  });
+
+  it('single-call fallback text recovery is unchanged', async () => {
+    const service = makeAIService(JSON.stringify({
+      text: '从 AI 救援得到的叙事', commands: [], action_options: ['x', 'y', 'z'],
+    }));
+    const raw = '{broken no tag';
+    const out = await new ResponseRepairStage(service as never, new ResponseParser()).execute(makeCtx({
+      rawResponse: raw,
+      parsedResponse: { text: raw, commands: [], actionOptions: [], parseOk: false, raw } as AIResponse,
+    }));
+    expect(out.parsedResponse?.text).toBe('从 AI 救援得到的叙事');
+  });
+});

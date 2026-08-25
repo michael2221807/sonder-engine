@@ -22,9 +22,11 @@
  *   - 在 CommandExecution 前拿到 commands 也很重要，否则本回合的时间 /
  *     精力 / NPC 状态全部不推进，用户以为发生了什么但 save 里什么都没变。
  *
- * 不处理：split-gen 第 2 步的 parseOk=false。分步生成的 step2 专门生成
- * 结构化字段，它的格式错误不是这个 stage 的范围（那需要 AICallStage 里
- * 就做 retry，不是事后补救）。
+ * split-gen（2026-08-25 起）：也处理。分步合并会把 step2 的 parseOk 传上来；
+ * 本 stage 用 meta.rawResponseStep2 作为结构修复的原料与 setting_updates
+ * provenance 门的依据（step1 的 raw 只用于正文抢救——它是叙事，不含结构）。
+ * 分步模式下 repair 模型返回的 text 一律丢弃：step1 的正文本来就是好的，
+ * 而 step2 原料里结构上不存在叙事，任何 text 输出都只能是编造。
  */
 import type { PipelineStage, PipelineContext } from '../types';
 import type { AIService } from '../../ai/ai-service';
@@ -122,8 +124,8 @@ export class ResponseRepairStage implements PipelineStage {
     // would reinvent commands from prose and the provenance gate would read a raw that
     // can never contain setting_updates. Round-62 incident (2026-08-25).
     const metaStep2Raw = ctx.meta.rawResponseStep2;
-    const structureRaw =
-      typeof metaStep2Raw === 'string' && metaStep2Raw.trim() ? metaStep2Raw : ctx.rawResponse;
+    const usingStep2Raw = typeof metaStep2Raw === 'string' && metaStep2Raw.trim().length > 0;
+    const structureRaw = usingStep2Raw ? (metaStep2Raw as string) : ctx.rawResponse;
 
     // Step 1: 正文抢救 —— 零成本（narrative always lives in ctx.rawResponse）
     let recoveredText: string | null = extractNarrativeFromWrapper(ctx.rawResponse);
@@ -199,8 +201,12 @@ export class ResponseRepairStage implements PipelineStage {
         if (wantSettingUpdates && repaired.settingUpdates) {
           recoveredSettingUpdates = repaired.settingUpdates;
         }
-        // If <正文> wasn't found but repair gave clean text, use it.
-        if (!recoveredText && repaired.text && repaired.text.trim()) {
+        // If <正文> wasn't found but repair gave clean text, use it — SINGLE-CALL ONLY.
+        // In split mode structureRaw is step2's JSON, which structurally contains no
+        // narrative: any `text` the repair model returns is fabricated, and letting it
+        // through would silently replace step1's genuinely good narrative (review of
+        // 9226845, Important #2). parsed.text (= step1's narrative) stays authoritative.
+        if (!usingStep2Raw && !recoveredText && repaired.text && repaired.text.trim()) {
           recoveredText = repaired.text;
         }
       } else {
