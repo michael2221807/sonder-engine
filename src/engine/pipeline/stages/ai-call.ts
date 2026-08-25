@@ -118,13 +118,27 @@ export class AICallStage implements PipelineStage {
     // 2026-04-11 (round 2): 加入反截断 + 输出格式铁律 —— 之前的 followup 只是
     // "请按 step2 规范输出..."，没有反截断保护，结果 commands/options 输出半截
     // 被切。现在显式要求完整输出 + 不允许省略 + 直接 JSON 不带解释。
+    //
+    // Canon Capture (2026-08-25): this followup is the LAST instruction the model reads,
+    // and an enumerated "必须全部给出" checklist here overrides the settingCapture system
+    // module buried tens of thousands of tokens earlier. Round-62 real-API incident: the
+    // checklist named four fields, the model emitted exactly those four, and the player's
+    // marked setting produced zero candidates (banner 0/0/0). On tagged rounds the field
+    // list MUST include setting_updates; on untagged rounds the text stays byte-identical
+    // to the pre-capture version (D6: no prompt delta when the feature is unused).
+    const captureActive = ctx.meta.settingCaptureActive === true;
     const STEP2_FOLLOWUP_USER =
       '请基于上面的叙事正文，输出 step2 的结构化数据。要求：\n\n' +
-      '1. **完整输出**：commands / action_options / mid_term_memory / knowledge_facts 四个字段必须全部给出，不得用 "(略)" / "(省略)" / "(略 N 条类似)" 之类敷衍，不得中途截断。\n' +
+      (captureActive
+        ? '1. **完整输出**：commands / action_options / mid_term_memory / knowledge_facts / setting_updates 五个字段必须全部给出，不得用 "(略)" / "(省略)" / "(略 N 条类似)" 之类敷衍，不得中途截断。\n'
+        : '1. **完整输出**：commands / action_options / mid_term_memory / knowledge_facts 四个字段必须全部给出，不得用 "(略)" / "(省略)" / "(略 N 条类似)" 之类敷衍，不得中途截断。\n') +
       '2. **action_options 必须 3-5 个**（按 `actionOptions` 或 `actionOptionsStory` 模块要求的长度），绝不可空数组或只给 1-2 个。\n' +
       '3. **commands 必须完整**：若本回合正文描述了多个状态变化（位置/时间/NPC/物品/体力/技能等），每条都要对应一条 command；不得合并省略。\n' +
-      '4. **格式铁律**：直接输出一个合法 JSON 对象 —— 无 ``` 代码围栏、无前后缀文字、无 `<thinking>` 标签。不重复或扩写正文（正文已由 step1 生成）。\n\n' +
-      '现在请输出这个 JSON 对象。';
+      '4. **格式铁律**：直接输出一个合法 JSON 对象 —— 无 ``` 代码围栏、无前后缀文字、无 `<thinking>` 标签。不重复或扩写正文（正文已由 step1 生成）。\n' +
+      (captureActive
+        ? '5. **setting_updates 绝不可省略**：本回合玩家输入包含设定标记，必须按系统提示词中「设定提取协议」的工作方法，把标记内容吃透并拆解为一条或多条独立设定，输出到 setting_updates 数组（每条含 kind / statement / evidence / anchors / entities）。漏掉该字段等于丢弃玩家明确要求记录的设定。\n'
+        : '') +
+      '\n现在请输出这个 JSON 对象。';
     // Sprint CoT-3: inject step1's thinking as context for step2 (PRINCIPLES §3.10, §13.7)
     // Step2 OUTPUT still forbids <thinking> (STEP2_FOLLOWUP_USER rule unchanged).
     // This is INPUT context only — CoT reasoning informs better action-option generation.

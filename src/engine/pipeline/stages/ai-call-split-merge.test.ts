@@ -94,6 +94,49 @@ describe('AICallStage · split-gen merge whitelist', () => {
     expect(out.parsedResponse?.settingUpdates).toBeUndefined();
   });
 
+  it('tagged round: the step2 followup checklist DEMANDS setting_updates', async () => {
+    // Round-62 real-API incident (2026-08-25): the followup is the model's final
+    // instruction and enumerated only four required fields, so the model omitted
+    // setting_updates entirely — zero candidates, banner 0/0/0. The checklist must
+    // name the field whenever the round carries a tag.
+    const sent: GenerateOptions[] = [];
+    const service = {
+      generate: async (opts: GenerateOptions): Promise<string> => {
+        sent.push(opts);
+        return opts.generationId?.endsWith('_step2') ? STEP2 : STEP1;
+      },
+    } as unknown as AIService;
+
+    const ctx = splitCtx();
+    (ctx.meta as Record<string, unknown>)['settingCaptureActive'] = true;
+    await new AICallStage(service, new ResponseParser()).execute(ctx);
+
+    const step2Call = sent.find((o) => o.generationId?.endsWith('_step2'));
+    const followup = step2Call?.messages[step2Call.messages.length - 1];
+    expect(followup?.role).toBe('user');
+    expect(followup?.content).toContain('setting_updates');
+    expect(followup?.content).toContain('五个字段');
+    expect(followup?.content).toContain('设定提取协议');
+  });
+
+  it('untagged round: the followup is byte-identical to the pre-capture text (D6)', async () => {
+    const sent: GenerateOptions[] = [];
+    const service = {
+      generate: async (opts: GenerateOptions): Promise<string> => {
+        sent.push(opts);
+        return opts.generationId?.endsWith('_step2') ? STEP2 : STEP1;
+      },
+    } as unknown as AIService;
+
+    await new AICallStage(service, new ResponseParser()).execute(splitCtx());
+
+    const step2Call = sent.find((o) => o.generationId?.endsWith('_step2'));
+    const followup = step2Call?.messages[step2Call.messages.length - 1];
+    expect(followup?.content).not.toContain('setting_updates');
+    expect(followup?.content).toContain('四个字段必须全部给出');
+    expect(followup?.content).toContain('现在请输出这个 JSON 对象。');
+  });
+
   it('single-call mode carries the field too', async () => {
     const single = JSON.stringify({
       text: 'n',

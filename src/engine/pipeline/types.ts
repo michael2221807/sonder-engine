@@ -76,6 +76,13 @@ export interface PipelineMeta {
   splitStep2Messages?: AIMessage[];
   /** 第 2 步消息来源标签 */
   splitStep2Sources?: string[];
+  /**
+   * Canon Capture：本回合玩家输入含设定标记且功能开启（ContextAssembly 写）。
+   * AICallStage 读它来把 `setting_updates` 加进 step2 收尾指令的必出字段清单 ——
+   * 2026-08-25 事故：收尾指令只列四个字段，模型照单省略 setting_updates，
+   * 玩家标记的设定整回合零候选（横幅 0/0/0）。
+   */
+  settingCaptureActive?: boolean;
   /** 思维链捕获开关 */
   cotEnabled?: boolean;
   /** 将 step1 thinking 注入 step2 */
