@@ -826,6 +826,12 @@ function handleComposerSend(text: string): void {
   const trimmed = text.trim();
   if (!trimmed || isGenerating.value) return;
 
+  // Safety net: mirror the sent input to the system clipboard so the player
+  // can recover it even if the round fails. Failure must never block the send.
+  void writeClipboard(trimmed).catch((err: unknown) => {
+    console.debug('[MainGamePanel] clipboard mirror on send failed', err);
+  });
+
   _lastSentInput = trimmed;
   localStorage.setItem(_PENDING_INPUT_KEY, trimmed);
 
@@ -835,24 +841,31 @@ function handleComposerSend(text: string): void {
 }
 
 /**
- * Fill an action option into the input textarea.
- * The user can review and edit the text before sending.
- * This preserves player agency (Polanyi design principle).
+ * Write text to the system clipboard (async Clipboard API with a hidden
+ * textarea + execCommand fallback). Throws on failure; callers decide
+ * whether that surfaces as a toast or stays silent.
  */
-async function copyText(text: string): Promise<void> {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-    } else {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
+async function writeClipboard(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    try {
       ta.select();
       document.execCommand('copy');
+    } finally {
       document.body.removeChild(ta);
     }
+  }
+}
+
+async function copyText(text: string): Promise<void> {
+  try {
+    await writeClipboard(text);
     eventBus?.emit('ui:toast', { type: 'success', message: t('mainGame.toast.copiedToClipboard') });
   } catch {
     eventBus?.emit('ui:toast', { type: 'error', message: t('mainGame.toast.copyFailed') });
