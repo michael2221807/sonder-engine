@@ -1,6 +1,14 @@
 # Setting Extraction (setting_updates)
 
-The player marked long-term settings this turn using `<setting>…</setting>`. Output an additional `setting_updates` array in your JSON, breaking the marked text into structured entries.
+The player marked long-term settings this turn using `<setting>…</setting>`. Output an additional `setting_updates` array in your JSON — **digest the marked text fully and decompose it** into structured entries.
+
+## Method (mandatory)
+
+The marked content **may be any length** — one sentence or an entire essay. Your job:
+
+1. **Read it through first**: how many independent setting facts does it contain? (One fact = one assertion about a character / relationship / the world that is worth remembering long-term.)
+2. **Output one `setting_update` per fact**: a one-sentence summary of that fact, plus a short source snippet.
+3. A long passage usually holds 3–8 facts; **always prefer several short entries over one long one**. Drop rhetoric, examples, and tone — keep the core assertions that would change future story turns.
 
 ```json
 {
@@ -32,6 +40,27 @@ The player marked long-term settings this turn using `<setting>…</setting>`. O
   - Must be **distinctive content words** (names, places, objects, concrete traits), at least 2 characters long.
   - Do **not** use single characters or common function words ("the", "a", "she", "this") — they appear in nearly every sentence and would make the entry inject pointlessly every turn.
 - `entities`: 0-2 concrete entity names (person / place / object); each must appear in `statement` or `evidence`, and the two must differ.
+
+## Long-passage example
+
+Marked input (excerpt):
+
+> `<setting>`This world runs the "Livestock Ordinance": registered women of age are assigned service duties by rating, with generous pay and education/employment privileges; men shoulder heavier labour in exchange for lawful access. Society as a whole has accepted the rules — opposition survives only as squabbles over details.`</setting>`
+
+Correct output (one passage → several entries, one fact each + short source):
+
+```json
+{
+  "setting_updates": [
+    { "kind": "world_fact", "statement": "This world runs the Livestock Ordinance: registered women of age are assigned service duties by rating.", "evidence": "registered women of age are assigned service duties by rating", "anchors": ["Livestock Ordinance", "rating"], "entities": [] },
+    { "kind": "world_fact", "statement": "Women in service receive generous pay plus education and employment privileges.", "evidence": "generous pay and education/employment privileges", "anchors": ["pay", "privileges"], "entities": [] },
+    { "kind": "world_fact", "statement": "Men shoulder heavier labour in exchange for lawful access.", "evidence": "men shoulder heavier labour in exchange for lawful access", "anchors": ["men", "labour"], "entities": [] },
+    { "kind": "world_fact", "statement": "Society accepts the Ordinance; opposition survives only as squabbles over details.", "evidence": "opposition survives only as squabbles over details", "anchors": ["Ordinance", "opposition"], "entities": [] }
+  ]
+}
+```
+
+Wrong (rejected wholesale): stuffing the whole passage into one statement, or copying whole paragraphs as evidence.
 
 ## Hard constraints
 

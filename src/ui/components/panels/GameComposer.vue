@@ -4,6 +4,8 @@ import { computed, nextTick, onBeforeUnmount, ref } from 'vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import MicInputButton from '@/ui/components/shared/MicInputButton.vue';
 import SettingTagButton from '@/ui/components/shared/SettingTagButton.vue';
+import { eventBus } from '@/engine/core/event-bus';
+import { scanSettingTags, SETTING_QUALITY_WARN_CHARS } from '@/engine/prompt/setting-tag-scanner';
 import AddLexiconTermButton from '@/ui/components/shared/AddLexiconTermButton.vue';
 
 const ACTION_OPTIONS_COLLAPSED_KEY = 'aga_action_options_collapsed';
@@ -57,6 +59,21 @@ function resetTextareaHeight(): void {
 function sendMessage(): void {
   const text = userInput.value.trim();
   if (!text || props.isGenerating) return;
+
+  // Soft advisory only — NEVER a gate (PM decision 2026-08-25). A very long marked
+  // setting still generates normally; the model just has more facts to decompose while
+  // also writing the narrative, so quality may dip. The player can rollback and retry.
+  try {
+    const tagChars = scanSettingTags(text).segments
+      .reduce((n, seg) => n + seg.rawText.length, 0);
+    if (tagChars > SETTING_QUALITY_WARN_CHARS) {
+      eventBus.emit('ui:toast', {
+        type: 'info',
+        i18nKey: 'mainGame.settingTag.longWarn',
+        duration: 6000,
+      });
+    }
+  } catch { /* advisory only — a scanner hiccup must never block sending */ }
 
   userInput.value = '';
   resetTextareaHeight();

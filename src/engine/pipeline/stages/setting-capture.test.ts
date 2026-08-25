@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SettingCaptureStage, matchEvidenceInSegments, classifyEvidenceFailure } from './setting-capture';
+import { SettingCaptureStage, matchEvidenceInSegments, classifyEvidenceFailure, normalizeLoose } from './setting-capture';
 import type { SettingCaptureResult } from './setting-capture';
 import { DEFAULT_ENGINE_PATHS } from '../types';
 import type { PipelineContext } from '../types';
@@ -561,5 +561,79 @@ describe('SettingCaptureStage — persisted last-round record (acceptance fix 20
     await run(sm, makeCtx({ originalUserInput: `${open}第二回${close}` }));
     expect(lastOf(sm)?.round).toBe(2);
     expect(lastOf(sm)?.accepted).toBe(0);
+  });
+});
+
+describe('loose evidence tier — punctuation must not veto real quotes (structural fix 2026-08-25)', () => {
+  // The round-62 failure mode: over a long Chinese passage the model drifts on
+  // punctuation alone (half-width comma, dropped quotes, … vs ……) and the strict
+  // verbatim tier killed every candidate as no_evidence — punishing the player for
+  // marking a LONG setting, the exact case the feature exists for.
+
+  it('a half-width comma no longer kills the match', () => {
+    const { segments } = scanSettingTags(`${open}女性是一种很媚强很善变的生物，我不能否认${close}`);
+    const hit = matchEvidenceInSegments('女性是一种很媚强很善变的生物, 我不能否认', segments);
+    expect(hit).not.toBeNull();
+    // The stored quote is the PLAYER's original — full-width comma preserved.
+    expect(hit!.originalText).toContain('，');
+  });
+
+  it('dropped quote marks no longer kill the match', () => {
+    const { segments } = scanSettingTags(`${open}她说："花这么多钱去保养还是要被操喷。"这就是现实${close}`);
+    const hit = matchEvidenceInSegments('花这么多钱去保养还是要被操喷', segments);
+    expect(hit).not.toBeNull();
+  });
+
+  it('an all-punctuation "quote" must NOT match everything', () => {
+    const { segments } = scanSettingTags(`${open}林月从小怕水${close}`);
+    expect(matchEvidenceInSegments('。。。！！', segments)).toBeNull();
+  });
+
+  it('a too-short loose needle must NOT sneak through', () => {
+    // 3 kept chars could land anywhere in a long passage; the tier requires ≥4.
+    const { segments } = scanSettingTags(`${open}这个世界的月亮有两颗，海是黑色的${close}`);
+    expect(matchEvidenceInSegments('（月）', segments)).toBeNull();
+  });
+
+  it('the loose tier still refuses text from OUTSIDE the segment', () => {
+    const { segments } = scanSettingTags(`标记外的重要内容。${open}标记内的设定${close}`);
+    expect(matchEvidenceInSegments('标记外的重要内容', segments)).toBeNull();
+  });
+
+  it('the loose tier still refuses cross-segment stitching, and classifies it honestly', () => {
+    const { segments } = scanSettingTags(`${open}林月${close}间隔${open}怕水${close}`);
+    expect(matchEvidenceInSegments('林月，怕水', segments)).toBeNull();
+    expect(classifyEvidenceFailure('林月，怕水', segments)).toBe('cross_segment');
+  });
+
+  it('evidence deep inside a >1200-char passage now verifies (domain cap raised to 4000)', () => {
+    const filler = '这个世界的背景设定非常复杂。'.repeat(100); // 1400 chars
+    const tail = '青云城的城门每逢子时关闭';
+    const { segments } = scanSettingTags(`${open}${filler}${tail}${close}`);
+    expect(segments[0].rawText.length).toBeGreaterThan(1200);
+    const hit = matchEvidenceInSegments(tail, segments);
+    expect(hit).not.toBeNull();
+  });
+
+  it('end-to-end: a punctuation-drifted candidate is ACCEPTED and stores the original', async () => {
+    const { sm } = createMockStateManager({ 元数据: { 回合序号: 62 } });
+    const r = await run(sm, makeCtx({
+      originalUserInput: `${open}女性们也逐渐开始收到政策带来的利好，譬如说升学优惠${close}`,
+      settingUpdates: [{
+        kind: 'world_fact',
+        statement: '女性因政策获得升学优惠等利好。',
+        evidence: '女性们也逐渐开始收到政策带来的利好, 譬如说升学优惠', // 半角逗号漂移
+        anchors: ['政策', '升学优惠'],
+        entities: [],
+      }],
+    }));
+    expect(r.accepted).toHaveLength(1);
+    const stored = capturedEntries(sm)[0].capturedSetting!.evidence;
+    expect(stored).toContain('，'); // player's own punctuation survives
+  });
+
+  it('normalizeLoose strips punctuation, symbols, whitespace and case', () => {
+    expect(normalizeLoose('她说："Ｈello, 世界！"')).toBe('她说hello世界');
+    expect(normalizeLoose('。。。')).toBe('');
   });
 });

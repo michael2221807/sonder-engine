@@ -205,6 +205,7 @@
   "mainGame.settingTag.buttonAria": "Mark as setting",
   "mainGame.settingTag.tooltip": "Mark the selected text as a long-term setting — the AI follows it this turn and remembers it from now on",
   "mainGame.settingTag.tooltipDisabled": "World book is off, so settings will not be recorded",
+  "mainGame.settingTag.longWarn": "That's a long marked setting — decomposition quality may dip. Generating as normal; if the result disappoints, roll back and resend.",
 
   "mainGame.settingCapture.recorded": "Recorded {count} setting(s)",
   "mainGame.settingCapture.recordedPartial": "Recorded {count} · {failed} could not be recorded",

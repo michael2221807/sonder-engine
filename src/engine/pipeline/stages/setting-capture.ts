@@ -177,6 +177,48 @@ function asStringArray(value: unknown): string[] | null {
  * The stored evidence is sliced from the player's ORIGINAL text (not the model's
  * normalized echo), because the panel promises to show "the player's own words".
  */
+/**
+ * Punctuation-insensitive normalization — the SECOND matching tier.
+ *
+ * Why it exists (2026-08-25, the structural fix): the strict tier demands a verbatim
+ * contiguous substring, and over a long Chinese passage the model routinely drifts on
+ * punctuation alone — a half-width comma for a full-width one, dropped quote marks,
+ * "……" vs "…". Each such drift used to kill the candidate as `no_evidence`, which
+ * punished the player for marking a LONG setting — the exact case the feature is for.
+ *
+ * Safety is unchanged in kind: the quote must still be a contiguous substring of ONE
+ * segment after the same transform. Ignoring punctuation cannot fabricate content the
+ * player never wrote — it only stops punctuation from vetoing content they did write.
+ */
+export function normalizeLoose(text: string): string {
+  if (typeof text !== 'string') return '';
+  return text.normalize('NFKC').replace(/[\p{P}\p{S}\s]/gu, '').toLowerCase();
+}
+
+/**
+ * Map a range in the LOOSE-normalized text back to the raw text.
+ *
+ * Builds an explicit loose-index → raw-index table (each kept character records where
+ * it came from), so the recovered quote is the player's original writing including its
+ * own punctuation. Falls back to null when the range cannot be mapped.
+ */
+function sliceOriginalForLooseRange(
+  raw: string,
+  looseStart: number,
+  looseLength: number,
+): string | null {
+  const map: number[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i].normalize('NFKC');
+    if (/[\p{P}\p{S}\s]/u.test(ch)) continue;
+    for (let k = 0; k < ch.length; k++) map.push(i);
+  }
+  const endIdx = looseStart + looseLength - 1;
+  if (looseStart < 0 || endIdx >= map.length) return null;
+  const sliced = raw.slice(map[looseStart], map[endIdx] + 1).trim();
+  return sliced || null;
+}
+
 export function matchEvidenceInSegments(
   evidence: string,
   segments: readonly SettingTagSegment[],
@@ -184,9 +226,29 @@ export function matchEvidenceInSegments(
   const needle = normalizeForEvidence(evidence);
   if (!needle) return null;
 
+  // Tier 2 needle, computed once. Empty when the evidence is all punctuation —
+  // such a "quote" locates nothing and must not match everything.
+  const needleLoose = normalizeLoose(evidence);
+
   for (const segment of segments) {
     const at = segment.normalizedText.indexOf(needle);
-    if (at === -1) continue;
+    if (at === -1) {
+      // ── Tier 2: punctuation-insensitive, same-segment, still contiguous ──
+      if (needleLoose.length >= 4) {
+        const segLoose = normalizeLoose(segment.rawText);
+        const looseAt = segLoose.indexOf(needleLoose);
+        if (looseAt !== -1) {
+          const sliced = sliceOriginalForLooseRange(segment.rawText, looseAt, needleLoose.length);
+          // Verify the recovery round-trips; a wide fallback is fine, a wrong one is not.
+          const trustworthy = sliced !== null && normalizeLoose(sliced).includes(needleLoose);
+          return {
+            segmentIndex: segment.index,
+            originalText: trustworthy && sliced ? sliced : segment.rawText.trim(),
+          };
+        }
+      }
+      continue;
+    }
 
     const sliced = sliceOriginalForNormalizedRange(segment, at, needle.length);
     // VERIFY before trusting the walk below. `normalizeForEvidence` normalizes the
@@ -266,7 +328,14 @@ export function classifyEvidenceFailure(
   const needle = normalizeForEvidence(evidence);
   if (!needle) return 'no_evidence';
   const stitched = segments.map((sgm) => sgm.normalizedText).join('');
-  return stitched.includes(needle) ? 'cross_segment' : 'no_evidence';
+  if (stitched.includes(needle)) return 'cross_segment';
+  // Mirror the matcher's loose tier so the label stays honest at both strictness levels.
+  const needleLoose = normalizeLoose(evidence);
+  if (needleLoose.length >= 4) {
+    const stitchedLoose = segments.map((sgm) => normalizeLoose(sgm.rawText)).join('');
+    if (stitchedLoose.includes(needleLoose)) return 'cross_segment';
+  }
+  return 'no_evidence';
 }
 
 /** Every token must actually appear in the statement or the evidence. */

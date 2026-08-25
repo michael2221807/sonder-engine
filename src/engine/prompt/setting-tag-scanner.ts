@@ -61,7 +61,26 @@ export interface ScanSettingTagsOptions {
 
 export const DEFAULT_SETTING_TAG_NAMES: readonly string[] = ['设定', 'setting'];
 export const MAX_SETTING_SEGMENTS = 5;
-export const MAX_SETTING_TOTAL_CHARS = 1200;
+/**
+ * Combined evidence-domain cap across a round's segments.
+ *
+ * This does NOT limit what the model reads — the tagged text travels to the model
+ * inside `userInput` regardless. It only bounds how much text the engine will run
+ * evidence verification against. 1200 was too tight for the product promise that a
+ * marked setting may be ANY length: everything past the cap had its summaries
+ * auto-rejected as `no_evidence`, punishing the player for writing a long passage.
+ * 4000 covers any realistic marked passage while still stopping a paste-bomb.
+ */
+export const MAX_SETTING_TOTAL_CHARS = 4000;
+
+/**
+ * Soft advisory line, NOT a gate. Past this combined tag length the model's
+ * decomposition quality tends to drop (more facts to keep straight while also writing
+ * the narrative), so the composer shows a heads-up toast on send — generation itself
+ * is never blocked, and the player can always rollback and regenerate (PM decision
+ * 2026-08-25: the marked setting is part of the story; length must not stop a turn).
+ */
+export const SETTING_QUALITY_WARN_CHARS = 1000;
 
 /**
  * Normalize text for matching: NFKC (so full-width punctuation and half-width forms

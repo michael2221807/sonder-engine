@@ -205,6 +205,7 @@
   "mainGame.settingTag.buttonAria": "标记为设定",
   "mainGame.settingTag.tooltip": "把选中的文字标记为长期设定，AI 本回合就会遵守，并且以后一直记得",
   "mainGame.settingTag.tooltipDisabled": "世界书已关闭，设定不会被记录",
+  "mainGame.settingTag.longWarn": "标记的设定较长，AI 拆解质量可能下降；照常生成中——若结果不满意，可回退本回合重新发送。",
 
   "mainGame.settingCapture.recorded": "已记住 {count} 条设定",
   "mainGame.settingCapture.recordedPartial": "已记住 {count} 条设定 · 另有 {failed} 条没记下",
