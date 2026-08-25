@@ -25,7 +25,6 @@ dist-ssr
 *.sw?
 
 # AI tool configs (local only)
-.cursor/
 .agents/
 .claude/
 .agent-bridge/

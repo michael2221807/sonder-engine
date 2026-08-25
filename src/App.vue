@@ -4,7 +4,7 @@
  *
  * Toast 监听 `eventBus` 的 `ui:toast`（如 GameVariablePanel 保存后提示），
  * 必须在此常驻挂载，否则子路由切换后无容器接收通知。
- * 对应 `implementation-standards`：错误/提示不吞、需对用户可见。
+ * 遵循项目错误处理规范：错误/提示不吞、需对用户可见。
  */
 import Toast from '@/ui/components/common/Toast.vue';
 import CloudSyncManager from '@/ui/components/cloud/CloudSyncManager.vue';
