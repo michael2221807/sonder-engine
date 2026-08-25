@@ -132,9 +132,17 @@ describe('AICallStage · split-gen merge whitelist', () => {
 
     const step2Call = sent.find((o) => o.generationId?.endsWith('_step2'));
     const followup = step2Call?.messages[step2Call.messages.length - 1];
-    expect(followup?.content).not.toContain('setting_updates');
-    expect(followup?.content).toContain('四个字段必须全部给出');
-    expect(followup?.content).toContain('现在请输出这个 JSON 对象。');
+    // D6 is a BYTE-identity invariant ("无 tag 回合提示词一字不变"), so this must be an
+    // exact-string comparison — a substring check would let a whitespace regression
+    // through. This literal is the pre-capture followup, verbatim.
+    expect(followup?.content).toBe(
+      '请基于上面的叙事正文，输出 step2 的结构化数据。要求：\n\n' +
+      '1. **完整输出**：commands / action_options / mid_term_memory / knowledge_facts 四个字段必须全部给出，不得用 "(略)" / "(省略)" / "(略 N 条类似)" 之类敷衍，不得中途截断。\n' +
+      '2. **action_options 必须 3-5 个**（按 `actionOptions` 或 `actionOptionsStory` 模块要求的长度），绝不可空数组或只给 1-2 个。\n' +
+      '3. **commands 必须完整**：若本回合正文描述了多个状态变化（位置/时间/NPC/物品/体力/技能等），每条都要对应一条 command；不得合并省略。\n' +
+      '4. **格式铁律**：直接输出一个合法 JSON 对象 —— 无 ``` 代码围栏、无前后缀文字、无 `<thinking>` 标签。不重复或扩写正文（正文已由 step1 生成）。\n\n' +
+      '现在请输出这个 JSON 对象。',
+    );
   });
 
   it('single-call mode carries the field too', async () => {
