@@ -571,6 +571,19 @@ export class ContextAssemblyStage implements PipelineStage {
           const s2 = this.promptAssembler.assemble(step2Flow, step2Vars, chatHistory);
           splitStep2Messages = s2.messages;
           splitStep2Sources = s2.messageSources;
+          // The current round's player input, verbatim. The legacy path always gave
+          // step2 this message; the builder path dropped it, leaving step2 with only
+          // step1's RETELLING of the input. Round-62 incident (2026-08-25): the
+          // settingCapture protocol demands evidence quoted verbatim from the tagged
+          // input — with the original nowhere in context, the model could only
+          // paraphrase from step1's thinking, and every candidate died in the evidence
+          // gate ("引文与标记原文对不上×6"). Appended as `user` so the final shape
+          // stays alternating: user(input) → assistant(step1) → user(followup).
+          splitStep2Messages.push({
+            role: 'user',
+            content: `<玩家输入>\n${ctx.userInput}\n</玩家输入>`,
+          });
+          splitStep2Sources.push('current_input');
         }
       }
 
