@@ -71,6 +71,7 @@ function isCaptured(book: WorldBook | null | undefined): boolean {
 }
 
 const selectedBook = computed(() => allBooks.value.find((b) => b.id === selectedBookId.value) ?? null);
+const capturedBookCard = computed(() => captured.capturedBook.value ?? null);
 const selectedEntry = computed(() => selectedBook.value?.entries.find((e) => e.id === selectedEntryId.value) ?? null);
 const selectedIsCaptured = computed(() => isCaptured(selectedBook.value));
 
@@ -139,6 +140,36 @@ const manualDraftOpen = ref(false);
  * would be the thing that drifts.
  */
 const lastSkipped = ref<Array<{ entryId: string; reason: string }>>([]);
+
+/**
+ * Standing banner for the last capture round.
+ *
+ * The toast lives 10 seconds; a player reading a long reply misses it and then had no
+ * way to learn whether their marked setting was recorded (2026-08-21 real-API
+ * acceptance finding). This banner stays until the next tagged round overwrites it,
+ * and rolls back with the round like the data it describes.
+ */
+const lastCapture = computed(() => captured.lastResult.value);
+
+function rejectReasonLabel(reason: string): string {
+  const key = `prompt.settingCapture.rejectReason.${reason}`;
+  const label = t(key);
+  return label === key ? reason : label;
+}
+
+const lastCaptureRejectSummary = computed(() => {
+  const rec = lastCapture.value;
+  if (!rec || rec.rejected.length === 0) return '';
+  return rec.rejected
+    .map((r) => (r.count > 1 ? `${rejectReasonLabel(r.reason)}×${r.count}` : rejectReasonLabel(r.reason)))
+    .join(' · ');
+});
+
+/** Open the manual-add draft, optionally pre-filled with the last round's tag text. */
+function openManualDraft(prefill?: string): void {
+  if (prefill && !manualDraft.value.trim()) manualDraft.value = prefill;
+  manualDraftOpen.value = true;
+}
 
 /** Engram projection status of a captured entry (design §10.2). */
 function engramStatusOf(entry: WorldBookEntry): string {
@@ -480,27 +511,23 @@ const injectionModeOptions = computed(() => [
       </div>
     </div>
 
-    <div v-if="allBooks.length === 0" class="wb-empty">
-      {{ $t('prompt.worldbook.noBooks') }}
-    </div>
-
-    <div v-else class="wb-layout">
+    <div class="wb-layout">
       <!-- Left: Book list + Entry list -->
       <div class="wb-sidebar">
-        <!-- Book cards. Profile books and this save's captured book are shown in one
-             list (to the player they are all "world book") but grouped, because their
-             lifetimes differ: profile books follow the character, the captured book
-             belongs to this save alone and rolls back with the round. -->
-        <template v-for="(book, i) in allBooks" :key="book.id">
-          <h4
-            v-if="i === 0 && !isCaptured(book)"
-            class="wb-group-title"
-          >{{ $t('prompt.worldbook.groupProfile') }}</h4>
-          <h4
-            v-if="isCaptured(book) && !isCaptured(allBooks[i - 1])"
-            class="wb-group-title"
-          >{{ $t('prompt.worldbook.groupSlot') }}</h4>
+        <!-- Profile books and this save's captured book are shown in one sidebar (to
+             the player they are all "world book") but as two explicit groups, because
+             their lifetimes differ: profile books follow the character, the captured
+             book belongs to this save alone and rolls back with the round.
 
+             The 本存档 group renders UNCONDITIONALLY. When it was hidden until the first
+             accepted capture, a player whose round produced zero accepts had no way to
+             learn where settings would have gone, what went wrong, or to reach the
+             manual-add fallback (2026-08-21 acceptance finding). -->
+        <h4 class="wb-group-title">{{ $t('prompt.worldbook.groupProfile') }}</h4>
+        <div v-if="books.length === 0" class="wb-empty-entries">
+          {{ $t('prompt.worldbook.noProfileBooks') }}
+        </div>
+        <template v-for="book in books" :key="book.id">
           <div
             :class="['wb-book-card', {
               'wb-book-card--selected': selectedBookId === book.id,
@@ -536,11 +563,65 @@ const injectionModeOptions = computed(() => [
               </Tooltip>
             </div>
             <span class="wb-book-count">{{ book.entries.length }} {{ $t('prompt.worldbook.entries') }}</span>
-            <p v-if="isCaptured(book)" class="wb-book-hint">
-              {{ $t('prompt.worldbook.capturedBookHint') }}
-            </p>
           </div>
         </template>
+
+        <h4 class="wb-group-title">{{ $t('prompt.worldbook.groupSlot') }}</h4>
+
+        <!-- Last capture round — standing result, good or bad. -->
+        <div
+          v-if="lastCapture"
+          :class="['wb-capture-banner', lastCapture.accepted > 0
+            ? 'wb-capture-banner--ok'
+            : (lastCapture.noops > 0 && lastCapture.rejected.length === 0
+              ? 'wb-capture-banner--info'
+              : 'wb-capture-banner--warn')]"
+        >
+          <span class="wb-capture-banner__round">
+            {{ $t('prompt.settingCapture.lastRound', { round: lastCapture.round }) }}
+          </span>
+          <span class="wb-capture-banner__body">
+            {{ $t('prompt.settingCapture.lastSummary', {
+              accepted: lastCapture.accepted,
+              noops: lastCapture.noops,
+              rejected: lastCapture.rejected.reduce((n, r) => n + r.count, 0),
+            }) }}
+            <template v-if="lastCaptureRejectSummary">（{{ lastCaptureRejectSummary }}）</template>
+          </span>
+          <AgaButton
+            v-if="lastCapture.accepted === 0 && lastCapture.segmentsPreview"
+            variant="ghost" size="sm"
+            @click="openManualDraft(lastCapture.segmentsPreview)"
+          >{{ $t('mainGame.settingCapture.addManually') }}</AgaButton>
+        </div>
+
+        <!-- The captured book itself, or a placeholder that keeps the destination and
+             the manual-add entry point visible before anything has been captured. -->
+        <div
+          v-if="capturedBookCard"
+          :class="['wb-book-card', 'wb-book-card--captured', {
+            'wb-book-card--selected': selectedBookId === capturedBookCard.id,
+          }]"
+          @click="selectedBookId = capturedBookCard.id; selectedEntryId = capturedBookCard.entries[0]?.id ?? ''"
+        >
+          <div class="wb-book-header">
+            <input class="wb-book-title-input" :value="capturedBookCard.title" readonly @click.stop />
+            <span class="wb-auto-badge">{{ $t('prompt.worldbook.capturedBadge') }}</span>
+          </div>
+          <span class="wb-book-count">{{ capturedBookCard.entries.length }} {{ $t('prompt.worldbook.entries') }}</span>
+          <p class="wb-book-hint">{{ $t('prompt.worldbook.capturedBookHint') }}</p>
+        </div>
+        <div v-else class="wb-book-card wb-book-card--captured wb-book-card--placeholder">
+          <div class="wb-book-header">
+            <span class="wb-book-title-input">{{ $t('prompt.worldbook.capturedBookTitle') }}</span>
+            <span class="wb-auto-badge">{{ $t('prompt.worldbook.capturedBadge') }}</span>
+          </div>
+          <span class="wb-book-count">0 {{ $t('prompt.worldbook.entries') }}</span>
+          <p class="wb-book-hint">{{ $t('prompt.worldbook.capturedEmptyHint') }}</p>
+          <AgaButton variant="ghost" size="sm" @click="openManualDraft()">
+            {{ $t('mainGame.settingCapture.addManually') }}
+          </AgaButton>
+        </div>
 
         <!-- Entries of selected book -->
         <template v-if="selectedBook">
@@ -1213,5 +1294,36 @@ const injectionModeOptions = computed(() => [
 .wb-capture-chip--engram-pending {
   background: color-mix(in oklch, var(--color-amber-400) 12%, transparent);
   color: var(--color-amber-400);
+}
+
+/* ── Standing capture-result banner ── */
+.wb-capture-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+.wb-capture-banner--ok   { background: color-mix(in oklch, var(--color-success) 8%, transparent); }
+.wb-capture-banner--info { background: color-mix(in oklch, var(--color-sage-400) 8%, transparent); }
+.wb-capture-banner--warn { background: color-mix(in oklch, var(--color-amber-400) 10%, transparent); }
+
+.wb-capture-banner__round {
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+.wb-capture-banner__body { color: var(--color-text); }
+
+/* Placeholder card keeps the destination visible before the first capture. */
+.wb-book-card--placeholder {
+  cursor: default;
+  opacity: 0.92;
+}
+.wb-book-card--placeholder .wb-book-title-input {
+  pointer-events: none;
 }
 </style>

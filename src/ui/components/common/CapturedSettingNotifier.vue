@@ -140,6 +140,10 @@ function handleResult(payload: unknown): void {
     message: capacityHit
       ? t('mainGame.settingCapture.capacityFull', { max: MAX_ACTIVE_CAPTURED_ENTRIES })
       : t('mainGame.settingCapture.failed'),
+    // 15s, not the 10s default: this toast reports that the player's EXPLICIT request
+    // failed, and a player mid-way through a long reply needs the extra window. The
+    // panel banner now carries the same information permanently either way.
+    duration: 15000,
     actions: [
       {
         i18nKey: 'mainGame.settingCapture.addManually',

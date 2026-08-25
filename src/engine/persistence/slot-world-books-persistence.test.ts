@@ -79,6 +79,24 @@ describe('slotWorldBooks — state tree round-trip', () => {
   });
 });
 
+describe('settingCaptureLast — same guarantees as the book it describes', () => {
+  it('round-trips through snapshot → rollback', () => {
+    const { sm } = createMockStateManager({});
+    sm.set(paths.settingCaptureLast, { round: 62, accepted: 0, noops: 0, rejected: [], segmentsPreview: 'x', at: 1 });
+    const snap = sm.toSnapshot();
+    sm.set(paths.settingCaptureLast, { round: 63, accepted: 1, noops: 0, rejected: [], segmentsPreview: 'y', at: 2 });
+    sm.rollbackTo(snap);
+    expect(sm.get<{ round: number }>(paths.settingCaptureLast)?.round).toBe(62);
+  });
+
+  it('is stripped from the prompt snapshot — the model must never read its own telemetry', () => {
+    const snapshot = { 系统: { 扩展: { settingCaptureLast: { round: 62, segmentsPreview: '秘密内容' } } } };
+    const json = stringifySnapshotForPrompt(snapshot, true, 0);
+    expect(json).not.toContain('settingCaptureLast');
+    expect(json).not.toContain('秘密内容');
+  });
+});
+
 describe('slotWorldBooks — prompt snapshot isolation', () => {
   it('is stripped from GAME_STATE_JSON', () => {
     // Entries reach the model through the world-book budget block. Leaving them in the

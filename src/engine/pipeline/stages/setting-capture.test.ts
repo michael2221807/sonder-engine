@@ -499,3 +499,67 @@ describe('classifyEvidenceFailure', () => {
     expect(r.rejected[0].reason).toBe('no_evidence');
   });
 });
+
+describe('SettingCaptureStage — persisted last-round record (acceptance fix 2026-08-21)', () => {
+  // Why this exists: the only feedback used to be a 10-second toast. A player reading a
+  // 3000-character reply missed it, found the world-book tab empty, and had no way to
+  // learn what happened. The record backs a standing banner in the panel.
+
+  function lastOf(sm: MockStateManager) {
+    return sm.get<{ round: number; accepted: number; noops: number;
+      rejected: Array<{ reason: string; count: number }>; segmentsPreview: string }>(
+      paths.settingCaptureLast);
+  }
+
+  it('writes a summary on a tagged round — accepted case', async () => {
+    const { sm } = createMockStateManager({ 元数据: { 回合序号: 62 } });
+    await run(sm, makeCtx({
+      originalUserInput: `${open}林月从小怕水${close}`,
+      settingUpdates: [goodUpdate],
+    }));
+    const rec = lastOf(sm);
+    expect(rec).toMatchObject({ round: 62, accepted: 1, noops: 0 });
+    expect(rec?.segmentsPreview).toContain('林月从小怕水');
+  });
+
+  it('writes the summary even when EVERYTHING was rejected — that is its whole point', async () => {
+    const { sm } = createMockStateManager({ 元数据: { 回合序号: 62 } });
+    await run(sm, makeCtx({
+      originalUserInput: `${open}林月从小怕水${close}`,
+      settingUpdates: [
+        { ...goodUpdate, statement: 'x'.repeat(300) },              // too_long
+        { ...goodUpdate, evidence: '完全对不上的引文' },              // no_evidence
+      ],
+    }));
+    const rec = lastOf(sm);
+    expect(rec?.accepted).toBe(0);
+    const reasons = Object.fromEntries((rec?.rejected ?? []).map((r) => [r.reason, r.count]));
+    expect(reasons['too_long']).toBe(1);
+    expect(reasons['no_evidence']).toBe(1);
+    // The player's words survive for the manual-add prefill.
+    expect(rec?.segmentsPreview).toBe('林月从小怕水');
+  });
+
+  it('does NOT touch the record on an ordinary untagged round (zero-touch saves)', async () => {
+    const { sm } = createMockStateManager({ 元数据: { 回合序号: 5 } });
+    await run(sm, makeCtx({ originalUserInput: '我环顾四周。' }));
+    expect(sm.get(paths.settingCaptureLast)).toBeUndefined();
+  });
+
+  it('caps the preview so a giant tag cannot bloat the save', async () => {
+    const { sm } = createMockStateManager({ 元数据: { 回合序号: 1 } });
+    const big = 'x'.repeat(900);
+    await run(sm, makeCtx({ originalUserInput: `${open}${big}${close}` }));
+    expect((lastOf(sm)?.segmentsPreview ?? '').length).toBeLessThanOrEqual(600);
+  });
+
+  it('each tagged round overwrites the previous record', async () => {
+    const { sm } = createMockStateManager({ 元数据: { 回合序号: 1 } });
+    await run(sm, makeCtx({ originalUserInput: `${open}第一回${close}`,
+      settingUpdates: [{ kind: 'world_fact', statement: '第一回。', evidence: '第一回', anchors: ['第一回'], entities: [] }] }));
+    sm.set(paths.roundNumber, 2);
+    await run(sm, makeCtx({ originalUserInput: `${open}第二回${close}` }));
+    expect(lastOf(sm)?.round).toBe(2);
+    expect(lastOf(sm)?.accepted).toBe(0);
+  });
+});

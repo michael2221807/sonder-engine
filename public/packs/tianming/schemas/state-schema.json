@@ -629,6 +629,11 @@
           "type": "object",
           "properties": {
             "engramMemory": { "type": "object", "default": {} },
+            "settingCaptureLast": {
+              "type": "object",
+              "$comment": "Canon Capture：本存档最近一次设定捕获的结果摘要（回合/接受数/拒绝原因/标记原文预览）。仅在带 <设定> 标记的回合写入；支撑世界书面板的常驻结果横幅。已加入 PROMPT_ALWAYS_STRIP_PATHS。",
+              "default": {}
+            },
             "slotWorldBooks": {
               "type": "array",
               "$comment": "Canon Capture：本存档专属的世界书册（WorldBook[]）。与 profile 世界书（IndexedDB，键 profileId:book.id）分开存放，因此随回合 rollback、随存档/备份/云同步走。DEFAULT_ENGINE_PATHS.slotWorldBooks 指向此路径；已加入 PROMPT_ALWAYS_STRIP_PATHS，只经世界书预算块注入。",

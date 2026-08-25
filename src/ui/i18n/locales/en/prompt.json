@@ -291,5 +291,22 @@
   "prompt.settingCapture.engram.off": "Graph is off",
   "prompt.settingCapture.engram.offHint": "The knowledge graph is disabled; the setting still works through the world book.",
   "prompt.settingCapture.engram.retracted": "Removed from graph",
-  "prompt.settingCapture.engram.retractedHint": "This setting was undone, so its graph edge was invalidated too. Restoring it rebuilds the edge."
+  "prompt.settingCapture.engram.retractedHint": "This setting was undone, so its graph edge was invalidated too. Restoring it rebuilds the edge.",
+
+  "prompt.worldbook.noProfileBooks": "No profile world books yet — use New World Book above",
+  "prompt.worldbook.capturedBookTitle": "Captured Settings",
+  "prompt.worldbook.capturedEmptyHint": "Text you mark with the Setting button in the composer lands here automatically. You can also add one by hand.",
+
+  "prompt.settingCapture.lastRound": "Setting capture on turn {round}",
+  "prompt.settingCapture.lastSummary": "{accepted} recorded · {noops} already known · {rejected} not accepted",
+  "prompt.settingCapture.rejectReason.no_tag": "no setting marker this turn",
+  "prompt.settingCapture.rejectReason.shape": "malformed",
+  "prompt.settingCapture.rejectReason.too_long": "over the length limit",
+  "prompt.settingCapture.rejectReason.no_evidence": "quote does not match the marked text",
+  "prompt.settingCapture.rejectReason.cross_segment": "quote spans two markers",
+  "prompt.settingCapture.rejectReason.bad_anchor": "unusable keyword",
+  "prompt.settingCapture.rejectReason.bad_entity": "unusable entity name",
+  "prompt.settingCapture.rejectReason.capacity": "setting limit reached",
+  "prompt.settingCapture.rejectReason.overflow": "over the per-turn limit",
+  "prompt.settingCapture.rejectReason.internal_error": "internal error"
 }

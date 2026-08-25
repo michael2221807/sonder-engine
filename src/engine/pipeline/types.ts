@@ -563,6 +563,17 @@ export interface EnginePathConfig {
    */
   slotWorldBooks: string;
   /**
+   * Last Canon Capture outcome for this slot (e.g. "系统.扩展.settingCaptureLast").
+   *
+   * Why it exists (2026-08-21 real-API acceptance finding): the only feedback for a
+   * capture round was a 10-second toast. A player reading a 3000-character reply missed
+   * it, found the world-book tab empty, and had NO way to learn what happened or to
+   * reach the manual-add fallback. This record backs a persistent banner in the panel.
+   * Written ONLY on rounds that carried a tag — saves that never use the feature stay
+   * byte-identical — and it rolls back with the round like everything else.
+   */
+  settingCaptureLast: string;
+  /**
    * 玩家已探索地点名称数组（如 "系统.探索记录"）
    * 由引擎 PostProcessStage 在每回合自动维护，无需 AI 命令写入。
    * 用于地图面板的探索状态节点样式（已探索绿边框 / 未探索降低透明度）。
@@ -895,6 +906,7 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
   },
   preRoundSnapshot: '元数据.上次对话前快照',
   slotWorldBooks: '系统.扩展.slotWorldBooks',
+  settingCaptureLast: '系统.扩展.settingCaptureLast',
   explorationRecord: '系统.探索记录',
   reasoningHistory: '元数据.推理历史',
   storyPlan: '元数据.剧情规划',

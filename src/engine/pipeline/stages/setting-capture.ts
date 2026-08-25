@@ -93,6 +93,30 @@ export interface SettingCaptureResult {
   hadTag: boolean;
 }
 
+/**
+ * Compact, persisted summary of the most recent capture round.
+ *
+ * Exists because a 10-second toast is the wrong medium for "your explicit request
+ * failed": a player reading a long reply misses it, and then nothing anywhere tells
+ * them what happened or offers the manual fallback. The world-book panel renders this
+ * as a standing banner until the next tagged round overwrites it.
+ *
+ * Deliberately tiny (counts + a capped preview, no candidate objects): it lives in the
+ * save and is cloned into the pre-round snapshot every round like the rest of the tree.
+ */
+export interface SettingCaptureLastRecord {
+  round: number;
+  at: number;
+  accepted: number;
+  noops: number;
+  rejected: Array<{ reason: SettingRejectReason; count: number }>;
+  /** The tag content the player wrote, capped — pre-fills the manual-add draft. */
+  segmentsPreview: string;
+}
+
+/** Cap on the persisted preview — enough to re-add by hand, small enough for a save. */
+export const SEGMENTS_PREVIEW_MAX_CHARS = 600;
+
 export const EMPTY_CAPTURE_RESULT: SettingCaptureResult = {
   accepted: [],
   noops: [],
@@ -286,6 +310,16 @@ export class SettingCaptureStage implements PipelineStage {
       this.bumpHitCounters(ctx);
     } catch (err) {
       console.warn('[SettingCapture] hit-counter write failed (non-blocking):', err);
+    }
+
+    // Persist the round summary for the panel's standing banner — but ONLY on tagged
+    // rounds, so a save that never touches the feature stays byte-identical.
+    if (result.hadTag) {
+      try {
+        this.writeLastRecord(ctx, result);
+      } catch (err) {
+        console.warn('[SettingCapture] last-record write failed (non-blocking):', err);
+      }
     }
 
     // Tell the UI what happened. Only when the round actually carried a tag — an
@@ -499,6 +533,26 @@ export class SettingCaptureStage implements PipelineStage {
     const round = this.stateManager.get<number>(this.paths.roundNumber) ?? 0;
     const next = bumpInjectionCounters(book, ids, round);
     if (next !== book) this.writeSlotBooks(upsertCapturedBook(books, next));
+  }
+
+  /** Fold the round result into the persisted `settingCaptureLast` summary. */
+  private writeLastRecord(ctx: PipelineContext, result: SettingCaptureResult): void {
+    const reasonCounts = new Map<SettingRejectReason, number>();
+    for (const r of result.rejected) {
+      reasonCounts.set(r.reason, (reasonCounts.get(r.reason) ?? 0) + 1);
+    }
+    const record: SettingCaptureLastRecord = {
+      round: this.stateManager.get<number>(this.paths.roundNumber) ?? ctx.roundNumber ?? 0,
+      at: Date.now(),
+      accepted: result.accepted.length,
+      noops: result.noops.length,
+      rejected: [...reasonCounts.entries()].map(([reason, count]) => ({ reason, count })),
+      segmentsPreview: result.segments
+        .map((seg) => seg.rawText)
+        .join('\n')
+        .slice(0, SEGMENTS_PREVIEW_MAX_CHARS),
+    };
+    this.stateManager.set(this.paths.settingCaptureLast, record, 'system');
   }
 
   private readSlotBooks(): WorldBook[] {

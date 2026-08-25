@@ -134,6 +134,9 @@ const PROMPT_ALWAYS_STRIP_PATHS: readonly string[] = [
   // budget block (deduped + budgeted). Leaving them in GAME_STATE_JSON would inject
   // every entry raw, every round, bypassing the budget entirely.
   '系统.扩展.slotWorldBooks',
+  // Canon Capture round telemetry for the panel banner — pure UI feedback, never
+  // something the model should read back.
+  '系统.扩展.settingCaptureLast',
   // '系统.扩展.语义记忆' — 暂不 strip：当前无检索链路消费该路径，
   // strip 会导致旧存档 triples 静默消失。待补 retrieval 注入后再启用。
   '系统.设置',

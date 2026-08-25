@@ -291,5 +291,22 @@
   "prompt.settingCapture.engram.off": "图谱已关闭",
   "prompt.settingCapture.engram.offHint": "关系图谱当前未启用；设定依然通过世界书正常生效。",
   "prompt.settingCapture.engram.retracted": "已从图谱移除",
-  "prompt.settingCapture.engram.retractedHint": "这条设定已被撤回，图谱里的连线也已失效。恢复它就会重新建立。"
+  "prompt.settingCapture.engram.retractedHint": "这条设定已被撤回，图谱里的连线也已失效。恢复它就会重新建立。",
+
+  "prompt.worldbook.noProfileBooks": "暂无角色档案世界书，点上方「新建世界书」创建",
+  "prompt.worldbook.capturedBookTitle": "自动设定集",
+  "prompt.worldbook.capturedEmptyHint": "在主面板输入时用「设定」按钮标记的内容，会自动出现在这里。也可以直接手动添加。",
+
+  "prompt.settingCapture.lastRound": "第 {round} 回合的设定捕获",
+  "prompt.settingCapture.lastSummary": "记录 {accepted} 条 · 已记过 {noops} 条 · 未通过 {rejected} 条",
+  "prompt.settingCapture.rejectReason.no_tag": "本回合没有设定标记",
+  "prompt.settingCapture.rejectReason.shape": "格式不合规",
+  "prompt.settingCapture.rejectReason.too_long": "超出长度上限",
+  "prompt.settingCapture.rejectReason.no_evidence": "引文与标记原文对不上",
+  "prompt.settingCapture.rejectReason.cross_segment": "引文跨越了两段标记",
+  "prompt.settingCapture.rejectReason.bad_anchor": "关键词无效",
+  "prompt.settingCapture.rejectReason.bad_entity": "实体名无效",
+  "prompt.settingCapture.rejectReason.capacity": "设定数量已达上限",
+  "prompt.settingCapture.rejectReason.overflow": "超出单回合条数上限",
+  "prompt.settingCapture.rejectReason.internal_error": "内部错误"
 }

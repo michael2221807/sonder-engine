@@ -19,6 +19,7 @@ import type { StateManager } from '@/engine/core/state-manager';
 import type { CanonMutationInput } from '@/engine/memory/engram/canon-projection';
 import { findCanonEdges, isProjectableRelationship } from '@/engine/memory/engram/canon-projection';
 import type { EngramEdge } from '@/engine/memory/engram/knowledge-edge';
+import type { SettingCaptureLastRecord } from '@/engine/pipeline/stages/setting-capture';
 import {
   CapturedSettingCoordinator,
   type CapturedMutationResult,
@@ -132,6 +133,17 @@ export function useCapturedSettings() {
 
   const activeCount = computed(() => activeCapturedEntries(capturedBook.value).length);
 
+  /**
+   * Standing summary of the most recent capture round (absent until the save's first
+   * tagged round). This is what lets the panel explain a miss AFTER the toast is gone —
+   * the acceptance finding that motivated it: a player missed the 10-second toast, found
+   * the tab empty, and had no way to learn what happened.
+   */
+  const lastResult = computed<SettingCaptureLastRecord | null>(() => {
+    const raw = engineState.get<SettingCaptureLastRecord>(paths.settingCaptureLast);
+    return raw && typeof raw === 'object' && typeof raw.round === 'number' ? raw : null;
+  });
+
   const isFull = computed(() => activeCount.value >= MAX_ACTIVE_CAPTURED_ENTRIES);
 
   function entryById(id: string): WorldBookEntry | undefined {
@@ -181,6 +193,7 @@ export function useCapturedSettings() {
     isFull,
     entryById,
     engramStatus,
+    lastResult,
     maxEntries: MAX_ACTIVE_CAPTURED_ENTRIES,
   };
 }
