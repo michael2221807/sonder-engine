@@ -211,6 +211,11 @@ test.describe('Plot Threads — parallel threads & scheduler (offline)', () => {
     { tag: ['@regression', '@plot', '@plot-threads'] },
     async ({ page, gameShell }) => {
       test.slow(); // full main-round assembly + offline failure under parallel workers
+      // The sidebar's Prompt 组装 entry is gated behind the Debug 模式 setting
+      // (2026-08-26 dead-control fix) — seed it on so goTab can click the link.
+      await page.addInitScript(() => {
+        localStorage.setItem('aga_debug_settings', JSON.stringify({ debugMode: true }));
+      });
       await seedSave(page, { tree: treeWithThreads() });
       await enterSeededGame(page);
 

@@ -35,6 +35,9 @@ export type EngineEventName =
   // cached format so the auto-sync path switches pipelines without a reload.
   | 'ui:cloud-format-changed'
   | 'worldbook:updated'
+  // Settings → LeftSidebar: Debug 模式 toggle changed. Payload: boolean (new value).
+  // Sole consumer gates the Prompt Assembly panel entry's visibility.
+  | 'settings:debug-mode-changed'
   // Canon Capture round result (SettingCaptureStage → UI). Payload: SettingCaptureResult.
   // The engine reports WHAT happened; the UI decides how to say it (i18n) and wires the
   // undo button — keeping engine code free of both i18n and Pinia.

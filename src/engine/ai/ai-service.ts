@@ -23,6 +23,7 @@ import { RateLimiter } from './rate-limiter';
 import type { RateLimiterConfig } from './rate-limiter';
 import { GeminiProvider } from './providers/gemini-provider';
 import { eventBus } from '../core/event-bus';
+import { isAiLoggingEnabled } from '../core/debug-flags';
 
 export class AIService {
   /** 所有 API 配置（id → config） */
@@ -223,6 +224,20 @@ export class AIService {
     const provider = this.createProvider(effectiveConfig);
     const { signal, cleanup } = this.createTimeoutSignal(options.signal);
 
+    // 设置 → 高级设置 → "AI API 完整记录" 的消费点（2026-08-26 死控件修复）。
+    // 记录实际发送的最终消息数组（strict/prefill 变换后）；绝不记录 apiKey。
+    const aiLogging = isAiLoggingEnabled();
+    if (aiLogging) {
+      console.log('[AI-LOG] request', {
+        usageType: options.usageType ?? 'main',
+        provider: effectiveConfig.provider,
+        model: effectiveConfig.model,
+        url: effectiveConfig.url,
+        stream: effectiveOptions.stream === true,
+        messages: effectiveOptions.messages,
+      });
+    }
+
     eventBus.emit('ai:request-start', {
       usageType: options.usageType,
       model: config.model,
@@ -230,12 +245,27 @@ export class AIService {
 
     try {
       const result = await provider.generate({ ...effectiveOptions, signal });
+      if (aiLogging) {
+        console.log('[AI-LOG] response', {
+          usageType: options.usageType ?? 'main',
+          model: effectiveConfig.model,
+          length: result.length,
+          text: result,
+        });
+      }
       eventBus.emit('ai:response-complete', {
         usageType: options.usageType,
         length: result.length,
       });
       return result;
     } catch (err) {
+      if (aiLogging) {
+        console.log('[AI-LOG] error', {
+          usageType: options.usageType ?? 'main',
+          model: effectiveConfig.model,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
       throw err;
     } finally {
       cleanup();

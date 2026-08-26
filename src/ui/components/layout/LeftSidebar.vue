@@ -26,6 +26,21 @@ const engramDebugVisible = ref(loadEngramConfig().debug);
 const engramEnabled = ref(loadEngramConfig().enabled);
 let offEngramConfigChanged: (() => void) | null = null;
 
+// ─── Prompt 组装入口可见性（受设置 Debug 模式控制）─────────
+// SettingsPanel 把 { debugMode } 持久化在 aga_debug_settings 并在每次变更时
+// emit `settings:debug-mode-changed`；这里是该事件的唯一消费点（2026-08-26 修复
+// 前该事件零监听者，入口无条件显示 = 死控件）。
+function loadDebugModeFlag(): boolean {
+  try {
+    const raw = JSON.parse(localStorage.getItem('aga_debug_settings') ?? '{}') as { debugMode?: boolean };
+    return raw.debugMode === true;
+  } catch {
+    return false;
+  }
+}
+const promptAssemblyVisible = ref(loadDebugModeFlag());
+let offDebugModeChanged: (() => void) | null = null;
+
 // ─── Collapse ─────────────────────────────────────────────────
 
 function toggleCollapse(): void {
@@ -60,11 +75,15 @@ onMounted(() => {
     engramDebugVisible.value = cfg?.debug === true;
     engramEnabled.value = cfg?.enabled === true;
   });
+  offDebugModeChanged = eventBus.on('settings:debug-mode-changed', (payload: unknown) => {
+    promptAssemblyVisible.value = payload === true;
+  });
 });
 
 onUnmounted(() => {
   if (clockTimer !== null) clearInterval(clockTimer);
   if (offEngramConfigChanged) offEngramConfigChanged();
+  if (offDebugModeChanged) offDebugModeChanged();
   document.documentElement.style.removeProperty('--sidebar-left-reserve');
 });
 
@@ -171,7 +190,9 @@ const panelGroups = computed<PanelGroup[]>(() => [
   {
     label: t('layout.sidebar.group.system'),
     items: BASE_SYSTEM_ITEMS.value.filter(
-      (item) => item.route !== '/game/engram-debug' || engramDebugVisible.value,
+      (item) =>
+        (item.route !== '/game/engram-debug' || engramDebugVisible.value) &&
+        (item.route !== '/game/prompt-assembly' || promptAssemblyVisible.value),
     ),
   },
 ]);
