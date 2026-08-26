@@ -1,50 +1,26 @@
 /**
- * TTS provider registry — maps `TtsBackendType` → factory function.
- * `resolve()` creates the right provider for a given API configuration.
- *
- * Mirrors ImageProviderRegistry (src/engine/image/provider-registry.ts).
- *
- * Usage:
- *   const registry = new TtsProviderRegistry();
- *   registry.register('cosyvoice', (c) => new CosyVoiceProvider(c.endpoint, c.apiKey, c.routingPath));
- *   const provider = registry.resolve({ backend: 'cosyvoice', endpoint: '...', apiKey: '' });
+ * TTS provider registry — thin subclass of the shared BackendRegistry
+ * (epic P0 item 9 de-duplicated the three copy-pasted registry classes).
  */
-import type { TtsBackendType, TtsProvider, TtsProviderFactory } from './types';
+import { BackendRegistry } from '../providers/backend-registry';
+import type { TtsBackendType, TtsProvider } from './types';
 
-export class TtsProviderRegistry {
-  private factories = new Map<TtsBackendType, TtsProviderFactory>();
+interface TtsFactoryConfig {
+  endpoint: string;
+  apiKey: string;
+  model?: string;
+  routingPath?: string;
+  /** 多凭证 backend 的附加凭证（豆包语音，epic P2） */
+  credentials?: Record<string, string>;
+}
 
-  register(backend: TtsBackendType, factory: TtsProviderFactory): void {
-    this.factories.set(backend, factory);
+export class TtsProviderRegistry extends BackendRegistry<TtsBackendType, TtsFactoryConfig, TtsProvider> {
+  constructor() {
+    super('TtsProviderRegistry');
   }
 
-  resolve(config: {
-    backend: TtsBackendType;
-    endpoint: string;
-    apiKey: string;
-    model?: string;
-    routingPath?: string;
-  }): TtsProvider {
-    const factory = this.factories.get(config.backend);
-    if (!factory) {
-      throw new Error(
-        `[TtsProviderRegistry] No provider registered for backend "${config.backend}". ` +
-        `Registered: [${[...this.factories.keys()].join(', ')}]`,
-      );
-    }
-    return factory({
-      endpoint: config.endpoint,
-      apiKey: config.apiKey,
-      model: config.model,
-      routingPath: config.routingPath,
-    });
-  }
-
-  has(backend: TtsBackendType): boolean {
-    return this.factories.has(backend);
-  }
-
-  get registeredBackends(): TtsBackendType[] {
-    return [...this.factories.keys()];
+  resolve(config: TtsFactoryConfig & { backend: TtsBackendType }): TtsProvider {
+    const { backend, ...factoryConfig } = config;
+    return this.resolveBackend(backend, factoryConfig);
   }
 }

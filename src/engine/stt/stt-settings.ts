@@ -12,7 +12,8 @@
  * 设计文档:docs/design/stt-streaming-handoff.md §5
  */
 import { DEFAULT_STT_SETTINGS } from './types';
-import type { SttSettings, SttInputMode, SttLatencyProfile, SttHotwordStrength, SttPauseTolerance } from './types';
+import { providerCatalog } from '../providers';
+import type { SttSettings, SttBackendType, SttInputMode, SttLatencyProfile, SttHotwordStrength, SttPauseTolerance } from './types';
 
 export const STT_SETTINGS_STORAGE_KEY = 'aga_stt_settings';
 
@@ -26,6 +27,10 @@ export function normalizeSttSettings(raw: unknown): SttSettings {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Partial<SttSettings>;
   return {
     enabled: typeof o.enabled === 'boolean' ? o.enabled : DEFAULT_STT_SETTINGS.enabled,
+    // epic P3 / D2: 当前听写服务商;合法值由目录派生(不手抄名单——review 2026-08-26),
+    // 未知值(含旧存档缺省)回落默认 cosyvoice
+    backend: providerCatalog.has('stt', String(o.backend ?? ''))
+      ? (o.backend as SttBackendType) : DEFAULT_STT_SETTINGS.backend,
     mode: MODES.includes(o.mode as SttInputMode) ? (o.mode as SttInputMode) : DEFAULT_STT_SETTINGS.mode,
     latency: LATENCIES.includes(o.latency as SttLatencyProfile)
       ? (o.latency as SttLatencyProfile)

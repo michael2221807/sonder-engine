@@ -14,6 +14,8 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { APIConfig, UsageType, APIAssignment, APIProviderType } from '../ai/types';
+import { normalizeApiManagementState } from './api-config-migration';
+import { providerCatalog, perBackendUsageType } from '../providers';
 
 /** Assignment preset — snapshot of all assignments + feature toggles */
 export interface APIAssignmentPreset {
@@ -28,7 +30,20 @@ export interface APIAssignmentPreset {
 const STORAGE_KEY = 'aga_api_management';
 const PRESETS_STORAGE_KEY = 'aga_assignment_presets';
 
-/** 所有支持的 UsageType — must match the union in ai/types.ts */
+/**
+ * Per-backend usage types derived from the provider catalog (epic P0 §3.3).
+ * These are the assignment table's per-backend rows — the product's
+ * multi-config switcher. Adding a vendor to the catalog grows this list (and
+ * the assignment UI) automatically; the `UsageType` union member itself is
+ * still declared by hand in ai/types.ts for type safety.
+ */
+const PER_BACKEND_USAGE_TYPES: UsageType[] = [
+  ...providerCatalog.byCategory('image').map((d) => perBackendUsageType('image', d.id)),
+  ...providerCatalog.byCategory('tts').map((d) => perBackendUsageType('tts', d.id)),
+  ...providerCatalog.byCategory('stt').map((d) => perBackendUsageType('stt', d.id)),
+];
+
+/** 所有支持的 UsageType — static part must match the union in ai/types.ts */
 const ALL_USAGE_TYPES: UsageType[] = [
   'main', 'memory_summary', 'text_optimization', 'cot',
   'instruction_generation', 'world_generation', 'event_generation',
@@ -36,11 +51,10 @@ const ALL_USAGE_TYPES: UsageType[] = [
   'field_repair',
   'npc_chat', 'embedding', 'rerank',
   'assistant', 'imageGeneration',
-  'imageGen_novelai', 'imageGen_openai', 'imageGen_sd_webui', 'imageGen_comfyui', 'imageGen_civitai',
   'imageCharacterTokenizer', 'imageSceneTokenizer', 'imageSecretTokenizer',
   'bodyPolish', 'plot_decompose',
   'world_builder', 'engram_batch_solidify', 'card_edge_classify',
-  'ttsGen_cosyvoice', 'sttGen_cosyvoice',
+  ...PER_BACKEND_USAGE_TYPES,
 ];
 
 /** 默认 Rerank 路由路径 */
@@ -93,8 +107,17 @@ export const useAPIManagementStore = defineStore('apiManagement', () => {
 
       // 向后兼容迁移：给所有缺失 apiCategory 的旧配置补上 'llm'
       // 确保 UI 过滤和 Reranker 类别检查都能正确工作
+      // （对损坏行防御：null/非对象条目跳过——否则这里先于 backend 回填迁移崩溃，
+      //   外层 catch 吞掉后整份配置停在未迁移状态。review Important 2026-08-26。）
       for (const cfg of apiConfigs.value) {
-        if (!cfg.apiCategory) cfg.apiCategory = 'llm';
+        if (cfg && typeof cfg === 'object' && !cfg.apiCategory) cfg.apiCategory = 'llm';
+      }
+
+      // Epic P0 回填迁移：非 llm 配置补 backend 字段（幂等；见 api-config-migration.ts）
+      const normalized = normalizeApiManagementState(apiConfigs.value);
+      if (normalized.changed) {
+        apiConfigs.value = normalized.configs;
+        saveToStorage();
       }
 
       loadPresets();
@@ -293,7 +316,8 @@ export const useAPIManagementStore = defineStore('apiManagement', () => {
   /** 导入配置 */
   function importConfig(data: Record<string, unknown>): void {
     if (Array.isArray(data.apiConfigs)) {
-      apiConfigs.value = data.apiConfigs as APIConfig[];
+      // Epic P0：导入的旧格式配置同样过回填迁移（与 loadFromStorage 同一函数，不得分叉）
+      apiConfigs.value = normalizeApiManagementState(data.apiConfigs as APIConfig[]).configs;
     }
     if (Array.isArray(data.apiAssignments)) {
       apiAssignments.value = data.apiAssignments as APIAssignment[];

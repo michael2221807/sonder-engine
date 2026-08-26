@@ -57,6 +57,28 @@ export class CosyVoiceProvider extends BaseTtsProvider {
     }
   }
 
+  /**
+   * 连测探针 — 迁自 AIService.testConnection 的 tts 分支(epic P0 连测委托)。
+   * Neutral ASCII probe text: engine code must not hardcode locale content, and
+   * a Chinese payload can false-negative against an English-only voice.
+   */
+  async testConnection(opts?: { speaker?: string; signal?: AbortSignal }): Promise<{ ok: boolean; error?: string }> {
+    const url = this.buildSynthUrl('test', opts?.speaker ?? '');
+    const { signal, cleanup } = this.withTimeout(opts?.signal, 10_000);
+    try {
+      const res = await fetch(url, { method: 'GET', signal });
+      if (!res.ok) {
+        const errText = await res.text().catch(() => `HTTP ${res.status}`);
+        return { ok: false, error: `${res.status}: ${errText.slice(0, 120)}` };
+      }
+      const ct = res.headers.get('content-type') ?? '';
+      const ok = ct.toLowerCase().includes('audio');
+      return { ok, error: ok ? undefined : `响应非音频（Content-Type: ${ct || '空'}）` };
+    } finally {
+      cleanup();
+    }
+  }
+
   async listSpeakers(external?: AbortSignal): Promise<TtsSpeaker[]> {
     const { signal, cleanup } = this.withTimeout(external, TTS_LIST_TIMEOUT_MS);
     try {

@@ -17,8 +17,18 @@ import type { AIService } from '../ai/ai-service';
 import type { SttProviderRegistry } from './provider-registry';
 import type { SttProvider, SttBackendType, SttStreamCallbacks, SttStreamHandle, SttLatencyProfile } from './types';
 import { deriveStreamUrl, openSttStream } from './stt-stream';
+import { providerCatalog } from '../providers';
+import { loadSttSettings } from './stt-settings';
 
-const DEFAULT_BACKEND: SttBackendType = 'cosyvoice';
+/**
+ * Active STT backend — the user's dictation-vendor selection (epic P3 / D2,
+ * settings 区可切); normalizeSttSettings guarantees a legal union value.
+ * Read fresh per call (MicInputButton pattern) so setting changes take effect
+ * on the next recording without a service restart.
+ */
+function activeSttBackend(): SttBackendType {
+  return loadSttSettings().backend;
+}
 
 export class SttService {
   constructor(
@@ -28,19 +38,21 @@ export class SttService {
 
   /** 是否具备可用配置(有启用的 stt 类 API)。UI 用于显隐麦克风键。 */
   isReady(): boolean {
-    return !!this.aiService.getSttConfigForBackend(DEFAULT_BACKEND);
+    return !!this.aiService.getSttConfigForBackend(activeSttBackend());
   }
 
   private resolveProvider(): SttProvider | null {
-    const config = this.aiService.getSttConfigForBackend(DEFAULT_BACKEND);
+    const backend = activeSttBackend();
+    const config = this.aiService.getSttConfigForBackend(backend);
     if (!config) return null;
     try {
       return this.registry.resolve({
-        backend: DEFAULT_BACKEND,
+        backend,
         endpoint: config.url,
         apiKey: config.apiKey,
         model: config.model,
         routingPath: config.useCustomRouting ? config.customRoutingPath : undefined,
+        credentials: config.credentials,
       });
     } catch {
       return null;
@@ -63,9 +75,13 @@ export class SttService {
   /**
    * 从 stt 配置的 base URL 派生流式 WS 地址(http→ws / https→wss + /v1/audio/stream)。
    * 无可用配置返回 null。后端确认 WS 路径固定,故无需单独配置字段。
+   * 能力门(epic P0 §3.7):仅描述符声明 sttStreaming 的 backend 才有流式地址——
+   * 不支持流式的后端(如 epic P3 的豆包 flash)自动隐藏实时听写入口,无用户开关。
    */
   getStreamUrl(): string | null {
-    const config = this.aiService.getSttConfigForBackend(DEFAULT_BACKEND);
+    const backend = activeSttBackend();
+    if (providerCatalog.get('stt', backend)?.capabilities.sttStreaming !== true) return null;
+    const config = this.aiService.getSttConfigForBackend(backend);
     if (!config?.url) return null;
     return deriveStreamUrl(config.url);
   }

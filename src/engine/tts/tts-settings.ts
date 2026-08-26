@@ -11,7 +11,8 @@ import {
   DEFAULT_TTS_SETTINGS, TTS_RATE_MIN, TTS_RATE_MAX,
   PREWARM_SECONDS_MIN, PREWARM_SECONDS_MAX,
 } from './types';
-import type { TtsSettings, TtsVoiceFavorite } from './types';
+import type { TtsSettings, TtsVoiceFavorite, TtsBackendType } from './types';
+import { providerCatalog } from '../providers';
 import {
   SEGMENT_TARGET_CHARS_MIN, SEGMENT_TARGET_CHARS_MAX,
   SEGMENT_MAX_SENTENCES_MIN, SEGMENT_MAX_SENTENCES_MAX,
@@ -57,6 +58,10 @@ export function normalizeTtsSettings(raw: unknown): TtsSettings {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Partial<TtsSettings>;
   return {
     enabled: typeof o.enabled === 'boolean' ? o.enabled : DEFAULT_TTS_SETTINGS.enabled,
+    // epic P2 / D2: 当前配音服务商;合法值由目录派生(不手抄名单——review 2026-08-26),
+    // 未知值(含旧存档缺省)回落默认 cosyvoice
+    backend: providerCatalog.has('tts', String(o.backend ?? ''))
+      ? (o.backend as TtsBackendType) : DEFAULT_TTS_SETTINGS.backend,
     autoNarrateOnRound: typeof o.autoNarrateOnRound === 'boolean'
       ? o.autoNarrateOnRound : DEFAULT_TTS_SETTINGS.autoNarrateOnRound,
     // 'full'/'pseudo' 保留;其它(含旧值 'segment')迁移到真流式 'stream'

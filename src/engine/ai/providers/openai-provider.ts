@@ -12,9 +12,22 @@
  * 对应 STEP-03B M2.3。
  */
 import { BaseProvider } from './base-provider';
+import { resolveLlmChatPath } from '../../providers/llm-paths';
 import type { GenerateOptions, AIMessage } from '../types';
 
 export class OpenAIProvider extends BaseProvider {
+  /**
+   * Chat path — resolution order (epic P4 / D4): explicit custom routing path
+   * → llm catalog preset defaultPath (config.backend, e.g. 'volcano_ark' →
+   * /api/v3/chat/completions) → OpenAI default /v1/chat/completions.
+   */
+  private chatPath(): string {
+    return resolveLlmChatPath(
+      this.config.backend,
+      this.config.useCustomRouting ? this.config.customRoutingPath : undefined,
+    );
+  }
+
   async generate(options: GenerateOptions): Promise<string> {
     const url = this.normalizeUrl(this.config.url);
     const { apiKey, model, temperature, maxTokens } = this.config;
@@ -39,7 +52,7 @@ export class OpenAIProvider extends BaseProvider {
     maxTokens: number,
     signal?: AbortSignal,
   ): Promise<string> {
-    const res = await fetch(`${url}/v1/chat/completions`, {
+    const res = await fetch(`${url}${this.chatPath()}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -78,7 +91,7 @@ export class OpenAIProvider extends BaseProvider {
     options: GenerateOptions,
   ): Promise<string> {
     try {
-      const res = await fetch(`${url}/v1/chat/completions`, {
+      const res = await fetch(`${url}${this.chatPath()}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,

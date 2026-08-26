@@ -74,14 +74,25 @@ export function resolveStyleParams(
   const applied: ResolvedStyleParams = {};
   const notApplicable: StyleParamNotApplicable[] = [];
 
-  // steps — universal
+  // steps — universal, except Seedream (no step parameter)
   if (typeof parsed.steps === 'number') {
-    applied.steps = clamp(parsed.steps, 1, backend === 'civitai' ? 150 : 50);
+    if (backend === 'volcengine') {
+      notApplicable.push({ key: 'steps', value: parsed.steps, reason: 'Seedream 不支持步数参数' });
+    } else {
+      applied.steps = clamp(parsed.steps, 1, backend === 'civitai' ? 150 : 50);
+    }
   }
 
-  // cfgScale — universal
+  // cfgScale — universal, except Seedream: guidance_scale 只在 3.x 模型存在
+  // （4.x 无此参数），resolver 无模型上下文无法区分，宣称 applied 会对默认
+  // 4.x 模型说谎（review Important 2026-08-26）。保守标记不适用，待 P1 真实
+  // key 校准后再按模型系开启（provider 侧映射注释见 volcengine.ts）。
   if (typeof parsed.cfgScale === 'number') {
-    applied.cfgScale = clamp(parsed.cfgScale, 1, backend === 'civitai' ? 30 : 20);
+    if (backend === 'volcengine') {
+      notApplicable.push({ key: 'cfgScale', value: parsed.cfgScale, reason: 'Seedream 4.x 无 guidance_scale；3.x 待真实校准' });
+    } else {
+      applied.cfgScale = clamp(parsed.cfgScale, 1, backend === 'civitai' ? 30 : 20);
+    }
   }
 
   // seed — universal, -1 means random

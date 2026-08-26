@@ -76,6 +76,22 @@ export interface APIConfig {
   apiCategory?: APICategory;
   /** 提供商类型 — 决定 LLM 请求格式（仅 apiCategory='llm' 时使用） */
   provider: APIProviderType;
+  /**
+   * backend 身份（provider-catalog 描述符 id，如 'civitai' / 'cosyvoice'）——
+   * 用户建配置时的显式选择，落盘持久化，取代旧的 URL 嗅探
+   * （epic P0，见 docs/design/volcano-ark-provider-epic.md §3.2）。
+   * `'custom'` = 未识别/用户自定义。旧配置由 normalizeApiManagementState 回填。
+   * llm 类别：通常缺省（沿用 provider）；仅当配置来自目录 llm 预设
+   * （如 'volcano_ark'，epic P4 / D4）时携带，供 OpenAIProvider / 连测 /
+   * fetchModels 解析该预设的默认端点路径。
+   */
+  backend?: string;
+  /**
+   * 多凭证 backend 的附加凭证（键由描述符 credentialFields 声明；
+   * `apiKey` 键约定仍存于顶层 apiKey 字段）。单凭证 backend 缺省此字段。
+   * 例：豆包语音 { appId, accessToken, resourceId }（epic P2 首个消费者）。
+   */
+  credentials?: Record<string, string>;
   /** API 端点 URL（不含 /v1 后缀） */
   url: string;
   /** API Key */
@@ -158,6 +174,7 @@ export type UsageType =
   | 'imageGen_sd_webui'        // SD-WebUI 图像生成
   | 'imageGen_comfyui'         // ComfyUI 图像生成
   | 'imageGen_civitai'         // Civitai 图像生成
+  | 'imageGen_volcengine'      // 火山方舟 Seedream 图像生成（epic P1）
   | 'imageCharacterTokenizer'  // 角色视觉 token 提取（LLM 类）— Sprint Image-2
   | 'imageSceneTokenizer'      // 场景视觉 token 提取（LLM 类）— Sprint Image-2
   | 'imageSecretTokenizer'     // 私密部位 token 提取（LLM 类）— Sprint Image-2
@@ -168,7 +185,9 @@ export type UsageType =
   | 'engram_batch_solidify'    // Story 4: Engram 批量固化（EngramBatchSolidifyPipeline）— 可单独配 API
   | 'card_edge_classify'       // Story 7: 存档转卡知识边分类（CardEdgeClassifyPipeline）— 可单独配 API
   | 'ttsGen_cosyvoice'         // TTS: CosyVoice 语音合成（apiCategory='tts'）— 可单独配 API
-  | 'sttGen_cosyvoice';        // STT: CosyVoice/SenseVoice 语音转文字（apiCategory='stt'）— 可单独配 API
+  | 'ttsGen_doubao'            // TTS: 豆包语音合成（epic P2）— 可单独配 API
+  | 'sttGen_cosyvoice'         // STT: CosyVoice/SenseVoice 语音转文字（apiCategory='stt'）— 可单独配 API
+  | 'sttGen_doubao';           // STT: 豆包录音识别 flash（epic P3）— 可单独配 API
 
 /** API 分配 — 指定某个功能使用哪个 API 配置 */
 export interface APIAssignment {

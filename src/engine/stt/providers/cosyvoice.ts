@@ -26,6 +26,27 @@ export class CosyVoiceSttProvider extends BaseSttProvider {
     return `${this.baseUrl}${normalized}`;
   }
 
+  /**
+   * 连测探针 — 迁自 AIService.testConnection 的 stt 分支(epic P0 连测委托)。
+   * 转写端点要真实音频,连测改探健康端点 GET / → JSON status:'ok'(与 TTS 共用
+   * 同一 CosyVoice 服务;判活即可,避免连测时空录音)。
+   */
+  async testConnection(opts?: { signal?: AbortSignal }): Promise<{ ok: boolean; error?: string }> {
+    const { signal, cleanup } = this.withTimeout(opts?.signal, 10_000);
+    try {
+      const res = await fetch(`${this.baseUrl}/`, { method: 'GET', signal });
+      if (!res.ok) {
+        const errText = await res.text().catch(() => `HTTP ${res.status}`);
+        return { ok: false, error: `${res.status}: ${errText.slice(0, 120)}` };
+      }
+      const data = (await res.json().catch(() => null)) as { status?: string } | null;
+      const ok = data?.status === 'ok';
+      return { ok, error: ok ? undefined : '健康探测未返回 status:ok' };
+    } finally {
+      cleanup();
+    }
+  }
+
   async transcribe(blob: Blob, options?: SttTranscribeOptions): Promise<SttResult> {
     const url = this.buildTranscribeUrl();
     const form = new FormData();

@@ -9,7 +9,7 @@
  * 设计文档：docs/design/tts-system-design.md §6.2
  * App doc：docs/user-guide/pages/game-main.md §3.13 配音
  */
-import { ref, inject, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, inject, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
@@ -18,8 +18,9 @@ import type { SelectOption } from '@/ui/components/shared/AgaSelect.vue';
 import { eventBus } from '@/engine/core/event-bus';
 import { loadTtsSettings, saveTtsSettings } from '@/engine/tts/tts-settings';
 import { TTS_RATE_MIN, TTS_RATE_MAX } from '@/engine/tts/types';
-import type { TtsSettings, TtsVoiceFavorite } from '@/engine/tts/types';
+import type { TtsSettings, TtsVoiceFavorite, TtsBackendType } from '@/engine/tts/types';
 import type { TtsService } from '@/engine/tts/tts-service';
+import { providerCatalog } from '@/engine/providers';
 
 const { t } = useI18n();
 const ttsService = inject<TtsService | undefined>('ttsService', undefined);
@@ -35,18 +36,39 @@ const PREWARM_UI_MAX = 10;
 
 const settings = ref<TtsSettings>(loadTtsSettings());
 
-/** 服务端音色列表（/speakers 拉取；空 = 未拉取或不可用，退回自由输入） */
-const remoteSpeakers = ref<string[]>([]);
+/**
+ * 音色候选（label 展示名 / value = 实际 speaker 值）。来源二选一（能力驱动，
+ * epic P0 §3.7）：speakerListing 后端（CosyVoice）经"拉取音色"从服务端取；
+ * 无列举端点的后端（豆包）在挂载/切换时静默装入 provider 的内置常用候选。
+ */
+const remoteSpeakers = ref<Array<{ name: string; voiceId: string }>>([]);
 const loadingSpeakers = ref(false);
+
+/** 当前配音服务商是否提供服务端音色列举（决定"拉取音色"按钮显隐）。 */
+const speakerListingSupported = computed(() =>
+  providerCatalog.get('tts', settings.value.backend)?.capabilities.speakerListing === true,
+);
 
 const speakerOptions = ref<SelectOption[]>([]);
 function rebuildSpeakerOptions(): void {
-  const opts: SelectOption[] = remoteSpeakers.value.map((s) => ({ label: s, value: s }));
+  const opts: SelectOption[] = remoteSpeakers.value.map((s) => ({
+    label: s.name === s.voiceId ? s.name : `${s.name}（${s.voiceId}）`,
+    value: s.voiceId,
+  }));
   // Keep the current custom value selectable even if not in the fetched list.
-  if (settings.value.defaultSpeaker && !remoteSpeakers.value.includes(settings.value.defaultSpeaker)) {
+  if (settings.value.defaultSpeaker && !remoteSpeakers.value.some((s) => s.voiceId === settings.value.defaultSpeaker)) {
     opts.unshift({ label: settings.value.defaultSpeaker, value: settings.value.defaultSpeaker });
   }
   speakerOptions.value = opts;
+}
+
+/** 无列举端点的后端：静默装入内置候选（不发"拉取成功"toast——不是网络拉取）。 */
+async function refreshBuiltinSpeakers(): Promise<void> {
+  if (speakerListingSupported.value || !ttsService) return;
+  try {
+    remoteSpeakers.value = await ttsService.listSpeakers();
+  } catch { remoteSpeakers.value = []; }
+  rebuildSpeakerOptions();
 }
 
 // Re-sync when settings change anywhere (quick-switch chip, backup import via
@@ -55,6 +77,7 @@ function rebuildSpeakerOptions(): void {
 let unsub: (() => void) | null = null;
 onMounted(() => {
   rebuildSpeakerOptions();
+  void refreshBuiltinSpeakers();
   unsub = eventBus.on('tts:state', () => {
     settings.value = ttsService?.getSettings() ?? loadTtsSettings();
     rebuildSpeakerOptions();
@@ -68,6 +91,20 @@ onBeforeUnmount(() => {
 function commit(): void {
   saveTtsSettings(settings.value);
   ttsService?.setSettings({ ...settings.value });
+}
+
+// ── 当前配音服务商（epic P2 / D2：平行 backend 的显式选择位，非 toggle） ──
+const backendOptions = providerCatalog
+  .byCategory('tts')
+  .map((d) => ({ label: t(`api.backend.${d.id}`), value: d.id }));
+function setBackend(v: string): void {
+  settings.value.backend = v as TtsBackendType;
+  // 换服务商后音色体系不同：清掉列表缓存重建候选（收藏保留）；
+  // 无列举端点的后端随即静默装入内置候选。
+  remoteSpeakers.value = [];
+  rebuildSpeakerOptions();
+  commit();
+  void refreshBuiltinSpeakers();
 }
 
 function setEnabled(v: boolean): void { settings.value.enabled = v; commit(); }
@@ -85,8 +122,7 @@ async function fetchSpeakers(): Promise<void> {
   if (!ttsService) return;
   loadingSpeakers.value = true;
   try {
-    const list = await ttsService.listSpeakers();
-    remoteSpeakers.value = list.map((s) => s.name);
+    remoteSpeakers.value = await ttsService.listSpeakers();
     rebuildSpeakerOptions();
     if (remoteSpeakers.value.length === 0) {
       eventBus.emit('ui:toast', { type: 'warning', message: t('settings.audio.speaker.fetchEmpty'), duration: 2500 });
@@ -145,6 +181,19 @@ function favoriteLabel(f: TtsVoiceFavorite): string {
     </div>
 
     <template v-if="settings.enabled">
+      <!-- 当前配音服务商（epic P2 / D2） -->
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">{{ $t('settings.audio.backend.label') }}</span>
+          <span class="setting-desc">{{ $t('settings.audio.backend.desc') }}</span>
+        </div>
+        <AgaSelect
+          :modelValue="settings.backend"
+          :options="backendOptions"
+          @update:modelValue="v => setBackend(v as string)"
+        />
+      </div>
+
       <!-- 自动配音 -->
       <div class="setting-row">
         <div class="setting-info">
@@ -277,7 +326,8 @@ function favoriteLabel(f: TtsVoiceFavorite): string {
             :placeholder="$t('settings.audio.speaker.placeholder')"
             @change="setDefaultSpeaker(($event.target as HTMLInputElement).value)"
           />
-          <AgaButton size="sm" variant="secondary" :disabled="loadingSpeakers" @click="fetchSpeakers">
+          <!-- 拉取音色仅对声明 speakerListing 能力的服务商显示（epic P0 §3.7 能力门） -->
+          <AgaButton v-if="speakerListingSupported" size="sm" variant="secondary" :disabled="loadingSpeakers" @click="fetchSpeakers">
             {{ loadingSpeakers ? $t('settings.audio.speaker.fetching') : $t('settings.audio.speaker.fetch') }}
           </AgaButton>
         </div>

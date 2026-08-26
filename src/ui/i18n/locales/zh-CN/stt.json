@@ -29,6 +29,10 @@
     "settings": {
       "sectionTitle": "语音输入（STT）",
       "desc": "对着麦克风说话，转成文字填进输入框，由你核对后再发送。",
+      "backend": {
+        "label": "听写服务商",
+        "desc": "当前用哪家服务转文字（CosyVoice 本地 / 豆包云端）；豆包暂不支持实时听写，选它时自动走录完即转"
+      },
       "hotword": {
         "sectionTitle": "专有名词偏置",
         "enabled": {

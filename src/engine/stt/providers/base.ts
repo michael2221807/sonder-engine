@@ -18,6 +18,7 @@ export abstract class BaseSttProvider implements SttProvider {
   ) {}
 
   abstract transcribe(blob: Blob, options?: SttTranscribeOptions): Promise<SttResult>;
+  abstract testConnection(opts?: { signal?: AbortSignal }): Promise<{ ok: boolean; error?: string }>;
 
   /** 归一化 endpoint(去尾斜杠) */
   protected get baseUrl(): string {

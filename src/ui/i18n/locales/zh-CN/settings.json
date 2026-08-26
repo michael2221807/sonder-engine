@@ -33,6 +33,8 @@
   "settings.audio.desc": "用 CosyVoice 把回合正文朗读出来。API 端点在「API 配置」里以 TTS 类别添加并分配。",
   "settings.audio.enabled.label": "启用配音",
   "settings.audio.enabled.desc": "总开关。关闭后回合播放键与自动配音全部隐藏。",
+  "settings.audio.backend.label": "配音服务商",
+  "settings.audio.backend.desc": "当前用哪家语音服务合成配音（CosyVoice 本地 / 豆包语音云端）；需先在「API 配置」中添加对应 TTS 配置。",
   "settings.audio.autoNarrate.label": "自动配音（每回合朗读）",
   "settings.audio.autoNarrate.desc": "AI 出文后自动朗读本回合正文。首次可能需先点击页面一次以解锁浏览器自动播放。",
   "settings.audio.mode.label": "传输模式",

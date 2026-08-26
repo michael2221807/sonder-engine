@@ -20,9 +20,10 @@ import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import { eventBus } from '@/engine/core/event-bus';
 import { API_PROVIDER_PRESETS, requestTimeoutMinutesToMs, REQUEST_TIMEOUT_MIN_MINUTES, REQUEST_TIMEOUT_MAX_MINUTES, REQUEST_TIMEOUT_DEFAULT_MINUTES } from '@/engine/ai/types';
-import { inferImageBackendFromUrl, AI_SETTINGS_STORAGE_KEY } from '@/engine/ai/ai-service';
+import { AI_SETTINGS_STORAGE_KEY } from '@/engine/ai/ai-service';
 import type { AIService } from '@/engine/ai/ai-service';
 import type { APIConfig, APIProviderType, UsageType, APICategory } from '@/engine/ai/types';
+import { providerCatalog } from '@/engine/providers';
 
 const { t } = useI18n();
 const apiStore = useAPIManagementStore();
@@ -43,9 +44,15 @@ interface UsageTypeMeta {
 }
 
 /**
- * Category assignment is static (no i18n needed); label/tip are reactive via t().
+ * Per-backend usage types (`imageGen_*` / `ttsGen_*` / `sttGen_*`) are the
+ * assignment table's multi-config switcher rows; their list derives from the
+ * provider catalog (epic P0 §3.3) so a new vendor's rows appear without
+ * touching this file. The template-literal Exclude keeps the static part
+ * exhaustively checked by TS for every non-backend usage.
  */
-const USAGE_TYPE_CATEGORIES: Record<UsageType, AssignCategory> = {
+type PerBackendUsage = `imageGen_${string}` | `ttsGen_${string}` | `sttGen_${string}`;
+
+const STATIC_USAGE_CATEGORIES: Record<Exclude<UsageType, PerBackendUsage>, AssignCategory> = {
   main: 'narrative',
   cot: 'narrative',
   bodyPolish: 'narrative',
@@ -60,11 +67,6 @@ const USAGE_TYPE_CATEGORIES: Record<UsageType, AssignCategory> = {
   instruction_generation: 'plot',
   privacy_repair: 'repair',
   field_repair: 'repair',
-  imageGen_novelai: 'image',
-  imageGen_openai: 'image',
-  imageGen_sd_webui: 'image',
-  imageGen_comfyui: 'image',
-  imageGen_civitai: 'image',
   imageGeneration: 'image',
   imageCharacterTokenizer: 'image',
   imageSceneTokenizer: 'image',
@@ -75,11 +77,35 @@ const USAGE_TYPE_CATEGORIES: Record<UsageType, AssignCategory> = {
   world_builder: 'utility',
   engram_batch_solidify: 'repair',
   card_edge_classify: 'repair',
-  ttsGen_cosyvoice: 'audio',
-  sttGen_cosyvoice: 'audio',
 };
 
+const USAGE_TYPE_CATEGORIES: Record<UsageType, AssignCategory> = {
+  ...STATIC_USAGE_CATEGORIES,
+  ...Object.fromEntries([
+    ...providerCatalog.byCategory('image').map((d) => [`imageGen_${d.id}`, 'image'] as const),
+    ...providerCatalog.byCategory('tts').map((d) => [`ttsGen_${d.id}`, 'audio'] as const),
+    ...providerCatalog.byCategory('stt').map((d) => [`sttGen_${d.id}`, 'audio'] as const),
+  ]),
+} as Record<UsageType, AssignCategory>;
+
+/** Split a per-backend usage key into its kind + backend id (null for static usages). */
+function parsePerBackendUsage(key: string): { kind: 'image' | 'tts' | 'stt'; backend: string } | null {
+  if (key.startsWith('imageGen_')) return { kind: 'image', backend: key.slice('imageGen_'.length) };
+  if (key.startsWith('ttsGen_')) return { kind: 'tts', backend: key.slice('ttsGen_'.length) };
+  if (key.startsWith('sttGen_')) return { kind: 'stt', backend: key.slice('sttGen_'.length) };
+  return null;
+}
+
 function getUsageTypeMeta(key: UsageType): UsageTypeMeta {
+  const perBackend = parsePerBackendUsage(key);
+  if (perBackend) {
+    const name = t(`api.backend.${perBackend.backend}`);
+    return {
+      label: t(`api.usage.byBackend.${perBackend.kind}`, { name }),
+      category: USAGE_TYPE_CATEGORIES[key],
+      tip: t(`api.usage.tip.byBackend.${perBackend.kind}`, { name }),
+    };
+  }
   return {
     label: t(`api.usage.${key}`),
     category: USAGE_TYPE_CATEGORIES[key],
@@ -227,7 +253,9 @@ async function testConnection(api: APIConfig): Promise<void> {
       apiKey: api.apiKey,
       model: api.model,
       apiCategory: api.apiCategory ?? 'llm',
+      backend: api.backend,
       customRoutingPath: api.useCustomRouting ? api.customRoutingPath : undefined,
+      credentials: api.credentials,
     });
     testStatuses.value[api.id] = result.ok ? 'ok' : 'error';
     testLatencies.value[api.id] = result.latencyMs;
@@ -268,7 +296,7 @@ async function fetchModelsForForm(): Promise<void> {
   }
   isFetchingModels.value = true;
   try {
-    const models = await aiService.fetchModels({ url: form.value.url, apiKey: form.value.apiKey, provider: form.value.provider });
+    const models = await aiService.fetchModels({ url: form.value.url, apiKey: form.value.apiKey, provider: form.value.provider, backend: form.value.backend || undefined });
     availableModels.value = models;
     if (models.length === 0) {
       eventBus.emit('ui:toast', { type: 'warning', message: t('api.fetchModels.empty'), duration: 2000 });
@@ -311,6 +339,10 @@ interface APIFormData {
   gproxyPromptCache: boolean;
   /** 强制流式 — 所有请求（含后台/非正文）走流式传输，适配只支持流式的供应商 */
   forceStreaming: boolean;
+  /** 非 llm 类别的 backend 身份（目录描述符 id；'custom' = 未识别/自定义）——落盘持久化 */
+  backend: string;
+  /** 多凭证 backend 的附加凭证（键由描述符 credentialFields 声明） */
+  credentials: Record<string, string>;
 }
 
 /**
@@ -327,50 +359,112 @@ const CATEGORY_OPTIONS: APICategory[] = ['llm', 'embedding', 'rerank', 'image', 
 
 /** Provider picker options for the edit modal (AgaSelect). */
 const PROVIDER_VALUES: APIProviderType[] = ['openai', 'claude', 'gemini', 'deepseek', 'custom'];
-const providerOptions = computed<SelectOption[]>(() =>
-  PROVIDER_VALUES.map((p) => ({ label: t(`api.form.provider.${p}`), value: p })),
+/**
+ * llm 目录预设（epic P4 / D4）：目录里不属于 APIProviderType 的 llm 条目
+ * （如 volcano_ark）。选中后以 provider:'custom' + backend:<id> 落盘，
+ * OpenAIProvider / 连测 / fetchModels 据 backend 解析该预设的端点路径。
+ */
+const LLM_PRESET_IDS: string[] = providerCatalog
+  .byCategory('llm')
+  .map((d) => d.id)
+  .filter((id) => !(PROVIDER_VALUES as string[]).includes(id));
+const providerOptions = computed<SelectOption[]>(() => [
+  ...PROVIDER_VALUES.map((p) => ({ label: t(`api.form.provider.${p}`), value: p })),
+  ...LLM_PRESET_IDS.map((id) => ({ label: t(`api.backend.${id}`), value: id })),
+]);
+/** 下拉显示值：llm 预设配置显示预设名，其余显示 provider。 */
+const providerSelectValue = computed(() =>
+  (form.value.apiCategory === 'llm' && LLM_PRESET_IDS.includes(form.value.backend))
+    ? form.value.backend
+    : form.value.provider,
 );
+function onProviderSelect(v: string): void {
+  availableModels.value = [];
+  if (LLM_PRESET_IDS.includes(v)) {
+    const d = providerCatalog.get('llm', v);
+    form.value.provider = 'custom';
+    form.value.backend = v;
+    form.value.url = d?.urlPreset ?? '';
+    form.value.model = d?.defaultModel ?? '';
+    return;
+  }
+  form.value.provider = v as APIProviderType;
+  form.value.backend = '';
+  onProviderChange();
+}
+/** llm 预设可能声明"无模型列表端点"（modelsPath 缺省）→ 隐藏获取模型按钮。 */
+const modelsFetchAvailable = computed(() => {
+  if (form.value.apiCategory === 'image') return false;
+  if (form.value.apiCategory === 'llm' && LLM_PRESET_IDS.includes(form.value.backend)) {
+    return !!providerCatalog.get('llm', form.value.backend)?.modelsPath;
+  }
+  return true;
+});
 
-type ImageBackendHint = 'civitai' | 'novelai' | 'openai' | 'sd_webui' | 'comfyui' | 'custom';
+/**
+ * Backend selector (image today, voice from epic P2) — derived from the
+ * provider catalog (epic P0 §3.3): options, URL presets, model placeholders
+ * and hints all come from the descriptors; the chosen id persists on the
+ * config as `backend` (no more URL sniffing on edit).
+ */
+const imageBackendOptions = computed<SelectOption[]>(() => [
+  ...providerCatalog.byCategory('image').map((d) => ({ label: t(`api.backend.${d.id}`), value: d.id })),
+  { label: t('api.backend.custom'), value: 'custom' },
+]);
 
-/** Static image backend data (URL, model placeholders). Labels and hints come from t() at call site. */
-const IMAGE_BACKEND_STATIC: Record<ImageBackendHint, { url: string; modelPlaceholder: string }> = {
-  civitai:  { url: 'https://orchestration.civitai.com', modelPlaceholder: 'urn:air:sdxl:checkpoint:civitai:101055@128078' },
-  novelai:  { url: 'https://image.novelai.net',          modelPlaceholder: 'nai-diffusion-4-5-full' },
-  openai:   { url: 'https://api.openai.com',             modelPlaceholder: 'dall-e-3' },
-  sd_webui: { url: 'http://localhost:7860',              modelPlaceholder: 'v1-5-pruned-emaonly.safetensors' },
-  comfyui:  { url: 'http://localhost:8188',              modelPlaceholder: 'v1-5-pruned-emaonly.safetensors' },
-  custom:   { url: '',                                   modelPlaceholder: '' },
-};
+/** 三个需要 backend 身份的类别共用的选择器选项（epic P2 起 tts/stt 也多后端）。 */
+const backendSelectorOptions = computed<SelectOption[]>(() => {
+  const cat = form.value.apiCategory;
+  if (cat === 'image') return imageBackendOptions.value;
+  if (cat === 'tts' || cat === 'stt') {
+    return providerCatalog.byCategory(cat).map((d) => ({ label: t(`api.backend.${d.id}`), value: d.id }));
+  }
+  return [];
+});
 
-function getImageBackendPreset(key: ImageBackendHint): { label: string; url: string; modelPlaceholder: string; modelHint: string } {
-  const s = IMAGE_BACKEND_STATIC[key];
+function onBackendChange(): void {
+  const cat = form.value.apiCategory;
+  if (cat !== 'image' && cat !== 'tts' && cat !== 'stt') return;
+  const d = providerCatalog.get(cat, form.value.backend);
+  form.value.url = d?.urlPreset ?? '';
+  form.value.model = cat === 'image' ? '' : (d?.defaultModel ?? '');
+  availableModels.value = [];
+}
+
+/**
+ * apiKey 输入框按所选 backend 的凭证声明显隐：声明里没有 'apiKey' 的
+ * backend（豆包语音——三凭证走 extraCredentialFields）隐藏通用 Key 框。
+ */
+const apiKeyFieldVisible = computed(() => {
+  const cat = form.value.apiCategory;
+  if (cat !== 'image' && cat !== 'tts' && cat !== 'stt') return true;
+  const d = providerCatalog.get(cat, form.value.backend);
+  if (!d) return true; // 'custom' / 未知 → 保留通用 Key 框
+  return d.credentialFields.some((f) => f.key === 'apiKey');
+});
+
+const activeImagePreset = computed(() => {
+  const id = form.value.backend || 'custom';
+  const d = providerCatalog.get('image', id);
   return {
-    label: t(`api.imageBackend.${key}`),
-    modelHint: t(`api.imageBackend.hint.${key}`),
-    ...s,
+    label: t(`api.backend.${id}`),
+    url: d?.urlPreset ?? '',
+    modelPlaceholder: d?.defaultModel ?? '',
+    modelHint: t(`api.backend.hint.${id}`),
   };
-}
-const imageBackend = ref<ImageBackendHint>('civitai');
+});
 
-/** Image backend picker options for the edit modal (AgaSelect). */
-const IMAGE_BACKEND_VALUES: ImageBackendHint[] = ['civitai', 'novelai', 'openai', 'sd_webui', 'comfyui', 'custom'];
-const imageBackendOptions = computed<SelectOption[]>(() =>
-  IMAGE_BACKEND_VALUES.map((k) => ({ label: t(`api.imageBackend.${k}`), value: k })),
-);
-
-function onImageBackendChange(): void {
-  const preset = getImageBackendPreset(imageBackend.value);
-  form.value.url = preset.url;
-  form.value.model = '';
-}
-
-const activeImagePreset = computed(() => getImageBackendPreset(imageBackend.value));
-
-function inferImageBackend(url: string): ImageBackendHint {
-  const result = inferImageBackendFromUrl(url);
-  return (result && result in IMAGE_BACKEND_STATIC) ? result as ImageBackendHint : 'custom';
-}
+/**
+ * Extra credential inputs beyond the shared apiKey field — declared by the
+ * selected backend's descriptor (epic P0 multi-credential mechanism; consumed
+ * by Doubao voice, which declares appId/accessToken/resourceId — epic P2).
+ */
+const extraCredentialFields = computed(() => {
+  const cat = form.value.apiCategory;
+  if (cat !== 'image' && cat !== 'tts' && cat !== 'stt') return [];
+  const d = providerCatalog.get(cat, form.value.backend);
+  return (d?.credentialFields ?? []).filter((f) => f.key !== 'apiKey');
+});
 
 const form = ref<APIFormData>({
   name: '',
@@ -388,6 +482,8 @@ const form = ref<APIFormData>({
   strictMessageFormat: false,
   gproxyPromptCache: false,
   forceStreaming: false,
+  backend: '',
+  credentials: {},
 });
 
 function openAddModal(): void {
@@ -412,8 +508,9 @@ function openAddModal(): void {
     strictMessageFormat: false,
     gproxyPromptCache: false,
     forceStreaming: false,
+    backend: '',
+    credentials: {},
   };
-  imageBackend.value = 'civitai';
   showEditModal.value = true;
 }
 
@@ -438,10 +535,13 @@ function fillFormFromConfig(api: APIConfig): void {
     strictMessageFormat: api.strictMessageFormat ?? false,
     gproxyPromptCache: api.gproxyPromptCache ?? false,
     forceStreaming: api.forceStreaming ?? false,
+    // 落盘的显式选择（loadFromStorage 的回填迁移保证旧配置也有值）；
+    // 兜底 'custom'/'cosyvoice' 仅防御手工改过 localStorage 的极端情况。
+    backend: api.backend
+      ?? ((api.apiCategory === 'tts' || api.apiCategory === 'stt') ? 'cosyvoice'
+        : api.apiCategory === 'image' ? 'custom' : ''),
+    credentials: { ...(api.credentials ?? {}) },
   };
-  if ((api.apiCategory ?? 'llm') === 'image') {
-    imageBackend.value = inferImageBackend(api.url);
-  }
 }
 
 function openEditModal(api: APIConfig): void {
@@ -489,6 +589,9 @@ interface CategorySlice {
   maxTokens: number;
   useCustomRouting: boolean;
   customRoutingPath: string;
+  /** 非 llm 类别的 backend 身份 + 附加凭证（epic P0）——随类别切换一起缓存/恢复 */
+  backend: string;
+  credentials: Record<string, string>;
 }
 
 /**
@@ -508,6 +611,8 @@ const CATEGORY_DEFAULTS: Record<APICategory, CategorySlice> = {
     maxTokens: 16000,
     useCustomRouting: false,
     customRoutingPath: '',
+    backend: '',
+    credentials: {},
   },
   embedding: {
     provider: 'custom',
@@ -517,6 +622,8 @@ const CATEGORY_DEFAULTS: Record<APICategory, CategorySlice> = {
     maxTokens: 0,
     useCustomRouting: false,
     customRoutingPath: '',
+    backend: '',
+    credentials: {},
   },
   rerank: {
     provider: 'custom',
@@ -526,33 +633,43 @@ const CATEGORY_DEFAULTS: Record<APICategory, CategorySlice> = {
     maxTokens: 0,
     useCustomRouting: false,
     customRoutingPath: '',
+    backend: '',
+    credentials: {},
   },
+  // 首次切入 image 默认选 Civitai 并预填其 URL（与旧行为一致，来源改为目录）
   image: {
     provider: 'custom',
-    url: '',
+    url: providerCatalog.get('image', 'civitai')?.urlPreset ?? '',
     model: '',
     temperature: 0,
     maxTokens: 0,
     useCustomRouting: false,
     customRoutingPath: '',
+    backend: 'civitai',
+    credentials: {},
   },
+  // tts/stt 默认值取目录当前唯一语音条目的预设（epic P0 派生；P2 起由 backend 选择器主导）
   tts: {
     provider: 'custom',
-    url: 'http://localhost:9880',
-    model: 'cosyvoice',
+    url: providerCatalog.byCategory('tts')[0]?.urlPreset ?? '',
+    model: providerCatalog.byCategory('tts')[0]?.defaultModel ?? '',
     temperature: 0,
     maxTokens: 0,
     useCustomRouting: false,
     customRoutingPath: '',
+    backend: providerCatalog.byCategory('tts')[0]?.id ?? '',
+    credentials: {},
   },
   stt: {
     provider: 'custom',
-    url: 'http://localhost:9880',
-    model: 'sensevoice',
+    url: providerCatalog.byCategory('stt')[0]?.urlPreset ?? '',
+    model: providerCatalog.byCategory('stt')[0]?.defaultModel ?? '',
     temperature: 0,
     maxTokens: 0,
     useCustomRouting: false,
     customRoutingPath: '',
+    backend: providerCatalog.byCategory('stt')[0]?.id ?? '',
+    credentials: {},
   },
 };
 
@@ -566,6 +683,8 @@ function snapshotCurrentSlice(): CategorySlice {
     maxTokens: form.value.maxTokens,
     useCustomRouting: form.value.useCustomRouting,
     customRoutingPath: form.value.customRoutingPath,
+    backend: form.value.backend,
+    credentials: { ...form.value.credentials },
   };
 }
 
@@ -578,6 +697,8 @@ function applySlice(slice: CategorySlice): void {
   form.value.maxTokens = slice.maxTokens;
   form.value.useCustomRouting = slice.useCustomRouting;
   form.value.customRoutingPath = slice.customRoutingPath;
+  form.value.backend = slice.backend;
+  form.value.credentials = { ...slice.credentials };
 }
 
 /**
@@ -593,14 +714,10 @@ function onCategoryChange(previousCategory: APICategory): void {
   availableModels.value = [];
   // 1. 把当前表单字段存到"切出"类别的 slot
   categoryFormCache.value[previousCategory] = snapshotCurrentSlice();
-  // 2. 从"切入"类别恢复，或用默认值
+  // 2. 从"切入"类别恢复，或用默认值（slice 已含 backend/credentials —— image 默认
+  //    civitai + 预填 URL、tts/stt 默认目录唯一语音条目,与旧行为一致,来源改为目录）
   const cached = categoryFormCache.value[newCat];
   applySlice(cached ?? CATEGORY_DEFAULTS[newCat]);
-  // 3. 切入 image 时，用 imageBackend 预设填充 URL
-  if (newCat === 'image' && !cached) {
-    imageBackend.value = 'civitai';
-    form.value.url = IMAGE_BACKEND_STATIC.civitai.url;
-  }
 }
 
 function onProviderChange(): void {
@@ -622,6 +739,13 @@ function onProviderChange(): void {
 const formValidationError = computed<string | null>(() => {
   if (!form.value.name.trim()) return t('api.form.validationNameRequired');
   if (!form.value.url.trim()) return t('api.form.validationUrlRequired');
+  // 多凭证 backend 的必填附加凭证（epic P2 checklist ④：三字段缺一有校验提示）。
+  // 通用 apiKey 沿既有政策保存时可留空，不在此强制。
+  for (const field of extraCredentialFields.value) {
+    if (field.required && !(form.value.credentials[field.key] ?? '').trim()) {
+      return t('api.form.validationCredentialRequired', { name: t(field.i18nKey) });
+    }
+  }
   return null;
 });
 
@@ -632,11 +756,23 @@ function saveAPI(): void {
     eventBus.emit('ui:toast', { type: 'error', message: err, duration: 2000 });
     return;
   }
+  // Epic P0：backend 仅对需要身份的类别落盘（P4 起 llm 目录预设也落盘）；
+  // credentials 剔除空值、无内容不落字段
+  const needsBackend = form.value.apiCategory === 'image' || form.value.apiCategory === 'tts' || form.value.apiCategory === 'stt';
+  const isLlmPreset = form.value.apiCategory === 'llm' && LLM_PRESET_IDS.includes(form.value.backend);
+  const cleanedCredentials = Object.fromEntries(
+    Object.entries(form.value.credentials).filter(([, v]) => typeof v === 'string' && v.trim().length > 0),
+  );
+  const payload = {
+    ...form.value,
+    backend: needsBackend ? (form.value.backend || 'custom') : (isLlmPreset ? form.value.backend : undefined),
+    credentials: Object.keys(cleanedCredentials).length > 0 ? cleanedCredentials : undefined,
+  };
   if (isNewAPI.value) {
-    apiStore.addAPI(form.value);
+    apiStore.addAPI(payload);
     eventBus.emit('ui:toast', { type: 'success', message: t('api.toast.added'), duration: 1500 });
   } else {
-    apiStore.updateAPI(editingId.value, form.value);
+    apiStore.updateAPI(editingId.value, payload);
     // Reset test status when config is updated
     delete testStatuses.value[editingId.value];
     eventBus.emit('ui:toast', { type: 'success', message: t('api.toast.updated'), duration: 1500 });
@@ -844,6 +980,18 @@ function isApiCategoryMismatch(api: APIConfig, type: UsageType): boolean {
 }
 
 /**
+ * per-backend 行（imageGen_* / ttsGen_* / sttGen_*）的 backend 不匹配判断
+ * （2026-08-26 review：类别匹配但 backend 不同——如把 CosyVoice 配置分给
+ * "豆包配音"行——也必须给 ⚠ 警告，否则会用 A 家配置去造 B 家 provider）。
+ */
+function isApiBackendMismatch(api: APIConfig, type: UsageType): boolean {
+  const perBackend = parsePerBackendUsage(type);
+  if (!perBackend) return false;
+  if (isApiCategoryMismatch(api, type)) return false; // 类别警告已覆盖
+  return (api.backend ?? '') !== perBackend.backend;
+}
+
+/**
  * Build the per-usageType assignment dropdown options as SelectOption[] for AgaSelect.
  * PRESERVES the exact label logic from the prior native <select>:
  *  - empty placeholder when no assignable API matches
@@ -860,7 +1008,8 @@ function getAssignableAPIOptions(type: UsageType): SelectOption[] {
     label:
       api.name +
       (!api.enabled ? ' ' + t('api.assign.disabled') : '') +
-      (isApiCategoryMismatch(api, type) ? ' ⚠ ' + t('api.assign.mismatch') : ''),
+      (isApiCategoryMismatch(api, type) ? ' ⚠ ' + t('api.assign.mismatch')
+        : isApiBackendMismatch(api, type) ? ' ⚠ ' + t('api.assign.backendMismatch') : ''),
   }));
 }
 </script>
@@ -1066,23 +1215,23 @@ function getAssignableAPIOptions(type: UsageType): SelectOption[] {
           <input v-model="form.name" type="text" class="form-input" :placeholder="$t('api.form.namePlaceholder')" />
         </div>
 
-        <!-- Provider only for LLM category -->
+        <!-- Provider only for LLM category (includes catalog presets like 火山方舟) -->
         <div v-if="form.apiCategory === 'llm'" class="form-group">
           <label class="form-label">{{ $t('api.form.provider') }}</label>
           <AgaSelect
-            :modelValue="form.provider"
+            :modelValue="providerSelectValue"
             :options="providerOptions"
-            @update:modelValue="v => { form.provider = v as APIProviderType; onProviderChange(); }"
+            @update:modelValue="v => onProviderSelect(v as string)"
           />
         </div>
 
-        <!-- Image backend selector -->
-        <div v-if="form.apiCategory === 'image'" class="form-group">
-          <label class="form-label">{{ $t('api.form.imageBackend') }}</label>
+        <!-- Backend selector for image / tts / stt (catalog-derived; choice persists on the config) -->
+        <div v-if="form.apiCategory === 'image' || form.apiCategory === 'tts' || form.apiCategory === 'stt'" class="form-group">
+          <label class="form-label">{{ form.apiCategory === 'image' ? $t('api.form.imageBackend') : $t('api.form.backend') }}</label>
           <AgaSelect
-            :modelValue="imageBackend"
-            :options="imageBackendOptions"
-            @update:modelValue="v => { imageBackend = v as ImageBackendHint; onImageBackendChange(); }"
+            :modelValue="form.backend"
+            :options="backendSelectorOptions"
+            @update:modelValue="v => { form.backend = v as string; onBackendChange(); }"
           />
         </div>
 
@@ -1097,7 +1246,7 @@ function getAssignableAPIOptions(type: UsageType): SelectOption[] {
               : form.apiCategory === 'image'
                 ? activeImagePreset.url || 'https://example.com'
                 : (form.apiCategory === 'tts' || form.apiCategory === 'stt')
-                  ? 'http://localhost:9880'
+                  ? (providerCatalog.get(form.apiCategory, form.backend)?.urlPreset || 'https://api.example.com')
                   : 'https://api.example.com'"
           />
           <span v-if="form.apiCategory === 'embedding' || form.apiCategory === 'rerank'" class="form-hint">
@@ -1107,15 +1256,12 @@ function getAssignableAPIOptions(type: UsageType): SelectOption[] {
           <span v-else-if="form.apiCategory === 'image'" class="form-hint">
             {{ activeImagePreset.label }}{{ $t('api.form.urlHintImage') }}
           </span>
-          <span v-else-if="form.apiCategory === 'tts'" class="form-hint">
-            {{ $t('api.form.urlHintTts') }}
-          </span>
-          <span v-else-if="form.apiCategory === 'stt'" class="form-hint">
-            {{ $t('api.form.urlHintStt') }}
+          <span v-else-if="form.apiCategory === 'tts' || form.apiCategory === 'stt'" class="form-hint">
+            {{ $t(`api.backend.hint.${form.backend || 'cosyvoice'}`) }}
           </span>
         </div>
 
-        <div class="form-group">
+        <div v-if="apiKeyFieldVisible" class="form-group">
           <label class="form-label">{{ $t('api.form.apiKey') }}</label>
           <input
             v-model="form.apiKey"
@@ -1125,6 +1271,18 @@ function getAssignableAPIOptions(type: UsageType): SelectOption[] {
           />
           <span v-if="form.apiCategory === 'tts'" class="form-hint">{{ $t('api.form.apiKeyHintTts') }}</span>
           <span v-else-if="form.apiCategory === 'stt'" class="form-hint">{{ $t('api.form.apiKeyHintStt') }}</span>
+        </div>
+
+        <!-- Extra credentials beyond apiKey — declared by the backend's descriptor
+             (epic P0 mechanism; Doubao voice renders appId/accessToken/resourceId here) -->
+        <div v-for="field in extraCredentialFields" :key="field.key" class="form-group">
+          <label class="form-label">{{ $t(field.i18nKey) }}</label>
+          <input
+            :value="form.credentials[field.key] ?? ''"
+            :type="field.secret ? 'password' : 'text'"
+            class="form-input"
+            @input="e => { form.credentials[field.key] = (e.target as HTMLInputElement).value; }"
+          />
         </div>
 
         <!-- Model with fetch button (B.1.2) — hidden for TTS/STT (CosyVoice needs no model) -->
@@ -1145,7 +1303,7 @@ function getAssignableAPIOptions(type: UsageType): SelectOption[] {
                     : 'gpt-4o'"
             />
             <button
-              v-if="form.apiCategory !== 'image'"
+              v-if="modelsFetchAvailable"
               class="btn-fetch-models"
               :disabled="isFetchingModels"
               @click="fetchModelsForForm"

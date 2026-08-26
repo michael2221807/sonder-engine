@@ -32,8 +32,6 @@ import { stripMarkersForSpeech, splitSentences, groupSentencesBySize } from './s
 import { HtmlAudioPlayer, type TtsAudioPlayer } from './audio-player';
 import { concatWavBlobs } from './audio-concat';
 
-const DEFAULT_BACKEND: TtsBackendType = 'cosyvoice';
-
 export class TtsService {
   private settings: TtsSettings;
   private player: TtsAudioPlayer;
@@ -91,23 +89,33 @@ export class TtsService {
     eventBus.emit('tts:state', this.getState());
   }
 
-  /** 是否具备可用配置(总开关开 + 有 tts 类 API)。UI 用于禁用播放键。 */
+  /**
+   * 当前配音服务商 — 用户在设置区 / 配音快切选定(epic P2 / D2),
+   * settings.backend 已由 normalizeTtsSettings 校验为合法 union 值。
+   */
+  private activeBackend(): TtsBackendType {
+    return this.settings.backend;
+  }
+
+  /** 是否具备可用配置(总开关开 + 当前服务商有 tts 类 API)。UI 用于禁用播放键。 */
   isReady(): boolean {
-    return this.settings.enabled && !!this.aiService.getTtsConfigForBackend(DEFAULT_BACKEND);
+    return this.settings.enabled && !!this.aiService.getTtsConfigForBackend(this.activeBackend());
   }
 
   // ─── provider ───
 
   private resolveProvider(): TtsProvider | null {
-    const config = this.aiService.getTtsConfigForBackend(DEFAULT_BACKEND);
+    const backend = this.activeBackend();
+    const config = this.aiService.getTtsConfigForBackend(backend);
     if (!config) return null;
     try {
       return this.registry.resolve({
-        backend: DEFAULT_BACKEND,
+        backend,
         endpoint: config.url,
         apiKey: config.apiKey,
         model: config.model,
         routingPath: config.useCustomRouting ? config.customRoutingPath : undefined,
+        credentials: config.credentials,
       });
     } catch {
       return null;

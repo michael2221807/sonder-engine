@@ -29,7 +29,7 @@ import { eventBus } from '@/engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import { readStatFields } from '@/engine/pack/stat-section-reader';
 import { extractAnchorViaAI } from '@/engine/image/anchor-extractor';
-import { inferImageBackendFromUrl } from '@/engine/ai/ai-service';
+import { providerCatalog } from '@/engine/providers';
 import type { AIService } from '@/engine/ai/ai-service';
 import { useAPIManagementStore } from '@/engine/stores/engine-api';
 import type { ImageService } from '@/engine/image/image-service';
@@ -53,7 +53,8 @@ const imageService = inject<ImageService>('imageService');
 const aiService = inject<AIService | undefined>('aiService', undefined);
 const apiStore = useAPIManagementStore();
 
-const IMAGE_BACKEND_KEYS: ImageBackendType[] = ['novelai', 'openai', 'sd_webui', 'comfyui', 'civitai'];
+// Catalog-derived (epic P0 §3.3) — mirrors ImagePanel.configuredBackends.
+const IMAGE_BACKEND_KEYS = providerCatalog.byCategory('image').map((d) => d.id) as ImageBackendType[];
 const configuredImageBackends = computed(() => {
   apiStore.apiConfigs; apiStore.apiAssignments;
   const set = new Set<string>();
@@ -68,29 +69,27 @@ const configuredImageBackends = computed(() => {
     const legacyAssign = apiStore.apiAssignments.find((a) => a.type === 'imageGeneration');
     if (legacyAssign && legacyAssign.apiId !== 'default') {
       const cfg = apiStore.apiConfigs.find((c) => c.id === legacyAssign.apiId && c.enabled && (c.apiCategory ?? 'llm') === 'image');
-      if (cfg) {
-        const b = inferImageBackendFromUrl(cfg.url);
-        if (b) set.add(b);
-      }
+      // Epic P0: persisted backend field replaces URL sniffing.
+      const b = cfg?.backend;
+      if (b && IMAGE_BACKEND_KEYS.includes(b as ImageBackendType)) set.add(b);
     }
   }
   return set;
 });
 
 const availableBackendOptions = computed(() => {
-  const ALL: SelectOption[] = [
-    { label: 'NovelAI', value: 'novelai' },
-    { label: 'OpenAI DALL-E', value: 'openai' },
-    { label: 'SD-WebUI', value: 'sd_webui' },
-    { label: 'ComfyUI', value: 'comfyui' },
-    { label: 'Civitai', value: 'civitai' },
-  ];
+  // Catalog-derived; labels via the shared api.backend.* i18n keys.
+  const ALL: SelectOption[] = providerCatalog
+    .byCategory('image')
+    .map((d) => ({ label: t(`api.backend.${d.id}`), value: d.id }));
   const available = configuredImageBackends.value;
   if (available.size === 0) return [{ label: t('character.image.noImageApi'), value: '' }];
   return ALL.filter((o) => available.has(o.value));
 });
 
-const VALID_BACKENDS = new Set<string>(['openai', 'novelai', 'sd_webui', 'comfyui', 'civitai']);
+// Catalog-derived (review Critical 2026-08-26: a hand-written set here
+// silently coerced newly-added backends back to novelai).
+const VALID_BACKENDS = new Set<string>(IMAGE_BACKEND_KEYS);
 function resolveDefaultBackend(): ImageBackendType {
   const raw = String(get('系统.扩展.image.config.defaultBackend') ?? 'novelai');
   const validated = VALID_BACKENDS.has(raw) ? raw as ImageBackendType : 'novelai' as ImageBackendType;

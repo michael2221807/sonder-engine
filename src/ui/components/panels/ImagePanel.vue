@@ -34,7 +34,7 @@ import { useBackdropClose } from '@/ui/composables/useBackdropClose';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import { eventBus } from '@/engine/core/event-bus';
 import { extractAnchorViaAI } from '@/engine/image/anchor-extractor';
-import { inferImageBackendFromUrl } from '@/engine/ai/ai-service';
+import { providerCatalog } from '@/engine/providers';
 import type { AIService } from '@/engine/ai/ai-service';
 import { useAPIManagementStore } from '@/engine/stores/engine-api';
 import { getDefaultPresets, getDefaultModelBundles } from '@/engine/image/transformer-presets';
@@ -91,8 +91,9 @@ const customComposition = ref('');
 const artStyle = ref<'none' | 'generic' | 'anime' | 'realistic' | 'chinese'>('none');
 const backend = computed<ImageBackendType>(() => {
   const saved = String(get('系统.扩展.image.config.defaultBackend') ?? 'novelai');
-  const VALID = new Set(['openai', 'novelai', 'sd_webui', 'comfyui', 'civitai']);
-  return VALID.has(saved) ? saved as ImageBackendType : 'novelai';
+  // Catalog-derived allowlist (review Critical 2026-08-26: a hand-written set
+  // here silently coerced newly-added backends back to novelai).
+  return IMAGE_BACKEND_KEYS.includes(saved as ImageBackendType) ? saved as ImageBackendType : 'novelai';
 });
 const extraPrompt = ref('');
 const selectedArtistPreset = ref('');
@@ -319,15 +320,13 @@ const styleOptions = computed(() => [
   { label: t('image.manual.artStyle.chinese'), value: 'chinese' as const },
 ]);
 
-const ALL_IMAGE_BACKENDS: SelectOption[] = [
-  { label: 'NovelAI', value: 'novelai' },
-  { label: 'OpenAI DALL-E', value: 'openai' },
-  { label: 'SD-WebUI', value: 'sd_webui' },
-  { label: 'ComfyUI', value: 'comfyui' },
-  { label: 'Civitai', value: 'civitai' },
-];
+// Catalog-derived (epic P0 §3.3): a new image vendor appears here without
+// touching this file. Labels resolve via the shared api.backend.* i18n keys.
+const ALL_IMAGE_BACKENDS = computed<SelectOption[]>(() =>
+  providerCatalog.byCategory('image').map((d) => ({ label: t(`api.backend.${d.id}`), value: d.id })),
+);
 
-const IMAGE_BACKEND_KEYS: ImageBackendType[] = ['novelai', 'openai', 'sd_webui', 'comfyui', 'civitai'];
+const IMAGE_BACKEND_KEYS = providerCatalog.byCategory('image').map((d) => d.id) as ImageBackendType[];
 
 function getImageApiForBackend(bk: string): import('@/engine/ai/types').APIConfig | null {
   const assignment = apiStore.apiAssignments.find((a) => a.type === `imageGen_${bk}`);
@@ -346,10 +345,10 @@ const configuredBackends = computed<Set<string>>(() => {
     const legacyAssign = apiStore.apiAssignments.find((a) => a.type === 'imageGeneration');
     if (legacyAssign && legacyAssign.apiId !== 'default') {
       const cfg = apiStore.apiConfigs.find((c) => c.id === legacyAssign.apiId && c.enabled && (c.apiCategory ?? 'llm') === 'image');
-      if (cfg) {
-        const b = inferImageBackendFromUrl(cfg.url);
-        if (b) set.add(b);
-      }
+      // Epic P0: the persisted backend field replaces URL sniffing (backfilled
+      // by the store's load-time migration; 'custom' has no per-backend route).
+      const b = cfg?.backend;
+      if (b && IMAGE_BACKEND_KEYS.includes(b as ImageBackendType)) set.add(b);
     }
   }
   return set;
@@ -358,7 +357,7 @@ const configuredBackends = computed<Set<string>>(() => {
 const backendOptions = computed<SelectOption[]>(() => {
   const available = configuredBackends.value;
   if (available.size === 0) return [{ label: t('image.backend.placeholder'), value: '' }];
-  return ALL_IMAGE_BACKENDS.filter((o) => available.has(o.value));
+  return ALL_IMAGE_BACKENDS.value.filter((o) => available.has(o.value));
 });
 
 
@@ -386,7 +385,7 @@ const civitaiOutputFormatOptions: SelectOption[] = [
 /** Human-readable label for an image backend. Reuses backendOptions as the
  *  source so any label change propagates without duplicating strings. */
 function backendLabel(value: string): string {
-  return ALL_IMAGE_BACKENDS.find((b) => b.value === value)?.label ?? value;
+  return ALL_IMAGE_BACKENDS.value.find((b) => b.value === value)?.label ?? value;
 }
 
 /**
@@ -1599,7 +1598,7 @@ const settingsTransformerIndependent = computed(() => get('系统.扩展.image.c
 
 const activeBackendStatus = computed(() => {
   const bk = backend.value;
-  const label = ALL_IMAGE_BACKENDS.find((o) => o.value === bk)?.label ?? bk;
+  const label = ALL_IMAGE_BACKENDS.value.find((o) => o.value === bk)?.label ?? bk;
   const cfg = aiService?.getImageConfigForBackend(bk);
   return {
     label,

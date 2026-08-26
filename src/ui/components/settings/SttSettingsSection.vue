@@ -11,12 +11,16 @@
  * App doc：docs/user-guide/pages/game-main.md §3.14 语音输入
  */
 import { ref, inject } from 'vue';
+import { useI18n } from 'vue-i18n';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
+import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
 import { loadSttSettings, saveSttSettings } from '@/engine/stt/stt-settings';
 import { useSttLexicon } from '@/ui/composables/useSttLexicon';
-import type { SttSettings, SttInputMode, SttLatencyProfile, SttHotwordStrength, SttPauseTolerance } from '@/engine/stt/types';
+import { providerCatalog } from '@/engine/providers';
+import type { SttSettings, SttBackendType, SttInputMode, SttLatencyProfile, SttHotwordStrength, SttPauseTolerance } from '@/engine/stt/types';
 import type { SttService } from '@/engine/stt/stt-service';
 
+const { t } = useI18n();
 const stt = inject<SttService | undefined>('sttService', undefined);
 const settings = ref<SttSettings>(loadSttSettings());
 const lexicon = useSttLexicon();
@@ -26,6 +30,17 @@ const newTerm = ref('');
 function commit(): void {
   saveSttSettings(settings.value);
   window.dispatchEvent(new CustomEvent('aga:stt-settings-changed'));
+}
+
+// ── 当前听写服务商（epic P3 / D2：平行 backend 的显式选择位，非 toggle）。
+// 流式听写入口按 backend 的 sttStreaming 能力自动显隐（stt-service 能力门）。
+const backendOptions = providerCatalog
+  .byCategory('stt')
+  .map((d) => ({ label: t(`api.backend.${d.id}`), value: d.id }));
+function setBackend(v: string): void {
+  settings.value.backend = v as SttBackendType;
+  commit();
+  streamReady.value = !!stt?.isStreamReady();
 }
 
 function setEnabled(v: boolean): void { settings.value.enabled = v; commit(); }
@@ -71,6 +86,19 @@ const mediaSupported = typeof navigator !== 'undefined' && !!navigator.mediaDevi
     </div>
 
     <template v-if="settings.enabled">
+      <!-- 当前听写服务商（epic P3 / D2） -->
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">{{ $t('stt.settings.backend.label') }}</span>
+          <span class="setting-desc">{{ $t('stt.settings.backend.desc') }}</span>
+        </div>
+        <AgaSelect
+          :modelValue="settings.backend"
+          :options="backendOptions"
+          @update:modelValue="v => setBackend(v as string)"
+        />
+      </div>
+
       <!-- 不安全上下文警告：浏览器禁用了麦克风(局域网 IP + http 等) -->
       <div v-if="!mediaSupported" class="setting-row setting-row--indent">
         <span class="setting-desc" style="color: var(--color-danger)">{{ $t('stt.settings.insecureContext') }}</span>

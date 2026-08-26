@@ -33,6 +33,8 @@
   "settings.audio.desc": "Read the round narration aloud with CosyVoice. Add and assign the API endpoint under \"API Config\" as a TTS-category API.",
   "settings.audio.enabled.label": "Enable voice",
   "settings.audio.enabled.desc": "Master switch. When off, the round play button and auto-narration are hidden.",
+  "settings.audio.backend.label": "Voice provider",
+  "settings.audio.backend.desc": "Which speech service synthesizes narration (local CosyVoice / cloud Doubao Voice); add the matching TTS entry under \"API Config\" first.",
   "settings.audio.autoNarrate.label": "Auto-narrate (read every round)",
   "settings.audio.autoNarrate.desc": "Automatically read the round narration after the AI responds. The first time you may need to click the page once to unlock browser autoplay.",
   "settings.audio.mode.label": "Transmission mode",

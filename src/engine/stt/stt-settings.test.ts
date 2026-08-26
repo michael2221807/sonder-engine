@@ -12,8 +12,12 @@ describe('normalizeSttSettings', () => {
     expect(normalizeSttSettings({})).toEqual(DEFAULT_STT_SETTINGS);
   });
   it('keeps valid fields', () => {
-    const s = normalizeSttSettings({ enabled: false, mode: 'stream', latency: 'fast', firstUseHint: false, hotwordEnabled: false, hotwordStrength: 'strong', pauseTolerance: 'long' });
-    expect(s).toEqual({ enabled: false, mode: 'stream', latency: 'fast', firstUseHint: false, hotwordEnabled: false, hotwordStrength: 'strong', pauseTolerance: 'long' });
+    const s = normalizeSttSettings({ enabled: false, backend: 'doubao', mode: 'stream', latency: 'fast', firstUseHint: false, hotwordEnabled: false, hotwordStrength: 'strong', pauseTolerance: 'long' });
+    expect(s).toEqual({ enabled: false, backend: 'doubao', mode: 'stream', latency: 'fast', firstUseHint: false, hotwordEnabled: false, hotwordStrength: 'strong', pauseTolerance: 'long' });
+  });
+  it('unknown backend falls back to cosyvoice (epic P3)', () => {
+    expect(normalizeSttSettings({ backend: 'bogus' }).backend).toBe('cosyvoice');
+    expect(normalizeSttSettings({}).backend).toBe('cosyvoice');
   });
   it('rejects invalid enum values → fall back to default', () => {
     const s = normalizeSttSettings({ mode: 'bogus', latency: 'turbo', hotwordStrength: 'nuclear', pauseTolerance: 'forever' });
@@ -38,8 +42,8 @@ describe('load/save roundtrip', () => {
     expect(loadSttSettings()).toEqual(DEFAULT_STT_SETTINGS);
   });
   it('save then load roundtrips', () => {
-    saveSttSettings({ enabled: false, mode: 'record', latency: 'stable', firstUseHint: false, hotwordEnabled: false, hotwordStrength: 'medium', pauseTolerance: 'short' });
-    expect(loadSttSettings()).toEqual({ enabled: false, mode: 'record', latency: 'stable', firstUseHint: false, hotwordEnabled: false, hotwordStrength: 'medium', pauseTolerance: 'short' });
+    saveSttSettings({ enabled: false, backend: 'doubao', mode: 'record', latency: 'stable', firstUseHint: false, hotwordEnabled: false, hotwordStrength: 'medium', pauseTolerance: 'short' });
+    expect(loadSttSettings()).toEqual({ enabled: false, backend: 'doubao', mode: 'record', latency: 'stable', firstUseHint: false, hotwordEnabled: false, hotwordStrength: 'medium', pauseTolerance: 'short' });
   });
   it('save preserves unknown forward-compat keys (read-merge)', () => {
     localStorage.setItem(STT_SETTINGS_STORAGE_KEY, JSON.stringify({ futureFlag: 7 }));

@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/home.md §1.3.1 (API 管理 · 测试连接 / 功能分配路由)
 /**
  * AI 服务 — 统一的 AI 调用入口
  *
@@ -24,6 +25,9 @@ import type { RateLimiterConfig } from './rate-limiter';
 import { GeminiProvider } from './providers/gemini-provider';
 import { eventBus } from '../core/event-bus';
 import { isAiLoggingEnabled } from '../core/debug-flags';
+import type { ConnectionTester, ConnectionTestResult } from '../providers/connection-test';
+import { perBackendUsageType } from '../providers/usage-keys';
+import { resolveLlmChatPath, resolveLlmModelsPath } from '../providers/llm-paths';
 
 export class AIService {
   /** 所有 API 配置（id → config） */
@@ -44,6 +48,17 @@ export class AIService {
   requestTimeoutMs = API_TIMEOUT_MS;
   /** Low-load mode rate limiter — throttles LLM generate calls */
   private rateLimiter = new RateLimiter();
+  /**
+   * Per-category connection testers (epic P0 §3.4) — categories whose probes
+   * live in provider classes (image/tts/stt) register here from main.ts, so
+   * AIService carries zero backend-specific knowledge. llm/embedding/rerank
+   * keep the inline request-style probes below.
+   */
+  private connectionTesters = new Map<string, ConnectionTester>();
+
+  registerConnectionTester(category: 'image' | 'tts' | 'stt', tester: ConnectionTester): void {
+    this.connectionTesters.set(category, tester);
+  }
 
   // ─── 配置管理 ───
 
@@ -77,14 +92,7 @@ export class AIService {
    * 返回 undefined 时，调用方负责降级（Embedder → pseudoEmbed，Reranker → scoreSort）。
    */
   getConfigForUsage(usageType: UsageType): APIConfig | undefined {
-    // 1. 显式分配的 API（最高优先级）
-    const assignedId = this.assignments.get(usageType);
-    if (assignedId) {
-      const config = this.configs.get(assignedId);
-      if (config?.enabled) return config;
-    }
-
-    // 2. 确定此 usage 需要的 API 类别
+    // 1. 确定此 usage 需要的类别与 backend（per-backend usage 才有 backend 维度）
     const isImageGen = usageType === 'imageGeneration' || usageType.startsWith('imageGen_');
     const isTts = usageType.startsWith('ttsGen_');
     const isStt = usageType.startsWith('sttGen_');
@@ -94,11 +102,37 @@ export class AIService {
       : isTts ? 'tts'
       : isStt ? 'stt'
       : 'llm';
+    const requiredBackend = usageType.startsWith('imageGen_') ? usageType.slice('imageGen_'.length)
+      : isTts ? usageType.slice('ttsGen_'.length)
+      : isStt ? usageType.slice('sttGen_'.length)
+      : null;
 
-    // 3. 非 LLM 类：只在同类 API 中查找，不 fallback 到 LLM
+    // 2. 显式分配的 API（最高优先级）
+    const assignedId = this.assignments.get(usageType);
+    if (assignedId) {
+      const config = this.configs.get(assignedId);
+      if (config?.enabled) {
+        // 种子分配守卫（2026-08-26 review Critical）：每个 usage 行初始化时都指向
+        // 'default'（LLM 种子配置）——对非 llm 类 usage 这是初始化噪音而非用户意图，
+        // 曾导致 voice/embedding 行"看似已配置"实则拿到 LLM 配置去打错误端点。
+        // 仅当类别真实匹配时才承认 'default' 指派；任何其他 id 都是用户显式指派，
+        // 原样尊重（含"显示全部 API"逃生舱的故意跨类别强制分配, CR-R11）。
+        if (assignedId !== 'default' || (config.apiCategory ?? 'llm') === requiredCategory) {
+          return config;
+        }
+      }
+    }
+
+    // 3. 非 LLM 类：只在同类 API 中查找，不 fallback 到 LLM；
+    //    per-backend usage 进一步要求 backend 同源（2026-08-26 review Critical：
+    //    禁止"豆包行借走 CosyVoice 配置"式跨 backend 借用——那会用 A 家的
+    //    URL/凭证去造 B 家的 provider）。legacy 'imageGeneration' 无 backend
+    //    维度，保持类别级兜底语义不变。
     if (requiredCategory !== 'llm') {
       for (const c of this.configs.values()) {
-        if (c.enabled && (c.apiCategory ?? 'llm') === requiredCategory) return c;
+        if (!c.enabled || (c.apiCategory ?? 'llm') !== requiredCategory) continue;
+        if (requiredBackend !== null && (c.backend ?? '') !== requiredBackend) continue;
+        return c;
       }
       return undefined;
     }
@@ -120,8 +154,7 @@ export class AIService {
    * Falls back to legacy imageGeneration assignment for backward compatibility.
    */
   getImageConfigForBackend(backend: string): APIConfig | undefined {
-    const perBackendUsage = `imageGen_${backend}` as UsageType;
-    return this.getConfigForUsage(perBackendUsage)
+    return this.getConfigForUsage(perBackendUsageType('image', backend))
       ?? this.getConfigForUsage('imageGeneration');
   }
 
@@ -134,8 +167,7 @@ export class AIService {
    * `apiCategory === 'tts'` configs, never falls back to an LLM config.
    */
   getTtsConfigForBackend(backend: string): APIConfig | undefined {
-    const perBackendUsage = `ttsGen_${backend}` as UsageType;
-    return this.getConfigForUsage(perBackendUsage);
+    return this.getConfigForUsage(perBackendUsageType('tts', backend));
   }
 
   // ─── STT per-backend routing ───
@@ -147,8 +179,7 @@ export class AIService {
    * `apiCategory === 'stt'` configs, never falls back to an LLM config.
    */
   getSttConfigForBackend(backend: string): APIConfig | undefined {
-    const perBackendUsage = `sttGen_${backend}` as UsageType;
-    return this.getConfigForUsage(perBackendUsage);
+    return this.getConfigForUsage(perBackendUsageType('stt', backend));
   }
 
   // ─── 主调用方法 ───
@@ -400,104 +431,58 @@ export class AIService {
    *
    * 超时：10s。不使用现有 config/assignment，直接用传入参数。
    *
-   * §11.3: 按 apiCategory 发送不同的测试请求：
-   * - 'llm'（或未指定）: POST /v1/chat/completions，验证 choices[0].message.content
+   * §11.3 + epic P0 §3.4: 按 apiCategory 路由测试：
+   * - 'image' / 'tts' / 'stt': 委托 main.ts 注册的 per-category tester —
+   *   经 registry 造出该 backend 的 provider 实例、调它自己的 testConnection()，
+   *   连测才真正命中该 backend 的契约（修复旧版 image 分支硬编码 Civitai 端点、
+   *   对其他图片后端一律测错地址的缺陷）。
+   * - 'llm'（或未指定）: POST /v1/chat/completions，验证 choices[0].message
    * - 'embedding':       POST /v1/embeddings，验证 data[0].embedding 是数组
    * - 'rerank':          POST /v1/rerank，验证 results 是数组
-   *
-   * 这使得用户在 APIPanel 中为不同类别的 API 测试连接时，
-   * 真的命中它们实际会被调用的端点，而不是只测试 chat completion。
    */
   async testConnection(config: {
     url: string;
     apiKey: string;
     model: string;
     apiCategory?: 'llm' | 'embedding' | 'rerank' | 'image' | 'tts' | 'stt';
+    /** 非 llm 类别的 backend id（目录描述符 id）——委托类别必传 */
+    backend?: string;
     /** 可选：自定义路径覆盖（embedding/rerank 走 body 端点；tts 走查询路径） */
     customRoutingPath?: string;
+    /** 多凭证 backend 的附加凭证（epic P2 起消费） */
+    credentials?: Record<string, string>;
     /** 可选：tts 连测用的 speaker（默认空，服务端取首个音色） */
     ttsSpeaker?: string;
-  }): Promise<{ ok: boolean; latencyMs: number; error?: string }> {
+  }): Promise<ConnectionTestResult> {
     const category = config.apiCategory ?? 'llm';
     const start = Date.now();
     const baseUrl = config.url.replace(/\/+$/, '');
 
-    // TTS: 响应是二进制音频（非 JSON），单独短路处理，不走下面的 res.json() 校验。
-    if (category === 'tts') {
-      const path = config.customRoutingPath?.trim() || '/';
-      // Neutral ASCII probe text — engine code must not hardcode locale content,
-      // and a Chinese payload can false-negative against an English-only voice.
-      const params = new URLSearchParams({
-        text: 'test',
-        speaker: config.ttsSpeaker ?? '',
+    // 委托类别：image / tts / stt → per-category tester（main.ts 注册）
+    if (category === 'image' || category === 'tts' || category === 'stt') {
+      const tester = this.connectionTesters.get(category);
+      if (!tester) {
+        return { ok: false, latencyMs: 0, error: `该类别（${category}）的连测器未注册` };
+      }
+      return tester({
+        url: config.url,
+        apiKey: config.apiKey,
+        model: config.model,
+        backend: config.backend,
+        customRoutingPath: config.customRoutingPath,
+        credentials: config.credentials,
+        ttsSpeaker: config.ttsSpeaker,
       });
-      const endpoint = `${baseUrl}${path.startsWith('/') ? path : '/' + path}?${params.toString()}`;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10_000);
-      try {
-        const res = await fetch(endpoint, { method: 'GET', signal: controller.signal });
-        clearTimeout(timeout);
-        const latencyMs = Date.now() - start;
-        if (!res.ok) {
-          const errText = await res.text().catch(() => `HTTP ${res.status}`);
-          return { ok: false, latencyMs, error: `${res.status}: ${errText.slice(0, 120)}` };
-        }
-        const ct = res.headers.get('content-type') ?? '';
-        const ok = ct.toLowerCase().includes('audio');
-        return { ok, latencyMs, error: ok ? undefined : `响应非音频（Content-Type: ${ct || '空'}）` };
-      } catch (err) {
-        clearTimeout(timeout);
-        const latencyMs = Date.now() - start;
-        const msg = (err as Error).message ?? String(err);
-        if (msg.includes('abort') || msg.includes('signal')) {
-          return { ok: false, latencyMs, error: '连接超时（10s）' };
-        }
-        return { ok: false, latencyMs, error: msg.slice(0, 100) };
-      }
-    }
-
-    // STT: 转写端点是 POST multipart（需真实音频），连测改探健康端点 GET / → JSON status:'ok'。
-    // 与 TTS 共用同一 CosyVoice 服务；健康端点判活即可，避免连测时空录音。
-    if (category === 'stt') {
-      const endpoint = `${baseUrl}/`;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10_000);
-      try {
-        const res = await fetch(endpoint, { method: 'GET', signal: controller.signal });
-        clearTimeout(timeout);
-        const latencyMs = Date.now() - start;
-        if (!res.ok) {
-          const errText = await res.text().catch(() => `HTTP ${res.status}`);
-          return { ok: false, latencyMs, error: `${res.status}: ${errText.slice(0, 120)}` };
-        }
-        const data = (await res.json().catch(() => null)) as { status?: string } | null;
-        const ok = data?.status === 'ok';
-        return { ok, latencyMs, error: ok ? undefined : '健康探测未返回 status:ok' };
-      } catch (err) {
-        clearTimeout(timeout);
-        const latencyMs = Date.now() - start;
-        const msg = (err as Error).message ?? String(err);
-        if (msg.includes('abort') || msg.includes('signal')) {
-          return { ok: false, latencyMs, error: '连接超时（10s）' };
-        }
-        return { ok: false, latencyMs, error: msg.slice(0, 100) };
-      }
     }
 
     // 按类别确定端点、请求体、响应校验
     let endpoint: string;
-    let method: 'GET' | 'POST' = 'POST';
+    const method: 'GET' | 'POST' = 'POST';
     let body: Record<string, unknown> | null;
     let validate: (data: unknown) => boolean;
     let invalidMsg: string;
 
-    if (category === 'image') {
-      endpoint = `${baseUrl}/v2/consumer/workflows?take=1`;
-      method = 'GET';
-      body = null;
-      validate = (d) => d != null && typeof d === 'object';
-      invalidMsg = '响应格式异常';
-    } else if (category === 'embedding') {
+    if (category === 'embedding') {
       const defaultPath = '/v1/embeddings';
       const path = config.customRoutingPath?.trim() || defaultPath;
       endpoint = `${baseUrl}${path.startsWith('/') ? path : '/' + path}`;
@@ -526,7 +511,9 @@ export class AIService {
       // LLM 类别（默认）
       // max_tokens 设为 10000：thinking model（如 Gemini 2.5 Pro）会消耗部分 output
       // token 做内部推理（reasoning_tokens），少量 token 不够输出文本。
-      endpoint = `${baseUrl}/v1/chat/completions`;
+      // 路径经 resolveLlmChatPath 解析（epic P4）：自定义路径 → 目录预设
+      // （volcano_ark → /api/v3/chat/completions）→ /v1/chat/completions。
+      endpoint = `${baseUrl}${resolveLlmChatPath(config.backend, config.customRoutingPath)}`;
       body = {
         model: config.model,
         messages: [{ role: 'user', content: '请仅输出数字 1' }],
@@ -587,7 +574,7 @@ export class AIService {
    * 超时：15s。不依赖现有配置，直接用传入参数。
    * 根据 provider 类型使用不同的端点和认证方式。
    */
-  async fetchModels(config: { url: string; apiKey: string; provider?: APIProviderType }): Promise<string[]> {
+  async fetchModels(config: { url: string; apiKey: string; provider?: APIProviderType; backend?: string }): Promise<string[]> {
     const baseUrl = config.url.replace(/\/(v1beta|v1)\/?$/, '').replace(/\/+$/, '');
     const provider = config.provider ?? 'openai';
     const controller = new AbortController();
@@ -609,10 +596,18 @@ export class AIService {
             'anthropic-version': '2023-06-01',
           };
           break;
-        default:
-          endpoint = `${baseUrl}/v1/models`;
+        default: {
+          // epic P4：目录预设可声明专属 models 路径；声明为"无"的预设
+          // （resolveLlmModelsPath → null，如 volcano_ark）UI 已隐藏按钮，
+          // 此处兜底直接报明确错误而不是打错误端点。
+          const modelsPath = resolveLlmModelsPath(config.backend);
+          if (modelsPath === null) {
+            throw new Error('该服务商未提供模型列表端点');
+          }
+          endpoint = `${baseUrl}${modelsPath}`;
           headers = { Authorization: `Bearer ${config.apiKey}` };
           break;
+        }
       }
 
       const res = await fetch(endpoint, {
@@ -662,23 +657,6 @@ export class AIService {
         return new OpenAIProvider(config);
     }
   }
-}
-
-/**
- * Infer image backend type from an API config's URL.
- * Used by both engine (per-backend routing) and UI (preset selection).
- */
-export function inferImageBackendFromUrl(url: string): string {
-  if (url.includes('orchestration.civitai.com')) return 'civitai';
-  if (url.includes('api.openai.com')) return 'openai';
-  if (url.includes('image.novelai.net')) return 'novelai';
-  try {
-    const hostname = new URL(url).hostname;
-    if (hostname.endsWith('.novelai.net')) return 'novelai';
-  } catch { /* invalid URL — fall through */ }
-  if (url.includes(':8188')) return 'comfyui';
-  if (url.includes(':7860')) return 'sd_webui';
-  return '';
 }
 
 /**

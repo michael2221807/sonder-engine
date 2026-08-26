@@ -21,6 +21,7 @@ export abstract class BaseTtsProvider implements TtsProvider {
   abstract synthesize(text: string, options: TtsSynthesizeOptions): Promise<Blob>;
   abstract getStreamUrl(text: string, options: { speaker: string; instruct?: string }): string | null;
   abstract listSpeakers(signal?: AbortSignal): Promise<TtsSpeaker[]>;
+  abstract testConnection(opts?: { speaker?: string; signal?: AbortSignal }): Promise<{ ok: boolean; error?: string }>;
 
   /** 归一化 endpoint(去尾斜杠) */
   protected get baseUrl(): string {

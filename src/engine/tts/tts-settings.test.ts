@@ -37,6 +37,12 @@ describe('normalizeTtsSettings', () => {
     expect(normalizeTtsSettings({ transmissionMode: 'weird' as unknown as 'full' }).transmissionMode).toBe('stream');
   });
 
+  it('backend: keeps doubao, falls back to cosyvoice for unknown/missing (epic P2)', () => {
+    expect(normalizeTtsSettings({ backend: 'doubao' }).backend).toBe('doubao');
+    expect(normalizeTtsSettings({ backend: 'bogus' }).backend).toBe('cosyvoice');
+    expect(normalizeTtsSettings({}).backend).toBe('cosyvoice');
+  });
+
   it('sanitizes favorites, dropping entries with no speaker', () => {
     const favs = normalizeTtsSettings({
       favorites: [

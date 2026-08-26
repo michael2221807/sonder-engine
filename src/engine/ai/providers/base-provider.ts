@@ -63,6 +63,15 @@ export abstract class BaseProvider {
     if (provider === 'gemini' || m.includes('gemini')) return 1_000_000;
 
     if (m.includes('deepseek') || provider === 'deepseek') return 64_000;
+    // 火山方舟 doubao 系（epic P4）：seed-1.6 官方 256k；带显式窗口后缀的按后缀，
+    // 其余保守取 128k（低估只会多裁剪 maxTokens，不会导致超窗报错）。
+    if (m.includes('doubao')) {
+      if (m.includes('256k')) return 256_000;
+      if (m.includes('128k')) return 128_000;
+      if (m.includes('32k')) return 32_000;
+      if (m.includes('seed-1-6') || m.includes('seed-1.6')) return 256_000;
+      return 128_000;
+    }
     if (m.includes('moonshot') || m.includes('kimi')) return 128_000;
     if (m.includes('gpt-4o') || m.includes('gpt-4.1') || m.includes('o1') || m.includes('o3')) return 128_000;
     if (m.includes('gpt-4')) return 128_000;

@@ -11,8 +11,8 @@
  * 设计文档:docs/design/stt-voice-input-handoff.md
  */
 
-/** STT 后端类型 — 决定请求格式与端点。首个:CosyVoice(SenseVoiceSmall)。 */
-export type SttBackendType = 'cosyvoice';
+/** STT 后端类型 — CosyVoice(SenseVoiceSmall, 本地) / 豆包录音识别(火山 flash, epic P3)。 */
+export type SttBackendType = 'cosyvoice' | 'doubao';
 
 /** 单次转写选项 */
 export interface SttTranscribeOptions {
@@ -49,6 +49,11 @@ export interface SttProvider {
    * CosyVoice: `POST {endpoint}{routingPath}` multipart(file=blob),返回 `{text, raw_text}`。
    */
   transcribe(blob: Blob, options?: SttTranscribeOptions): Promise<SttResult>;
+  /**
+   * 最小连通探测(epic P0 连测委托):APIPanel"测试连接"经 AIService 注册的 tester
+   * 调到这里。延迟计时/错误整形由 measureConnectionTest 包装,这里只回答 ok/error。
+   */
+  testConnection(opts?: { signal?: AbortSignal }): Promise<{ ok: boolean; error?: string }>;
 }
 
 /** Provider 工厂签名 — 由 registry 注册 */
@@ -58,6 +63,8 @@ export type SttProviderFactory = (config: {
   model?: string;
   /** 自定义转写路径(默认 '/v1/audio/transcriptions') */
   routingPath?: string;
+  /** 多凭证 backend 的附加凭证(豆包: appId/accessToken/resourceId, epic P3) */
+  credentials?: Record<string, string>;
 }) => SttProvider;
 
 /** CosyVoice STT 默认转写路径(OpenAI Whisper 兼容) */
@@ -170,6 +177,11 @@ export const LEXICON_TERM_MAX_CHARS = 10;
 export interface SttSettings {
   /** 总开关:关则主输入/私聊不显示麦克风键。 */
   enabled: boolean;
+  /**
+   * 当前听写服务商(epic P3 / D2)——平行 backend 的显式选择位(设置区可切)。
+   * 流式听写仅对声明 sttStreaming 能力的 backend 可用(能力门,无 toggle)。
+   */
+  backend: SttBackendType;
   /** 输入模式。 */
   mode: SttInputMode;
   /** 实时听写延迟档(仅 stream/auto 生效)。 */
@@ -186,6 +198,7 @@ export interface SttSettings {
 
 export const DEFAULT_STT_SETTINGS: SttSettings = {
   enabled: true,
+  backend: 'cosyvoice',
   mode: 'auto',
   latency: 'balanced',
   firstUseHint: true,

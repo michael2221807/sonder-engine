@@ -12,8 +12,8 @@
 
 // ─── Backend / Provider ───
 
-/** TTS 后端类型 — 决定请求格式与端点。首个:CosyVoice。 */
-export type TtsBackendType = 'cosyvoice';
+/** TTS 后端类型 — 决定请求格式与端点。CosyVoice(本地) / 豆包语音(火山, epic P2)。 */
+export type TtsBackendType = 'cosyvoice' | 'doubao';
 
 /** 单次合成选项 */
 export interface TtsSynthesizeOptions {
@@ -49,9 +49,12 @@ export interface TtsProvider {
   getStreamUrl(text: string, options: Omit<TtsSynthesizeOptions, 'signal'>): string | null;
   /** 拉取服务端可用音色列表;失败返回 [](UI 降级为自由输入) */
   listSpeakers(signal?: AbortSignal): Promise<TtsSpeaker[]>;
-  // NOTE: no testConnection() here — the production "test connection" probe lives
-  // in AIService.testConnection (apiCategory='tts' branch), which is what APIPanel
-  // calls with a raw config. Keeping a second impl here would only invite drift.
+  /**
+   * 最小连通探测(epic P0 连测委托):APIPanel 的"测试连接"经 AIService 注册的
+   * tester 调到这里,让每个 backend 的连测真正命中它自己的契约。延迟计时与
+   * 错误整形由 measureConnectionTest 包装,这里只回答 ok/error。
+   */
+  testConnection(opts?: { speaker?: string; signal?: AbortSignal }): Promise<{ ok: boolean; error?: string }>;
 }
 
 /** Provider 工厂签名 — 由 registry 注册 */
@@ -61,6 +64,8 @@ export type TtsProviderFactory = (config: {
   model?: string;
   /** 自定义查询路径(默认 '/') */
   routingPath?: string;
+  /** 多凭证 backend 的附加凭证(豆包: appId/accessToken/resourceId, epic P2) */
+  credentials?: Record<string, string>;
 }) => TtsProvider;
 
 // ─── 全局配音设置(持久化到 aga_tts_settings) ───
@@ -78,6 +83,11 @@ export interface TtsVoiceFavorite {
 export interface TtsSettings {
   /** 总开关 — 关闭后播放键与自动配音全部失效 */
   enabled: boolean;
+  /**
+   * 当前配音服务商(epic P2 / D2)——平行 backend 之间的显式选择位,
+   * 设置区 + 配音快切 popover 可切。值为目录 tts 描述符 id。
+   */
+  backend: TtsBackendType;
   /** 自动配音 — AI 出文后自动朗读正文(post-round fire-and-forget) */
   autoNarrateOnRound: boolean;
   /**
@@ -118,6 +128,7 @@ export interface TtsSettings {
 
 export const DEFAULT_TTS_SETTINGS: TtsSettings = {
   enabled: false,
+  backend: 'cosyvoice',
   autoNarrateOnRound: false,
   transmissionMode: 'stream',
   segmentTargetChars: 120,

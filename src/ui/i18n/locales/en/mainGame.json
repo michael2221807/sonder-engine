@@ -66,6 +66,7 @@
   "mainGame.voice.title": "Quick voice",
   "mainGame.voice.noVoice": "No voice",
   "mainGame.voice.autoNarrate": "Auto-narrate",
+  "mainGame.voice.backend": "Provider",
   "mainGame.voice.favorites": "Saved voices",
   "mainGame.voice.speaker": "Voice",
   "mainGame.voice.speakerPlaceholder": "e.g. jok老师",

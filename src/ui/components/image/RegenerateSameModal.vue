@@ -12,11 +12,15 @@
  * calling `ImageService.regenerateFromPrompts` with its own subject params.
  */
 import { ref, computed, watch, inject, onMounted, onUnmounted, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { ImageBackendType, CivitaiLoraSnapshot, ImageReferenceInput } from '@/engine/image/types';
 
 import { PROVIDER_CAPABILITIES } from '@/engine/image/provider-capabilities';
+import { providerCatalog } from '@/engine/providers';
 import AgaSelect, { type SelectOption } from '@/ui/components/shared/AgaSelect.vue';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   /** Short subject label: NPC name, '场景', '主角', etc. */
@@ -72,15 +76,12 @@ watch(() => props.availableBackends, (opts) => {
   }
 }, { immediate: true });
 
-const ALL_BACKENDS: SelectOption[] = [
-  { label: 'NovelAI', value: 'novelai' },
-  { label: 'OpenAI DALL-E', value: 'openai' },
-  { label: 'SD-WebUI', value: 'sd_webui' },
-  { label: 'ComfyUI', value: 'comfyui' },
-  { label: 'Civitai', value: 'civitai' },
-];
+// Catalog-derived (epic P0 §3.3); labels via the shared api.backend.* i18n keys.
+const ALL_BACKENDS = computed<SelectOption[]>(() =>
+  providerCatalog.byCategory('image').map((d) => ({ label: t(`api.backend.${d.id}`), value: d.id })),
+);
 const backendOptions = computed(() =>
-  props.availableBackends?.length ? props.availableBackends : ALL_BACKENDS,
+  props.availableBackends?.length ? props.availableBackends : ALL_BACKENDS.value,
 );
 
 const dialogRef = ref<HTMLElement | null>(null);

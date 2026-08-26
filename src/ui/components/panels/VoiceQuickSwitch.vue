@@ -17,8 +17,9 @@ import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import { eventBus } from '@/engine/core/event-bus';
 import { loadTtsSettings, saveTtsSettings } from '@/engine/tts/tts-settings';
 import { TTS_RATE_MIN, TTS_RATE_MAX } from '@/engine/tts/types';
-import type { TtsSettings, TtsVoiceFavorite } from '@/engine/tts/types';
+import type { TtsSettings, TtsVoiceFavorite, TtsBackendType } from '@/engine/tts/types';
 import type { TtsService } from '@/engine/tts/tts-service';
+import { providerCatalog } from '@/engine/providers';
 
 defineProps<{ speaking?: boolean }>();
 
@@ -38,6 +39,13 @@ const chipLabel = computed(() => {
 function commit(): void {
   saveTtsSettings(settings.value);
   ttsService?.setSettings({ ...settings.value });
+}
+
+// ── 服务商档（epic P2 / D2：与设置区同一选择位的就地快切） ──
+const ttsBackends = providerCatalog.byCategory('tts').map((d) => d.id);
+function setBackend(id: string): void {
+  settings.value.backend = id as TtsBackendType;
+  commit();
 }
 
 function setAutoNarrate(v: boolean): void { settings.value.autoNarrateOnRound = v; commit(); }
@@ -116,6 +124,22 @@ onBeforeUnmount(() => {
     <Transition name="voice-pop">
       <div v-if="open" class="voice-popover glass-edge" @click.stop>
         <div class="voice-popover__title">{{ $t('mainGame.voice.title') }}</div>
+
+        <!-- 服务商档（epic P2 / D2）：多 backend 时才显示，单 backend 无需选择 -->
+        <div v-if="ttsBackends.length > 1" class="voice-row">
+          <span class="voice-row__label">{{ $t('mainGame.voice.backend') }}</span>
+          <div class="voice-seg" role="group" :aria-label="$t('mainGame.voice.backend')">
+            <button
+              v-for="id in ttsBackends"
+              :key="id"
+              type="button"
+              class="voice-seg__btn"
+              :class="{ 'voice-seg__btn--active': settings.backend === id }"
+              :aria-pressed="settings.backend === id"
+              @click="setBackend(id)"
+            >{{ $t(`api.backend.${id}`) }}</button>
+          </div>
+        </div>
 
         <div class="voice-row">
           <span class="voice-row__label">{{ $t('mainGame.voice.autoNarrate') }}</span>
@@ -251,6 +275,30 @@ onBeforeUnmount(() => {
   padding: var(--space-xs) 0;
 }
 .voice-row--stack { flex-direction: column; align-items: stretch; gap: 4px; }
+
+/* 服务商快切段（epic P2 / D2）— 迷你 segment，同弹窗视觉语言 */
+.voice-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.voice-seg__btn {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary, rgba(255, 255, 255, 0.65));
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.voice-seg__btn:hover { color: var(--color-text-primary, #fff); }
+.voice-seg__btn--active {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--color-text-primary, #fff);
+}
 .voice-row__label { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
 .voice-row__label--section {
   margin-top: var(--space-xs);

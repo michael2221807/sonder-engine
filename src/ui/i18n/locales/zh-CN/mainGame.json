@@ -66,6 +66,7 @@
   "mainGame.voice.title": "快速配音",
   "mainGame.voice.noVoice": "未设音色",
   "mainGame.voice.autoNarrate": "自动配音",
+  "mainGame.voice.backend": "服务商",
   "mainGame.voice.favorites": "常用音色",
   "mainGame.voice.speaker": "音色",
   "mainGame.voice.speakerPlaceholder": "如 jok老师",

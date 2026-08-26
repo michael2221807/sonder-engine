@@ -29,6 +29,10 @@
     "settings": {
       "sectionTitle": "Voice input (STT)",
       "desc": "Speak into the microphone to fill the input box with text; you review it before sending.",
+      "backend": {
+        "label": "Dictation provider",
+        "desc": "Which service transcribes speech (local CosyVoice / cloud Doubao); Doubao has no live dictation yet, so it always records-then-transcribes"
+      },
       "hotword": {
         "sectionTitle": "Proper-noun biasing",
         "enabled": {

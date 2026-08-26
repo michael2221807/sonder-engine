@@ -1,5 +1,6 @@
 import type { ImageProvider, ImageBackendType } from './types';
 import type { ImageReferenceInput, ImageUnderstandingRequest, ImageUnderstandingResult } from './reference-types';
+import { providerCatalog } from '../providers';
 
 export interface ImageToImageProvider {
   imageToImage(
@@ -41,10 +42,20 @@ export function supportsImageUnderstanding(
     && typeof (provider as Record<string, unknown>)['describeImage'] === 'function';
 }
 
-export const PROVIDER_CAPABILITIES: Record<ImageBackendType, ImageProviderCapabilities> = {
-  civitai: { textToImage: true, imageToImage: true, imageCaptioning: true, imageTagging: true, inpainting: false },
-  novelai: { textToImage: true, imageToImage: true, imageCaptioning: false, imageTagging: false, inpainting: false },
-  openai: { textToImage: true, imageToImage: false, imageCaptioning: false, imageTagging: false, inpainting: false },
-  sd_webui: { textToImage: true, imageToImage: false, imageCaptioning: false, imageTagging: false, inpainting: false },
-  comfyui: { textToImage: true, imageToImage: false, imageCaptioning: false, imageTagging: false, inpainting: false },
-};
+/**
+ * Derived from the provider catalog (single source of truth — epic P0).
+ * The export keeps its historical name/shape so existing consumers are
+ * untouched; descriptor.test.ts pins the derived values.
+ */
+export const PROVIDER_CAPABILITIES: Record<ImageBackendType, ImageProviderCapabilities> =
+  Object.fromEntries(
+    providerCatalog.byCategory('image').map((d) => [d.id, {
+      textToImage: d.capabilities.textToImage === true,
+      imageToImage: d.capabilities.imageToImage === true,
+      imageCaptioning: d.capabilities.imageCaptioning === true,
+      imageTagging: d.capabilities.imageTagging === true,
+      inpainting: d.capabilities.inpainting === true,
+    }]),
+    // Object.fromEntries widens keys to string; the catalog's image ids are
+    // pinned 1:1 against ImageBackendType by descriptor.test.ts.
+  ) as Record<ImageBackendType, ImageProviderCapabilities>;

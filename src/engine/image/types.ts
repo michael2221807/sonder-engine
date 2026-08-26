@@ -7,8 +7,12 @@
  * provider implementation.
  */
 
-/** Supported image backend types — matches the `imageBackend` field on APIConfig */
-export type ImageBackendType = 'openai' | 'novelai' | 'sd_webui' | 'comfyui' | 'civitai';
+/**
+ * Supported image backend types. Each member pairs a provider-catalog
+ * descriptor (engine/providers/catalog-entries.ts) with a factory registration
+ * in main.ts; `APIConfig.backend` persists the user's choice (epic P0).
+ */
+export type ImageBackendType = 'openai' | 'novelai' | 'sd_webui' | 'comfyui' | 'civitai' | 'volcengine';
 
 /** Image task status lifecycle */
 export type ImageTaskStatus = 'pending' | 'tokenizing' | 'generating' | 'complete' | 'failed';
