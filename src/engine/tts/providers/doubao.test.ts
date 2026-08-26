@@ -1,76 +1,102 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { DoubaoTtsProvider, parseDoubaoTtsBody, DOUBAO_TTS_DEFAULT_PATH } from './doubao';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { DoubaoTtsProvider, DOUBAO_TTS_DEFAULT_PATH, DOUBAO_SAMPLE_SPEAKERS } from './doubao';
+import {
+  FakeWebSocket,
+  serverFullFrame,
+  serverAudioFrame,
+  serverErrorFrame,
+} from '../../providers/doubao-ws-fixtures';
 
-function b64(bytes: number[]): string {
-  return btoa(String.fromCharCode(...bytes));
-}
+const SID = '3a363ef7-4937-4295-9cd1-a6c7344a1328';
 
-describe('parseDoubaoTtsBody', () => {
-  it('concatenates base64 data frames in order', () => {
-    const body = [
-      JSON.stringify({ code: 0, data: b64([1, 2]) }),
-      JSON.stringify({ code: 0, data: b64([3]) }),
-      JSON.stringify({ code: 20000000, message: 'OK' }), // terminal sentinel
-    ].join('\n');
-    expect([...parseDoubaoTtsBody(body)]).toEqual([1, 2, 3]);
+describe('DoubaoTtsProvider (WebSocket unidirectional stream)', () => {
+  beforeEach(() => {
+    FakeWebSocket.reset();
+    vi.stubGlobal('WebSocket', FakeWebSocket);
   });
-
-  it('tolerates SSE-style "data:" prefixes, blank lines and malformed lines', () => {
-    const body = `\n data: ${JSON.stringify({ code: 0, data: b64([9]) })}\nnot-json\n[DONE]\n`;
-    expect([...parseDoubaoTtsBody(body)]).toEqual([9]);
-  });
-
-  it('throws on an error frame with the server message', () => {
-    const body = JSON.stringify({ code: 45000001, message: 'invalid speaker' });
-    expect(() => parseDoubaoTtsBody(body)).toThrow(/invalid speaker/);
-  });
-
-  it('skips frames whose data is not valid base64', () => {
-    const body = JSON.stringify({ code: 0, data: '###not-base64###' });
-    expect(parseDoubaoTtsBody(body).length).toBe(0);
-  });
-});
-
-describe('DoubaoTtsProvider request shape', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('POSTs the V3 unidirectional endpoint with query api_key auth (browser-compatible, live-verified 2026-08-27)', async () => {
-    let captured: { url?: string; init?: RequestInit } = {};
-    vi.stubGlobal('fetch', vi.fn(async (url: unknown, init?: RequestInit) => {
-      captured = { url: String(url), init };
-      return new Response(JSON.stringify({ code: 0, data: b64([1]) }), { status: 200 });
-    }));
-    const provider = new DoubaoTtsProvider('https://openspeech.bytedance.com', 'apikey-1', undefined, {
-      resourceId: 'volc.service_type.10029',
+  function start(credentials?: Record<string, string>, customPath?: string) {
+    const provider = new DoubaoTtsProvider('https://openspeech.bytedance.com', 'apikey-1', customPath, credentials ?? { resourceId: 'seed-tts-2.0' });
+    const promise = provider.synthesize('你好', { speaker: 'zh_female_vv_uranus_bigtts' });
+    // The socket is constructed synchronously inside synthesize().
+    const ws = FakeWebSocket.instances[FakeWebSocket.instances.length - 1];
+    return { provider, promise, ws };
+  }
+
+  it('connects with query auth (browser WebSocket cannot set headers — live-verified)', async () => {
+    const { promise, ws } = start();
+    expect(ws.url).toBe(
+      `wss://openspeech.bytedance.com${DOUBAO_TTS_DEFAULT_PATH}?api_key=apikey-1&api_resource_id=seed-tts-2.0`);
+    ws.open();
+    const { payload } = FakeWebSocket.decodeClientJson(ws.sent[0]);
+    expect(payload).toMatchObject({
+      req_params: { text: '你好', speaker: 'zh_female_vv_uranus_bigtts', audio_params: { format: 'mp3', sample_rate: 24000 } },
     });
-    const blob = await provider.synthesize('你好', { speaker: 'zh_female_cancan_mars_bigtts' });
-    expect(blob.size).toBe(1);
-    // key travels as query (X-Api-Key header is not CORS-allow-listed by openspeech)
-    expect(captured.url).toBe(`https://openspeech.bytedance.com${DOUBAO_TTS_DEFAULT_PATH}?api_key=apikey-1`);
-    const headers = captured.init?.headers as Record<string, string>;
-    expect(headers['X-Api-Key']).toBeUndefined();
-    expect(headers['X-Api-Resource-Id']).toBe('volc.service_type.10029');
-    expect(headers['X-Api-Request-Id']).toBeTruthy();
-    const body = JSON.parse(String(captured.init?.body));
-    expect(body.req_params.text).toBe('你好');
-    expect(body.req_params.speaker).toBe('zh_female_cancan_mars_bigtts');
+    ws.emitFrame(serverAudioFrame(SID, new Uint8Array([1, 2])));
+    ws.emitFrame(serverAudioFrame(SID, new Uint8Array([3])));
+    ws.emitFrame(serverFullFrame(152, SID, {}));
+    const blob = await promise;
+    expect(blob.size).toBe(3);
+    expect(blob.type).toBe('audio/mpeg');
   });
 
-  it('parses the live-verified nested error frame shape {"header":{code,message}}', () => {
-    const body = JSON.stringify({ header: { reqid: 'x', code: 45000030, message: 'requested resource not granted' } });
-    expect(() => parseDoubaoTtsBody(body)).toThrow(/45000030.*not granted/);
+  it('defaults the resource id to seed-tts-2.0 when credentials omit it', () => {
+    const { ws, promise } = start({});
+    expect(ws.url).toContain('api_resource_id=seed-tts-2.0');
+    ws.emitFrame(serverErrorFrame(1, 'x'));
+    return expect(promise).rejects.toThrow();
   });
 
-  it('getStreamUrl is null (POST + header auth cannot feed <audio>)', () => {
+  it('honors a custom routing path (non-plan console endpoint)', () => {
+    const { ws, promise } = start(undefined, '/api/v3/tts/unidirectional/stream');
+    expect(ws.url).toContain('/api/v3/tts/unidirectional/stream?');
+    ws.emitFrame(serverErrorFrame(1, 'x'));
+    return expect(promise).rejects.toThrow();
+  });
+
+  it('surfaces server error frames with code and message', async () => {
+    const { promise, ws } = start();
+    ws.open();
+    ws.emitFrame(serverErrorFrame(55000000, 'resource ID is mismatched with speaker related resource'));
+    await expect(promise).rejects.toThrow(/55000000.*mismatched/);
+  });
+
+  it('rejects on SessionFinished without any audio (silent-voice guard)', async () => {
+    const { promise, ws } = start();
+    ws.open();
+    ws.emitFrame(serverFullFrame(152, SID, {}));
+    await expect(promise).rejects.toThrow(/empty audio/);
+  });
+
+  it('rejects when the connection closes before the session finishes', async () => {
+    const { promise, ws } = start();
+    ws.open();
+    ws.emitFrame(serverAudioFrame(SID, new Uint8Array([1])));
+    ws.emitClose();
+    await expect(promise).rejects.toThrow(/提前关闭/);
+  });
+
+  it('getStreamUrl is null (audio arrives over WS frames, not a URL)', () => {
     const provider = new DoubaoTtsProvider('https://x.test', '');
     expect(provider.getStreamUrl()).toBeNull();
   });
 
-  it('testConnection reports the server error instead of throwing', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () =>
-      new Response(JSON.stringify({ code: 45000002, message: 'auth failed' }), { status: 200 })));
+  it('sample speakers are the live-verified 2.0 uranus set', async () => {
     const provider = new DoubaoTtsProvider('https://x.test', '');
-    const result = await provider.testConnection();
+    const speakers = await provider.listSpeakers();
+    expect(speakers.length).toBe(10);
+    for (const s of speakers) expect(s.voiceId).toMatch(/_uranus_bigtts$/);
+    expect(DOUBAO_SAMPLE_SPEAKERS[0].voiceId).toBe('zh_female_shuangkuaisisi_uranus_bigtts');
+  });
+
+  it('testConnection reports server errors instead of throwing', async () => {
+    const provider = new DoubaoTtsProvider('https://x.test', 'k');
+    const resultPromise = provider.testConnection();
+    const ws = FakeWebSocket.instances[FakeWebSocket.instances.length - 1];
+    ws.open();
+    ws.emitFrame(serverErrorFrame(45000002, 'auth failed'));
+    const result = await resultPromise;
     expect(result.ok).toBe(false);
     expect(result.error).toContain('auth failed');
   });

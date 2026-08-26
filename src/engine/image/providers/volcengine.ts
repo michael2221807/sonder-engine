@@ -27,18 +27,23 @@ import type { ImageToImageProvider } from '../provider-capabilities';
 /** Generation path relative to the configured base URL (catalog defaultPath). */
 const GENERATION_PATH = '/api/v3/images/generations';
 
+/** seedream-5.x pixel-AREA bounds — live-verified 2026-08-27 via the API's own
+ * validation messages ("image size must be at least 3686400 pixels" /
+ * "at most 16777216 pixels"). 3,686,400 = 1920², 16,777,216 = 4096². */
+const SEEDREAM5_MIN_PIXELS = 3_686_400;
+const SEEDREAM5_MAX_PIXELS = 16_777_216;
+
 /**
- * Map a requested width/height onto Seedream's allowed pixel range, keeping
- * aspect ratio and rounding to multiples of 8:
+ * Map a requested width/height onto Seedream's allowed range, keeping aspect
+ * ratio and rounding to multiples of 8:
+ * - seedream-5.x: total PIXEL COUNT within [3686400, 16777216] (per-dimension
+ *   limits none observed — the API validates area, live-verified 2026-08-27)
  * - seedream-4.x: both sides within [1280, 4096]
  * - seedream-3.x: both sides within [512, 2048]
  * - unknown models: conservative [512, 4096] clamp (no upscale below 512)
  */
 export function resolveSeedreamSize(model: string, width: number, height: number): string {
   const m = model.toLowerCase();
-  const [min, max] = m.includes('seedream-4') ? [1280, 4096]
-    : m.includes('seedream-3') ? [512, 2048]
-    : [512, 4096];
 
   // Non-finite/zero guards: fall back to a square request rather than emitting
   // "NaNxNaN" at the API (review Minor 2026-08-26).
@@ -47,6 +52,44 @@ export function resolveSeedreamSize(model: string, width: number, height: number
 
   let w = Math.max(1, Math.round(safeW));
   let h = Math.max(1, Math.round(safeH));
+
+  if (m.includes('seedream-5')) {
+    // Area-based scaling: grow (ceil to /8 so rounding never dips back under
+    // the minimum) or shrink (floor to /8) aspect-preserving.
+    const area = w * h;
+    if (area < SEEDREAM5_MIN_PIXELS) {
+      const s = Math.sqrt(SEEDREAM5_MIN_PIXELS / area);
+      w = Math.ceil((w * s) / 8) * 8;
+      h = Math.ceil((h * s) / 8) * 8;
+    } else if (area > SEEDREAM5_MAX_PIXELS) {
+      const s = Math.sqrt(SEEDREAM5_MAX_PIXELS / area);
+      w = Math.floor((w * s) / 8) * 8;
+      h = Math.floor((h * s) / 8) * 8;
+    } else {
+      w = Math.round(w / 8) * 8;
+      h = Math.round(h / 8) * 8;
+    }
+    // Per-side floor: extreme aspect ratios (free-text manual-size inputs)
+    // can round a side to 0 — never emit a zero dimension (review Important
+    // 2026-08-27).
+    w = Math.max(8, w); h = Math.max(8, h);
+    // /8 rounding (or the floor above) can cross an area bound — re-fit by
+    // resizing the LARGER side only, in one step. No lockstep ±8 loops: they
+    // walk tiny sides through zero and crawl on extreme ratios.
+    if (w * h > SEEDREAM5_MAX_PIXELS) {
+      if (w >= h) w = Math.max(8, Math.floor(SEEDREAM5_MAX_PIXELS / h / 8) * 8);
+      else h = Math.max(8, Math.floor(SEEDREAM5_MAX_PIXELS / w / 8) * 8);
+    }
+    if (w * h < SEEDREAM5_MIN_PIXELS) {
+      if (w >= h) w = Math.ceil(SEEDREAM5_MIN_PIXELS / h / 8) * 8;
+      else h = Math.ceil(SEEDREAM5_MIN_PIXELS / w / 8) * 8;
+    }
+    return `${w}x${h}`;
+  }
+
+  const [min, max] = m.includes('seedream-4') ? [1280, 4096]
+    : m.includes('seedream-3') ? [512, 2048]
+    : [512, 4096];
 
   // Scale up so the smaller side reaches min, then down so the larger side
   // fits max (down-scale wins if the aspect ratio cannot satisfy both).
@@ -87,13 +130,31 @@ export class VolcengineImageProvider extends BaseImageProvider implements ImageT
     return this.request(body);
   }
 
+  /**
+   * Generation URL: a configured endpoint that already carries a path (e.g.
+   * the Agent Plan `/api/plan/v3/images/generations`, or a local proxy route)
+   * is used verbatim; a bare origin gets the standard pay-as-you-go path
+   * appended. NOTE (live-verified 2026-08-27): the `/api/plan/*` gateway does
+   * NOT allow the `authorization` header in its CORS preflight — browsers can
+   * only reach the plan path through a proxy; direct browser calls must use
+   * the default `/api/v3` path.
+   */
+  private generationUrl(): string {
+    const endpoint = this.endpoint.replace(/\/+$/, '');
+    try {
+      const u = new URL(endpoint);
+      if (u.pathname && u.pathname !== '/') return endpoint;
+    } catch { /* not an absolute URL — fall through to append */ }
+    return `${endpoint}${GENERATION_PATH}`;
+  }
+
   private buildBody(
     prompt: string,
     width: number,
     height: number,
     options?: Record<string, unknown>,
   ): Record<string, unknown> {
-    const model = this.model || 'doubao-seedream-4-0-250828';
+    const model = this.model || 'doubao-seedream-5.0-lite';
     const body: Record<string, unknown> = {
       model,
       prompt,
@@ -111,8 +172,7 @@ export class VolcengineImageProvider extends BaseImageProvider implements ImageT
   }
 
   private async request(body: Record<string, unknown>): Promise<Blob> {
-    const endpoint = this.endpoint.replace(/\/+$/, '');
-    const response = await fetch(`${endpoint}${GENERATION_PATH}`, {
+    const response = await fetch(this.generationUrl(), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -155,16 +215,15 @@ export class VolcengineImageProvider extends BaseImageProvider implements ImageT
    * network failure) prove they are not.
    */
   async testConnection(): Promise<boolean> {
-    const endpoint = this.endpoint.replace(/\/+$/, '');
     try {
-      const res = await fetch(`${endpoint}${GENERATION_PATH}`, {
+      const res = await fetch(this.generationUrl(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
-          model: this.model || 'doubao-seedream-4-0-250828',
+          model: this.model || 'doubao-seedream-5.0-lite',
           prompt: 'test',
           size: '1x1',
         }),

@@ -1,72 +1,60 @@
 // App doc: docs/user-guide/pages/game-main.md §3.14 (语音输入 · 听写服务商)
 /**
- * Doubao voice (豆包语音, Volcano) STT provider — epic P3, non-streaming.
+ * Doubao voice (豆包语音, Volcano) STT provider — epic P3, calibrated against
+ * the Agent Plan live endpoints 2026-08-27.
  *
- * Protocol: 大模型录音文件识别·极速版 (flash) —
- *   POST {endpoint}{routingPath || '/api/v3/auc/bigmodel/recognize/flash'}
- *   Headers: X-Api-Key (新版单 API Key 鉴权, live-verified 2026-08-27) +
- *   X-Api-Resource-Id (volc.bigasr.auc_turbo) + X-Api-Request-Id +
- *   X-Api-Sequence: -1. Success is signalled by the X-Api-Status-Code
- *   response header (20000000); error headers carry X-Api-Message (both are
- *   CORS-exposed — live-verified).
- *   Body: { user: { uid }, audio: { format, data: <base64> }, request: { model_name: 'bigmodel', enable_itn: true } }
+ * Protocol: 大模型流式语音识别 (sauc) WebSocket V3 —
+ *   WSS {endpoint}{routingPath || '/api/v3/plan/sauc/bigmodel_nostream'}
+ *       ?api_key=<key>&api_resource_id=<resourceId>
+ *   Client sends one full request (seq 1) with
+ *   { user, audio: { format:'wav', rate:16000, … }, request:{ model_name:'bigmodel' } },
+ *   then audio-only frames (negative sequence on the last one). The server
+ *   replies with full-response frames whose payload carries result.text — for
+ *   bigmodel_nostream only the terminal frame holds the transcript.
  *
- * CORS verified reachable from browser origins (research doc §3.2).
+ * Live findings that shaped this implementation (2026-08-27, plan key):
+ * - The Agent Plan gateway has NO flash (file-recognition) HTTP endpoint —
+ *   `/api/v3/plan/auc/...` 404s; sauc WebSocket is the only plan ASR surface,
+ *   which is why this provider is WS despite design D6 deferring streaming
+ *   dictation UX (the recorded-blob flow below is still non-streaming UX).
+ * - `?api_key=` + `?api_resource_id=` query auth live-verified (browser
+ *   WebSocket cannot set headers; WS needs no CORS preflight → browser-safe).
+ * - Round-trip verified: plan TTS audio fed back through this protocol
+ *   returned the exact source text.
  *
- * ⚠ Transcribed from official docs without a live round-trip (credentials
- * pending from the PO) — `parseDoubaoSttResponse` digs for text defensively
- * and MUST be validated during P3 acceptance. Known open risk (recorded in
- * the design doc): MediaRecorder produces webm/opus; whether flash accepts it
- * needs the real-credential test, else the recorder needs a wav path.
- *
- * Streaming dictation (wss binary protocol) is deliberately NOT implemented
- * (design D6 / backlog); the descriptor declares sttStreaming:false so the
- * live-dictation entry point auto-hides for this backend (capability gate).
+ * MediaRecorder emits webm/opus; blobToWav16kMono decodes + resamples to the
+ * 16 kHz mono WAV the request declares. WAV input passes through untouched.
  */
 import { BaseSttProvider, STT_TRANSCRIBE_TIMEOUT_MS } from './base';
 import type { SttBackendType, SttTranscribeOptions, SttResult } from '../types';
+import { blobToWav16kMono, pcm16ToWav, STT_TARGET_SAMPLE_RATE } from '../audio-transcode';
+import {
+  buildFullClientFrame,
+  buildAudioClientFrame,
+  parseServerFrame,
+  toWebSocketUrl,
+} from '../../providers/doubao-ws-protocol';
 
-export const DOUBAO_STT_DEFAULT_PATH = '/api/v3/auc/bigmodel/recognize/flash';
+export const DOUBAO_STT_DEFAULT_PATH = '/api/v3/plan/sauc/bigmodel_nostream';
+export const DOUBAO_STT_DEFAULT_RESOURCE_ID = 'volc.seedasr.sauc.duration';
 
-/** Map a recording MIME type onto the API's `format` field (best-effort). */
-export function doubaoAudioFormat(mime: string): string {
-  const m = mime.toLowerCase();
-  if (m.includes('wav')) return 'wav';
-  if (m.includes('mp3') || m.includes('mpeg')) return 'mp3';
-  if (m.includes('ogg')) return 'ogg';
-  if (m.includes('webm')) return 'webm';
-  return 'wav';
-}
+/** Upload chunk size (bytes) — ~200ms of 16k s16le audio per frame. */
+const AUDIO_CHUNK_BYTES = 6400;
 
-/**
- * Extract the transcript from a flash response body. Documented shape is
- * `result.text` (with optional utterances); dig defensively. Pure for tests.
- */
-export function parseDoubaoSttResponse(data: unknown): string {
-  if (!data || typeof data !== 'object') return '';
-  const obj = data as { result?: unknown; text?: unknown };
-  if (typeof obj.text === 'string') return obj.text;
-  const result = obj.result as { text?: unknown; utterances?: unknown } | undefined;
-  if (result && typeof result === 'object') {
-    if (typeof result.text === 'string') return result.text;
-    if (Array.isArray(result.utterances)) {
-      return result.utterances
-        .map((u) => (u && typeof u === 'object' && typeof (u as { text?: unknown }).text === 'string')
-          ? (u as { text: string }).text : '')
-        .join('');
-    }
+/** Dig the transcript out of a sauc payload. Pure for tests. */
+export function extractSaucText(payload: unknown): string {
+  if (!payload || typeof payload !== 'object') return '';
+  const result = (payload as { result?: unknown }).result;
+  if (!result || typeof result !== 'object') return '';
+  const r = result as { text?: unknown; utterances?: unknown };
+  if (typeof r.text === 'string' && r.text.length > 0) return r.text;
+  if (Array.isArray(r.utterances)) {
+    return r.utterances
+      .map((u) => (u && typeof u === 'object' && typeof (u as { text?: unknown }).text === 'string')
+        ? (u as { text: string }).text : '')
+      .join('');
   }
   return '';
-}
-
-async function blobToBase64(blob: Blob): Promise<string> {
-  const buf = new Uint8Array(await blob.arrayBuffer());
-  let bin = '';
-  const CHUNK = 0x8000;
-  for (let i = 0; i < buf.length; i += CHUNK) {
-    bin += String.fromCharCode(...buf.subarray(i, i + CHUNK));
-  }
-  return btoa(bin);
 }
 
 export class DoubaoSttProvider extends BaseSttProvider {
@@ -81,71 +69,94 @@ export class DoubaoSttProvider extends BaseSttProvider {
     super(endpoint, apiKey, routingPath);
   }
 
-  private headers(): Record<string, string> {
-    // 新版控制台单 API Key 鉴权 — key 走 `api_key` QUERY 参数（见 transcribeUrl
-    // 与 tts/providers/doubao.ts headers 注：X-Api-Key 头不在 openspeech 的
-    // CORS 允许列表，浏览器预检会拒；query 实测直达 grant 阶段）。
-    return {
-      'Content-Type': 'application/json',
-      'X-Api-Resource-Id': this.credentials.resourceId ?? '',
-      'X-Api-Request-Id': (globalThis.crypto?.randomUUID?.() ?? `aga-${Date.now()}-${Math.random().toString(36).slice(2)}`),
-      'X-Api-Sequence': '-1',
-    };
+  private transcribeUrl(): string {
+    const raw = this.routingPath?.trim();
+    const path = raw ? (raw.startsWith('/') ? raw : '/' + raw) : DOUBAO_STT_DEFAULT_PATH;
+    const resourceId = this.credentials.resourceId?.trim() || DOUBAO_STT_DEFAULT_RESOURCE_ID;
+    return `${toWebSocketUrl(this.baseUrl)}${path}`
+      + `?api_key=${encodeURIComponent(this.apiKey)}`
+      + `&api_resource_id=${encodeURIComponent(resourceId)}`;
   }
 
-  private transcribeUrl(): string {
-    const path = this.routingPath?.trim() || DOUBAO_STT_DEFAULT_PATH;
-    // API key via query — browser-compatible auth (see headers() note).
-    return `${this.baseUrl}${path.startsWith('/') ? path : '/' + path}?api_key=${encodeURIComponent(this.apiKey)}`;
+  /** Open the socket, stream `wav`, resolve with the final transcript. */
+  private streamRecognition(wav: Uint8Array, signal: AbortSignal): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      let ws: WebSocket;
+      try {
+        ws = new WebSocket(this.transcribeUrl());
+      } catch (err) {
+        reject(err instanceof Error ? err : new Error(String(err)));
+        return;
+      }
+      ws.binaryType = 'arraybuffer';
+      let latestText = '';
+      let settled = false;
+      const finish = (result: string | Error) => {
+        if (settled) return;
+        settled = true;
+        signal.removeEventListener('abort', onAbort);
+        try { ws.close(); } catch { /* already closed */ }
+        if (result instanceof Error) reject(result); else resolve(result);
+      };
+      const onAbort = () => finish(new Error('[Doubao STT] aborted'));
+      if (signal.aborted) { onAbort(); return; }
+      signal.addEventListener('abort', onAbort, { once: true });
+
+      ws.onerror = () => finish(new Error('[Doubao STT] WebSocket 连接失败（检查 URL/API Key/网络）'));
+      ws.onopen = () => {
+        ws.send(buildFullClientFrame({
+          user: { uid: 'aga' },
+          audio: { format: 'wav', codec: 'raw', rate: STT_TARGET_SAMPLE_RATE, bits: 16, channel: 1 },
+          request: { model_name: 'bigmodel', enable_punc: true },
+        }, 1));
+        let seq = 1;
+        for (let i = 0; i < wav.length; i += AUDIO_CHUNK_BYTES) {
+          seq += 1;
+          const last = i + AUDIO_CHUNK_BYTES >= wav.length;
+          ws.send(buildAudioClientFrame(wav.subarray(i, i + AUDIO_CHUNK_BYTES), seq, last));
+        }
+      };
+      ws.onmessage = (evt: MessageEvent) => {
+        if (!(evt.data instanceof ArrayBuffer)) return;
+        const frame = parseServerFrame(new Uint8Array(evt.data));
+        if (!frame) return;
+        if (frame.errorCode !== undefined) {
+          finish(new Error(`[Doubao STT] server error ${frame.errorCode}: ${(frame.errorMessage ?? '').slice(0, 200)}`));
+          return;
+        }
+        const text = extractSaucText(frame.json);
+        if (text) latestText = text;
+        // Terminal frame: negative sequence OR the last-packet flag bit (the
+        // live server set the flag while keeping the sequence positive).
+        if ((frame.sequence !== undefined && frame.sequence < 0) || (frame.flags & 0b0010) !== 0) finish(latestText);
+      };
+      // bigmodel_nostream closes normally ("finish last sequence") right after
+      // the terminal frame — the close is an alternate success signal.
+      ws.onclose = () => finish(latestText);
+    });
   }
 
   async transcribe(blob: Blob, options?: SttTranscribeOptions): Promise<SttResult> {
-    // hotwords: FunASR-specific (CosyVoice backend) — no flash equivalent; ignored.
+    // hotwords: FunASR-specific (CosyVoice backend) — no sauc equivalent; ignored.
     const { signal, cleanup } = this.withTimeout(options?.signal, STT_TRANSCRIBE_TIMEOUT_MS);
     try {
-      const res = await fetch(this.transcribeUrl(), {
-        method: 'POST',
-        headers: this.headers(),
-        body: JSON.stringify({
-          user: { uid: 'aga' },
-          audio: { format: doubaoAudioFormat(blob.type), data: await blobToBase64(blob) },
-          request: { model_name: 'bigmodel', enable_itn: true },
-        }),
-        signal,
-      });
-      const statusCode = res.headers.get('X-Api-Status-Code') ?? '';
-      if (!res.ok || (statusCode && statusCode !== '20000000')) {
-        const msg = res.headers.get('X-Api-Message') ?? (await res.text().catch(() => '')).slice(0, 160);
-        throw new Error(`[Doubao STT] transcribe failed ${res.status}${statusCode ? `/${statusCode}` : ''}: ${msg}`);
-      }
-      const data: unknown = await res.json().catch(() => null);
-      return { text: parseDoubaoSttResponse(data) };
+      const wav = await blobToWav16kMono(blob);
+      return { text: await this.streamRecognition(wav, signal) };
     } finally {
       cleanup();
     }
   }
 
   /**
-   * Free-ish probe: an empty-audio request is rejected at validation, which
-   * still proves endpoint + credentials; explicit auth errors report false.
+   * Cheap probe: a header-only WAV (no samples) exercises handshake + auth +
+   * resource grant; an empty transcript back is success, an auth-family error
+   * (or a rejected handshake, surfacing as onerror) reports false.
    */
   async testConnection(opts?: { signal?: AbortSignal }): Promise<{ ok: boolean; error?: string }> {
     const { signal, cleanup } = this.withTimeout(opts?.signal, 10_000);
     try {
-      const res = await fetch(this.transcribeUrl(), {
-        method: 'POST',
-        headers: this.headers(),
-        body: JSON.stringify({ user: { uid: 'aga' }, audio: { format: 'wav', data: '' }, request: { model_name: 'bigmodel' } }),
-        signal,
-      });
-      const statusCode = res.headers.get('X-Api-Status-Code') ?? '';
-      if (statusCode === '20000000') return { ok: true };
-      // Documented auth-failure family is 401/403 at HTTP level or 45xxxxxx
-      // status codes; parameter complaints mean we got past auth.
-      if (res.status === 401 || res.status === 403 || statusCode.startsWith('45')) {
-        const msg = res.headers.get('X-Api-Message') ?? `HTTP ${res.status}`;
-        return { ok: false, error: `认证失败: ${msg}`.slice(0, 160) };
-      }
+      const silent = new Int16Array(STT_TARGET_SAMPLE_RATE / 10); // 100ms of silence
+      await this.streamRecognition(pcm16ToWav(silent, STT_TARGET_SAMPLE_RATE), signal);
       return { ok: true };
     } catch (err) {
       return { ok: false, error: (err instanceof Error ? err.message : String(err)).slice(0, 160) };

@@ -18,8 +18,10 @@ import {
 import type { CredentialFieldSpec } from './descriptor';
 
 /**
- * 豆包语音凭证（epic P2/P3）— 新版控制台鉴权（PO 指定，2026-08-27）：
- * 单 API Key（header `X-Api-Key`，实测 2026-08-27）+ Resource ID。
+ * 豆包语音凭证（epic P2/P3）— 单 API Key + Resource ID（PO 指定，2026-08-27）。
+ * key 与 resource id 均走 WebSocket URL 的 query（`?api_key=&api_resource_id=`，
+ * 浏览器 WS 不能带自定义头；实测 2026-08-27 全链路可用）。Agent Plan 套餐资源：
+ * 配音 `seed-tts-2.0`，听写 `volc.seedasr.sauc.duration`。
  * 旧版 appid/access-token 三凭证制不再支持（新版控制台为官方推荐路径）。
  */
 const DOUBAO_VOICE_CREDENTIALS: CredentialFieldSpec[] = [
@@ -125,12 +127,17 @@ export function registerBuiltinProviders(catalog: ProviderCatalog): void {
     capabilities: { textToImage: true, imageToImage: false, imageCaptioning: false, imageTagging: false, inpainting: false },
   });
   catalog.register({
-    id: 'volcengine', category: 'image', // 火山方舟 Seedream — epic P1
+    // 火山方舟 Seedream — epic P1. Agent Plan 用户注意（实测 2026-08-27）：
+    // 套餐路径 /api/plan/v3/images/generations 的 CORS 预检不放行 authorization
+    // 头 → 浏览器无法直连套餐端点，需本地代理（把带路径的完整 URL 填进配置，
+    // provider 会原样使用）；默认路径为按量端点（浏览器可直连）。
+    id: 'volcengine', category: 'image',
     urlPreset: 'https://ark.cn-beijing.volces.com',
     defaultPath: '/api/v3/images/generations', // providers/volcengine.ts
     credentialFields: [API_KEY_CREDENTIAL],
     capabilities: { textToImage: true, imageToImage: true, imageCaptioning: false, imageTagging: false, inpainting: false },
-    defaultModel: 'doubao-seedream-4-0-250828',
+    // Medium 套餐唯一图片模型（PO 指定 2026-08-27，真实出图验证）。
+    defaultModel: 'doubao-seedream-5.0-lite',
   });
 
   // ── Voice backends (CosyVoice contract: tts/providers/cosyvoice.ts, stt/providers/cosyvoice.ts) ──
@@ -151,21 +158,24 @@ export function registerBuiltinProviders(catalog: ProviderCatalog): void {
     defaultModel: 'sensevoice', // cosmetic — see tts note
   });
   catalog.register({
-    // 豆包语音 TTS — epic P2. Independent product line from Ark (own domain,
-    // three-header auth); protocol details in tts/providers/doubao.ts.
+    // 豆包语音 TTS — epic P2, WebSocket 单向流（协议在 tts/providers/doubao.ts）。
+    // 默认路径 = Agent Plan 套餐端点（实测 2026-08-27 真实出声）；独立控制台
+    // 账号把路径改为 /api/v3/tts/unidirectional/stream 即可（同协议）。
+    // ⚠ 套餐的 HTTP chunked 端点会静默返回 0 音频帧 — 勿回退到 HTTP。
     id: 'doubao', category: 'tts',
     urlPreset: 'https://openspeech.bytedance.com',
-    defaultPath: '/api/v3/tts/unidirectional',
+    defaultPath: '/api/v3/plan/tts/unidirectional/stream',
     credentialFields: DOUBAO_VOICE_CREDENTIALS,
     capabilities: { speakerListing: false, streamUrl: false },
   });
   catalog.register({
-    // 豆包录音识别 flash — epic P3, non-streaming only (D6: wss binary
-    // streaming stays on the backlog; sttStreaming:false hides the
-    // live-dictation entry point for this backend).
+    // 豆包流式识别 sauc — epic P3, WebSocket（Agent Plan 网关没有 flash HTTP
+    // 端点，实测 2026-08-27 404）。传输是流式的，但产品交互仍是"录完再转"
+    // （D6：实时听写 UX 仍在 backlog → sttStreaming:false 继续隐藏实时入口）。
+    // 独立控制台账号把路径改为 /api/v3/sauc/bigmodel_nostream。
     id: 'doubao', category: 'stt',
     urlPreset: 'https://openspeech.bytedance.com',
-    defaultPath: '/api/v3/auc/bigmodel/recognize/flash',
+    defaultPath: '/api/v3/plan/sauc/bigmodel_nostream',
     credentialFields: DOUBAO_VOICE_CREDENTIALS,
     capabilities: { sttStreaming: false },
   });

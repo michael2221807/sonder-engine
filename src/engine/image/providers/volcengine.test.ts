@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { resolveSeedreamSize } from './volcengine';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { resolveSeedreamSize, VolcengineImageProvider } from './volcengine';
 
 // NOTE: these ranges mirror the official docs as of 2026-08 and are pinned so
 // future tweaks are deliberate; the real-key calibration matrix (P1 acceptance)
@@ -54,5 +54,81 @@ describe('resolveSeedreamSize', () => {
   it('non-finite / non-positive inputs fall back to a square instead of NaNxNaN', () => {
     expect(resolveSeedreamSize('doubao-seedream-4-0-250828', NaN, Infinity)).toBe('1280x1280');
     expect(resolveSeedreamSize('doubao-seedream-3-0-t2i-250415', 0, -5)).toBe('1024x1024');
+  });
+
+  // seedream-5.x validates total PIXEL AREA, not per-dimension ranges —
+  // live-verified 2026-08-27 ("at least 3686400" / "at most 16777216" pixels).
+  describe('seedream-5.x area-based sizing', () => {
+    const MIN = 3_686_400;
+    const MAX = 16_777_216;
+
+    it('scales a 1024 square up to the exact minimum area (1920x1920)', () => {
+      expect(resolveSeedreamSize('doubao-seedream-5.0-lite', 1024, 1024)).toBe('1920x1920');
+    });
+
+    it('keeps aspect ratio while lifting small landscape requests over the floor', () => {
+      const [w, h] = parse(resolveSeedreamSize('doubao-seedream-5.0-lite', 2048, 1024));
+      expect(w * h).toBeGreaterThanOrEqual(MIN);
+      expect(w / h).toBeCloseTo(2, 1);
+      expect(w % 8).toBe(0);
+      expect(h % 8).toBe(0);
+    });
+
+    it('passes through in-range sizes (live-verified 2048x1800 generates)', () => {
+      expect(resolveSeedreamSize('doubao-seedream-5.0-lite', 2048, 1800)).toBe('2048x1800');
+    });
+
+    it('shrinks oversized requests under the area ceiling', () => {
+      const [w, h] = parse(resolveSeedreamSize('doubao-seedream-5.0-lite', 8192, 8192));
+      expect(w * h).toBeLessThanOrEqual(MAX);
+      expect(w).toBe(h);
+      expect(w % 8).toBe(0);
+    });
+
+    it('4096 square (exactly the max area) passes through', () => {
+      expect(resolveSeedreamSize('doubao-seedream-5.0-lite', 4096, 4096)).toBe('4096x4096');
+    });
+
+    it('extreme aspect ratios never emit a zero side and stay within area bounds', () => {
+      // Regression (review Important 2026-08-27): the free-text manual-size
+      // inputs can feed values like 5000000x1; the in-range branch used to
+      // round the tiny side straight to 0.
+      for (const [rw, rh] of [[5_000_000, 1], [1, 5_000_000], [4_000_000, 2], [10_000_000, 3]] as const) {
+        const [w, h] = parse(resolveSeedreamSize('doubao-seedream-5.0-lite', rw, rh));
+        expect(w).toBeGreaterThanOrEqual(8);
+        expect(h).toBeGreaterThanOrEqual(8);
+        expect(w % 8).toBe(0);
+        expect(h % 8).toBe(0);
+        expect(w * h).toBeGreaterThanOrEqual(MIN);
+        expect(w * h).toBeLessThanOrEqual(MAX);
+      }
+    });
+  });
+});
+
+describe('VolcengineImageProvider generation URL', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function captureUrl(endpoint: string): Promise<string> {
+    return new Promise((resolve) => {
+      vi.stubGlobal('fetch', vi.fn(async (url: unknown) => {
+        resolve(String(url));
+        return new Response(JSON.stringify({ data: [{ b64_json: 'AAAA' }] }), { status: 200 });
+      }));
+      const provider = new VolcengineImageProvider(endpoint, 'k', 'doubao-seedream-5.0-lite');
+      void provider.generate('a cat', '', 2048, 2048);
+    });
+  }
+
+  it('appends the pay-as-you-go path to a bare origin', async () => {
+    expect(await captureUrl('https://ark.cn-beijing.volces.com'))
+      .toBe('https://ark.cn-beijing.volces.com/api/v3/images/generations');
+  });
+
+  it('uses an endpoint that already carries a path verbatim (plan/proxy setups)', async () => {
+    expect(await captureUrl('https://ark.cn-beijing.volces.com/api/plan/v3/images/generations'))
+      .toBe('https://ark.cn-beijing.volces.com/api/plan/v3/images/generations');
+    expect(await captureUrl('http://127.0.0.1:8787/ark-plan/images'))
+      .toBe('http://127.0.0.1:8787/ark-plan/images');
   });
 });

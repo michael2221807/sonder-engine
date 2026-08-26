@@ -1,94 +1,64 @@
 // App doc: docs/user-guide/pages/game-main.md §3.13 (配音 · 配音服务商)
 /**
- * Doubao voice (豆包语音, Volcano) TTS provider — epic P2.
+ * Doubao voice (豆包语音, Volcano) TTS provider — epic P2, calibrated against
+ * the Agent Plan live endpoints 2026-08-27.
  *
- * Protocol: 大模型语音合成 HTTP 单向流式 V3 —
- *   POST {endpoint}{routingPath || '/api/v3/tts/unidirectional'}
- *   Headers: X-Api-Key (新版控制台单 API Key 鉴权, live-verified 2026-08-27)
- *   + X-Api-Resource-Id (per model, e.g. volc.service_type.10029 / seed-tts-2.0)
- *   + X-Api-Request-Id.
- *   Body: { req_params: { text, speaker, audio_params: { format, sample_rate } } }
- *   Response: chunked JSON lines, each carrying a base64 `data` audio fragment;
- *   fragments concatenate into one MP3.
+ * Protocol: 大模型语音合成 WebSocket 单向流式 V3 —
+ *   WSS {endpoint}{routingPath || '/api/v3/plan/tts/unidirectional/stream'}
+ *       ?api_key=<key>&api_resource_id=<resourceId>
+ *   One session-less full-client frame carrying
+ *   { user, req_params: { text, speaker, audio_params } }; the server streams
+ *   audio-only frames (mp3 fragments) plus TTSSentenceStart/End events and
+ *   ends with SessionFinished (152).
  *
- * CORS verified reachable from browser origins (research doc §3.2, curl probe
- * 2026-08-26: ACAO * + X-Api-* headers allowed).
+ * Live findings that shaped this implementation (2026-08-27, plan key):
+ * - The HTTP chunked variant (/plan/tts/unidirectional) accepts the request
+ *   and replies OK but streams ZERO audio frames — server-side dead for plan
+ *   accounts, hence WebSocket here.
+ * - Auth via `?api_key=` query + resource id via `?api_resource_id=` query are
+ *   both live-verified; this matters because a browser WebSocket cannot set
+ *   custom headers at all (and openspeech's CORS allow-list would block
+ *   X-Api-Key on the HTTP paths anyway).
+ * - `seed-tts-2.0` only voices the `*_uranus_bigtts` 2.0 series; the sample
+ *   list below is the set that actually produced audio in the live sweep.
+ * - WebSocket needs no CORS preflight → fully browser-usable.
  *
- * ⚠ Field-level protocol details are transcribed from the official docs
- * (volcengine.com/docs/6561) WITHOUT a live round-trip — the PO has not yet
- * provided Doubao voice credentials. `parseDoubaoTtsBody` is deliberately
- * defensive (collects every base64 `data` field on any non-error line) and
- * MUST be validated against a real response during P2 acceptance.
+ * The same provider serves non-plan (standalone 豆包语音 console) accounts by
+ * overriding the routing path to '/api/v3/tts/unidirectional/stream'.
  *
- * No transport-level streaming for `<audio>`: the endpoint needs POST +
- * credential headers, which an audio element cannot send → getStreamUrl()
- * returns null and playback falls back to the existing pseudo/full buffered
- * modes (design D6).
+ * No transport-level streaming for <audio>: the audio arrives over WS frames
+ * → getStreamUrl() returns null and playback falls back to the buffered modes
+ * (design D6).
  */
 import { BaseTtsProvider, TTS_SYNTHESIZE_TIMEOUT_MS } from './base';
 import type { TtsBackendType, TtsSynthesizeOptions, TtsSpeaker } from '../types';
+import {
+  buildFullClientFrame,
+  parseServerFrame,
+  toWebSocketUrl,
+  DOUBAO_WS_EVENT,
+} from '../../providers/doubao-ws-protocol';
 
-export const DOUBAO_TTS_DEFAULT_PATH = '/api/v3/tts/unidirectional';
+export const DOUBAO_TTS_DEFAULT_PATH = '/api/v3/plan/tts/unidirectional/stream';
+export const DOUBAO_TTS_DEFAULT_RESOURCE_ID = 'seed-tts-2.0';
 
 /**
- * Built-in speaker candidates (documented sample voice_types; the service has
- * no listing endpoint — descriptor declares speakerListing:false). Users can
- * type any voice_type their console shows. VERIFY ids during P2 acceptance.
+ * Built-in speakers — every id below produced real audio in the 2026-08-27
+ * live sweep against seed-tts-2.0 (10 中文 uranus 2.0 音色; the English ones
+ * from the same series stayed silent on Chinese text and are excluded).
  */
 export const DOUBAO_SAMPLE_SPEAKERS: TtsSpeaker[] = [
-  { name: '灿灿', voiceId: 'zh_female_cancan_mars_bigtts' },
-  { name: '爽快思思', voiceId: 'zh_female_shuangkuaisisi_moon_bigtts' },
-  { name: '温暖阿虎', voiceId: 'zh_male_wennuanahu_moon_bigtts' },
-  { name: '少年梓辛', voiceId: 'zh_male_shaonianzixin_moon_bigtts' },
+  { name: '爽快思思 2.0', voiceId: 'zh_female_shuangkuaisisi_uranus_bigtts' },
+  { name: '知性灿灿 2.0', voiceId: 'zh_female_cancan_uranus_bigtts' },
+  { name: '甜美小源 2.0', voiceId: 'zh_female_tianmeixiaoyuan_uranus_bigtts' },
+  { name: 'Vivi 2.0', voiceId: 'zh_female_vv_uranus_bigtts' },
+  { name: '小何 2.0', voiceId: 'zh_female_xiaohe_uranus_bigtts' },
+  { name: '暖阳女声 2.0', voiceId: 'zh_female_kefunvsheng_uranus_bigtts' },
+  { name: '佩奇猪 2.0', voiceId: 'zh_female_peiqi_uranus_bigtts' },
+  { name: '云舟 2.0', voiceId: 'zh_male_m191_uranus_bigtts' },
+  { name: '小天 2.0', voiceId: 'zh_male_taocheng_uranus_bigtts' },
+  { name: '儒雅逸辰 2.0', voiceId: 'zh_male_ruyayichen_uranus_bigtts' },
 ];
-
-/**
- * Parse a unidirectional-TTS response body: one JSON object per line, audio
- * fragments in base64 `data` fields. Error lines (code present and non-zero
- * beyond the terminal sentinel) surface as an Error; malformed lines are
- * skipped. Pure — unit-tested without network.
- */
-export function parseDoubaoTtsBody(body: string): Uint8Array {
-  const fragments: Uint8Array[] = [];
-  let total = 0;
-  for (const line of body.split('\n')) {
-    const trimmed = line.trim().replace(/^data:\s*/, '');
-    if (!trimmed || trimmed === '[DONE]') continue;
-    let obj: {
-      code?: unknown; data?: unknown; message?: unknown;
-      header?: { code?: unknown; message?: unknown };
-    };
-    try {
-      obj = JSON.parse(trimmed) as typeof obj;
-    } catch { continue; }
-    if (!obj || typeof obj !== 'object') continue;
-    // Status may sit at the top level OR nested under `header` — the nested
-    // form is live-verified (2026-08-27 error frames look like
-    // {"header":{"reqid":…,"code":45000030,"message":"…"}}).
-    const rawCode = typeof obj.code === 'number' ? obj.code
-      : typeof obj.header?.code === 'number' ? obj.header.code : 0;
-    // 0 = data frame; 20000000 = documented terminal OK sentinel. Anything
-    // else with a message is an error frame.
-    if (rawCode !== 0 && rawCode !== 20000000) {
-      const msg = typeof obj.message === 'string' ? obj.message
-        : typeof obj.header?.message === 'string' ? obj.header.message : `code ${rawCode}`;
-      throw new Error(`[Doubao TTS] server error ${rawCode}: ${msg}`);
-    }
-    if (typeof obj.data === 'string' && obj.data.length > 0) {
-      try {
-        const bin = atob(obj.data);
-        const bytes = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-        fragments.push(bytes);
-        total += bytes.length;
-      } catch { /* not base64 — skip the frame */ }
-    }
-  }
-  const out = new Uint8Array(total);
-  let offset = 0;
-  for (const f of fragments) { out.set(f, offset); offset += f.length; }
-  return out;
-}
 
 export class DoubaoTtsProvider extends BaseTtsProvider {
   readonly backend: TtsBackendType = 'doubao';
@@ -102,50 +72,84 @@ export class DoubaoTtsProvider extends BaseTtsProvider {
     super(endpoint, apiKey, customPath);
   }
 
-  private headers(): Record<string, string> {
-    // 新版控制台单 API Key 鉴权 — the key travels as the `api_key` QUERY
-    // parameter (see synthesizeUrl), NOT a header: live-verified 2026-08-27
-    // that `?api_key=` reaches the grant stage, while the `X-Api-Key` header
-    // (though accepted by curl) is missing from openspeech's CORS
-    // allow-headers list → browser preflight fails. The X-Api-* headers below
-    // ARE allow-listed.
-    return {
-      'Content-Type': 'application/json',
-      'X-Api-Resource-Id': this.credentials.resourceId ?? '',
-      'X-Api-Request-Id': (globalThis.crypto?.randomUUID?.() ?? `aga-${Date.now()}-${Math.random().toString(36).slice(2)}`),
-    };
-  }
-
   private synthesizeUrl(): string {
     // `customPath` keeps the caller's original value: BaseTtsProvider defaults
     // this.routingPath to '/' (CosyVoice's real synth path), which would be
     // indistinguishable from "not customized" here (review Minor 2026-08-26).
     const raw = this.customPath?.trim();
     const path = raw ? (raw.startsWith('/') ? raw : '/' + raw) : DOUBAO_TTS_DEFAULT_PATH;
-    // API key via query — browser-compatible auth (see headers() note).
-    return `${this.baseUrl}${path}?api_key=${encodeURIComponent(this.apiKey)}`;
+    const resourceId = this.credentials.resourceId?.trim() || DOUBAO_TTS_DEFAULT_RESOURCE_ID;
+    // Key + resource id via query — the only auth a browser WebSocket can carry.
+    return `${toWebSocketUrl(this.baseUrl)}${path}`
+      + `?api_key=${encodeURIComponent(this.apiKey)}`
+      + `&api_resource_id=${encodeURIComponent(resourceId)}`;
   }
 
-  private async requestSynthesis(text: string, speaker: string, signal: AbortSignal): Promise<Blob> {
-    const res = await fetch(this.synthesizeUrl(), {
-      method: 'POST',
-      headers: this.headers(),
-      body: JSON.stringify({
-        req_params: {
-          text,
-          speaker,
-          audio_params: { format: 'mp3', sample_rate: 24000 },
-        },
-      }),
-      signal,
+  private requestSynthesis(text: string, speaker: string, signal: AbortSignal): Promise<Blob> {
+    return new Promise<Blob>((resolve, reject) => {
+      let ws: WebSocket;
+      try {
+        ws = new WebSocket(this.synthesizeUrl());
+      } catch (err) {
+        reject(err instanceof Error ? err : new Error(String(err)));
+        return;
+      }
+      ws.binaryType = 'arraybuffer';
+      const chunks: Uint8Array[] = [];
+      let settled = false;
+      const finish = (result: Blob | Error) => {
+        if (settled) return;
+        settled = true;
+        signal.removeEventListener('abort', onAbort);
+        try { ws.close(); } catch { /* already closed */ }
+        if (result instanceof Error) reject(result); else resolve(result);
+      };
+      const onAbort = () => finish(new Error('[Doubao TTS] aborted'));
+      if (signal.aborted) { onAbort(); return; }
+      signal.addEventListener('abort', onAbort, { once: true });
+
+      ws.onerror = () => finish(new Error('[Doubao TTS] WebSocket 连接失败（检查 URL/网络）'));
+      ws.onopen = () => {
+        ws.send(buildFullClientFrame({
+          user: { uid: 'aga' },
+          req_params: {
+            text,
+            speaker,
+            audio_params: { format: 'mp3', sample_rate: 24000 },
+          },
+        }));
+      };
+      ws.onmessage = (evt: MessageEvent) => {
+        if (!(evt.data instanceof ArrayBuffer)) return;
+        const frame = parseServerFrame(new Uint8Array(evt.data));
+        if (!frame) return;
+        if (frame.errorCode !== undefined) {
+          finish(new Error(`[Doubao TTS] server error ${frame.errorCode}: ${(frame.errorMessage ?? '').slice(0, 200)}`));
+          return;
+        }
+        if (frame.audio && frame.audio.length > 0) {
+          // Copy — the subarray aliases the (reusable) event buffer.
+          chunks.push(new Uint8Array(frame.audio));
+          return;
+        }
+        if (frame.event === DOUBAO_WS_EVENT.SessionFailed) {
+          finish(new Error(`[Doubao TTS] session failed: ${JSON.stringify(frame.json ?? {}).slice(0, 200)}`));
+          return;
+        }
+        if (frame.event === DOUBAO_WS_EVENT.SessionFinished) {
+          if (chunks.length === 0) {
+            finish(new Error('[Doubao TTS] empty audio in response（检查音色是否为 2.0 uranus 系）'));
+            return;
+          }
+          const total = chunks.reduce((n, c) => n + c.length, 0);
+          const out = new Uint8Array(total);
+          let off = 0;
+          for (const c of chunks) { out.set(c, off); off += c.length; }
+          finish(new Blob([out], { type: 'audio/mpeg' }));
+        }
+      };
+      ws.onclose = () => finish(new Error('[Doubao TTS] 连接提前关闭（会话未完成）'));
     });
-    if (!res.ok) {
-      const errText = await res.text().catch(() => `HTTP ${res.status}`);
-      throw new Error(`[Doubao TTS] synthesize failed ${res.status}: ${errText.slice(0, 160)}`);
-    }
-    const bytes = parseDoubaoTtsBody(await res.text());
-    if (bytes.length === 0) throw new Error('[Doubao TTS] empty audio in response');
-    return new Blob([bytes], { type: 'audio/mpeg' });
   }
 
   async synthesize(text: string, options: TtsSynthesizeOptions): Promise<Blob> {
@@ -159,7 +163,7 @@ export class DoubaoTtsProvider extends BaseTtsProvider {
     }
   }
 
-  /** POST + credential headers can't feed an <audio> URL → no transport streaming. */
+  /** Audio arrives over WS frames — nothing an <audio> URL could stream. */
   getStreamUrl(): string | null {
     return null;
   }
@@ -171,8 +175,10 @@ export class DoubaoTtsProvider extends BaseTtsProvider {
   async testConnection(opts?: { speaker?: string; signal?: AbortSignal }): Promise<{ ok: boolean; error?: string }> {
     const { signal, cleanup } = this.withTimeout(opts?.signal, 15_000);
     try {
+      // Real single-character synthesis — per-character billing makes this a
+      // ~1-char probe while proving the full auth + resource + voice chain.
       const speaker = opts?.speaker || DOUBAO_SAMPLE_SPEAKERS[0].voiceId;
-      const blob = await this.requestSynthesis('test', speaker, signal);
+      const blob = await this.requestSynthesis('好', speaker, signal);
       return { ok: blob.size > 0, error: blob.size > 0 ? undefined : '响应无音频数据' };
     } catch (err) {
       return { ok: false, error: (err instanceof Error ? err.message : String(err)).slice(0, 160) };
