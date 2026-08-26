@@ -17,10 +17,13 @@ import {
 } from './descriptor';
 import type { CredentialFieldSpec } from './descriptor';
 
-/** 豆包语音三凭证（epic P2/P3, decision D3）— appid + access token + resource id */
+/**
+ * 豆包语音凭证（epic P2/P3）— 新版控制台鉴权（PO 指定，2026-08-27）：
+ * 单 API Key（header `X-Api-Key`，实测 2026-08-27）+ Resource ID。
+ * 旧版 appid/access-token 三凭证制不再支持（新版控制台为官方推荐路径）。
+ */
 const DOUBAO_VOICE_CREDENTIALS: CredentialFieldSpec[] = [
-  { key: 'appId', i18nKey: 'api.credential.appId', required: true, secret: false },
-  { key: 'accessToken', i18nKey: 'api.credential.accessToken', required: true, secret: true },
+  API_KEY_CREDENTIAL,
   { key: 'resourceId', i18nKey: 'api.credential.resourceId', required: true, secret: false },
 ];
 
@@ -68,14 +71,18 @@ export function registerBuiltinProviders(catalog: ProviderCatalog): void {
     // persisted APIProviderType union stays untouched; the config stores
     // provider:'custom' + backend:'volcano_ark', and OpenAIProvider resolves
     // its chat path from this descriptor instead of the /v1 hardcode).
-    // modelsPath deliberately omitted until a real key verifies Ark exposes a
-    // listing endpoint — the UI hides the fetch-models button without it.
+    // modelsPath deliberately ABSENT (UI hides the fetch-models button):
+    // live-tested 2026-08-27 — GET /api/v3/models works via curl, but its
+    // OPTIONS preflight 404s without ACAO, so a browser (this app) cannot
+    // call it. chat/images preflights ARE allowed; only /models lacks CORS.
     id: 'volcano_ark', category: 'llm',
     urlPreset: 'https://ark.cn-beijing.volces.com',
     defaultPath: '/api/v3/chat/completions',
     credentialFields: [API_KEY_CREDENTIAL],
     capabilities: {},
-    defaultModel: 'doubao-seed-1-6-250615',
+    // Calibrated 2026-08-27: seed-1.6 was retired from the shelf; 2-1-pro is
+    // the current mainline (models move fast — the prefill is just a hint).
+    defaultModel: 'doubao-seed-2-1-pro-260628',
   });
 
   // ── Image backends (URLs from APIPanel IMAGE_BACKEND_STATIC; paths from provider classes) ──

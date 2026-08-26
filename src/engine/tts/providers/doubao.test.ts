@@ -34,26 +34,31 @@ describe('parseDoubaoTtsBody', () => {
 describe('DoubaoTtsProvider request shape', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('POSTs the V3 unidirectional endpoint with the three credential headers', async () => {
+  it('POSTs the V3 unidirectional endpoint with query api_key auth (browser-compatible, live-verified 2026-08-27)', async () => {
     let captured: { url?: string; init?: RequestInit } = {};
     vi.stubGlobal('fetch', vi.fn(async (url: unknown, init?: RequestInit) => {
       captured = { url: String(url), init };
       return new Response(JSON.stringify({ code: 0, data: b64([1]) }), { status: 200 });
     }));
-    const provider = new DoubaoTtsProvider('https://openspeech.bytedance.com', '', undefined, {
-      appId: 'app1', accessToken: 'tok1', resourceId: 'volc.service_type.10029',
+    const provider = new DoubaoTtsProvider('https://openspeech.bytedance.com', 'apikey-1', undefined, {
+      resourceId: 'volc.service_type.10029',
     });
     const blob = await provider.synthesize('你好', { speaker: 'zh_female_cancan_mars_bigtts' });
     expect(blob.size).toBe(1);
-    expect(captured.url).toBe(`https://openspeech.bytedance.com${DOUBAO_TTS_DEFAULT_PATH}`);
+    // key travels as query (X-Api-Key header is not CORS-allow-listed by openspeech)
+    expect(captured.url).toBe(`https://openspeech.bytedance.com${DOUBAO_TTS_DEFAULT_PATH}?api_key=apikey-1`);
     const headers = captured.init?.headers as Record<string, string>;
-    expect(headers['X-Api-App-Key']).toBe('app1');
-    expect(headers['X-Api-Access-Key']).toBe('tok1');
+    expect(headers['X-Api-Key']).toBeUndefined();
     expect(headers['X-Api-Resource-Id']).toBe('volc.service_type.10029');
     expect(headers['X-Api-Request-Id']).toBeTruthy();
     const body = JSON.parse(String(captured.init?.body));
     expect(body.req_params.text).toBe('你好');
     expect(body.req_params.speaker).toBe('zh_female_cancan_mars_bigtts');
+  });
+
+  it('parses the live-verified nested error frame shape {"header":{code,message}}', () => {
+    const body = JSON.stringify({ header: { reqid: 'x', code: 45000030, message: 'requested resource not granted' } });
+    expect(() => parseDoubaoTtsBody(body)).toThrow(/45000030.*not granted/);
   });
 
   it('getStreamUrl is null (POST + header auth cannot feed <audio>)', () => {

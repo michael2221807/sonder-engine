@@ -37,15 +37,16 @@ describe('DoubaoSttProvider request shape', () => {
         status: 200, headers: { 'X-Api-Status-Code': '20000000' },
       });
     }));
-    const provider = new DoubaoSttProvider('https://openspeech.bytedance.com', '', undefined, {
-      appId: 'app1', accessToken: 'tok1', resourceId: 'volc.bigasr.auc_turbo',
+    const provider = new DoubaoSttProvider('https://openspeech.bytedance.com', 'apikey-1', undefined, {
+      resourceId: 'volc.bigasr.auc_turbo',
     });
     const result = await provider.transcribe(new Blob([new Uint8Array([1, 2, 3])], { type: 'audio/wav' }));
     expect(result.text).toBe('测试');
-    expect(captured.url).toBe(`https://openspeech.bytedance.com${DOUBAO_STT_DEFAULT_PATH}`);
+    // key travels as query (X-Api-Key header is not CORS-allow-listed by openspeech)
+    expect(captured.url).toBe(`https://openspeech.bytedance.com${DOUBAO_STT_DEFAULT_PATH}?api_key=apikey-1`);
     const headers = captured.init?.headers as Record<string, string>;
-    expect(headers['X-Api-App-Key']).toBe('app1');
-    expect(headers['X-Api-Access-Key']).toBe('tok1');
+    expect(headers['X-Api-Key']).toBeUndefined();
+    expect(headers['X-Api-Resource-Id']).toBe('volc.bigasr.auc_turbo');
     expect(headers['X-Api-Sequence']).toBe('-1');
     const body = JSON.parse(String(captured.init?.body));
     expect(body.audio.format).toBe('wav');

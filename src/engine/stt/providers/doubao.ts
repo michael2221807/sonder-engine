@@ -4,9 +4,11 @@
  *
  * Protocol: 大模型录音文件识别·极速版 (flash) —
  *   POST {endpoint}{routingPath || '/api/v3/auc/bigmodel/recognize/flash'}
- *   Headers: X-Api-App-Key / X-Api-Access-Key / X-Api-Resource-Id +
- *   X-Api-Request-Id + X-Api-Sequence: -1. Success is signalled by the
- *   X-Api-Status-Code response header (20000000).
+ *   Headers: X-Api-Key (新版单 API Key 鉴权, live-verified 2026-08-27) +
+ *   X-Api-Resource-Id (volc.bigasr.auc_turbo) + X-Api-Request-Id +
+ *   X-Api-Sequence: -1. Success is signalled by the X-Api-Status-Code
+ *   response header (20000000); error headers carry X-Api-Message (both are
+ *   CORS-exposed — live-verified).
  *   Body: { user: { uid }, audio: { format, data: <base64> }, request: { model_name: 'bigmodel', enable_itn: true } }
  *
  * CORS verified reachable from browser origins (research doc §3.2).
@@ -80,10 +82,11 @@ export class DoubaoSttProvider extends BaseSttProvider {
   }
 
   private headers(): Record<string, string> {
+    // 新版控制台单 API Key 鉴权 — key 走 `api_key` QUERY 参数（见 transcribeUrl
+    // 与 tts/providers/doubao.ts headers 注：X-Api-Key 头不在 openspeech 的
+    // CORS 允许列表，浏览器预检会拒；query 实测直达 grant 阶段）。
     return {
       'Content-Type': 'application/json',
-      'X-Api-App-Key': this.credentials.appId ?? '',
-      'X-Api-Access-Key': this.credentials.accessToken ?? this.apiKey,
       'X-Api-Resource-Id': this.credentials.resourceId ?? '',
       'X-Api-Request-Id': (globalThis.crypto?.randomUUID?.() ?? `aga-${Date.now()}-${Math.random().toString(36).slice(2)}`),
       'X-Api-Sequence': '-1',
@@ -92,7 +95,8 @@ export class DoubaoSttProvider extends BaseSttProvider {
 
   private transcribeUrl(): string {
     const path = this.routingPath?.trim() || DOUBAO_STT_DEFAULT_PATH;
-    return `${this.baseUrl}${path.startsWith('/') ? path : '/' + path}`;
+    // API key via query — browser-compatible auth (see headers() note).
+    return `${this.baseUrl}${path.startsWith('/') ? path : '/' + path}?api_key=${encodeURIComponent(this.apiKey)}`;
   }
 
   async transcribe(blob: Blob, options?: SttTranscribeOptions): Promise<SttResult> {

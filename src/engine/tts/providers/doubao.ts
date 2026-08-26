@@ -4,8 +4,9 @@
  *
  * Protocol: 大模型语音合成 HTTP 单向流式 V3 —
  *   POST {endpoint}{routingPath || '/api/v3/tts/unidirectional'}
- *   Headers: X-Api-App-Key / X-Api-Access-Key / X-Api-Resource-Id (three
- *   credentials from the descriptor's credentialFields) + X-Api-Request-Id.
+ *   Headers: X-Api-Key (新版控制台单 API Key 鉴权, live-verified 2026-08-27)
+ *   + X-Api-Resource-Id (per model, e.g. volc.service_type.10029 / seed-tts-2.0)
+ *   + X-Api-Request-Id.
  *   Body: { req_params: { text, speaker, audio_params: { format, sample_rate } } }
  *   Response: chunked JSON lines, each carrying a base64 `data` audio fragment;
  *   fragments concatenate into one MP3.
@@ -53,17 +54,25 @@ export function parseDoubaoTtsBody(body: string): Uint8Array {
   for (const line of body.split('\n')) {
     const trimmed = line.trim().replace(/^data:\s*/, '');
     if (!trimmed || trimmed === '[DONE]') continue;
-    let obj: { code?: unknown; data?: unknown; message?: unknown };
+    let obj: {
+      code?: unknown; data?: unknown; message?: unknown;
+      header?: { code?: unknown; message?: unknown };
+    };
     try {
       obj = JSON.parse(trimmed) as typeof obj;
     } catch { continue; }
     if (!obj || typeof obj !== 'object') continue;
-    const code = typeof obj.code === 'number' ? obj.code : 0;
+    // Status may sit at the top level OR nested under `header` — the nested
+    // form is live-verified (2026-08-27 error frames look like
+    // {"header":{"reqid":…,"code":45000030,"message":"…"}}).
+    const rawCode = typeof obj.code === 'number' ? obj.code
+      : typeof obj.header?.code === 'number' ? obj.header.code : 0;
     // 0 = data frame; 20000000 = documented terminal OK sentinel. Anything
     // else with a message is an error frame.
-    if (code !== 0 && code !== 20000000) {
-      const msg = typeof obj.message === 'string' ? obj.message : `code ${code}`;
-      throw new Error(`[Doubao TTS] server error: ${msg}`);
+    if (rawCode !== 0 && rawCode !== 20000000) {
+      const msg = typeof obj.message === 'string' ? obj.message
+        : typeof obj.header?.message === 'string' ? obj.header.message : `code ${rawCode}`;
+      throw new Error(`[Doubao TTS] server error ${rawCode}: ${msg}`);
     }
     if (typeof obj.data === 'string' && obj.data.length > 0) {
       try {
@@ -94,10 +103,14 @@ export class DoubaoTtsProvider extends BaseTtsProvider {
   }
 
   private headers(): Record<string, string> {
+    // 新版控制台单 API Key 鉴权 — the key travels as the `api_key` QUERY
+    // parameter (see synthesizeUrl), NOT a header: live-verified 2026-08-27
+    // that `?api_key=` reaches the grant stage, while the `X-Api-Key` header
+    // (though accepted by curl) is missing from openspeech's CORS
+    // allow-headers list → browser preflight fails. The X-Api-* headers below
+    // ARE allow-listed.
     return {
       'Content-Type': 'application/json',
-      'X-Api-App-Key': this.credentials.appId ?? '',
-      'X-Api-Access-Key': this.credentials.accessToken ?? this.apiKey,
       'X-Api-Resource-Id': this.credentials.resourceId ?? '',
       'X-Api-Request-Id': (globalThis.crypto?.randomUUID?.() ?? `aga-${Date.now()}-${Math.random().toString(36).slice(2)}`),
     };
@@ -109,7 +122,8 @@ export class DoubaoTtsProvider extends BaseTtsProvider {
     // indistinguishable from "not customized" here (review Minor 2026-08-26).
     const raw = this.customPath?.trim();
     const path = raw ? (raw.startsWith('/') ? raw : '/' + raw) : DOUBAO_TTS_DEFAULT_PATH;
-    return `${this.baseUrl}${path}`;
+    // API key via query — browser-compatible auth (see headers() note).
+    return `${this.baseUrl}${path}?api_key=${encodeURIComponent(this.apiKey)}`;
   }
 
   private async requestSynthesis(text: string, speaker: string, signal: AbortSignal): Promise<Blob> {

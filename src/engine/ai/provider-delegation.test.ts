@@ -141,8 +141,11 @@ describe('llm endpoint path resolution (epic P4 / D4)', () => {
     expect(resolveLlmChatPath('not-in-catalog')).toBe('/v1/chat/completions');
   });
 
-  it('resolveLlmModelsPath: null for presets that declare no listing endpoint', () => {
+  it('resolveLlmModelsPath: preset paths honored; volcano_ark declares none (browser CORS)', () => {
     expect(resolveLlmModelsPath('openai')).toBe('/v1/models');
+    // Live-tested 2026-08-27: Ark GET /api/v3/models works via curl but its
+    // OPTIONS preflight 404s without ACAO → unusable from the browser, so the
+    // preset deliberately declares no listing endpoint (button hidden).
     expect(resolveLlmModelsPath('volcano_ark')).toBeNull();
     expect(resolveLlmModelsPath()).toBe('/v1/models');
   });
