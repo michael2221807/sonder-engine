@@ -103,6 +103,7 @@
   "character.image.reference.sourceAvatar": "Current Avatar",
   "character.image.reference.sourcePortrait": "Current Portrait",
   "character.image.reference.selectFile": "Select image…",
+  "character.image.reference.strengthUnsupported": "This provider has no redraw-strength parameter — describe the amount of change in \"Extra Requirements\", e.g. \"only adjust the pose and lighting, keep everything else unchanged\".",
   "character.image.reference.denoise": "Redraw Intensity",
   "character.image.reference.denoiseNear": "0.25 Near original",
   "character.image.reference.denoiseMid": "0.55 Keep composition",

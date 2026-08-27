@@ -26,6 +26,15 @@ export interface ImageProviderCapabilities {
   imageCaptioning: boolean;
   imageTagging: boolean;
   inpainting: boolean;
+  /**
+   * Backend accepts a numeric reference-strength ("重绘幅度") alongside the
+   * reference image. NovelAI maps it to `strength`, Civitai to
+   * `sourceImageDenoiseStrenght`. Seedream/Doubao has NO such parameter in its
+   * official API (verified 2026-08-27 against the vendor parameter table), so
+   * it declares false and the UI hides the slider instead of shipping a dead
+   * control — the redraw magnitude goes into the prompt text there.
+   */
+  referenceStrength: boolean;
 }
 
 export function supportsImageToImage(
@@ -55,6 +64,7 @@ export const PROVIDER_CAPABILITIES: Record<ImageBackendType, ImageProviderCapabi
       imageCaptioning: d.capabilities.imageCaptioning === true,
       imageTagging: d.capabilities.imageTagging === true,
       inpainting: d.capabilities.inpainting === true,
+      referenceStrength: d.capabilities.referenceStrength === true,
     }]),
     // Object.fromEntries widens keys to string; the catalog's image ids are
     // pinned 1:1 against ImageBackendType by descriptor.test.ts.

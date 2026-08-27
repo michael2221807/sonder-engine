@@ -2074,14 +2074,19 @@ const avatarInitial = computed<string>(() => {
                     <input type="file" accept="image/*" style="display:none" @change="onPlayerRefFileChange" />
                   </label>
                 </div>
-                <label class="pi-label" style="margin-top:4px;">{{ $t('character.image.reference.denoise') }}</label>
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <input type="range" min="0.1" max="1" step="0.05" v-model.number="playerRefDenoise" class="bp-edit-range" style="flex:1" />
-                  <span style="font-size:0.8rem;min-width:32px;text-align:right">{{ playerRefDenoise.toFixed(2) }}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--color-text-muted);">
-                  <span>{{ $t('character.image.reference.denoiseNear') }}</span><span>{{ $t('character.image.reference.denoiseMid') }}</span><span>{{ $t('character.image.reference.denoiseFar') }}</span>
-                </div>
+                <template v-if="PROVIDER_CAPABILITIES[playerDefaultBackend]?.referenceStrength">
+                  <label class="pi-label" style="margin-top:4px;">{{ $t('character.image.reference.denoise') }}</label>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <input type="range" min="0.1" max="1" step="0.05" v-model.number="playerRefDenoise" class="bp-edit-range" style="flex:1" data-testid="player-ref-denoise-slider" />
+                    <span style="font-size:0.8rem;min-width:32px;text-align:right">{{ playerRefDenoise.toFixed(2) }}</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--color-text-muted);">
+                    <span>{{ $t('character.image.reference.denoiseNear') }}</span><span>{{ $t('character.image.reference.denoiseMid') }}</span><span>{{ $t('character.image.reference.denoiseFar') }}</span>
+                  </div>
+                </template>
+                <p v-else style="font-size:0.75rem;color:var(--color-text-muted);margin-top:4px;" data-testid="player-ref-strength-unsupported">
+                  {{ $t('character.image.reference.strengthUnsupported') }}
+                </p>
                 <p style="font-size:0.75rem;color:var(--color-text-muted);margin-top:2px;">{{ $t('character.image.reference.notice') }}</p>
               </div>
             </div>

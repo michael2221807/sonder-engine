@@ -225,6 +225,8 @@
   "image.manual.refUpload": "上传图片",
   "image.manual.refAvatar": "使用当前头像/立绘",
   "image.manual.refSelectFile": "选择图片…",
+  "image.reference.strengthUnsupported": "该服务商没有「重绘幅度」参数 —— 请在下方「额外要求」里描述改动幅度，例如「仅调整姿态与光线，其余保持不变」或「仅保留人物外貌，其余全部重画」。",
+  "image.regenerate.strengthUnsupported": "该服务商没有「重绘幅度」参数 —— 请直接在下方提示词里描述改动幅度，例如「仅调整姿态与光线，其余保持不变」。",
   "image.manual.refDenoiseLabel": "重绘幅度",
   "image.manual.refNoiseLabel": "Noise（增加细节变化）",
   "image.manual.refNote": "参考重绘会把源图发送给当前生成后端。",

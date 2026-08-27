@@ -94,7 +94,8 @@ export function registerBuiltinProviders(catalog: ProviderCatalog): void {
     urlPreset: 'https://orchestration.civitai.com',
     defaultPath: '/v2/consumer/workflows', // civitai.ts:436
     credentialFields: [API_KEY_CREDENTIAL],
-    capabilities: { textToImage: true, imageToImage: true, imageCaptioning: true, imageTagging: true, inpainting: false },
+    // referenceStrength: Civitai maps 重绘幅度 → sourceImageDenoiseStrenght.
+    capabilities: { textToImage: true, imageToImage: true, imageCaptioning: true, imageTagging: true, inpainting: false, referenceStrength: true },
     defaultModel: 'urn:air:sdxl:checkpoint:civitai:101055@128078',
   });
   catalog.register({
@@ -102,7 +103,8 @@ export function registerBuiltinProviders(catalog: ProviderCatalog): void {
     urlPreset: 'https://image.novelai.net',
     defaultPath: '/ai/generate-image', // novelai.ts:124
     credentialFields: [API_KEY_CREDENTIAL],
-    capabilities: { textToImage: true, imageToImage: true, imageCaptioning: false, imageTagging: false, inpainting: false },
+    // referenceStrength: NovelAI maps 重绘幅度 → parameters.strength.
+    capabilities: { textToImage: true, imageToImage: true, imageCaptioning: false, imageTagging: false, inpainting: false, referenceStrength: true },
     defaultModel: 'nai-diffusion-4-5-full',
   });
   catalog.register({
@@ -136,6 +138,10 @@ export function registerBuiltinProviders(catalog: ProviderCatalog): void {
     urlPreset: 'https://ark.cn-beijing.volces.com',
     defaultPath: '/api/v3/images/generations', // providers/volcengine.ts
     credentialFields: [API_KEY_CREDENTIAL],
+    // referenceStrength 刻意不声明：Seedream 官方参数表（2026-08-27 核对）只有
+    // model/prompt/image/size/sequential_image_generation/stream/response_format/
+    // watermark 等，**没有任何重绘强度参数** → UI 隐藏「重绘幅度」滑块，改由提示词
+    // 表达改动幅度（避免死控件）。
     capabilities: { textToImage: true, imageToImage: true, imageCaptioning: false, imageTagging: false, inpainting: false },
     // Medium 套餐唯一图片模型（PO 指定 2026-08-27，真实出图验证）。
     defaultModel: 'doubao-seedream-5.0-lite',

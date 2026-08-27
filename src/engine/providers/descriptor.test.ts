@@ -64,15 +64,34 @@ describe('built-in catalog entries', () => {
   });
 
   it('PROVIDER_CAPABILITIES derivation matches the pre-P0 hand-written map (+ P1 volcengine)', () => {
-    // Regression pin: first five verbatim from provider-capabilities.ts@8899da8.
+    // Regression pin: first five verbatim from provider-capabilities.ts@8899da8;
+    // referenceStrength added 2026-08-27 (numeric 重绘幅度 support, see below).
     expect(PROVIDER_CAPABILITIES).toEqual({
-      civitai: { textToImage: true, imageToImage: true, imageCaptioning: true, imageTagging: true, inpainting: false },
-      novelai: { textToImage: true, imageToImage: true, imageCaptioning: false, imageTagging: false, inpainting: false },
-      openai: { textToImage: true, imageToImage: false, imageCaptioning: false, imageTagging: false, inpainting: false },
-      sd_webui: { textToImage: true, imageToImage: false, imageCaptioning: false, imageTagging: false, inpainting: false },
-      comfyui: { textToImage: true, imageToImage: false, imageCaptioning: false, imageTagging: false, inpainting: false },
-      volcengine: { textToImage: true, imageToImage: true, imageCaptioning: false, imageTagging: false, inpainting: false },
+      civitai: { textToImage: true, imageToImage: true, imageCaptioning: true, imageTagging: true, inpainting: false, referenceStrength: true },
+      novelai: { textToImage: true, imageToImage: true, imageCaptioning: false, imageTagging: false, inpainting: false, referenceStrength: true },
+      openai: { textToImage: true, imageToImage: false, imageCaptioning: false, imageTagging: false, inpainting: false, referenceStrength: false },
+      sd_webui: { textToImage: true, imageToImage: false, imageCaptioning: false, imageTagging: false, inpainting: false, referenceStrength: false },
+      comfyui: { textToImage: true, imageToImage: false, imageCaptioning: false, imageTagging: false, inpainting: false, referenceStrength: false },
+      volcengine: { textToImage: true, imageToImage: true, imageCaptioning: false, imageTagging: false, inpainting: false, referenceStrength: false },
     });
+  });
+
+  it('referenceStrength is declared only where the vendor API actually has a strength param', () => {
+    // The 重绘幅度 slider is capability-gated on this flag (4 UI surfaces).
+    // NovelAI → parameters.strength; Civitai → sourceImageDenoiseStrenght.
+    // Seedream/Doubao's official parameter table has NO strength/denoise field
+    // (verified 2026-08-27), so it must stay false or the slider becomes a
+    // dead control again.
+    const strengthCapable = providerCatalog.byCategory('image')
+      .filter((d) => d.capabilities.referenceStrength === true)
+      .map((d) => d.id)
+      .sort();
+    expect(strengthCapable).toEqual(['civitai', 'novelai']);
+    // Every img2img backend WITHOUT the flag must render the hint instead.
+    const img2imgNoStrength = providerCatalog.byCategory('image')
+      .filter((d) => d.capabilities.imageToImage === true && d.capabilities.referenceStrength !== true)
+      .map((d) => d.id);
+    expect(img2imgNoStrength).toEqual(['volcengine']);
   });
 
   it('registerBuiltinProviders is single-shot (re-registration throws)', () => {

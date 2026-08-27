@@ -66,6 +66,11 @@ const referenceDenoise = ref(props.defaultDenoiseStrength ?? 0.65);
 const canUseReference = computed(() =>
   !!props.sourceAssetId && PROVIDER_CAPABILITIES[chosenBackend.value]?.imageToImage === true,
 );
+/** Numeric 重绘幅度 only exists for backends whose API has a strength param
+ *  (capability-gated — Seedream has none; epic 2026-08-27). */
+const backendSupportsRefStrength = computed(() =>
+  PROVIDER_CAPABILITIES[chosenBackend.value]?.referenceStrength === true,
+);
 watch(canUseReference, (can) => { if (!can) useReference.value = false; });
 
 const imageService = inject<{ getAssetCache(): { retrieve(id: string): Promise<{ blob: Blob } | null> } } | null>('imageService', null);
@@ -190,16 +195,21 @@ onUnmounted(() => { document.removeEventListener('keydown', onKeydown); });
               show-label
             />
             <div v-if="useReference" class="regen-ref-controls">
-              <div class="regen-label">{{ $t('image.regenerate.redrawStrength') }}</div>
-              <div class="regen-ref-slider">
-                <input type="range" min="0.1" max="1" step="0.05" v-model.number="referenceDenoise" />
-                <span class="regen-ref-val">{{ referenceDenoise.toFixed(2) }}</span>
-              </div>
-              <div class="regen-ref-marks">
-                <span>{{ $t('image.regenerate.markNear') }}</span>
-                <span>{{ $t('image.regenerate.markKeep') }}</span>
-                <span>{{ $t('image.regenerate.markHeavy') }}</span>
-              </div>
+              <template v-if="backendSupportsRefStrength">
+                <div class="regen-label">{{ $t('image.regenerate.redrawStrength') }}</div>
+                <div class="regen-ref-slider">
+                  <input type="range" min="0.1" max="1" step="0.05" v-model.number="referenceDenoise" data-testid="regen-ref-denoise-slider" />
+                  <span class="regen-ref-val">{{ referenceDenoise.toFixed(2) }}</span>
+                </div>
+                <div class="regen-ref-marks">
+                  <span>{{ $t('image.regenerate.markNear') }}</span>
+                  <span>{{ $t('image.regenerate.markKeep') }}</span>
+                  <span>{{ $t('image.regenerate.markHeavy') }}</span>
+                </div>
+              </template>
+              <p v-else class="regen-hint" data-testid="regen-ref-strength-unsupported">
+                {{ $t('image.regenerate.strengthUnsupported') }}
+              </p>
               <p v-if="blobCheckFailed" class="regen-hint regen-hint--error">
                 {{ $t('image.regenerate.cacheMissing') }}
               </p>

@@ -106,6 +106,15 @@ const backgroundMode = ref(true);
 const backendSupportsImg2Img = computed(() =>
   PROVIDER_CAPABILITIES[backend.value]?.imageToImage === true,
 );
+/**
+ * Numeric 重绘幅度 slider — only rendered for backends whose API actually has a
+ * strength parameter (NovelAI `strength` / Civitai `sourceImageDenoiseStrenght`).
+ * Seedream/Doubao has none, so the slider would be a dead control there; the
+ * hint points users at 额外要求 instead (capability-gated, epic 2026-08-27).
+ */
+const backendSupportsRefStrength = computed(() =>
+  PROVIDER_CAPABILITIES[backend.value]?.referenceStrength === true,
+);
 const npcReferenceEnabled = ref(false);
 const npcReferenceSource = ref('upload');
 const npcReferenceDenoise = ref(0.65);
@@ -3219,7 +3228,7 @@ function clearNpcImages() {
             <div v-if="backendSupportsImg2Img" class="form-section">
               <div class="form-section form-section--inline">
                 <label class="form-label">{{ $t('image.manual.referenceRedraw') }}</label>
-                <AgaToggle v-model="npcReferenceEnabled" />
+                <AgaToggle v-model="npcReferenceEnabled" data-testid="ref-redraw-toggle" />
               </div>
               <div v-if="npcReferenceEnabled" class="ref-controls">
                 <label class="form-label">{{ $t('image.manual.refSource') }}</label>
@@ -3236,12 +3245,17 @@ function clearNpcImages() {
                     <input type="file" accept="image/*" style="display:none" @change="onNpcReferenceFileChange" />
                   </label>
                 </div>
-                <label class="form-label" style="margin-top: var(--space-xs);">{{ $t('image.manual.refDenoiseLabel') }}</label>
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <input type="range" min="0.1" max="1" step="0.05" v-model.number="npcReferenceDenoise" style="flex:1" />
-                  <span style="font-size:0.8rem;min-width:32px;text-align:right">{{ npcReferenceDenoise.toFixed(2) }}</span>
-                </div>
-                <div class="ref-marks"><span>{{ $t('image.regenerate.markNear') }}</span><span>{{ $t('image.regenerate.markKeep') }}</span><span>{{ $t('image.regenerate.markHeavy') }}</span></div>
+                <template v-if="backendSupportsRefStrength">
+                  <label class="form-label" style="margin-top: var(--space-xs);">{{ $t('image.manual.refDenoiseLabel') }}</label>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <input type="range" min="0.1" max="1" step="0.05" v-model.number="npcReferenceDenoise" style="flex:1" data-testid="ref-denoise-slider" />
+                    <span style="font-size:0.8rem;min-width:32px;text-align:right">{{ npcReferenceDenoise.toFixed(2) }}</span>
+                  </div>
+                  <div class="ref-marks"><span>{{ $t('image.regenerate.markNear') }}</span><span>{{ $t('image.regenerate.markKeep') }}</span><span>{{ $t('image.regenerate.markHeavy') }}</span></div>
+                </template>
+                <p v-else class="form-hint" style="margin-top: var(--space-xs);" data-testid="ref-strength-unsupported">
+                  {{ $t('image.reference.strengthUnsupported') }}
+                </p>
                 <div v-if="backend === 'novelai'" style="margin-top:6px;">
                   <label class="form-label">{{ $t('image.manual.refNoiseLabel') }}</label>
                   <div style="display:flex;align-items:center;gap:8px;">
@@ -3853,12 +3867,17 @@ function clearNpcImages() {
                     <input type="file" accept="image/*" style="display:none" @change="onSceneReferenceFileChange" />
                   </label>
                 </div>
-                <label class="form-label" style="margin-top:var(--space-xs);">{{ $t('image.scene.refDenoiseLabel') }}</label>
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <input type="range" min="0.1" max="1" step="0.05" v-model.number="sceneReferenceDenoise" style="flex:1" />
-                  <span style="font-size:0.8rem;min-width:32px;text-align:right">{{ sceneReferenceDenoise.toFixed(2) }}</span>
-                </div>
-                <div class="ref-marks"><span>{{ $t('image.scene.refMarkNear') }}</span><span>{{ $t('image.scene.refMarkKeep') }}</span><span>{{ $t('image.scene.refMarkHeavy') }}</span></div>
+                <template v-if="backendSupportsRefStrength">
+                  <label class="form-label" style="margin-top:var(--space-xs);">{{ $t('image.scene.refDenoiseLabel') }}</label>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <input type="range" min="0.1" max="1" step="0.05" v-model.number="sceneReferenceDenoise" style="flex:1" data-testid="scene-ref-denoise-slider" />
+                    <span style="font-size:0.8rem;min-width:32px;text-align:right">{{ sceneReferenceDenoise.toFixed(2) }}</span>
+                  </div>
+                  <div class="ref-marks"><span>{{ $t('image.scene.refMarkNear') }}</span><span>{{ $t('image.scene.refMarkKeep') }}</span><span>{{ $t('image.scene.refMarkHeavy') }}</span></div>
+                </template>
+                <p v-else class="form-hint" style="margin-top:var(--space-xs);" data-testid="scene-ref-strength-unsupported">
+                  {{ $t('image.reference.strengthUnsupported') }}
+                </p>
                 <div v-if="backend === 'novelai'" style="margin-top:6px;">
                   <label class="form-label">{{ $t('image.manual.refNoiseLabel') }}</label>
                   <div style="display:flex;align-items:center;gap:8px;">

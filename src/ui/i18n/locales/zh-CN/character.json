@@ -103,6 +103,7 @@
   "character.image.reference.sourceAvatar": "当前头像",
   "character.image.reference.sourcePortrait": "当前立绘",
   "character.image.reference.selectFile": "选择图片…",
+  "character.image.reference.strengthUnsupported": "该服务商没有「重绘幅度」参数 —— 请在「额外要求」里描述改动幅度，例如「仅调整姿态与光线，其余保持不变」。",
   "character.image.reference.denoise": "重绘幅度",
   "character.image.reference.denoiseNear": "0.25 近似原图",
   "character.image.reference.denoiseMid": "0.55 保留构图",

@@ -225,6 +225,8 @@
   "image.manual.refUpload": "Upload Image",
   "image.manual.refAvatar": "Use current avatar/portrait",
   "image.manual.refSelectFile": "Select image...",
+  "image.reference.strengthUnsupported": "This provider has no redraw-strength parameter — describe the amount of change in \"Extra Requirements\" below, e.g. \"only adjust the pose and lighting, keep everything else unchanged\".",
+  "image.regenerate.strengthUnsupported": "This provider has no redraw-strength parameter — describe the amount of change directly in the prompt below, e.g. \"only adjust the pose and lighting, keep everything else unchanged\".",
   "image.manual.refDenoiseLabel": "Redraw Strength",
   "image.manual.refNoiseLabel": "Noise (add detail variation)",
   "image.manual.refNote": "Reference redraw will send the source image to the current backend.",
