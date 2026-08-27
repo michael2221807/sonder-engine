@@ -54,6 +54,12 @@ export function buildSecretPartSystemPrompt(params: {
   stylePromptInput?: string;
   /** Overall art style label from the UI grid (通用/动漫/写实/古风). Omitted = no style line. */
   artStyle?: string;
+  /**
+   * seedream_narrative (Doubao) — swaps the English-tags output mandates for
+   * Chinese natural-language ones (2026-08-27); every other strategy keeps
+   * the exact legacy text. Only meaningful on the non-NovelAI branch.
+   */
+  narrative?: boolean;
 }): string {
   const description = buildSecretPartDescription(params.part);
 
@@ -77,7 +83,9 @@ export function buildSecretPartSystemPrompt(params: {
 
   return [
     '你是私密部位特写提示词转换器。',
-    '任务：将角色资料、角色锚点与部位描述转化为稳定、可画的生图短语（英文 tags）。',
+    params.narrative
+      ? '任务：将角色资料、角色锚点与部位描述转化为稳定、可画的中文自然语言特写描述。'
+      : '任务：将角色资料、角色锚点与部位描述转化为稳定、可画的生图短语（英文 tags）。',
     '画面要求：纯粹的微距特写 (Macro shot)。目标部位占据 90% 以上画面，强调纹理、颜色、光泽与边缘细节。',
     '禁止退步：严禁生成包含头部、四肢或大幅场景的提示词。',
     '单体约束：画面中只能有一个目标器官，严禁任何形式的解剖重复或畸变镜像。',
@@ -85,7 +93,9 @@ export function buildSecretPartSystemPrompt(params: {
     '风格要求：跟随输入资料、额外要求和风格提示词；不要默认补充固定质量串、固定二次元风格串或固定写实风格串。',
     params.artStyle ? `画风要求：整体画风为「${params.artStyle}」。在保持微距特写构图的前提下体现该画风的质感与渲染方式。` : '',
     params.hasAnchor ? '锚点对齐：优先继承与目标部位稳定相关的身体特征，让局部细节与角色保持一致。' : '',
-    '输出格式：使用英文逗号分隔的短语串。',
+    params.narrative
+      ? '输出格式：使用中文自然语言完整句子，不使用逗号短语串或任何权重语法。'
+      : '输出格式：使用英文逗号分隔的短语串。',
     params.compatMode && params.stylePromptInput ? '请吸收额外风格词并整合：' + params.stylePromptInput : '',
     `本次目标：${description}`,
     '输出结构：请只输出 <提示词>...</提示词>。',

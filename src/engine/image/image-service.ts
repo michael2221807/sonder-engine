@@ -628,6 +628,17 @@ export class ImageService {
 
       const resolvedBodyDesc = this.resolveBodyDescription(params.characterName, params.part);
 
+      // Secret-part flow historically runs WITHOUT the model-bundle system
+      // prompt — preserved byte-identical for every legacy strategy. Only the
+      // Doubao narrative ruleset wires the preset context through, so its
+      // Chinese-narrative doctrine reaches this flow too (review Important
+      // 2026-08-27: the hardcoded English mandates here escaped the ruleset).
+      const secretPresetContext = getTransformerPresetContext(
+        'npc',
+        params.anchorPositive ? 'anchor' : 'default',
+        this.getCustomPresetOptions(),
+      );
+
       const tokenResult = await this.tokenizer.tokenizeSecretPart({
         characterName: params.characterName,
         part: params.part,
@@ -641,6 +652,9 @@ export class ImageService {
         isNovelAI,
         extraRequirements: params.extraPrompt,
         artStyle: params.artStyle,
+        presetContext: secretPresetContext.serializationStrategy === 'seedream_narrative'
+          ? secretPresetContext
+          : undefined,
       });
 
       const processedPositive = normalizeSingleCharacterOutput(tokenResult.rawResponse, { isNovelAI });
