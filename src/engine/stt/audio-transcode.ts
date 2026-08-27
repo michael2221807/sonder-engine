@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-main.md §3.14 (语音输入 · 录音格式自动转换)
 /**
  * Recording → WAV transcoding for STT backends that need a fixed PCM input
  * (Doubao sauc wants 16 kHz mono s16le; MediaRecorder emits webm/opus).

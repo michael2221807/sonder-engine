@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-image.md §Tab 7 规则（模型规则集 + 规则模板）
 /**
  * Transformer Preset System — ported
  *

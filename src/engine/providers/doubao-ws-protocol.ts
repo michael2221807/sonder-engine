@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-main.md §3.13 / §3.14 (豆包语音 · WebSocket 协议)
 /**
  * Doubao voice (openspeech.bytedance.com) V3 WebSocket binary protocol —
  * frame builders/parsers shared by the TTS and STT providers.

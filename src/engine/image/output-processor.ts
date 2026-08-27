@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-image.md §Tab 7 规则（序列化策略：标签串 / 中文叙述）
 /**
  * Output Processor — processes raw AI transformer output into clean image prompts.
  *

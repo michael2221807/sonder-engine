@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/home.md §1.3.1（服务商下拉 / 凭证字段 / 火山方舟接入速查）
 /**
  * Built-in provider descriptors — every backend the app ships with today.
  *
