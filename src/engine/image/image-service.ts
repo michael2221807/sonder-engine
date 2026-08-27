@@ -28,7 +28,7 @@ import { joinPromptFragments } from './style-preset-injection';
 import { normalizeSingleCharacterOutput, processTransformerOutput, type SerializationStrategy } from './output-processor';
 
 const VALID_STRATEGIES: ReadonlySet<SerializationStrategy> = new Set([
-  'flat', 'nai_character_segments', 'gemini_structured', 'grok_structured', 'sd_danbooru',
+  'flat', 'nai_character_segments', 'gemini_structured', 'grok_structured', 'sd_danbooru', 'seedream_narrative',
 ]);
 
 function toSerializationStrategy(raw: string): SerializationStrategy {

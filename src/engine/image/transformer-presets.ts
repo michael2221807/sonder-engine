@@ -40,6 +40,7 @@ export interface TransformerDefaultsData {
       gemini_structured?: string;
       grok_structured?: string;
       sd_danbooru?: string;
+      seedream_narrative?: string;
       fallback?: string;
     };
     npc_common?: string[];
@@ -48,6 +49,7 @@ export interface TransformerDefaultsData {
       gemini_structured?: string;
       grok_structured?: string;
       sd_danbooru?: string;
+      seedream_narrative?: string;
       fallback?: string;
     };
     scene_common?: string[];
@@ -132,7 +134,9 @@ function buildStructuredOutputFormatHint(
           ? (hints?.grok_structured ?? 'Grok 最终会把这条单角色 tags 转成更电影化的描述式提示词。')
           : strategy === 'sd_danbooru'
             ? (hints?.sd_danbooru ?? 'SD 生图后端会直接使用这条 Danbooru 标签作为正向提示词。标签应是逗号分隔的 Danbooru 格式英文标签。')
-            : (hints?.fallback ?? '输出必须可被后续解析成单角色提示词。');
+            : strategy === 'seedream_narrative'
+              ? (hints?.seedream_narrative ?? '豆包 Seedream 会把这条单角色描述作为完整的中文绘图指令直接执行；请写成连贯的自然语言段落，不要写成逗号标签串。')
+              : (hints?.fallback ?? '输出必须可被后续解析成单角色提示词。');
 
     const common = fmt?.npc_common ?? [
       '请使用以下结构输出：',
@@ -160,7 +164,9 @@ function buildStructuredOutputFormatHint(
         ? (hints?.grok_structured ?? 'Grok 最终会把这些段落转成更电影化的描述式提示词；<角色> 内每条 [序号] 仍只写对应角色的动作、姿态、视线和镜头关系。')
         : strategy === 'sd_danbooru'
           ? (hints?.sd_danbooru ?? 'SD 生图后端会把基础段与角色段合并为逗号分隔的 Danbooru 标签序列。<基础> 负责全局环境、镜头、天气和光影标签；<角色> 内每条 [序号] 负责该角色的外观与动作标签，标签格式与基础段相同。')
-          : (hints?.fallback ?? '输出必须可被后续解析成基础段与 [序号] 角色段。');
+          : strategy === 'seedream_narrative'
+            ? (hints?.seedream_narrative ?? '豆包 Seedream 最终会把基础段与角色段合并成一段连贯的中文绘图指令。<基础> 用完整句子描述地点、空间、时间天气、镜头与光影；<角色> 内每条 [序号] 用一两句完整中文句子描述该角色的辨识外观、动作与位置。')
+            : (hints?.fallback ?? '输出必须可被后续解析成基础段与 [序号] 角色段。');
 
   const common = fmt?.scene_common ?? [
     '请使用以下结构输出：',
@@ -666,6 +672,117 @@ function buildDefaultPresets(packData?: TransformerDefaultsData): TransformerPro
       '只输出"风景场景"或"故事快照"其中之一。',
     ].join('\n')),
   },
+
+  // ── Doubao Seedream · NPC ──
+  // Sources (researched 2026-08-27): Volcano official image-generation tutorials
+  // (docs 82379/1824121 family), AtlasCloud Seedream 5.0 Pro prompt guide
+  // (inline negation, imperfection cues, no resolution keywords), evolink
+  // cross-version best practices (structure formula, 5.0 deep-thinking prefers
+  // long logical prompts), KreadoAI SPACE framework, WaveSpeed 4.0-5.0
+  // tutorial (natural language over tag lists). Doubao 生图已真机验证
+  // (2026-08-27, doubao-seedream-5.0-lite via gproxy).
+  {
+    id: 'transformer_doubao_npc',
+    name: p('transformer_doubao_npc', 'name', 'Doubao · NPC角色生成'),
+    scope: 'npc',
+    prompt: p('transformer_doubao_npc', 'prompt', [
+      '你是豆包 Seedream 角色提示词整理器。',
+      '你的任务是把 NPC 资料整理成可直接用于 Seedream 角色生图的中文自然语言描述，保持稳定、统一、可复用。',
+      '输出完整连贯的中文句子，不要逗号标签堆砌、不要下划线标签、不要任何权重语法；Seedream 把整段提示词当作一条绘图指令来推理执行。',
+      '人名、地名、服饰与组织名等专有名词直接保留中文原文；Seedream 原生理解中文。',
+      '描述元素之间的关系而不是孤立罗列——逻辑连贯的完整描述比破碎短语效果更好，篇幅可以比标签式模型更长。',
+      '描述顺序建议：主体身份与年龄感 > 外貌与面部辨识 > 身材体态 > 常驻服饰材质与层次 > 手持物或身份道具 > 姿态动作与表情 > 镜头构图 > 光影氛围。',
+      '请把身份、等级、性格转换成可见结果：眼神、站姿、轮廓、表情、衣料质感、光线方向。',
+      '越靠前、越具体的描述权重越高；重要的辨识信息写在前面，用具体程度代替权重语法。',
+      '单次输出只服务一个清晰镜头、一个主姿态、一个主光源，避免互相冲突的多视角、多动作、多光线。',
+      '不要写 4K、8K、杰作、高清、高质量这类空泛质量词——它们不会提高分辨率，只会干扰画风；用具体的材质、光影和细节描写代替。',
+      'Seedream 没有负面提示词参数：不想出现的内容直接写成句内指令（如"画面中不要出现文字和水印"），并优先用正向表述（"双手自然垂在身侧"优于"不要画坏手"）。',
+      '写实或摄影风格时，主动加入自然的不完美线索（真实皮肤质感、环境光、轻微颗粒感），避免过度磨皮的塑料感。',
+      '需要画面内出现文字时，把原文放进引号并注明位置与语种，文字保持简短。',
+      '若输入没有明确指定画风介质，不要擅自锁定二次元、写实、国风或摄影风格；只整理并强化输入中已经存在的风格信息。',
+      '资料缺口只做低冲突、可长期复用的保守补全。',
+      '当资料有限时，可根据身份、等级、年龄、性别补全年龄感、脸部气质、体态、常驻衣着材质、配饰与身份道具。',
+    ].join('\n')),
+    anchorModePrompt: p('transformer_doubao_npc', 'anchorModePrompt', [
+      '请直接沿用锚点中的稳定外观，不要重复改写已经确定的五官、体型、常驻衣着和主要配饰。',
+      '只在最终描述里补当前镜头需要的动作、姿态、表情、景别、构图、光影、临时服装变化、环境关系和道具。',
+      '若正文与锚点一致，可直接吸收为动态补充；若正文与锚点冲突，以锚点中的稳定外观为主。',
+      '锚点若是英文标签，把它的含义融入中文描述、保持外观事实一致即可，不必逐词直译。',
+    ].join('\n')),
+    noAnchorFallbackPrompt: p('transformer_doubao_npc', 'noAnchorFallbackPrompt', [
+      '请根据输入的角色设定完成完整角色描述，不能只输出镜头、姿态、光影或空泛气质词。',
+      '请优先完整提炼年龄感、身份、等级、外貌、身材、常驻衣着和其他稳定辨识特征。',
+      '请先完成稳定外观和身份辨识，再补动作、姿态、镜头、光影和环境。',
+      '请在补全时选择稳妥、低冲突、容易长期保持一致的视觉表达，但对输入中已经明确给出的设定不得省略。',
+      '当资料只给出身份、等级、年龄、性别等少量字段时，也要据此补全最稳妥的外观、体态、衣着层次、配饰、武器或身份道具。',
+    ].join('\n')),
+    outputFormatPrompt: [
+      buildStructuredOutputFormatHint('seedream_narrative', 'npc', packData),
+      p('transformer_doubao_npc', 'outputFormatPrompt', [
+        '单角色图直接输出 <提示词>，内容是一段连贯的中文自然语言描述，不要再拆 <基础>/<角色>。',
+        '请先写稳定主体，再补镜头、动作、光影和少量环境。',
+        '有锚点时，只补动态动作、姿态、表情、临时服装变化和道具。',
+      ].join('\n')),
+    ].join('\n'),
+  },
+
+  // ── Doubao Seedream · Scene ──
+  {
+    id: 'transformer_doubao_scene',
+    name: p('transformer_doubao_scene', 'name', 'Doubao · 场景生成'),
+    scope: 'scene',
+    prompt: p('transformer_doubao_scene', 'prompt', [
+      '你是豆包 Seedream 场景提示词整理器。',
+      '你的任务是把场景描述整理成可直接用于 Seedream 场景生图的中文自然语言描述，保持空间清晰、层次稳定、单帧可执行。',
+      '输出完整连贯的中文句子，不要逗号标签堆砌、不要下划线标签、不要任何权重语法；Seedream 会把整段提示词当作一条绘图指令来推理执行。',
+      '基础段负责地点、时间、天气、空间结构、镜头、光影与整体氛围；角色信息统一写进 <角色> 块并用 [序号] 区分。',
+      '描述空间与元素之间的逻辑关系（谁在哪里、朝向何处、与什么相接），而不是并列名词——Seedream 对关系描述的还原度最高。',
+      '基础段描述顺序建议：大地点 > 具体地点 > 空间结构 > 时间天气 > 环境材质与细节 > 镜头构图 > 光影氛围。',
+      '纯场景时让环境作为第一主体；故事快照时也必须保留地点、前中后景、地面关系和空间尺度。',
+      '单次输出只服务一个稳定时刻、一个主镜头、一个主光源、一个主要叙事焦点，避免多视角、多时间切片和多事件并列。',
+      '不要写 4K、8K、杰作、高清这类空泛质量词；分辨率由生成参数控制，用具体的材质与光影描写提升画面。',
+      '排除项直接写成句内指令（如"画面中不要出现现代物品"），并优先正向表述。',
+      '国风或古典场景可主动描写山、水、雾、风、树影、檐角、石阶、灯火、云气、雨雪、花叶的材质与气氛，并保留中文意象原文。',
+      '若输入没有明确指定画风介质，不要擅自锁定二次元、写实、国风或摄影风格；只整理输入里已有的风格线索。',
+    ].join('\n')),
+    sceneAnchorModePrompt: p('transformer_doubao_scene', 'sceneAnchorModePrompt', [
+      '请沿用角色锚点中的稳定外观，把场景输出重点放在空间、角色站位、互动关系、动作调度、镜头构图、天气、光影、环境细节和气氛。',
+      '<角色> 块里每条 [序号] 用一两句完整中文描述该角色当前镜头需要的识别外观、动作和站位，不要把完整角色设定重新灌入场景。',
+      '多人场景时优先表达关系、位置、视线和调度，让环境层级与人物关系一起成立。',
+      '锚点若是英文标签，把它的含义融入中文描述、保持外观事实一致即可。',
+    ].join('\n')),
+    noAnchorFallbackPrompt: p('transformer_doubao_scene', 'noAnchorFallbackPrompt', [
+      '请为主要角色补一两句辨识外观描述。',
+      '多人画面里优先保留位置、动作、关系和少量识别特征，让环境与人物容量保持平衡。',
+      '不要把场景图写成多个完整角色立绘描述的拼贴。',
+    ].join('\n')),
+    outputFormatPrompt: [
+      buildStructuredOutputFormatHint('seedream_narrative', 'scene', packData),
+      p('transformer_doubao_scene', 'outputFormatPrompt', [
+        '纯场景时可以只输出 <基础>；故事快照或多人画面时，主要角色必须写进 <角色> 块。',
+        '<基础> 与 <角色> 内每条 [序号] 都用完整中文句子表达，不要写成标签串。',
+        '基础段负责地点、空间、天气、镜头、光影与整体氛围；<角色> 内每条 [序号] 只写该角色自身的外观辨识、动作、姿态、视线和与环境或他人的关系。',
+      ].join('\n')),
+    ].join('\n'),
+  },
+
+  // ── Doubao Seedream · Scene Judge ──
+  {
+    id: 'transformer_doubao_scene_judge',
+    name: p('transformer_doubao_scene_judge', 'name', 'Doubao · 场景判定'),
+    scope: 'scene_judge',
+    prompt: p('transformer_doubao_scene_judge', 'prompt', [
+      '你负责判断当前文本更适合生成"风景场景"还是"故事快照"。',
+      '判定保持保守，优先选择稳定、易读、可执行的画面类型。',
+      '只有在文本能够稳定对应到一个单一时刻、一个清晰地点、一个主要事件时，才可判为故事快照。',
+      '故事快照通常至少满足以下四项：明确地点、可见环境细节、在场人物、稳定姿态、明确动作、道具交互、空间方向、单一时刻感。',
+      '如果文本主要是对话、心理活动、设定说明、回忆叙述、抽象氛围、身份介绍或长段内心描写，则默认判为风景场景。',
+      '若存在多人混战、频繁动作切换、连续剧情变化、复杂视角切换，也优先回退为风景场景。',
+      '若文本能稳定对应到"门前对峙、亭中交谈、桥上回首、崖边停步、举剑相向、递物瞬间"这类单帧事件，可提高故事快照优先级。',
+      '即使判为故事快照，也必须保证地点和环境仍然清晰可读，不允许变成拥挤人物拼贴。',
+      '只输出"风景场景"或"故事快照"其中之一。',
+    ].join('\n')),
+  },
 ];
 }
 
@@ -821,6 +938,40 @@ function buildDefaultModelBundles(packData?: TransformerDefaultsData): ModelTran
     npcPresetId: 'transformer_pony_npc',
     scenePresetId: 'transformer_pony_scene',
     sceneJudgePresetId: 'transformer_pony_scene_judge',
+  },
+
+  // ── Doubao Seedream Model Bundle ──
+  // Sources (researched 2026-08-27): Volcano official tutorials, AtlasCloud
+  // 5.0 Pro guide, evolink cross-version practices, KreadoAI SPACE framework,
+  // WaveSpeed tutorial. Community consensus: natural-language sentences over
+  // tag stacking, no negative-prompt field (inline exclusions, positive
+  // phrasing preferred), no resolution keywords (they shift style, not
+  // pixels), Chinese-native prompting, 5.0 deep thinking rewards long
+  // logically-connected prompts. 真机验证 doubao-seedream-5.0-lite（2026-08-27）。
+  {
+    id: 'transformer_model_bundle_doubao',
+    name: b('transformer_model_bundle_doubao', 'name', 'Doubao Seedream'),
+    enabled: false,
+    modelPrompt: b('transformer_model_bundle_doubao', 'modelPrompt', [
+      '目标模型为豆包 Seedream（doubao-seedream 系列）。',
+      '输出采用中文自然语言完整句子；Seedream 把整段提示词当作一条连贯绘图指令推理执行，不适合标签堆砌。',
+      '不要使用任何权重语法（括号权重、冒号数字、下划线标签）；强调靠语序和具体程度——越靠前、越具体的描述权重越高。',
+      '不要输出负面提示词段；排除项作为普通指令写进正文（如"画面中不要出现文字和水印"），并优先正向表述。',
+      '不要写 4K、8K、masterpiece、best quality 等空泛质量词；分辨率由生成参数控制，质量靠具体的材质、光影和细节描写。',
+      '人名、地名、服饰、组织名等专有名词保留中文原文；画面内需要出现的文字用引号标注原文并说明位置与语种，文字保持简短。',
+      '若任务要求单角色图，直接输出该角色的一段完整中文描述；若任务要求场景图，按基础段 + [序号]角色段组织，各段都用完整句子。',
+      '若输入没有明确要求，不要擅自锁定二次元、写实、国风或摄影风格；只整理并强化已有风格线索。',
+      '若 NPC 资料较少，可以根据身份、等级、年龄、性别做保守补全，但补全内容必须长期稳定、低冲突、易复用。',
+    ].join('\n')),
+    anchorModeModelPrompt: b('transformer_model_bundle_doubao', 'anchorModeModelPrompt', [
+      '目标模型为豆包 Seedream（doubao-seedream 系列）。',
+      '请沿用锚点中的稳定外观，把输出重点放在镜头、动作、姿态、构图、光影、环境和临时状态补充，仍然使用中文自然语言完整句子。',
+      '不要把锚点已经固定的稳定外观重复展开成冗长描述；锚点若是英文标签，把含义融入中文描述即可。',
+    ].join('\n')),
+    serializationStrategy: 'seedream_narrative',
+    npcPresetId: 'transformer_doubao_npc',
+    scenePresetId: 'transformer_doubao_scene',
+    sceneJudgePresetId: 'transformer_doubao_scene_judge',
   },
 ];
 }

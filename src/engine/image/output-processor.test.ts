@@ -361,4 +361,45 @@ describe('processTransformerOutput', () => {
     const result = processTransformerOutput(input, { strategy: 'flat' });
     expect(result).toBe('1girl, blue hair');
   });
+
+  // ── seedream_narrative (Doubao Seedream, 2026-08-27) ──
+
+  it('seedream_narrative: joins base and characters as Chinese narrative paragraphs', () => {
+    const input = '<提示词结构><基础>黄昏的青石长街上灯火初上，镜头从街口平视望去。</基础><角色>[1]甲|一位青衣女子立在灯下，手按剑柄，目光望向街尾。\n[2]乙|一名灰袍老者背对镜头缓步走远。</角色></提示词结构>';
+    const result = processTransformerOutput(input, { strategy: 'seedream_narrative' });
+    expect(result).toContain('黄昏的青石长街');
+    expect(result).toContain('画面中的角色1：一位青衣女子');
+    expect(result).toContain('画面中的角色2：一名灰袍老者');
+    // Paragraph join — no pipe segments, no English labels
+    expect(result).not.toContain('|');
+    expect(result).not.toContain('Base scene');
+    expect(result.split('\n')).toHaveLength(3);
+  });
+
+  it('seedream_narrative: single character drops the numeric label', () => {
+    const input = '<提示词结构><基础>雨后的庭院，苔痕青青。</基础><角色>[1]甲|少女撑伞立于檐下。</角色></提示词结构>';
+    const result = processTransformerOutput(input, { strategy: 'seedream_narrative' });
+    expect(result).toContain('画面中的角色：少女撑伞立于檐下。');
+    expect(result).not.toContain('角色1');
+  });
+
+  it('seedream_narrative: base-only scene passes through without labels', () => {
+    const input = '<提示词结构><基础>云海翻涌的山巅，一轮红日破晓。</基础></提示词结构>';
+    const result = processTransformerOutput(input, { strategy: 'seedream_narrative' });
+    expect(result).toBe('云海翻涌的山巅，一轮红日破晓。');
+  });
+
+  it('seedream_narrative: unstructured input returns cleaned narrative untouched', () => {
+    const input = '<提示词>一位白衣少年负手立于桥头，晨雾漫过石栏。</提示词>';
+    const result = processTransformerOutput(input, { strategy: 'seedream_narrative' });
+    expect(result).toBe('一位白衣少年负手立于桥头，晨雾漫过石栏。');
+  });
+
+  it('seedream_narrative: empty base with multiple characters keeps only labeled paragraphs', () => {
+    const input = '<提示词结构><基础></基础><角色>[1]甲|红衣女子执灯而立。\n[2]乙|黑衣男子按刀在侧。</角色></提示词结构>';
+    const result = processTransformerOutput(input, { strategy: 'seedream_narrative' });
+    expect(result.split('\n')).toHaveLength(2);
+    expect(result.startsWith('画面中的角色1：红衣女子')).toBe(true);
+    expect(result).toContain('画面中的角色2：黑衣男子');
+  });
 });

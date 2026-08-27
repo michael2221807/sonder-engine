@@ -1,2 +1,2 @@
 <think>Thinking complete</think>
-Understood. I will first output <thinking></thinking>, then output <提示词结构></提示词结构>; within it, <基础> handles the global scene, and <角色> contains per-character tags written as [1]..., [2]... sequentially:
+Understood. I will first output <thinking></thinking>, then output <提示词结构></提示词结构>; within it, <基础> handles the global scene, and <角色> contains per-character content written as [1]..., [2]... sequentially, with language and format following the system-layer model rules:

@@ -6,18 +6,18 @@ import {
 } from '@/engine/image/transformer-presets';
 
 describe('getDefaultPresets', () => {
-  it('returns 15 default presets', () => {
-    expect(getDefaultPresets()).toHaveLength(15);
+  it('returns 18 default presets', () => {
+    expect(getDefaultPresets()).toHaveLength(18);
   });
 
-  it('covers all 3 scopes × 5 backends', () => {
+  it('covers all 3 scopes × 6 backends', () => {
     const presets = getDefaultPresets();
     const npc = presets.filter((p) => p.scope === 'npc');
     const scene = presets.filter((p) => p.scope === 'scene');
     const judge = presets.filter((p) => p.scope === 'scene_judge');
-    expect(npc).toHaveLength(5);
-    expect(scene).toHaveLength(5);
-    expect(judge).toHaveLength(5);
+    expect(npc).toHaveLength(6);
+    expect(scene).toHaveLength(6);
+    expect(judge).toHaveLength(6);
   });
 
   it('all presets have non-empty prompt', () => {
@@ -53,8 +53,8 @@ describe('getDefaultPresets', () => {
 });
 
 describe('getDefaultModelBundles', () => {
-  it('returns 5 model bundles', () => {
-    expect(getDefaultModelBundles()).toHaveLength(5);
+  it('returns 6 model bundles', () => {
+    expect(getDefaultModelBundles()).toHaveLength(6);
   });
 
   it('NAI bundle is enabled by default', () => {
@@ -62,18 +62,30 @@ describe('getDefaultModelBundles', () => {
     expect(nai?.enabled).toBe(true);
   });
 
-  it('Gemini, Grok, Illustrious, and Pony bundles are disabled by default', () => {
+  it('Gemini, Grok, Illustrious, Pony, and Doubao bundles are disabled by default', () => {
     const bundles = getDefaultModelBundles();
     expect(bundles.find((b) => b.name === 'Gemini')?.enabled).toBe(false);
     expect(bundles.find((b) => b.name === 'Grok')?.enabled).toBe(false);
     expect(bundles.find((b) => b.name === 'Illustrious')?.enabled).toBe(false);
     expect(bundles.find((b) => b.name === 'Pony')?.enabled).toBe(false);
+    expect(bundles.find((b) => b.name === 'Doubao Seedream')?.enabled).toBe(false);
   });
 
   it('Illustrious and Pony bundles use sd_danbooru strategy', () => {
     const bundles = getDefaultModelBundles();
     expect(bundles.find((b) => b.name === 'Illustrious')?.serializationStrategy).toBe('sd_danbooru');
     expect(bundles.find((b) => b.name === 'Pony')?.serializationStrategy).toBe('sd_danbooru');
+  });
+
+  it('Doubao bundle uses the seedream_narrative strategy with Chinese natural-language doctrine', () => {
+    const doubao = getDefaultModelBundles().find((b) => b.name === 'Doubao Seedream');
+    expect(doubao?.serializationStrategy).toBe('seedream_narrative');
+    // Researched doctrine pins (2026-08-27): natural language, no weight
+    // syntax, inline exclusions, no vapid quality words.
+    expect(doubao?.modelPrompt).toContain('自然语言');
+    expect(doubao?.modelPrompt).toContain('权重语法');
+    expect(doubao?.modelPrompt).toContain('负面提示词');
+    expect(doubao?.modelPrompt).toContain('masterpiece');
   });
 
   it('each bundle links to valid preset IDs', () => {

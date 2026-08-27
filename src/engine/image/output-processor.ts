@@ -27,7 +27,7 @@ export interface StructuredOutput {
 }
 
 /** Serialization strategy — image prompt serialization strategy type */
-export type SerializationStrategy = 'flat' | 'nai_character_segments' | 'gemini_structured' | 'grok_structured' | 'sd_danbooru';
+export type SerializationStrategy = 'flat' | 'nai_character_segments' | 'gemini_structured' | 'grok_structured' | 'sd_danbooru' | 'seedream_narrative';
 
 // ═══════════════════════════════════════════════════════════
 // §2 — Leaf utilities (no internal dependencies)
@@ -582,6 +582,20 @@ export function processTransformerOutput(
       return parts.join('; ');
     }
 
+    if (strategy === 'seedream_narrative') {
+      // Doubao Seedream reads the whole prompt as ONE coherent natural-language
+      // instruction (no tag stacking, no weight syntax, Chinese-native) — join
+      // the base scene and per-character descriptions as flowing paragraphs.
+      // Labels stay Chinese on purpose: the ruleset asks the transformer for
+      // Chinese narrative output (calibrated 2026-08-27).
+      const parts = [
+        safeBase,
+        ...roleTexts.map((text, i) =>
+          roleTexts.length > 1 ? `画面中的角色${i + 1}：${text}` : `画面中的角色：${text}`),
+      ].filter(Boolean);
+      return parts.join('\n');
+    }
+
     // flat: merge all parts
     return normalizeArtistCase(cleanPromptOutput([safeBase, ...roleTexts].filter(Boolean).join(', ')));
   }
@@ -593,7 +607,8 @@ export function processTransformerOutput(
 
   // Non-flat strategy with flat input — wrap as base-only
   if (strategy === 'nai_character_segments') return normalizeNaiWeightSyntax(cleaned);
-  // sd_danbooru / gemini_structured / grok_structured: return cleaned text as-is
-  // (no NAI weight normalization — A1111 (tag:1.3) syntax is native for SD models)
+  // sd_danbooru / gemini_structured / grok_structured / seedream_narrative:
+  // return cleaned text as-is (no NAI weight normalization — A1111 syntax is
+  // native for SD models; Seedream narrative text has no weight syntax at all)
   return cleaned;
 }

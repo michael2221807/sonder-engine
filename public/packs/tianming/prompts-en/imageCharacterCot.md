@@ -1,2 +1,2 @@
 <think>Thinking complete</think>
-Understood. I will first output <thinking></thinking>, then output <提示词></提示词>; inside <提示词> I will only include the final tags for the current single character used for image generation:
+Understood. I will first output <thinking></thinking>, then output <提示词></提示词>; inside <提示词> I will only include the final prompt content for the current single character, with language and format following the system-layer model rules:
