@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { resolveSeedreamSize, VolcengineImageProvider } from './volcengine';
+import { resolveSeedreamSize, seedreamSupportsSeed, VolcengineImageProvider } from './volcengine';
 
 // NOTE: these ranges mirror the official docs as of 2026-08 and are pinned so
 // future tweaks are deliberate; the real-key calibration matrix (P1 acceptance)
@@ -103,6 +103,46 @@ describe('resolveSeedreamSize', () => {
         expect(w * h).toBeLessThanOrEqual(MAX);
       }
     });
+  });
+});
+
+describe('seed 机型门控（官方参数表 2026-08-28）', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function captureBody(model: string, options?: Record<string, unknown>): Promise<Record<string, unknown>> {
+    return new Promise((resolve) => {
+      vi.stubGlobal('fetch', vi.fn(async (_url: unknown, init: unknown) => {
+        resolve(JSON.parse(String((init as RequestInit).body)) as Record<string, unknown>);
+        return new Response(JSON.stringify({ data: [{ b64_json: 'AAAA' }] }), { status: 200 });
+      }));
+      const provider = new VolcengineImageProvider('https://ark.example.com', 'k', model);
+      void provider.generate('a cat', '', 2048, 2048, options);
+    });
+  }
+
+  it('seedreamSupportsSeed 只认 3.0-t2i / seededit-3.0-i2i', () => {
+    // 点写法（文档）与连字符+日期写法（真实 endpoint ID）都必须认
+    expect(seedreamSupportsSeed('doubao-seedream-3.0-t2i')).toBe(true);
+    expect(seedreamSupportsSeed('doubao-seedream-3-0-t2i-250415')).toBe(true);
+    expect(seedreamSupportsSeed('doubao-seededit-3.0-i2i')).toBe(true);
+    expect(seedreamSupportsSeed('doubao-seededit-3-0-i2i-250628')).toBe(true);
+    expect(seedreamSupportsSeed('doubao-seedream-5.0-lite')).toBe(false);
+    expect(seedreamSupportsSeed('doubao-seedream-4.0')).toBe(false);
+  });
+
+  it('5.0-lite 不发 seed（官方：该机型不支持）', async () => {
+    const body = await captureBody('doubao-seedream-5.0-lite', { seed: 42 });
+    expect(body.seed).toBeUndefined();
+  });
+
+  it('3.0-t2i 仍然转发 seed', async () => {
+    const body = await captureBody('doubao-seedream-3.0-t2i', { seed: 42 });
+    expect(body.seed).toBe(42);
+  });
+
+  it('从不转发 guidance_scale（官方：5.0-lite/4.5/4.0 不支持）', async () => {
+    const body = await captureBody('doubao-seedream-5.0-lite', { seed: 7, cfgScale: 5, guidance_scale: 5 });
+    expect(body.guidance_scale).toBeUndefined();
   });
 });
 

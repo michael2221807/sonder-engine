@@ -1399,7 +1399,7 @@ export class ImageService {
       defaultEngine: engine === 'general_llm' ? 'general_llm' : 'civitai_vlm',
       civitaiModel: this.stateManager.get<string>(`${base}.civitaiModel`) ?? 'claude-sonnet-5',
       temperature: this.stateManager.get<number>(`${base}.temperature`) ?? 0.2,
-      maxNewTokens: this.stateManager.get<number>(`${base}.maxNewTokens`) ?? 300,
+      maxNewTokens: this.stateManager.get<number>(`${base}.maxNewTokens`) ?? 600,
     };
   }
 

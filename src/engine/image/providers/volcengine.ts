@@ -102,6 +102,19 @@ export function resolveSeedreamSize(model: string, width: number, height: number
   return `${roundTo8(w)}x${roundTo8(h)}`;
 }
 
+/**
+ * `seed` 的机型门控（官方参数表 2026-08-28）：
+ * 「仅 doubao-seedream-3.0-t2i / doubao-seededit-3.0-i2i 支持该参数」。
+ * 我们的默认机型 doubao-seedream-5.0-lite（以及 4.x）不支持——此前无条件转发
+ * 等于对网关发无效字段（最好情况被忽略，最坏未来变 400）。
+ */
+export function seedreamSupportsSeed(model: string): boolean {
+  // 机型 ID 两种写法都要认：文档里的 `doubao-seedream-3.0-t2i` 与实际
+  // endpoint 里的 `doubao-seedream-3-0-t2i-250415`（点/连字符 + 日期后缀）。
+  const m = model.toLowerCase();
+  return /seedream-3[.-]0-t2i/.test(m) || /seededit-3[.-]0-i2i/.test(m);
+}
+
 export class VolcengineImageProvider extends BaseImageProvider implements ImageToImageProvider {
   readonly backend: ImageBackendType = 'volcengine';
 
@@ -163,11 +176,12 @@ export class VolcengineImageProvider extends BaseImageProvider implements ImageT
       // Off by default — game art must not carry the provider watermark.
       watermark: options?.watermark === true,
     };
-    if (typeof options?.seed === 'number' && options.seed >= 0) body.seed = options.seed;
-    // guidance_scale (Seedream 3.x only, range 1-10) is deliberately NOT
-    // forwarded yet: style-param-resolver marks cfgScale not-applicable for
-    // this backend pending real-key calibration (P1 acceptance). When
-    // calibration confirms behavior per model family, re-enable there first.
+    if (typeof options?.seed === 'number' && options.seed >= 0 && seedreamSupportsSeed(model)) {
+      body.seed = options.seed;
+    }
+    // guidance_scale：官方参数表明确 "doubao-seedream-5.0-lite/4.5/4.0 不支持"
+    // （只有 3.0-t2i / seededit-3.0-i2i 有），因此不转发；style-param-resolver
+    // 同步把 cfgScale 标为不适用。校准悬念到此关闭（2026-08-28 官方规格核对）。
     return body;
   }
 

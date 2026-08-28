@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-image.md §参考图与图片提炼设置（默认值来源）
 /**
  * Image subsystem save migration — Sprint Image-6
  *
@@ -74,7 +75,11 @@ const DEFAULT_IMAGE_STATE = {
       defaultEngine: 'civitai_vlm',
       civitaiModel: 'claude-sonnet-5',
       temperature: 0.2,
-      maxNewTokens: 300,
+      // 600（原 300）：人体优先提示词要求「有序 tags + 2-4 句 caption」，
+      // 300 token 会把 JSON 截断成解析失败（2026-08-28 人体细节强化）。
+      maxNewTokens: 600,
+      /** 新存档已是新默认，无需一次性提额（见下方 bump 迁移） */
+      maxNewTokensBumped: true,
     },
     transformer: {
       independentEnabled: false,
@@ -185,6 +190,26 @@ export function migrateImageState(stateManager: StateManager): boolean {
     }, 'system');
     console.debug('[ImageMigration] Added understanding config defaults to existing save');
     migrated = true;
+  }
+
+  // Field-level 一次性提额（2026-08-28 人体细节强化）：提炼提示词改为「有序 tags
+  // + 2-4 句 caption」后，旧默认 300 token 会把 JSON 截断成解析失败。只提旧默认
+  // 值（300），用户自定义过的值不动；`maxNewTokensBumped` 标记保证只跑一次，
+  // 用户之后主动改回 300 不会被再次改写。
+  // 已知边界（可接受）：WD 时代把 captionMaxNewTokens 恰好设成 300 的用户，其值
+  // 会被上面的 legacy 迁移带进来并同时打上 bumped 标记 → 停在 300。那 300 本来
+  // 就是他自己设的（旧默认是 160），尊重用户设置比强行提额更合理。
+  const bumpFlagPath = `${understandingPath}.maxNewTokensBumped`;
+  if (stateManager.get<unknown>(understandingPath) != null
+      && stateManager.get<boolean>(bumpFlagPath) !== true) {
+    if (stateManager.get<number>(`${understandingPath}.maxNewTokens`) === 300) {
+      stateManager.set(`${understandingPath}.maxNewTokens`, 600, 'system');
+      console.debug('[ImageMigration] Bumped understanding.maxNewTokens 300 → 600');
+      // 只有真正改了用户可见的值才算 migrated——标记本身是簿记，不该把
+      // 「什么都没变」的存档标脏（否则四个既有 no-op 用例全部翻车）。
+      migrated = true;
+    }
+    stateManager.set(bumpFlagPath, true, 'system');
   }
 
   return migrated;

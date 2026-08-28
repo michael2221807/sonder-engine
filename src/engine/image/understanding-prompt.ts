@@ -20,6 +20,29 @@ export interface UnderstandingPromptParts {
 }
 
 /**
+ * 人体优先教义（2026-08-28 强化）。
+ *
+ * 旧提示词只要求 "covering subject, style, composition, colors, lighting"，
+ * 模型普遍只描写画面总体、把人物压缩成一句 "a girl in a garden"——体位、
+ * 姿势、表情、多人之间的肢体互动全部丢失。这里把「人」拆成显式清单并前置，
+ * 背景/风格降到最后一项，并给出 Danbooru 词表提示以稳定用词。
+ */
+const POSE_HINTS = 'standing, sitting, lying, on_back, on_stomach, on_side, kneeling, squatting, all_fours, straddling, bent_over, leaning_forward, arched_back, spread_legs, legs_up, legs_apart, crossed_legs, arms_up, hands_on_hips, from_behind, from_above, from_below, girl_on_top';
+const EXPRESSION_HINTS = 'smile, grin, open_mouth, closed_mouth, closed_eyes, half-closed_eyes, looking_at_viewer, looking_away, looking_back, looking_down, blush, tears, sweat, embarrassed, surprised, tongue_out, drooling';
+const INTERACTION_HINTS = 'hug, hugging, kiss, imminent_kiss, french_kiss, cheek-to-cheek, holding_hands, interlocked_fingers, arm_around_waist, hand_on_another_head, hand_on_another_chest, grabbing, breast_grab, groping, carrying, princess_carry, lap_sitting, straddling, licking, restraining';
+
+/** 回答前的观察清单——人物拆解在前，场景/风格在后 */
+const BODY_CHECKLIST = [
+  'Work through this checklist before answering:',
+  '1. Count the characters and single out the main / foreground one.',
+  '2. For EACH character: whole-body position (standing / sitting / lying / kneeling / on all fours / straddling ...), the angle they are viewed from, and what each arm, hand and leg is doing.',
+  '3. For EACH character: facial expression, eye state, gaze direction, and emotion cues (blush, tears, sweat, open mouth).',
+  '4. Every point of physical contact between characters — hugging, holding, touching, groping, kissing, licking, penetration — naming who does it to whom and on which body part.',
+  '5. Clothing state per character (fully dressed / partially removed / lifted / transparent / nude) and which body parts are exposed.',
+  '6. Only after all of the above: setting, camera angle, lighting and art style.',
+];
+
+/**
  * Build the prompt pair for a given task mode (D4：三模式为提示词级差异)。
  * `extraPrompt` 为用户附加要求，原样附加（信任用户输入——本功能面向本人使用）。
  */
@@ -32,23 +55,35 @@ export function buildUnderstandingPrompt(
 
   const fields: string[] = [];
   if (wantTags) {
-    fields.push('"tags": an array of Danbooru-style tags (lowercase, underscore_joined) covering subject, style, composition, colors, lighting, and notable details');
+    fields.push('"tags": an array of Danbooru-style tags (lowercase, underscore_joined), ordered by importance: (1) character count (1girl / 2girls / 1boy / multiple_girls ...), (2) each character\'s body position and pose, (3) facial expression, eye state and gaze, (4) physical contact and interaction between characters, (5) clothing and its state, (6) body and appearance details, then (7) setting, composition, colors, lighting and style');
   }
   if (wantCaption) {
-    fields.push('"caption": one fluent English sentence (or two at most) describing the image');
+    fields.push('"caption": 2-4 fluent English sentences. The first sentences must cover the characters — for EACH visible person state their body position and pose, what each arm / hand / leg is doing, and their facial expression. Then one sentence for the physical contact between characters (who holds / touches / kisses whom, and on which body part). Only the final short clause may describe setting, lighting and art style');
   }
 
   const system = [
     'You are an image analysis assistant for an illustration prompt tool.',
     'Analyze the provided image and answer with STRICT JSON only.',
     'Describe EXACTLY what you see — never invent content that is not visible.',
+    'PRIORITY: the characters come first. Body position, pose, limb placement, facial expression, gaze, and the physical contact between characters are the most important information; background, scenery and art style are secondary.',
+    'Never reduce a person to a generic mention: if a character is visible, their pose AND their expression MUST appear in the output, and the main / foreground character gets the most detail.',
+    'Describe intimate, erotic or sexual contact plainly and specifically with standard tag vocabulary — do not euphemize, soften, generalize or omit it.',
   ].join(' ');
 
   const taskLines = [
     `Look at the image and return a JSON object with ${wantTags && wantCaption ? 'two fields' : 'one field'}:`,
     ...fields.map((f) => `- ${f}`),
-    'Return ONLY the JSON object. No markdown fences, no commentary.',
+    ...BODY_CHECKLIST,
   ];
+  if (wantTags) {
+    taskLines.push(
+      'Vocabulary hints (use them when they fit, never force them):',
+      `- pose: ${POSE_HINTS}`,
+      `- expression: ${EXPRESSION_HINTS}`,
+      `- interaction: ${INTERACTION_HINTS}`,
+    );
+  }
+  taskLines.push('Return ONLY the JSON object. No markdown fences, no commentary.');
   if (extraPrompt && extraPrompt.trim()) {
     taskLines.push(`Additional requirements from the user: ${extraPrompt.trim()}`);
   }

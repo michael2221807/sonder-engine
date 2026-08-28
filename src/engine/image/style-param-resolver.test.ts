@@ -36,6 +36,50 @@ describe('resolveStyleParams', () => {
     expect(resolveStyleParams(preset, 'novelai')).toBeNull();
   });
 
+  // ── 火山方舟 Seedream（2026-08-28 官方规格核对）──
+
+  describe('volcengine / Seedream', () => {
+    const na = (r: ReturnType<typeof resolveStyleParams>, key: string) =>
+      r!.notApplicable.find((n) => n.key === key);
+
+    it('steps 与 cfgScale 一律不适用（Seedream 无步数；5.x/4.x 无 guidance_scale）', () => {
+      const r = resolveStyleParams(makePreset({ steps: 28, cfgScale: 7 }), 'volcengine')!;
+      expect(r.applied.steps).toBeUndefined();
+      expect(r.applied.cfgScale).toBeUndefined();
+      expect(na(r, 'steps')).toBeDefined();
+      expect(na(r, 'cfgScale')?.reason).toContain('3.0-t2i');
+    });
+
+    it('未传模型名时 seed 保守标为不适用', () => {
+      const r = resolveStyleParams(makePreset({ seed: 12345 }), 'volcengine')!;
+      expect(r.applied.seed).toBeUndefined();
+      expect(na(r, 'seed')?.reason).toContain('3.0-t2i');
+    });
+
+    it('5.0-lite / 4.x 的 seed 不适用', () => {
+      for (const model of ['doubao-seedream-5.0-lite', 'doubao-seedream-4-0-250828']) {
+        const r = resolveStyleParams(makePreset({ seed: 12345 }), 'volcengine', model)!;
+        expect(r.applied.seed).toBeUndefined();
+        expect(na(r, 'seed')).toBeDefined();
+      }
+    });
+
+    // 回归钉死（review Important 2026-08-28）：resolver 一刀切封死会让 provider
+    // 侧的机型门控变成死代码——支持 seed 的机型必须真的能拿到 seed。
+    it('3.0-t2i / seededit-3.0-i2i 的 seed 正常应用', () => {
+      for (const model of ['doubao-seedream-3.0-t2i', 'doubao-seedream-3-0-t2i-250415', 'doubao-seededit-3-0-i2i-250628']) {
+        const r = resolveStyleParams(makePreset({ seed: 12345 }), 'volcengine', model)!;
+        expect(r.applied.seed).toBe(12345);
+        expect(na(r, 'seed')).toBeUndefined();
+      }
+    });
+
+    it('model 参数只影响 volcengine，其它后端 seed 照常应用', () => {
+      const r = resolveStyleParams(makePreset({ seed: 7 }), 'novelai', 'doubao-seedream-5.0-lite')!;
+      expect(r.applied.seed).toBe(7);
+    });
+  });
+
   // ── Universal fields ──
 
   it('maps steps for all backends', () => {

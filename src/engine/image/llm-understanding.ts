@@ -94,7 +94,7 @@ export async function describeImageWithGeneralLlm(
     usageType: 'main',
     stream: false,
     temperature: request.temperature ?? 0.2,
-    maxTokens: request.maxNewTokens ?? 300,
+    maxTokens: request.maxNewTokens ?? 600,
   });
 
   if (!content.trim()) {

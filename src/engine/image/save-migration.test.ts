@@ -96,7 +96,8 @@ describe('migrateImageState', () => {
   it('does not run full init when image root already exists with all fields', () => {
     sm.set('系统.扩展.image', {
       enabled: false,
-      config: { civitai: { scheduler: 'Euler', loras: [] }, reference: { enabled: true }, understanding: { defaultEngine: 'civitai_vlm' } },
+      // maxNewTokensBumped 也算「全字段齐备」的一员（2026-08-28 一次性提额标记）
+      config: { civitai: { scheduler: 'Euler', loras: [] }, reference: { enabled: true }, understanding: { defaultEngine: 'civitai_vlm', maxNewTokensBumped: true } },
       referenceLibrary: [],
     }, 'system');
     sm.set.mockClear();
@@ -240,7 +241,7 @@ describe('migrateImageState', () => {
     expect(u?.defaultEngine).toBe('civitai_vlm');
     expect(u?.civitaiModel).toBe('claude-sonnet-5');
     expect(u?.temperature).toBe(0.2);
-    expect(u?.maxNewTokens).toBe(300);
+    expect(u?.maxNewTokens).toBe(600);
   });
 
   it('migrates user-changed legacy captionTemperature/captionMaxNewTokens into understanding', () => {
@@ -274,7 +275,7 @@ describe('migrateImageState', () => {
     migrateImageState(sm as unknown as import('../core/state-manager').StateManager);
     const u = sm.get('系统.扩展.image.config.understanding') as Record<string, unknown> | undefined;
     expect(u?.temperature).toBe(0.2);
-    expect(u?.maxNewTokens).toBe(300); // 旧默认 160 面向 JoyCaption → 新默认 300
+    expect(u?.maxNewTokens).toBe(600); // 旧默认 160 面向 JoyCaption → 新默认 600（人体优先提示词）
   });
 
   it('does not overwrite existing understanding config (idempotent)', () => {
@@ -283,7 +284,8 @@ describe('migrateImageState', () => {
       config: {
         civitai: { scheduler: 'Euler', loras: [] },
         reference: { enabled: true },
-        understanding: { defaultEngine: 'general_llm', civitaiModel: 'gpt-4o-mini', temperature: 0.9, maxNewTokens: 500 },
+        // maxNewTokensBumped=true → 已过一次性提额，本用例只验证「不覆盖既有配置」
+        understanding: { defaultEngine: 'general_llm', civitaiModel: 'gpt-4o-mini', temperature: 0.9, maxNewTokens: 500, maxNewTokensBumped: true },
       },
       referenceLibrary: [],
     }, 'system');
@@ -294,6 +296,46 @@ describe('migrateImageState', () => {
     const u = sm.get('系统.扩展.image.config.understanding') as Record<string, unknown> | undefined;
     expect(u?.defaultEngine).toBe('general_llm');
     expect(u?.civitaiModel).toBe('gpt-4o-mini');
+  });
+
+  it('bumps a stale default maxNewTokens 300 → 600 once（2026-08-28 人体细节强化）', () => {
+    sm.set('系统.扩展.image', {
+      enabled: true,
+      config: {
+        civitai: { scheduler: 'Euler', loras: [] },
+        reference: { enabled: true },
+        understanding: { defaultEngine: 'civitai_vlm', civitaiModel: 'claude-sonnet-5', temperature: 0.2, maxNewTokens: 300 },
+      },
+      referenceLibrary: [],
+    }, 'system');
+    sm.set.mockClear();
+
+    expect(migrateImageState(sm as unknown as import('../core/state-manager').StateManager)).toBe(true);
+    const base = '系统.扩展.image.config.understanding';
+    expect(sm.get(`${base}.maxNewTokens`)).toBe(600);
+    expect(sm.get(`${base}.maxNewTokensBumped`)).toBe(true);
+
+    // 二次加载：不再改写（用户此后主动设回 300 也不会被抢）
+    sm.set(`${base}.maxNewTokens`, 300, 'system');
+    expect(migrateImageState(sm as unknown as import('../core/state-manager').StateManager)).toBe(false);
+    expect(sm.get(`${base}.maxNewTokens`)).toBe(300);
+  });
+
+  it('does not bump a user-customized maxNewTokens', () => {
+    sm.set('系统.扩展.image', {
+      enabled: true,
+      config: {
+        civitai: { scheduler: 'Euler', loras: [] },
+        reference: { enabled: true },
+        understanding: { defaultEngine: 'civitai_vlm', civitaiModel: 'claude-sonnet-5', temperature: 0.2, maxNewTokens: 150 },
+      },
+      referenceLibrary: [],
+    }, 'system');
+    sm.set.mockClear();
+
+    migrateImageState(sm as unknown as import('../core/state-manager').StateManager);
+    expect(sm.get('系统.扩展.image.config.understanding.maxNewTokens')).toBe(150);
+    expect(sm.get('系统.扩展.image.config.understanding.maxNewTokensBumped')).toBe(true);
   });
 
   it('full init includes understanding defaults', () => {

@@ -599,7 +599,7 @@ async function submitGenerate() {
     }
 
     const pngPresetObj = selectedPngPreset.value ? artistPresets.value.find((p) => p.id === selectedPngPreset.value) : undefined;
-    const styleApplicability = pngPresetObj ? resolveStyleParams(pngPresetObj, backend.value) : null;
+    const styleApplicability = pngPresetObj ? resolveStyleParams(pngPresetObj, backend.value, configuredModelFor(backend.value)) : null;
 
     const task = await imageService.generateCharacterImage({
       characterName: selectedNpc.value,
@@ -768,7 +768,7 @@ async function generateSecretPart(partKey: 'breast' | 'vagina' | 'anus') {
       secretPngPreset.value,
     ]);
     const secretPngObj = secretPngPreset.value ? artistPresets.value.find((p) => p.id === secretPngPreset.value) : undefined;
-    const secretStyleApplicability = secretPngObj ? resolveStyleParams(secretPngObj, backend.value) : null;
+    const secretStyleApplicability = secretPngObj ? resolveStyleParams(secretPngObj, backend.value, configuredModelFor(backend.value)) : null;
     const task = await imageService.generateSecretPartImage({
       characterName: selectedNpc.value,
       part: partKey,
@@ -806,7 +806,7 @@ async function generateAllSecretParts() {
       secretPngPreset.value,
     ]);
     const secretPngObj2 = secretPngPreset.value ? artistPresets.value.find((p) => p.id === secretPngPreset.value) : undefined;
-    const secretStyleApplicability2 = secretPngObj2 ? resolveStyleParams(secretPngObj2, backend.value) : null;
+    const secretStyleApplicability2 = secretPngObj2 ? resolveStyleParams(secretPngObj2, backend.value, configuredModelFor(backend.value)) : null;
     for (const part of secretParts.value) {
       const task = await imageService.generateSecretPartImage({
         characterName: selectedNpc.value,
@@ -1541,7 +1541,7 @@ async function generateScene() {
       }
     }
     const scenePngPresetObj = selectedScenePngPreset.value ? artistPresets.value.find((p) => p.id === selectedScenePngPreset.value) : undefined;
-    const sceneStyleApplicability = scenePngPresetObj ? resolveStyleParams(scenePngPresetObj, backend.value) : null;
+    const sceneStyleApplicability = scenePngPresetObj ? resolveStyleParams(scenePngPresetObj, backend.value, configuredModelFor(backend.value)) : null;
 
     // Assemble narrative text from selected rounds
     const selectedNarrative = recentRounds.value
@@ -1604,6 +1604,11 @@ const settingsBackend = computed(() => String(get('系统.扩展.image.config.de
 const isNovelAIBackend = computed(() => settingsBackend.value === 'novelai');
 const settingsLoraPreviewScope = ref<CivitaiLoraScope>('character');
 const settingsTransformerIndependent = computed(() => get('系统.扩展.image.config.transformerIndependentModel') === true);
+
+/** 该后端当前配置的模型名——`resolveStyleParams` 判定 Seedream `seed` 是否适用要用它 */
+function configuredModelFor(bk: ImageBackendType): string | undefined {
+  return aiService?.getImageConfigForBackend(bk)?.model || undefined;
+}
 
 const activeBackendStatus = computed(() => {
   const bk = backend.value;
@@ -1713,7 +1718,8 @@ const selectedPreset = computed(() =>
 const selectedPresetParamPreview = computed(() => {
   const p = selectedPreset.value;
   if (!p) return null;
-  return resolveStyleParams(p, (backend.value as import('@/engine/image/types').ImageBackendType) || 'novelai');
+  const bk = (backend.value as import('@/engine/image/types').ImageBackendType) || 'novelai';
+  return resolveStyleParams(p, bk, configuredModelFor(bk));
 });
 
 function createPreset() {
@@ -5413,8 +5419,8 @@ function clearNpcImages() {
                 <label class="form-label">{{ $t('image.settings.understandingMaxTokens') }}</label>
                 <input
                   type="number" min="50" max="1000" class="form-input"
-                  :value="get('系统.扩展.image.config.understanding.maxNewTokens') ?? 300"
-                  @change="setValue('系统.扩展.image.config.understanding.maxNewTokens', Math.max(50, Math.min(1000, Math.floor(Number(($event.target as HTMLInputElement).value) || 300))))"
+                  :value="get('系统.扩展.image.config.understanding.maxNewTokens') ?? 600"
+                  @change="setValue('系统.扩展.image.config.understanding.maxNewTokens', Math.max(50, Math.min(1000, Math.floor(Number(($event.target as HTMLInputElement).value) || 600))))"
                 />
               </div>
             </div>

@@ -150,6 +150,11 @@ function extractLoraSnapshot(record: Record<string, unknown>): CivitaiLoraSnapsh
 
 const ALL_BACKEND_LABELS: Record<string, string> = { novelai: 'NovelAI', openai: 'OpenAI DALL-E', sd_webui: 'SD-WebUI', comfyui: 'ComfyUI', civitai: 'Civitai' };
 const activeBackend = computed(() => resolveDefaultBackend());
+/** 该后端当前配置的模型名——`resolveStyleParams` 判定 Seedream `seed` 是否适用要用它 */
+function configuredModelFor(bk: string): string | undefined {
+  return aiService?.getImageConfigForBackend(bk)?.model || undefined;
+}
+
 const activeBackendStatus = computed(() => {
   const bk = activeBackend.value;
   const cfg = aiService?.getImageConfigForBackend(bk);
@@ -421,7 +426,7 @@ async function generatePlayerImage() {
     // Resolve replicateParams from selected PNG preset
     const allPresets = Array.isArray(rawPresets) ? rawPresets as ArtistPreset[] : [];
     const playerPngObj = playerPngPreset.value ? allPresets.find((p) => p.id === playerPngPreset.value) : undefined;
-    const playerStyleApplicability = playerPngObj ? resolveStyleParams(playerPngObj, defaultBackend) : null;
+    const playerStyleApplicability = playerPngObj ? resolveStyleParams(playerPngObj, defaultBackend, configuredModelFor(defaultBackend)) : null;
 
     // Build reference if enabled
     let playerReference: import('@/engine/image/types').ImageReferenceInput | undefined;
@@ -1202,7 +1207,7 @@ async function generatePlayerSecretPart(partKey: 'breast' | 'vagina' | 'anus') {
     ]);
     const allPresets = Array.isArray(rawPresets) ? rawPresets as ArtistPreset[] : [];
     const pngObj = playerSecretPngPreset.value ? allPresets.find((p) => p.id === playerSecretPngPreset.value) : undefined;
-    const styleApplicability = pngObj ? resolveStyleParams(pngObj, playerDefaultBackend.value) : null;
+    const styleApplicability = pngObj ? resolveStyleParams(pngObj, playerDefaultBackend.value, configuredModelFor(playerDefaultBackend.value)) : null;
     const anchor = playerAnchor.value;
     const task = await imageService.generateSecretPartImage({
       characterName: '__player__',
@@ -1241,7 +1246,7 @@ async function generateAllPlayerSecretParts() {
     ]);
     const allPresets = Array.isArray(rawPresets) ? rawPresets as ArtistPreset[] : [];
     const pngObj = playerSecretPngPreset.value ? allPresets.find((p) => p.id === playerSecretPngPreset.value) : undefined;
-    const styleApplicability = pngObj ? resolveStyleParams(pngObj, playerDefaultBackend.value) : null;
+    const styleApplicability = pngObj ? resolveStyleParams(pngObj, playerDefaultBackend.value, configuredModelFor(playerDefaultBackend.value)) : null;
     const anchor = playerAnchor.value;
     const failed: string[] = [];
     for (const part of playerSecretParts.value) {

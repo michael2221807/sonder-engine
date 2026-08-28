@@ -257,7 +257,7 @@ export class CivitaiImageProvider
 
     const body = {
       model,
-      maxTokens: request.maxNewTokens ?? 300,
+      maxTokens: request.maxNewTokens ?? 600,
       temperature: request.temperature ?? 0.2,
       messages: [
         { role: 'system', content: system },

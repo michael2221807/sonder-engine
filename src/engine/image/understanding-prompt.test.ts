@@ -26,6 +26,38 @@ describe('buildUnderstandingPrompt', () => {
     expect(system).toContain('STRICT JSON');
   });
 
+  it('体位/姿势/表情/互动为强制项，人物优先于背景（2026-08-28 人体细节强化）', () => {
+    const { system, taskText } = buildUnderstandingPrompt('both');
+    // system 层：人物优先 + 不许把人一笔带过 + 亲密接触不许回避
+    expect(system).toContain('PRIORITY: the characters come first');
+    expect(system).toMatch(/pose AND their expression MUST appear/);
+    expect(system).toMatch(/do not euphemize/i);
+    // 任务层：观察清单四项（人数/体位肢体/表情/接触）与「背景放最后」
+    expect(taskText).toContain('whole-body position');
+    expect(taskText).toContain('facial expression, eye state, gaze direction');
+    expect(taskText).toContain('Every point of physical contact between characters');
+    expect(taskText).toContain('Only after all of the above: setting');
+  });
+
+  it('tags 模式给出体位/表情/互动词表提示；caption 模式不给（无 tags 可写）', () => {
+    const tagsOnly = buildUnderstandingPrompt('tags').taskText;
+    expect(tagsOnly).toContain('- pose: ');
+    expect(tagsOnly).toContain('- expression: ');
+    expect(tagsOnly).toContain('- interaction: ');
+    expect(tagsOnly).toContain('straddling');
+    expect(tagsOnly).toContain('breast_grab');
+    expect(buildUnderstandingPrompt('caption').taskText).not.toContain('Vocabulary hints');
+    // 清单对两种模式都生效
+    expect(buildUnderstandingPrompt('caption').taskText).toContain('whole-body position');
+  });
+
+  it('caption 要求 2-4 句且人物段落在前，tags 要求按重要性排序', () => {
+    const { taskText } = buildUnderstandingPrompt('both');
+    expect(taskText).toContain('2-4 fluent English sentences');
+    expect(taskText).toContain('ordered by importance');
+    expect(taskText).toContain('character count');
+  });
+
   it('appends user extra prompt when provided', () => {
     const { taskText } = buildUnderstandingPrompt('both', '  重点关注服装细节  ');
     expect(taskText).toContain('重点关注服装细节');
