@@ -56,13 +56,11 @@ const DEFAULT_IMAGE_STATE = {
       maxUploadBytes: 10 * 1024 * 1024,
       defaultDenoiseStrength: 0.65,
       preserveSourceDimensions: false,
+      // 旧 reference.civitai.{understandingEnabled,wdTaggingModel,wdThreshold,
+      // captionTemperature,captionMaxNewTokens} 已随 wdTagging/JoyCaption 拆除
+      // （图片提炼重建 epic D5）；imageToImageEnabled 仍由参考重绘链路消费。
       civitai: {
         imageToImageEnabled: true,
-        understandingEnabled: true,
-        wdTaggingModel: 'wd14-vit.v1',
-        wdThreshold: 0.35,
-        captionTemperature: 0.2,
-        captionMaxNewTokens: 160,
       },
       novelai: {
         imageToImageEnabled: true,
@@ -70,6 +68,13 @@ const DEFAULT_IMAGE_STATE = {
         defaultStrength: 0.55,
         defaultNoise: 0.1,
       },
+    },
+    // 图片提炼（重建 epic §4）：双引擎设置
+    understanding: {
+      defaultEngine: 'civitai_vlm',
+      civitaiModel: 'claude-sonnet-5',
+      temperature: 0.2,
+      maxNewTokens: 300,
     },
     transformer: {
       independentEnabled: false,
@@ -163,6 +168,22 @@ export function migrateImageState(stateManager: StateManager): boolean {
   if (stateManager.get<unknown>(refLibPath) == null) {
     stateManager.set(refLibPath, [], 'system');
     console.debug('[ImageMigration] Added referenceLibrary[] to existing save');
+    migrated = true;
+  }
+
+  // Field-level: add understanding config if missing（图片提炼重建 epic §4）。
+  // 幂等一次性迁移：旧 WD/JoyCaption 时代用户改过的 temperature（≠0.2）与
+  // maxNewTokens（≠160 旧默认）迁入新键；等于旧默认的值不迁（新默认 300 面向 VLM JSON 输出）。
+  const understandingPath = `${IMAGE_ROOT_PATH}.config.understanding`;
+  if (stateManager.get<unknown>(understandingPath) == null) {
+    const legacyTemp = stateManager.get<number>(`${referencePath}.civitai.captionTemperature`);
+    const legacyMaxTokens = stateManager.get<number>(`${referencePath}.civitai.captionMaxNewTokens`);
+    stateManager.set(understandingPath, {
+      ...DEFAULT_IMAGE_STATE.config.understanding,
+      ...(typeof legacyTemp === 'number' && legacyTemp !== 0.2 ? { temperature: legacyTemp } : {}),
+      ...(typeof legacyMaxTokens === 'number' && legacyMaxTokens !== 160 ? { maxNewTokens: legacyMaxTokens } : {}),
+    }, 'system');
+    console.debug('[ImageMigration] Added understanding config defaults to existing save');
     migrated = true;
   }
 

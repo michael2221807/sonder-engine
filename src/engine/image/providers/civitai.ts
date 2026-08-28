@@ -2,7 +2,8 @@
 import { BaseImageProvider, IMAGE_DOWNLOAD_TIMEOUT_MS } from './base';
 import type { ImageBackendType } from '../types';
 import type { ImageToImageProvider, ImageUnderstandingProvider } from '../provider-capabilities';
-import type { ImageReferenceInput, ImageUnderstandingRequest, ImageUnderstandingResult, ImageUnderstandingTag } from '../reference-types';
+import type { ImageReferenceInput, ImageUnderstandingRequest, ImageUnderstandingResult } from '../reference-types';
+import { buildUnderstandingPrompt, parseUnderstandingResponse, looksLikeRefusal, minPromptTokensWithImage } from '../understanding-prompt';
 import { clamp } from '../utils';
 
 interface CivitaiImage {
@@ -186,57 +187,16 @@ export class CivitaiImageProvider
     return this.executeTextToImageRecipe(url, body, options);
   }
 
-  // ── Media URL resolution with blob upload fallback ──
+  // ── Media URL resolution ──
 
   /**
-   * Resolve a media reference to a URL suitable for Civitai recipes.
-   * Data URLs are passed through directly — Civitai recipes may accept them.
-   * If a recipe rejects a data URL (Phase 0 validation will determine this),
-   * callers should catch the error and retry via `uploadAndRetry()`.
-   */
-  /**
-   * For textToImage sourceImage: pass through directly (accepts data URL per swagger — no format constraint).
-   * For wdTagging/mediaCaptioning mediaUrl: MUST be a real URL (format: "uri").
-   * Use `uploadForMediaUrl()` for understanding endpoints.
+   * For textToImage sourceImage: pass through directly (accepts data URL per
+   * swagger — no format constraint). chatCompletion image blocks also accept
+   * data URLs directly (verified 2026-08-27), so no upload hop is needed
+   * anywhere anymore.
    */
   private ensureSourceImage(dataUrlOrUrl: string): string {
     return dataUrlOrUrl;
-  }
-
-  /**
-   * Upload a data URL to Civitai via recipes/imageUpload and return a hosted URL.
-   * Required for wdTagging/mediaCaptioning which only accept format: "uri" (not data URLs).
-   * Per swagger: imageUpload body is a bare JSON string (not an object), returns { blob: { url, id, ... } }.
-   */
-  private async uploadForMediaUrl(
-    dataUrl: string,
-    options?: Record<string, unknown>,
-  ): Promise<string> {
-    if (!dataUrl.startsWith('data:')) return dataUrl;
-
-    const uploadUrl = this.buildRecipeUrl('/v2/consumer/recipes/imageUpload', options);
-    const res = await fetch(uploadUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify(dataUrl),
-      signal: AbortSignal.timeout(60_000),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      throw new Error(`[Civitai] 图片上传失败: ${res.status} — ${errText.slice(0, 200)}`);
-    }
-
-    const data = await res.json() as { blob?: { url?: string; id?: string } };
-    const blobUrl = data.blob?.url;
-    if (blobUrl) return blobUrl;
-    const blobId = data.blob?.id;
-    if (blobId) return blobId;
-
-    throw new Error('[Civitai] 图片上传成功但未返回可用 URL');
   }
 
   // ── image-to-image ──
@@ -263,73 +223,56 @@ export class CivitaiImageProvider
     return this.executeTextToImageRecipe(url, body, options);
   }
 
-  // ── image understanding (wdTagging / mediaCaptioning) ──
+  // ── image understanding (chatCompletion VLM) ──
 
+  /** 图片提炼默认模型（epic D2）：anthropic 路由 token 计量远低于 openai 路由且
+   * 自发输出 Danbooru 词汇。可被 request.model / understanding 设置覆盖。 */
+  static readonly DEFAULT_UNDERSTANDING_MODEL = 'claude-sonnet-5';
+
+  /**
+   * Image understanding via the multi-provider chatCompletion recipe.
+   *
+   * 旧 wdTagging / mediaCaptioning recipe 已确认上游死亡（路由在、算力无，
+   * 四种输入组合全灭）并于本 epic 拆除（D5）。实测证据与本实现的三条硬约束：
+   * docs/status/image-understanding-api-verification-2026-08-27.md
+   *
+   * 1. 图片块**必须** camelCase `{type:'imageUrl', imageUrl:{url}}` ——
+   *    OpenAI 标准 snake_case `image_url` 会被网关静默丢图，模型凭空幻觉
+   *    （200 + 合法 JSON，promptTokens 却只有纯文本量级）。
+   * 2. 204 / 空 body = 失败（模型名无效、路由拒绝均不走 4xx）。
+   * 3. usage.promptTokens 防幻觉断言（仅 openai/ 路由，真实校准后下限=文本估算+500）
+   *    ⇒ 图片未送达则报错。详见 minPromptTokensWithImage 的校准记录。
+   */
   async describeImage(
     request: ImageUnderstandingRequest,
     options?: Record<string, unknown>,
   ): Promise<ImageUnderstandingResult> {
-    const rawMediaUrl = request.image.dataUrl ?? request.image.url;
-    if (!rawMediaUrl) {
+    const dataUrl = request.image.dataUrl ?? request.image.url;
+    if (!dataUrl) {
       throw new Error('[Civitai] 提炼图片缺少 dataUrl 或 url');
     }
-    const mediaUrl = await this.uploadForMediaUrl(rawMediaUrl, options);
 
-    let tags: ImageUnderstandingTag[] = [];
-    let caption: string | undefined;
+    const { system, taskText } = buildUnderstandingPrompt(request.task, request.prompt);
+    const model = request.model?.trim() || CivitaiImageProvider.DEFAULT_UNDERSTANDING_MODEL;
 
-    const needTags = request.task === 'tags' || request.task === 'both';
-    const needCaption = request.task === 'caption' || request.task === 'both';
-
-    if (needTags && needCaption) {
-      tags = await this.callWdTagging(mediaUrl, request, options);
-      try {
-        caption = await this.callMediaCaptioning(mediaUrl, request, options);
-      } catch (err) {
-        console.warn('[Civitai] Captioning failed, returning tags-only result:', (err as Error).message);
-        caption = undefined;
-      }
-    } else if (needTags) {
-      tags = await this.callWdTagging(mediaUrl, request, options);
-    } else if (needCaption) {
-      caption = await this.callMediaCaptioning(mediaUrl, request, options);
-    }
-
-    const tagString = tags
-      .sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))
-      .map((t) => t.text)
-      .join(', ');
-
-    let positiveDraft: string;
-    if (request.task === 'both') {
-      positiveDraft = [tagString, caption].filter(Boolean).join(', ');
-    } else if (request.task === 'tags') {
-      positiveDraft = tagString;
-    } else {
-      positiveDraft = caption ?? '';
-    }
-
-    return {
-      provider: 'civitai',
-      task: request.task,
-      caption,
-      tags: tags.length > 0 ? tags : undefined,
-      positiveDraft,
-      createdAt: Date.now(),
+    const body = {
+      model,
+      maxTokens: request.maxNewTokens ?? 300,
+      temperature: request.temperature ?? 0.2,
+      messages: [
+        { role: 'system', content: system },
+        {
+          role: 'user',
+          content: [
+            // CRITICAL: camelCase — snake_case image_url is silently dropped (见上方注释 1)
+            { type: 'imageUrl', imageUrl: { url: dataUrl } },
+            { type: 'text', text: taskText },
+          ],
+        },
+      ],
     };
-  }
 
-  private async callWdTagging(
-    mediaUrl: string,
-    request: ImageUnderstandingRequest,
-    options?: Record<string, unknown>,
-  ): Promise<ImageUnderstandingTag[]> {
-    const body: Record<string, unknown> = { mediaUrl };
-    if (request.threshold != null) body.threshold = request.threshold;
-    if (request.prompt) body.prompt = request.prompt;
-
-    const url = this.buildRecipeUrl('/v2/consumer/recipes/wdTagging', options);
-
+    const url = this.buildRecipeUrl('/v2/consumer/recipes/chatCompletion', options);
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -337,162 +280,60 @@ export class CivitaiImageProvider
         'Authorization': `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(60_000),
+      signal: AbortSignal.timeout(120_000),
     });
 
     if (!response.ok) {
       const errText = await response.text().catch(() => '');
-      throw new Error(`[Civitai] WD Tagging 失败: ${response.status} — ${errText.slice(0, 200)}`);
+      if (response.status === 401) throw new Error('[Civitai] API Key 无效或已过期');
+      if (response.status === 402) throw new Error('[Civitai] Buzz 余额不足');
+      if (response.status === 429) throw new Error('[Civitai] 请求过于频繁，请稍后再试');
+      throw new Error(`[Civitai] 图片提炼失败: ${response.status} — ${errText.slice(0, 200)}`);
     }
 
     const rawText = await response.text();
-    let data: { tags?: Record<string, number>; rating?: Record<string, number> | null };
-    try { data = JSON.parse(rawText); }
-    catch { throw new Error(`[Civitai] WD Tagging 响应解析失败 (非 JSON) — ${rawText.slice(0, 200)}`); }
+    if (response.status === 204 || !rawText.trim()) {
+      throw new Error('[Civitai] 图片提炼返回空响应（204）— 模型名无效或该路由拒绝了请求。请在设置中检查 Civitai 视觉模型名。');
+    }
 
-    if (!data.tags || typeof data.tags !== 'object') return [];
-
-    return Object.entries(data.tags).map(([text, confidence]) => ({
-      text,
-      confidence,
-    }));
-  }
-
-  /**
-   * Media captioning via recipe endpoint with 204 retry.
-   * JoyCaption VLM is slow — recipe may return 204 (accepted, not complete).
-   * On 204: retry the same request up to 5 times with backoff.
-   * If all retries return 204, fallback to workflow API with polling.
-   */
-  private async callMediaCaptioning(
-    mediaUrl: string,
-    request: ImageUnderstandingRequest,
-    options?: Record<string, unknown>,
-  ): Promise<string> {
-    const body: Record<string, unknown> = {
-      mediaUrl,
-      temperature: request.temperature ?? 0.2,
-      maxNewTokens: request.maxNewTokens ?? 160,
+    let data: {
+      model?: string;
+      choices?: Array<{ message?: { content?: string } }>;
+      usage?: { promptTokens?: number };
     };
-    const url = this.buildRecipeUrl('/v2/consumer/recipes/mediaCaptioning', options);
-
-    // Try recipe endpoint with 204 retry
-    for (let attempt = 0; attempt < 5; attempt++) {
-      if (attempt > 0) await new Promise((r) => setTimeout(r, 5000 * attempt));
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(120_000),
-      });
-
-      if (response.status === 204) continue;
-
-      if (!response.ok) {
-        const errText = await response.text().catch(() => '');
-        throw new Error(`[Civitai] Media Captioning 失败: ${response.status} — ${errText.slice(0, 200)}`);
-      }
-
-      const contentType = response.headers.get('content-type') ?? '';
-      const rawText = await response.text();
-      if (!rawText.trim()) continue;
-
-      let data: { caption?: string };
-      try { data = JSON.parse(rawText); }
-      catch { throw new Error(`[Civitai] Media Captioning 响应解析失败 (content-type: ${contentType}) — ${rawText.slice(0, 300)}`); }
-      return data.caption ?? '';
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      throw new Error(`[Civitai] 图片提炼响应解析失败 (非 JSON) — ${rawText.slice(0, 200)}`);
     }
 
-    // Recipe exhausted — try workflow API as fallback
-    return this.callMediaCaptioningViaWorkflow(mediaUrl, request, options);
-  }
+    const content = data.choices?.[0]?.message?.content;
+    if (typeof content !== 'string' || !content.trim()) {
+      throw new Error('[Civitai] 图片提炼响应中无文本内容');
+    }
 
-  private async callMediaCaptioningViaWorkflow(
-    mediaUrl: string,
-    request: ImageUnderstandingRequest,
-    options?: Record<string, unknown>,
-  ): Promise<string> {
-    const endpoint = this.endpoint.replace(/\/+$/, '');
+    // 防幻觉断言（硬约束 3）：仅对 openai/ 路由生效——静默丢图只在该路由以
+    // 200+幻觉形态出现（真实校准 2026-08-27，详见 minPromptTokensWithImage docs）
+    const promptTokens = data.usage?.promptTokens;
+    const minTokens = minPromptTokensWithImage(taskText, system, data.model ?? '');
+    if (minTokens !== null && typeof promptTokens === 'number' && promptTokens < minTokens) {
+      throw new Error(`[Civitai] 网关未将图片送达模型（promptTokens=${promptTokens} 过低），提炼结果会是幻觉，已拦截。请报告此问题。`);
+    }
 
-    const workflowBody = {
-      steps: [{
-        $type: 'mediaCaptioning',
-        input: {
-          mediaUrl,
-          temperature: request.temperature ?? 0.5,
-          maxNewTokens: request.maxNewTokens ?? 300,
-        },
-        priority: 'normal',
-        timeout: '00:02:00',
-      }],
-      currencies: ['yellow', 'blue'],
-      allowMatureContent: options?.allowMatureContent === true,
+    const parsed = parseUnderstandingResponse(content, request.task);
+    if (parsed.degraded && looksLikeRefusal(content)) {
+      throw new Error('[Civitai] 模型拒绝分析该图片（可能因内容审核）。可尝试更换视觉模型或切换到通用 LLM 提炼引擎。');
+    }
+
+    return {
+      provider: 'civitai_vlm',
+      task: request.task,
+      caption: parsed.caption,
+      tags: parsed.tags,
+      positiveDraft: parsed.positiveDraft,
+      raw: data,
+      createdAt: Date.now(),
     };
-
-    const response = await fetch(`${endpoint}/v2/consumer/workflows?wait=120`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.apiKey}` },
-      body: JSON.stringify(workflowBody),
-      signal: AbortSignal.timeout(180_000),
-    });
-
-    const rawText = await response.text();
-    if (!rawText.trim()) {
-      throw new Error('[Civitai] Media Captioning workflow 返回空响应');
-    }
-
-    let data: Record<string, unknown>;
-    try { data = JSON.parse(rawText); }
-    catch { throw new Error(`[Civitai] Media Captioning workflow 响应解析失败 — ${rawText.slice(0, 300)}`); }
-
-    const status = String(data.status ?? '');
-    if (status === 'succeeded' || status === 'completed') {
-      const steps = data.steps as Array<Record<string, unknown>> | undefined;
-      const output = steps?.[0]?.output as Record<string, unknown> | undefined;
-      if (output?.caption) return String(output.caption);
-      return '';
-    }
-
-    if (status === 'failed') {
-      const steps = data.steps as Array<Record<string, unknown>> | undefined;
-      const jobs = steps?.[0]?.jobs as Array<Record<string, unknown>> | undefined;
-      const reason = jobs?.[0]?.reason ?? jobs?.[0]?.status ?? 'unknown';
-      throw new Error(`[Civitai] Media Captioning 失败 (${reason})。JoyCaption 服务可能暂时不可用，请尝试"标签"模式。`);
-    }
-
-    // 202 — poll
-    const workflowId = data.id;
-    if (!workflowId || typeof workflowId !== 'string') {
-      throw new Error('[Civitai] Media Captioning workflow 无 ID');
-    }
-
-    for (let i = 0; i < 10; i++) {
-      await new Promise((r) => setTimeout(r, 5000));
-      try {
-        const pollRes = await fetch(`${endpoint}/v2/consumer/workflows/${workflowId}?wait=true`, {
-          headers: { 'Authorization': `Bearer ${this.apiKey}` },
-          signal: AbortSignal.timeout(65_000),
-        });
-        if (!pollRes.ok) continue;
-        const pollData = await pollRes.json() as Record<string, unknown>;
-        const s = String(pollData.status ?? '');
-        if (s === 'succeeded' || s === 'completed') {
-          const steps = pollData.steps as Array<Record<string, unknown>> | undefined;
-          const output = steps?.[0]?.output as Record<string, unknown> | undefined;
-          return output?.caption ? String(output.caption) : '';
-        }
-        if (s === 'failed' || s === 'expired') {
-          throw new Error(`[Civitai] Media Captioning workflow ${s}。请尝试"标签"模式。`);
-        }
-      } catch (err) {
-        if ((err as Error).message?.includes('Civitai')) throw err;
-      }
-    }
-    throw new Error('[Civitai] Media Captioning 等待超时，请尝试"标签"模式');
   }
 
   // ── Polling ──

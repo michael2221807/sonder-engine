@@ -12,6 +12,7 @@
  * 对应 STEP-03B M2.3。
  */
 import { BaseProvider } from './base-provider';
+import { contentToText, messagesHaveImageBlocks } from '../content-blocks';
 import type { GenerateOptions, AIMessage } from '../types';
 
 export class GeminiProvider extends BaseProvider {
@@ -41,17 +42,24 @@ export class GeminiProvider extends BaseProvider {
     systemInstruction: string;
     contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>;
   } {
+    // 图片块本期仅 OpenAIProvider 支持（图片提炼 epic D7）：Gemini 直连缺乏
+    // 真实验证凭据，映射为 inlineData 未经实测，明确报错优于静默丢图。
+    if (messagesHaveImageBlocks(messages)) {
+      throw new Error('图片输入暂仅支持 OpenAI 兼容 API 配置（当前 provider: gemini）。请在 API 管理中改用 OpenAI 兼容配置后重试。');
+    }
+
     let systemInstruction = '';
     const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
 
     for (const msg of messages) {
+      const text = contentToText(msg.content);
       if (msg.role === 'system') {
-        systemInstruction += (systemInstruction ? '\n\n' : '') + msg.content;
+        systemInstruction += (systemInstruction ? '\n\n' : '') + text;
       } else {
         contents.push({
           // Gemini 使用 "model" 而非 "assistant"
           role: msg.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: msg.content }],
+          parts: [{ text }],
         });
       }
     }

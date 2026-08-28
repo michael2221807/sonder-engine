@@ -65,6 +65,7 @@ describe('migrateImageState', () => {
       config: {
         civitai: { allowMatureContent: true, scheduler: 'DDIM', steps: 30, cfgScale: 5, seed: 42, clipSkip: 1, outputFormat: 'jpeg', additionalNetworksJson: '{}', controlNetsJson: '', loras: [] },
         reference: { enabled: true },
+        understanding: { defaultEngine: 'civitai_vlm' },
       },
       referenceLibrary: [],
     }, 'system');
@@ -95,7 +96,7 @@ describe('migrateImageState', () => {
   it('does not run full init when image root already exists with all fields', () => {
     sm.set('系统.扩展.image', {
       enabled: false,
-      config: { civitai: { scheduler: 'Euler', loras: [] }, reference: { enabled: true } },
+      config: { civitai: { scheduler: 'Euler', loras: [] }, reference: { enabled: true }, understanding: { defaultEngine: 'civitai_vlm' } },
       referenceLibrary: [],
     }, 'system');
     sm.set.mockClear();
@@ -145,6 +146,7 @@ describe('migrateImageState', () => {
       config: {
         civitai: { scheduler: 'Euler', loras: existingLoras },
         reference: { enabled: true },
+        understanding: { defaultEngine: 'civitai_vlm' },
       },
       referenceLibrary: [],
     }, 'system');
@@ -160,7 +162,7 @@ describe('migrateImageState', () => {
   it('adds reference config to existing save without it', () => {
     sm.set('系统.扩展.image', {
       enabled: true,
-      config: { civitai: { scheduler: 'Euler', loras: [] } },
+      config: { civitai: { scheduler: 'Euler', loras: [] }, understanding: { defaultEngine: 'civitai_vlm' } },
     }, 'system');
     sm.set.mockClear();
 
@@ -171,8 +173,10 @@ describe('migrateImageState', () => {
     expect(reference).toBeDefined();
     expect(reference?.enabled).toBe(true);
     expect(reference?.defaultDenoiseStrength).toBe(0.65);
+    // 旧 wd/caption 键已随 wdTagging/JoyCaption 拆除（重建 epic D5）
     const civitaiRef = reference?.civitai as Record<string, unknown> | undefined;
-    expect(civitaiRef?.wdThreshold).toBe(0.35);
+    expect(civitaiRef?.imageToImageEnabled).toBe(true);
+    expect(civitaiRef?.wdThreshold).toBeUndefined();
   });
 
   it('adds referenceLibrary to existing save without it', () => {
@@ -195,6 +199,7 @@ describe('migrateImageState', () => {
       config: {
         civitai: { scheduler: 'Euler', loras: [] },
         reference: { enabled: false, defaultDenoiseStrength: 0.5 },
+        understanding: { defaultEngine: 'general_llm' },
       },
       referenceLibrary: [{ id: 'existing' }],
     }, 'system');
@@ -218,6 +223,84 @@ describe('migrateImageState', () => {
     expect(reference?.enabled).toBe(true);
     const refLib = sm.get('系统.扩展.image.referenceLibrary');
     expect(refLib).toEqual([]);
+  });
+
+  it('adds understanding config with defaults to existing save without it（重建 epic §4）', () => {
+    sm.set('系统.扩展.image', {
+      enabled: true,
+      config: { civitai: { scheduler: 'Euler', loras: [] }, reference: { enabled: true } },
+      referenceLibrary: [],
+    }, 'system');
+    sm.set.mockClear();
+
+    const result = migrateImageState(sm as unknown as import('../core/state-manager').StateManager);
+    expect(result).toBe(true);
+
+    const u = sm.get('系统.扩展.image.config.understanding') as Record<string, unknown> | undefined;
+    expect(u?.defaultEngine).toBe('civitai_vlm');
+    expect(u?.civitaiModel).toBe('claude-sonnet-5');
+    expect(u?.temperature).toBe(0.2);
+    expect(u?.maxNewTokens).toBe(300);
+  });
+
+  it('migrates user-changed legacy captionTemperature/captionMaxNewTokens into understanding', () => {
+    sm.set('系统.扩展.image', {
+      enabled: true,
+      config: {
+        civitai: { scheduler: 'Euler', loras: [] },
+        reference: { enabled: true, civitai: { captionTemperature: 0.7, captionMaxNewTokens: 480, wdThreshold: 0.35 } },
+      },
+      referenceLibrary: [],
+    }, 'system');
+    sm.set.mockClear();
+
+    migrateImageState(sm as unknown as import('../core/state-manager').StateManager);
+    const u = sm.get('系统.扩展.image.config.understanding') as Record<string, unknown> | undefined;
+    expect(u?.temperature).toBe(0.7);
+    expect(u?.maxNewTokens).toBe(480);
+  });
+
+  it('legacy values equal to old defaults (0.2 / 160) are not migrated — new defaults win', () => {
+    sm.set('系统.扩展.image', {
+      enabled: true,
+      config: {
+        civitai: { scheduler: 'Euler', loras: [] },
+        reference: { enabled: true, civitai: { captionTemperature: 0.2, captionMaxNewTokens: 160 } },
+      },
+      referenceLibrary: [],
+    }, 'system');
+    sm.set.mockClear();
+
+    migrateImageState(sm as unknown as import('../core/state-manager').StateManager);
+    const u = sm.get('系统.扩展.image.config.understanding') as Record<string, unknown> | undefined;
+    expect(u?.temperature).toBe(0.2);
+    expect(u?.maxNewTokens).toBe(300); // 旧默认 160 面向 JoyCaption → 新默认 300
+  });
+
+  it('does not overwrite existing understanding config (idempotent)', () => {
+    sm.set('系统.扩展.image', {
+      enabled: true,
+      config: {
+        civitai: { scheduler: 'Euler', loras: [] },
+        reference: { enabled: true },
+        understanding: { defaultEngine: 'general_llm', civitaiModel: 'gpt-4o-mini', temperature: 0.9, maxNewTokens: 500 },
+      },
+      referenceLibrary: [],
+    }, 'system');
+    sm.set.mockClear();
+
+    const result = migrateImageState(sm as unknown as import('../core/state-manager').StateManager);
+    expect(result).toBe(false);
+    const u = sm.get('系统.扩展.image.config.understanding') as Record<string, unknown> | undefined;
+    expect(u?.defaultEngine).toBe('general_llm');
+    expect(u?.civitaiModel).toBe('gpt-4o-mini');
+  });
+
+  it('full init includes understanding defaults', () => {
+    migrateImageState(sm as unknown as import('../core/state-manager').StateManager);
+    const u = sm.get('系统.扩展.image.config.understanding') as Record<string, unknown> | undefined;
+    expect(u?.defaultEngine).toBe('civitai_vlm');
+    expect(u?.civitaiModel).toBe('claude-sonnet-5');
   });
 
   it('full init includes loras[] in civitai defaults', () => {

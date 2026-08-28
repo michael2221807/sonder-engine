@@ -1809,6 +1809,50 @@ const understandingMode = ref(false);
 const understandingFile = ref<File | null>(null);
 const understandingCoverDataUrl = ref<string | null>(null);
 const understandingTask = ref<'tags' | 'caption' | 'both'>('both');
+// 提炼引擎（重建 epic D1）：默认取设置值，面板内可切换，会话内记忆
+const understandingEngine = ref<import('@/engine/image/types').ImageUnderstandingEngine>(
+  imageService?.getUnderstandingConfig().defaultEngine ?? 'civitai_vlm',
+);
+
+// 能力门控（参照 c1c3463 重绘幅度先例：不可用 = 禁用 + 说明，不留死控件）
+const understandingCivitaiAvailable = computed(() => {
+  apiStore.apiConfigs; apiStore.apiAssignments; // reactivity deps
+  return Boolean(aiService?.getImageConfigForBackend('civitai'));
+});
+// D3B「必须标明」：通用 LLM 引擎复用主对话配置，选项与设置区都显示当前模型名
+const understandingLlmInfo = computed(() => {
+  apiStore.apiConfigs; apiStore.apiAssignments; // reactivity deps
+  return imageService?.getGeneralLlmInfo();
+});
+const understandingEngineOptions = computed<Array<{
+  label: string;
+  value: import('@/engine/image/types').ImageUnderstandingEngine;
+  disabled: boolean;
+}>>(() => [
+  {
+    label: t('image.presets.engineCivitai'),
+    value: 'civitai_vlm',
+    disabled: !understandingCivitaiAvailable.value,
+  },
+  {
+    label: understandingLlmInfo.value?.available
+      ? t('image.presets.engineGeneralLlm', { model: understandingLlmInfo.value.model })
+      : t('image.presets.engineGeneralLlmBare'),
+    value: 'general_llm',
+    disabled: !understandingLlmInfo.value?.available,
+  },
+]);
+const understandingNoEngine = computed(() =>
+  understandingEngineOptions.value.every((o) => o.disabled));
+// 选中引擎失效时自动落到另一个可用引擎。apiStore 若在挂载后一拍才水合，
+// 本 watch 会随选项重算再次触发并自我纠正（瞬时切换不产生请求，无用户可见影响）
+watch(understandingEngineOptions, (opts) => {
+  const current = opts.find((o) => o.value === understandingEngine.value);
+  if (current?.disabled) {
+    const fallback = opts.find((o) => !o.disabled);
+    if (fallback) understandingEngine.value = fallback.value;
+  }
+}, { immediate: true });
 const understandingLoading = ref(false);
 const understandingResult = ref<import('@/engine/image/types').ImageUnderstandingResult | null>(null);
 const understandingEditDraft = ref('');
@@ -1843,25 +1887,31 @@ async function runUnderstanding() {
       reader.onerror = () => reject(new Error('read'));
       reader.readAsDataURL(understandingFile.value!);
     });
-    const refConfig = imageService.getReferenceConfig();
     const result = await imageService.analyzeImage({
-      backend: 'civitai',
+      engine: understandingEngine.value,
       image: { id: generateReferenceId(), role: 'source', source: 'data_url', dataUrl },
       task: understandingTask.value,
-      threshold: refConfig.civitai.wdThreshold,
-      temperature: refConfig.civitai.captionTemperature,
-      maxNewTokens: refConfig.civitai.captionMaxNewTokens,
     });
     understandingResult.value = result;
     understandingEditDraft.value = result.positiveDraft;
-    if (understandingTask.value === 'both' && !result.caption && result.tags?.length) {
-      eventBus.emit('ui:toast', { type: 'warning', message: t('image.toast.civitaiCaptionUnavailable'), duration: 4000 });
+    // 结构化解析降级：要标签却没标签 = 模型没按 JSON 出（原文已落 caption）
+    if (understandingTask.value !== 'caption' && !result.tags?.length && result.caption) {
+      eventBus.emit('ui:toast', { type: 'warning', message: t('image.toast.tagsNotParsed'), duration: 4000 });
     }
   } catch (err) {
-    understandingError.value = (err as Error).message;
+    understandingError.value = classifyUnderstandingError((err as Error).message);
   } finally {
     understandingLoading.value = false;
   }
+}
+
+// 四类错误的 i18n 呈现（design §5.1）：引擎层错误是中文硬编码（引擎禁 import
+// vue-i18n），UI 层按稳定标记分类映射到 zh/en 文案；未识别的原样透出
+function classifyUnderstandingError(message: string): string {
+  if (message.includes('拒绝分析')) return t('image.understanding.error.refused');
+  if (message.includes('空响应（204')) return t('image.understanding.error.emptyResponse');
+  if (message.includes('未将图片送达模型')) return t('image.understanding.error.imageDropped');
+  return message;
 }
 
 function saveUnderstandingAsPreset(scope: 'npc' | 'scene') {
@@ -1874,7 +1924,8 @@ function saveUnderstandingAsPreset(scope: 'npc' | 'scene') {
     positive: understandingEditDraft.value || understandingResult.value.positiveDraft,
     negative: understandingResult.value.negativeDraft ?? '',
     pngMeta: {
-      source: `civitai_${understandingResult.value.task}`,
+      // vlm_ / llm_ 前缀（重建 epic §4）；历史 civitai_ 前缀数据保留可读
+      source: `${understandingResult.value.provider === 'general_llm' ? 'llm' : 'vlm'}_${understandingResult.value.task}`,
       originalPrompt: understandingResult.value.positiveDraft,
       rawText: JSON.stringify(understandingResult.value.raw ?? {}),
       coverDataUrl: understandingCoverDataUrl.value ?? undefined,
@@ -4428,7 +4479,7 @@ function clearNpcImages() {
               </label>
               <label class="png-import-btn">
                 {{ $t('image.presets.importImageAnalyze') }}
-                <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none" @change="importImageForUnderstanding" />
+                <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none" data-testid="understanding-import-input" @change="importImageForUnderstanding" />
               </label>
             </div>
           </div>
@@ -4449,6 +4500,17 @@ function clearNpcImages() {
 
             <div class="understanding-controls">
               <div class="form-section">
+                <label class="form-label">{{ $t('image.presets.engineLabel') }}</label>
+                <AgaSelect
+                  data-testid="understanding-engine-select"
+                  :options="understandingEngineOptions"
+                  v-model="understandingEngine"
+                  :disabled="understandingNoEngine"
+                />
+                <span v-if="!understandingCivitaiAvailable && !understandingNoEngine" class="form-hint" data-testid="understanding-civitai-hint">{{ $t('image.presets.engineCivitaiNeedApi') }}</span>
+                <span v-if="!understandingLlmInfo?.available && !understandingNoEngine" class="form-hint" data-testid="understanding-llm-hint">{{ $t('image.presets.engineLlmNeedConfig') }}</span>
+              </div>
+              <div class="form-section">
                 <label class="form-label">{{ $t('image.presets.analyzeMode') }}</label>
                 <AgaSelect
                   :options="[
@@ -4459,8 +4521,9 @@ function clearNpcImages() {
                   v-model="understandingTask"
                 />
               </div>
-              <p class="form-hint" style="color: var(--color-amber-400, #fbbf24);">{{ $t('image.presets.analyzeCivitaiNote') }}</p>
-              <AgaButton variant="primary" size="sm" :loading="understandingLoading" @click="runUnderstanding">
+              <p v-if="understandingNoEngine" class="form-hint" style="color: var(--color-error, #f87171);" data-testid="understanding-no-engine">{{ $t('image.presets.engineNoneAvailable') }}</p>
+              <p v-else class="form-hint" style="color: var(--color-amber-400, #fbbf24);">{{ $t('image.presets.analyzeEngineNote') }}</p>
+              <AgaButton data-testid="understanding-start-btn" variant="primary" size="sm" :loading="understandingLoading" :disabled="understandingNoEngine" @click="runUnderstanding">
                 {{ understandingLoading ? $t('image.presets.analyzing') : $t('image.presets.startAnalyze') }}
               </AgaButton>
               <span v-if="understandingError" class="form-hint" style="color: var(--color-error, #f87171);">{{ understandingError }}</span>
@@ -5300,31 +5363,58 @@ function clearNpcImages() {
             />
           </div>
 
+          <!-- 图片提炼（重建 epic §5.2）：双引擎设置 -->
+          <div class="settings-row">
+            <div>
+              <span class="form-label">{{ $t('image.settings.understandingEngine') }}</span>
+              <span class="form-hint">{{ $t('image.settings.understandingEngineHint') }}</span>
+            </div>
+            <AgaSelect
+              data-testid="understanding-default-engine"
+              :options="[
+                { label: $t('image.presets.engineCivitai'), value: 'civitai_vlm' },
+                { label: $t('image.presets.engineGeneralLlmBare'), value: 'general_llm' },
+              ]"
+              :model-value="String(get('系统.扩展.image.config.understanding.defaultEngine') ?? 'civitai_vlm')"
+              @update:model-value="setValue('系统.扩展.image.config.understanding.defaultEngine', $event)"
+            />
+          </div>
+          <div class="settings-row">
+            <div>
+              <span class="form-label">{{ $t('image.settings.understandingCivitaiModel') }}</span>
+              <span class="form-hint">{{ $t('image.settings.understandingCivitaiModelHint') }}</span>
+            </div>
+            <input
+              type="text" class="form-input" style="max-width: 220px" data-testid="understanding-civitai-model"
+              :value="get('系统.扩展.image.config.understanding.civitaiModel') ?? 'claude-sonnet-5'"
+              @change="setValue('系统.扩展.image.config.understanding.civitaiModel', String(($event.target as HTMLInputElement).value).trim() || 'claude-sonnet-5')"
+            />
+          </div>
+          <!-- D3B「必须标明」：通用 LLM 引擎 = 主对话模型配置 -->
+          <div class="settings-row">
+            <span class="form-hint" data-testid="understanding-llm-note">
+              {{ understandingLlmInfo?.available
+                ? $t('image.settings.understandingLlmNote', { model: understandingLlmInfo.model })
+                : $t('image.settings.understandingLlmNotConfigured') }}
+            </span>
+          </div>
           <details class="form-advanced">
-            <summary>{{ $t('image.settings.civitaiAnalyzeParams') }}</summary>
+            <summary>{{ $t('image.settings.understandingAdvanced') }}</summary>
             <div class="settings-grid-3">
               <div class="form-section">
-                <label class="form-label">{{ $t('image.settings.wdThreshold') }}</label>
-                <input
-                  type="number" min="0.1" max="0.9" step="0.05" class="form-input"
-                  :value="get('系统.扩展.image.config.reference.civitai.wdThreshold') ?? 0.35"
-                  @change="setValue('系统.扩展.image.config.reference.civitai.wdThreshold', Math.max(0.1, Math.min(0.9, Number(($event.target as HTMLInputElement).value) || 0.35)))"
-                />
-              </div>
-              <div class="form-section">
-                <label class="form-label">{{ $t('image.settings.captionTemp') }}</label>
+                <label class="form-label">{{ $t('image.settings.understandingTemp') }}</label>
                 <input
                   type="number" min="0" max="1" step="0.1" class="form-input"
-                  :value="get('系统.扩展.image.config.reference.civitai.captionTemperature') ?? 0.2"
-                  @change="setValue('系统.扩展.image.config.reference.civitai.captionTemperature', Math.max(0, Math.min(1, Number(($event.target as HTMLInputElement).value) || 0.2)))"
+                  :value="get('系统.扩展.image.config.understanding.temperature') ?? 0.2"
+                  @change="setValue('系统.扩展.image.config.understanding.temperature', Math.max(0, Math.min(1, Number(($event.target as HTMLInputElement).value) || 0.2)))"
                 />
               </div>
               <div class="form-section">
-                <label class="form-label">{{ $t('image.settings.captionMaxToken') }}</label>
+                <label class="form-label">{{ $t('image.settings.understandingMaxTokens') }}</label>
                 <input
-                  type="number" min="20" max="500" class="form-input"
-                  :value="get('系统.扩展.image.config.reference.civitai.captionMaxNewTokens') ?? 160"
-                  @change="setValue('系统.扩展.image.config.reference.civitai.captionMaxNewTokens', Math.max(20, Math.min(500, Math.floor(Number(($event.target as HTMLInputElement).value) || 160))))"
+                  type="number" min="50" max="1000" class="form-input"
+                  :value="get('系统.扩展.image.config.understanding.maxNewTokens') ?? 300"
+                  @change="setValue('系统.扩展.image.config.understanding.maxNewTokens', Math.max(50, Math.min(1000, Math.floor(Number(($event.target as HTMLInputElement).value) || 300))))"
                 />
               </div>
             </div>

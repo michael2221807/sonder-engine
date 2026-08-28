@@ -22,6 +22,8 @@ import { ImageAssetCache } from './asset-cache';
 import { ImageTaskQueue } from './task-queue';
 import type { ImageTask, ImageAsset, ImageBackendType, ImageSubjectType, CharacterAnchor, StylePreset, CivitaiLoraShelfItem, CivitaiLoraSnapshot, ImageReferenceInput, ImageUnderstandingRequest, ImageUnderstandingResult, SecretPartType } from './types';
 import { supportsImageToImage, supportsImageUnderstanding } from './provider-capabilities';
+import { describeImageWithGeneralLlm, getGeneralLlmInfo, type GeneralLlmInfo } from './llm-understanding';
+import type { ImageUnderstandingEngine } from './reference-types';
 import { blobToDataUrl } from './utils';
 import { prepareCivitaiLora, resolveLoraScope, validateShelfForGeneration } from './civitai-lora';
 import { joinPromptFragments } from './style-preset-injection';
@@ -771,24 +773,8 @@ export class ImageService {
   getTaskQueue(): ImageTaskQueue { return this.queue; }
   getAssetCache(): ImageAssetCache { return this.cache; }
 
-  getReferenceConfig(): {
-    defaultDenoiseStrength: number;
-    maxUploadBytes: number;
-    persistUploadedReferences: boolean;
-    civitai: { wdThreshold: number; captionTemperature: number; captionMaxNewTokens: number };
-  } {
-    const base = '系统.扩展.image.config.reference';
-    return {
-      defaultDenoiseStrength: this.stateManager.get<number>(`${base}.defaultDenoiseStrength`) ?? 0.65,
-      maxUploadBytes: this.stateManager.get<number>(`${base}.maxUploadBytes`) ?? 10 * 1024 * 1024,
-      persistUploadedReferences: this.stateManager.get<boolean>(`${base}.persistUploadedReferences`) !== false,
-      civitai: {
-        wdThreshold: this.stateManager.get<number>(`${base}.civitai.wdThreshold`) ?? 0.35,
-        captionTemperature: this.stateManager.get<number>(`${base}.civitai.captionTemperature`) ?? 0.2,
-        captionMaxNewTokens: this.stateManager.get<number>(`${base}.civitai.captionMaxNewTokens`) ?? 160,
-      },
-    };
-  }
+  // getReferenceConfig() 已随 WD 拆除删去（review 2026-08-27）：唯一消费点是旧提炼
+  // 参数读取；UI 现直接走 get('系统.扩展.image.config.reference.*')，零消费方法不保留。
 
   /**
    * Regenerate an image using already-composed positive + negative prompts,
@@ -1358,37 +1344,68 @@ export class ImageService {
     return ref;
   }
 
+  /**
+   * 图片提炼编排（图片提炼重建 epic §3.5）：按 engine 分派到
+   * Civitai VLM（chatCompletion）或通用 LLM（主对话配置，D3B）。
+   * 旧 understandingEnabled 硬闸已移除——引擎选择本身即开关。
+   */
   async analyzeImage(request: ImageUnderstandingRequest): Promise<ImageUnderstandingResult> {
     if (!this.enabled) throw new Error('[ImageService] Image generation is disabled');
 
-    if (request.backend === 'civitai'
-      && this.stateManager.get<boolean>('系统.扩展.image.config.reference.civitai.understandingEnabled') === false) {
-      throw new Error('[ImageService] Civitai 图片提炼已在设置中禁用');
+    const resolvedImage = await this.resolveReferenceAsset(request.image);
+    const cfg = this.getUnderstandingConfig();
+    const effective: ImageUnderstandingRequest = {
+      ...request,
+      image: resolvedImage,
+      model: request.model ?? cfg.civitaiModel,
+      temperature: request.temperature ?? cfg.temperature,
+      maxNewTokens: request.maxNewTokens ?? cfg.maxNewTokens,
+    };
+
+    if (request.engine === 'general_llm') {
+      return describeImageWithGeneralLlm(this.aiService, effective);
     }
 
-    const config = this.aiService.getImageConfigForBackend(request.backend);
-    if (!config) throw new Error(`[ImageService] 未找到 "${request.backend}" 后端的图像 API 配置`);
+    // civitai_vlm：走 civitai 图像 API 配置（token 鉴权 + allowMatureContent 透传，D6）
+    const config = this.aiService.getImageConfigForBackend('civitai');
+    if (!config) throw new Error('[ImageService] 未找到 Civitai 图像 API 配置。Civitai 视觉引擎需要先在 API 管理中配置 Civitai 图像 API，或切换到通用 LLM 引擎。');
 
     const provider = this.providerRegistry.resolve({
-      backend: request.backend,
+      backend: 'civitai',
       endpoint: config.url,
       apiKey: config.apiKey,
       model: config.model,
     });
     if (!supportsImageUnderstanding(provider)) {
-      throw new Error(`[ImageService] "${request.backend}" 后端不支持图片提炼`);
+      throw new Error('[ImageService] Civitai provider 不支持图片提炼');
     }
 
-    const resolvedImage = await this.resolveReferenceAsset(request.image);
+    const providerOptions: Record<string, unknown> = {
+      allowMatureContent: this.stateManager.get<boolean>('系统.扩展.image.config.civitai.allowMatureContent') === true,
+    };
+    return provider.describeImage(effective, providerOptions);
+  }
 
-    let providerOptions: Record<string, unknown> | undefined;
-    if (request.backend === 'civitai') {
-      const base = '系统.扩展.image.config.civitai';
-      providerOptions = {
-        allowMatureContent: this.stateManager.get<boolean>(`${base}.allowMatureContent`) === true,
-      };
-    }
-    return provider.describeImage({ ...request, image: resolvedImage }, providerOptions);
+  /** 提炼设置（图片提炼重建 epic §4）；默认值与 save-migration 保持一致 */
+  getUnderstandingConfig(): {
+    defaultEngine: ImageUnderstandingEngine;
+    civitaiModel: string;
+    temperature: number;
+    maxNewTokens: number;
+  } {
+    const base = '系统.扩展.image.config.understanding';
+    const engine = this.stateManager.get<string>(`${base}.defaultEngine`);
+    return {
+      defaultEngine: engine === 'general_llm' ? 'general_llm' : 'civitai_vlm',
+      civitaiModel: this.stateManager.get<string>(`${base}.civitaiModel`) ?? 'claude-sonnet-5',
+      temperature: this.stateManager.get<number>(`${base}.temperature`) ?? 0.2,
+      maxNewTokens: this.stateManager.get<number>(`${base}.maxNewTokens`) ?? 300,
+    };
+  }
+
+  /** D3B「必须标明」：主对话 LLM 配置信息，供设置区/提炼面板标示与能力门控 */
+  getGeneralLlmInfo(): GeneralLlmInfo {
+    return getGeneralLlmInfo(this.aiService);
   }
 
   private async storeAsset(task: ImageTask, blob: Blob, backend: ImageBackendType): Promise<ImageAsset> {

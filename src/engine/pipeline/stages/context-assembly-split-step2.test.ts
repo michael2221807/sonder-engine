@@ -152,6 +152,7 @@ describe('ContextAssembly · split-gen step2 player-input parity', () => {
   it('step2 still receives the settingCapture module on tagged rounds', async () => {
     const out = await makeStage().execute(makeCtx());
     const step2 = out.meta.splitStep2Messages ?? [];
-    expect(step2.some((m) => m.content.includes('设定提取协议'))).toBe(true);
+    // 主管线只产 string content；String() 仅为 AIMessage.content 联合类型收窄
+    expect(step2.some((m) => String(m.content).includes('设定提取协议'))).toBe(true);
   });
 });

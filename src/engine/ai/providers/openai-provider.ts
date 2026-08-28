@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-image.md §6.3.1 图片提炼（多模态 image_url 序列化）
 /**
  * OpenAI 兼容 Provider — 处理 OpenAI / DeepSeek / 自定义 API
  *
@@ -13,7 +14,18 @@
  */
 import { BaseProvider } from './base-provider';
 import { resolveLlmChatPath } from '../../providers/llm-paths';
+import { isBlockContent } from '../content-blocks';
 import type { GenerateOptions, AIMessage } from '../types';
+
+/** OpenAI ChatCompletion 多模态 content part（wire 格式） */
+type OpenAIWireContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } };
+
+interface OpenAIWireMessage {
+  role: AIMessage['role'];
+  content: string | OpenAIWireContentPart[];
+}
 
 export class OpenAIProvider extends BaseProvider {
   /**
@@ -26,6 +38,26 @@ export class OpenAIProvider extends BaseProvider {
       this.config.backend,
       this.config.useCustomRouting ? this.config.customRoutingPath : undefined,
     );
+  }
+
+  /**
+   * AIMessage[] → wire 格式。图片块映射为标准 snake_case `image_url`
+   * （OpenAI 官方 + gproxy 转 Claude 均以此形状实测通过，见
+   * docs/status/image-understanding-api-verification-2026-08-27.md §一 C1）。
+   * 纯 string content 原样透传，保持既有请求体逐字节不变。
+   */
+  private toWireMessages(messages: AIMessage[]): OpenAIWireMessage[] {
+    return messages.map((msg) => {
+      if (!isBlockContent(msg.content)) return { role: msg.role, content: msg.content };
+      return {
+        role: msg.role,
+        content: msg.content.map((block): OpenAIWireContentPart => (
+          block.type === 'image'
+            ? { type: 'image_url', image_url: { url: block.dataUrl } }
+            : { type: 'text', text: block.text }
+        )),
+      };
+    });
   }
 
   async generate(options: GenerateOptions): Promise<string> {
@@ -60,7 +92,7 @@ export class OpenAIProvider extends BaseProvider {
       },
       body: JSON.stringify({
         model,
-        messages,
+        messages: this.toWireMessages(messages),
         temperature,
         max_tokens: maxTokens,
         stream: false,
@@ -100,7 +132,7 @@ export class OpenAIProvider extends BaseProvider {
         },
         body: JSON.stringify({
           model,
-          messages,
+          messages: this.toWireMessages(messages),
           temperature,
           max_tokens: maxTokens,
           stream: true,

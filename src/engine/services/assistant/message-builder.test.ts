@@ -96,7 +96,8 @@ describe('MessageBuilder — 历史渲染', () => {
       makeMsg('assistant', '上次回答'),
     ];
     const msgs = builder.build({ history, userPrompt: '继续', attachments: [], gamePack: null });
-    const histUser = msgs.find((m) => m.role === 'user' && m.content.includes('上次问题'));
+    // MessageBuilder 只产 string content；String() 仅为 AIMessage.content 联合类型收窄
+    const histUser = msgs.find((m) => m.role === 'user' && String(m.content).includes('上次问题'));
     expect(histUser?.content).toContain('社交关系'); // label
     expect(histUser?.content).toContain('数据快照不再附上'); // 提示
   });
@@ -115,7 +116,7 @@ describe('MessageBuilder — 历史渲染', () => {
       makeMsg('system', '✅ 已注入', { systemKind: 'inject-success' }),
     ];
     const msgs = builder.build({ history, userPrompt: 'q', attachments: [], gamePack: null });
-    const sysHist = msgs.find((m) => m.role === 'system' && m.content.includes('成功注入'));
+    const sysHist = msgs.find((m) => m.role === 'system' && String(m.content).includes('成功注入'));
     expect(sysHist).toBeDefined();
   });
 
@@ -124,7 +125,7 @@ describe('MessageBuilder — 历史渲染', () => {
       makeMsg('system', '↶ 已撤销', { systemKind: 'inject-rolled-back' }),
     ];
     const msgs = builder.build({ history, userPrompt: 'q', attachments: [], gamePack: null });
-    const sysHist = msgs.find((m) => m.role === 'system' && m.content.includes('撤销'));
+    const sysHist = msgs.find((m) => m.role === 'system' && String(m.content).includes('撤销'));
     expect(sysHist).toBeDefined();
   });
 
@@ -135,8 +136,8 @@ describe('MessageBuilder — 历史渲染', () => {
     ];
     const msgs = builder.build({ history, userPrompt: 'q', attachments: [], gamePack: null });
     // 没有这两条
-    expect(msgs.find((m) => m.content.includes('清空'))).toBeUndefined();
-    expect(msgs.find((m) => m.content.includes('AI 错'))).toBeUndefined();
+    expect(msgs.find((m) => String(m.content).includes('清空'))).toBeUndefined();
+    expect(msgs.find((m) => String(m.content).includes('AI 错'))).toBeUndefined();
   });
 });
 

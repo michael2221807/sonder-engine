@@ -11,6 +11,7 @@
 import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { usePromptDebugStore } from '@/engine/stores/engine-prompt';
+import { contentToDebugText, messagesToDebugSafe } from '@/engine/ai/content-blocks';
 import { eventBus } from '@/engine/core/event-bus';
 import Modal from '@/ui/components/common/Modal.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
@@ -92,12 +93,17 @@ function estimateTokens(text: string): number {
   return Math.ceil(cjkCount / 1.5 + otherCount / 4);
 }
 
+// \u591a\u6a21\u6001\u6d88\u606f\uff08\u56fe\u7247\u63d0\u70bc epic\uff09\uff1a\u56fe\u7247\u5757\u6e32\u67d3\u4e3a [\u56fe\u7247 \u2026] \u5360\u4f4d\uff0c\u4e0d\u5c55\u793a base64
+function messageText(msg: { content: string | import('@/engine/ai/types').AIContentBlock[] }): string {
+  return contentToDebugText(msg.content);
+}
+
 const totalTokens = computed(() => {
-  return messages.value.reduce((sum, msg) => sum + estimateTokens(msg.content), 0);
+  return messages.value.reduce((sum, msg) => sum + estimateTokens(messageText(msg)), 0);
 });
 
 const perMessageTokens = computed(() => {
-  return messages.value.map((msg) => estimateTokens(msg.content));
+  return messages.value.map((msg) => estimateTokens(messageText(msg)));
 });
 
 // ─── Collapsible sections ─────────────────────────────────────
@@ -154,7 +160,12 @@ function clearAll(): void {
 
 function exportSnapshot(): void {
   if (!activeSnapshot.value) return;
-  const blob = new Blob([JSON.stringify(activeSnapshot.value, null, 2)], { type: 'application/json' });
+  // 导出与屏显同源：图片块以占位符出现，base64 不落文件
+  const safeSnapshot = {
+    ...activeSnapshot.value,
+    messages: messagesToDebugSafe(activeSnapshot.value.messages ?? []),
+  };
+  const blob = new Blob([JSON.stringify(safeSnapshot, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `prompt-snapshot-${activeIndex.value + 1}-${Date.now()}.json`;
@@ -165,7 +176,8 @@ function exportSnapshot(): void {
 // ─── Copy to clipboard ────────────────────────────────────────
 
 function copyToClipboard(): void {
-  const data = JSON.stringify(messages.value, null, 2);
+  // 复制与屏显同源：图片块以占位符出现，base64 不进剪贴板
+  const data = JSON.stringify(messagesToDebugSafe(messages.value), null, 2);
   navigator.clipboard.writeText(data).then(() => {
     eventBus.emit('ui:toast', { type: 'success', message: t('promptAssembly.toast.jsonCopied'), duration: 1200 });
   }).catch(() => {});
@@ -426,7 +438,7 @@ function detectMemorySegments(content: string): MemorySegment[] {
 function memorySegmentsFor(index: number): MemorySegment[] {
   const msg = messages.value[index];
   if (!msg || msg.role !== 'system') return [];
-  return detectMemorySegments(msg.content);
+  return detectMemorySegments(messageText(msg));
 }
 </script>
 
@@ -611,7 +623,7 @@ function memorySegmentsFor(index: number): MemorySegment[] {
                   <span class="memory-seg-legend-range">{{ $t('promptAssembly.memory.lineRange', { start: seg.startLine + 1, end: seg.endLine + 1 }) }}</span>
                 </div>
               </div>
-              <pre class="message-text">{{ msg.content }}</pre>
+              <pre class="message-text">{{ messageText(msg) }}</pre>
             </div>
           </Transition>
         </div>

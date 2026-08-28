@@ -1,5 +1,3 @@
-import type { ImageBackendType } from './types';
-
 export type ImageReferenceRole =
   | 'source'
   | 'style'
@@ -43,12 +41,25 @@ export interface ImageGenerationReferenceParams {
   references?: ImageReferenceInput[];
 }
 
+/**
+ * 提炼引擎（图片提炼重建 epic，2026-08-27）：
+ * - 'civitai_vlm'  — Civitai chatCompletion 多供应商 VLM 网关（camelCase 图片块）
+ * - 'general_llm'  — 复用主对话 LLM 配置（usageType 'main'，OpenAI 兼容多模态，D3B）
+ * 旧 wdTagging/JoyCaption 链路已确认上游死亡并拆除（D5），证据见
+ * docs/status/image-understanding-api-verification-2026-08-27.md
+ */
+export type ImageUnderstandingEngine = 'civitai_vlm' | 'general_llm';
+
+export type ImageUnderstandingTask = 'caption' | 'tags' | 'both';
+
 export interface ImageUnderstandingRequest {
-  backend: ImageBackendType;
+  engine: ImageUnderstandingEngine;
   image: ImageReferenceInput;
-  task: 'caption' | 'tags' | 'both';
+  task: ImageUnderstandingTask;
+  /** 用户附加要求，拼入任务提示词 */
   prompt?: string;
-  threshold?: number;
+  /** civitai_vlm 路由模型覆盖（缺省用 understanding 设置的默认，硬默认 claude-sonnet-5，D2） */
+  model?: string;
   temperature?: number;
   maxNewTokens?: number;
 }
@@ -60,8 +71,8 @@ export interface ImageUnderstandingTag {
 }
 
 export interface ImageUnderstandingResult {
-  provider: ImageBackendType;
-  task: 'caption' | 'tags' | 'both';
+  provider: ImageUnderstandingEngine;
+  task: ImageUnderstandingTask;
   caption?: string;
   tags?: ImageUnderstandingTag[];
   /** Always populated: tags joined for 'tags', caption text for 'caption', both merged for 'both'. Empty string if provider returned nothing. */

@@ -46,10 +46,20 @@ export const API_PROVIDER_PRESETS: Record<APIProviderType, {
 
 // ─── 消息格式 ───
 
-/** 单条 AI 消息 — 通用的 role/content 格式 */
+/**
+ * 多模态内容块 — `AIMessage.content` 为数组时按块发送。
+ * `image.dataUrl` 必须携带完整 `data:<mime>;base64,` 前缀（jpeg/png/gif/webp）。
+ * 目前仅 OpenAIProvider 支持图片块（图片提炼 epic D7）；Claude/Gemini 直连
+ * provider 收到图片块会抛出明确错误。纯文本调用方一律继续使用 string。
+ */
+export type AIContentBlock =
+  | { type: 'text'; text: string }
+  | { type: 'image'; dataUrl: string };
+
+/** 单条 AI 消息 — 通用的 role/content 格式；content 为数组时是多模态消息 */
 export interface AIMessage {
   role: 'system' | 'user' | 'assistant';
-  content: string;
+  content: string | AIContentBlock[];
 }
 
 // ─── API 配置 ───

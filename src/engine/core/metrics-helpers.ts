@@ -11,6 +11,9 @@
  * Phase 5 可选升级到 js-tiktoken（~400KB 额外包体积换 5-10% 精度）。
  */
 
+import type { AIContentBlock } from '../ai/types';
+import { IMAGE_BLOCK_TOKEN_BUDGET } from '../ai/content-blocks';
+
 const OVERHEAD_PER_MESSAGE = 8;
 
 /** CJK 字符判断 — 只看 CJK 统一汉字区段，够用且和 base-provider 算法一致 */
@@ -31,13 +34,20 @@ export function estimateTextTokens(text: string): number {
   return cjk + Math.ceil(nonCjk / 4);
 }
 
-/** 整个消息列表的 token 估算（含每条消息的 8 token 开销） */
+/** 整个消息列表的 token 估算（含每条消息的 8 token 开销）；图片块按固定预算计 */
 export function estimateMessagesTokens(
-  messages: ReadonlyArray<{ content: string }>,
+  messages: ReadonlyArray<{ content: string | AIContentBlock[] }>,
 ): number {
   if (!Array.isArray(messages) || messages.length === 0) return 0;
-  return messages.reduce(
-    (sum, msg) => sum + OVERHEAD_PER_MESSAGE + estimateTextTokens(msg.content ?? ''),
-    0,
-  );
+  return messages.reduce((sum, msg) => {
+    if (Array.isArray(msg.content)) {
+      const blocks: readonly AIContentBlock[] = msg.content;
+      return sum + OVERHEAD_PER_MESSAGE + blocks.reduce((s: number, block: AIContentBlock) => (
+        block.type === 'image'
+          ? s + IMAGE_BLOCK_TOKEN_BUDGET
+          : s + estimateTextTokens(block.text)
+      ), 0);
+    }
+    return sum + OVERHEAD_PER_MESSAGE + estimateTextTokens(msg.content ?? '');
+  }, 0);
 }

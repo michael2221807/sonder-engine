@@ -39,12 +39,11 @@ function makeReference(overrides?: Partial<ImageReferenceInput>): ImageReference
 
 function makeUnderstandingRequest(task: 'tags' | 'caption' | 'both', overrides?: Partial<ImageUnderstandingRequest>): ImageUnderstandingRequest {
   return {
-    backend: 'civitai',
+    engine: 'civitai_vlm',
     image: makeReference(),
     task,
-    threshold: 0.35,
     temperature: 0.2,
-    maxNewTokens: 160,
+    maxNewTokens: 300,
     ...overrides,
   };
 }
@@ -395,129 +394,142 @@ describe('CivitaiImageProvider', () => {
     });
   });
 
-  // ── describeImage() ──
+  // ── describeImage() — chatCompletion VLM 契约（图片提炼重建 epic P1） ──
 
-  // imageUpload mock: describeImage now uploads data URLs first to get a hosted URL
-  const uploadOk = { status: 200, body: { blob: { url: 'https://cdn.civitai.com/test.png', id: 'blob_test', available: true } } };
+  const DATA_URL = 'data:image/png;base64,iVBORw0KGgo=';
+  // 真实校准（2026-08-27）：anthropic 路由小图 promptTokens≈109；防幻觉断言只对 openai/ 路由生效
+  const okUsage = { promptTokens: 109, completionTokens: 50, totalTokens: 159 };
+  // usage 传 null 表示响应体不含 usage 字段（显式 undefined 会落回默认参数）
+  const chatOk = (
+    content: string,
+    usage: Record<string, unknown> | null = okUsage,
+    model = 'anthropic/claude-sonnet-5',
+  ) => ({
+    status: 200,
+    body: { model, choices: [{ message: { role: 'assistant', content } }], ...(usage ? { usage } : {}) },
+  });
+  const BOTH_JSON = '{"tags":["1girl","red_circle","simple_background"],"caption":"A girl in a garden"}';
 
   describe('describeImage()', () => {
-    it('calls wdTagging for task=tags', async () => {
-      const calls = mockFetchSequence(
-        uploadOk,
-        { status: 200, body: { tags: { '1girl': 0.95, 'solo': 0.9, 'portrait': 0.8 }, rating: { general: 0.8 } } },
-      );
+    it('sends a single chatCompletion request with camelCase imageUrl block（snake_case 会被网关静默丢图）', async () => {
+      const calls = mockFetchSequence(chatOk(BOTH_JSON));
 
-      const result = await makeProvider().describeImage(makeUnderstandingRequest('tags'));
+      await makeProvider().describeImage(makeUnderstandingRequest('both'));
 
-      expect(calls[0].url).toContain('/v2/consumer/recipes/imageUpload');
-      expect(calls[1].url).toContain('/v2/consumer/recipes/wdTagging');
-      expect(result.tags).toHaveLength(3);
-      expect(result.tags![0].text).toBe('1girl');
-      expect(result.tags![0].confidence).toBe(0.95);
-      expect(result.positiveDraft).toContain('1girl');
-      expect(result.caption).toBeUndefined();
+      expect(calls).toHaveLength(1);
+      expect(calls[0].url).toContain('/v2/consumer/recipes/chatCompletion');
+      const body = JSON.parse(calls[0].init?.body as string);
+      expect(body.messages[0].role).toBe('system');
+      expect(body.messages[1].role).toBe('user');
+      expect(body.messages[1].content[0]).toEqual({ type: 'imageUrl', imageUrl: { url: DATA_URL } });
+      expect(body.messages[1].content[1].type).toBe('text');
+      expect(JSON.stringify(body)).not.toContain('image_url');
     });
 
-    it('calls mediaCaptioning recipe for task=caption', async () => {
-      const calls = mockFetchSequence(
-        uploadOk,
-        { status: 200, body: { caption: 'A girl with long hair standing in a garden' } },
-      );
+    it('uses request.model when provided and DEFAULT_UNDERSTANDING_MODEL otherwise', async () => {
+      const calls = mockFetchSequence(chatOk(BOTH_JSON), chatOk(BOTH_JSON));
+
+      await makeProvider().describeImage(makeUnderstandingRequest('both', { model: 'gpt-4o-mini' }));
+      await makeProvider().describeImage(makeUnderstandingRequest('both', { model: undefined }));
+
+      expect(JSON.parse(calls[0].init?.body as string).model).toBe('gpt-4o-mini');
+      expect(JSON.parse(calls[1].init?.body as string).model)
+        .toBe(CivitaiImageProvider.DEFAULT_UNDERSTANDING_MODEL);
+    });
+
+    it('passes temperature and maxNewTokens into the body', async () => {
+      const calls = mockFetchSequence(chatOk(BOTH_JSON));
+
+      await makeProvider().describeImage(makeUnderstandingRequest('both', { temperature: 0.8, maxNewTokens: 200 }));
+      const body = JSON.parse(calls[0].init?.body as string);
+      expect(body.temperature).toBe(0.8);
+      expect(body.maxTokens).toBe(200);
+    });
+
+    it('appends allowMatureContent query（D6）', async () => {
+      const calls = mockFetchSequence(chatOk(BOTH_JSON));
+
+      await makeProvider().describeImage(makeUnderstandingRequest('both'), { allowMatureContent: true });
+      expect(calls[0].url).toContain('allowMatureContent=true');
+    });
+
+    it('parses strict JSON into tags + caption + positiveDraft', async () => {
+      mockFetchSequence(chatOk(BOTH_JSON));
+
+      const result = await makeProvider().describeImage(makeUnderstandingRequest('both'));
+      expect(result.tags).toHaveLength(3);
+      expect(result.tags![0]).toEqual({ text: '1girl' });
+      expect(result.caption).toBe('A girl in a garden');
+      expect(result.positiveDraft).toBe('1girl, red_circle, simple_background, A girl in a garden');
+      expect(result.provider).toBe('civitai_vlm');
+      expect(result.task).toBe('both');
+      expect(result.createdAt).toBeGreaterThan(0);
+    });
+
+    it('parses fenced ```json responses', async () => {
+      mockFetchSequence(chatOk('```json\n' + BOTH_JSON + '\n```'));
+
+      const result = await makeProvider().describeImage(makeUnderstandingRequest('tags'));
+      expect(result.tags).toHaveLength(3);
+      expect(result.positiveDraft).toBe('1girl, red_circle, simple_background');
+    });
+
+    it('throws on 204/empty body（模型名无效不走 4xx）', async () => {
+      mockFetchSequence({ status: 204, text: '' });
+
+      await expect(makeProvider().describeImage(makeUnderstandingRequest('both')))
+        .rejects.toThrow(/空响应.*204/);
+    });
+
+    it('anti-hallucination: throws when openai/ route reports text-only promptTokens（图片被静默丢弃）', async () => {
+      mockFetchSequence(chatOk(BOTH_JSON, { promptTokens: 77 }, 'openai/gpt-4o-mini'));
+
+      await expect(makeProvider().describeImage(makeUnderstandingRequest('both')))
+        .rejects.toThrow(/未将图片送达模型/);
+    });
+
+    it('anti-hallucination assertion is scoped to openai/ routes — anthropic 小图 109 tokens 不误伤（真实校准）', async () => {
+      mockFetchSequence(chatOk(BOTH_JSON, { promptTokens: 109 }, 'anthropic/claude-sonnet-5'));
+
+      const result = await makeProvider().describeImage(makeUnderstandingRequest('both'));
+      expect(result.caption).toBe('A girl in a garden');
+    });
+
+    it('openai/ route with genuine image tokens passes the assertion', async () => {
+      mockFetchSequence(chatOk(BOTH_JSON, { promptTokens: 8550 }, 'openai/gpt-4o-mini'));
+
+      const result = await makeProvider().describeImage(makeUnderstandingRequest('both'));
+      expect(result.caption).toBe('A girl in a garden');
+    });
+
+    it('missing usage field skips the anti-hallucination assertion', async () => {
+      mockFetchSequence(chatOk(BOTH_JSON, null, 'openai/gpt-4o-mini'));
+
+      const result = await makeProvider().describeImage(makeUnderstandingRequest('both'));
+      expect(result.caption).toBe('A girl in a garden');
+    });
+
+    it('degrades non-JSON responses to caption', async () => {
+      mockFetchSequence(chatOk('Just a plain description of the image.'));
 
       const result = await makeProvider().describeImage(makeUnderstandingRequest('caption'));
-
-      expect(calls[0].url).toContain('/v2/consumer/recipes/imageUpload');
-      expect(calls[1].url).toContain('/v2/consumer/recipes/mediaCaptioning');
-      expect(result.caption).toBe('A girl with long hair standing in a garden');
-      expect(result.positiveDraft).toBe('A girl with long hair standing in a garden');
+      expect(result.caption).toBe('Just a plain description of the image.');
+      expect(result.positiveDraft).toBe('Just a plain description of the image.');
       expect(result.tags).toBeUndefined();
     });
 
-    it('calls both for task=both, tags then caption', async () => {
-      const calls = mockFetchSequence(
-        uploadOk,
-        { status: 200, body: { tags: { '1girl': 0.95, 'garden': 0.7 }, rating: null } },
-        { status: 200, body: { caption: 'A girl in a garden' } },
-      );
+    it('throws a dedicated error on refusal text（D6）', async () => {
+      mockFetchSequence(chatOk("I can't assist with analyzing this image due to content policy."));
 
-      const result = await makeProvider().describeImage(makeUnderstandingRequest('both'));
-
-      expect(calls).toHaveLength(3);
-      expect(calls[0].url).toContain('/v2/consumer/recipes/imageUpload');
-      expect(calls[1].url).toContain('/v2/consumer/recipes/wdTagging');
-      expect(calls[2].url).toContain('/v2/consumer/recipes/mediaCaptioning');
-      expect(result.tags).toHaveLength(2);
-      expect(result.caption).toBe('A girl in a garden');
-      expect(result.positiveDraft).toContain('1girl');
-      expect(result.positiveDraft).toContain('A girl in a garden');
+      await expect(makeProvider().describeImage(makeUnderstandingRequest('both')))
+        .rejects.toThrow(/拒绝分析/);
     });
 
-    it('wdTagging URL includes allowMatureContent query', async () => {
-      const calls = mockFetchSequence(
-        uploadOk,
-        { status: 200, body: { tags: { 'test': 0.5 } } },
-      );
+    it('maps 402 to Buzz error', async () => {
+      mockFetchSequence({ status: 402, text: 'Insufficient Buzz' });
 
-      await makeProvider().describeImage(
-        makeUnderstandingRequest('tags'),
-        { allowMatureContent: true },
-      );
-
-      expect(calls[0].url).toContain('allowMatureContent=true');
-      expect(calls[1].url).toContain('allowMatureContent=true');
-    });
-
-    it('mediaCaptioning URL includes allowMatureContent query', async () => {
-      const calls = mockFetchSequence(
-        uploadOk,
-        { status: 200, body: { caption: 'test' } },
-      );
-
-      await makeProvider().describeImage(
-        makeUnderstandingRequest('caption'),
-        { allowMatureContent: true },
-      );
-
-      expect(calls[0].url).toContain('allowMatureContent=true');
-      expect(calls[1].url).toContain('allowMatureContent=true');
-    });
-
-    it('passes threshold to wdTagging body', async () => {
-      const calls = mockFetchSequence(
-        uploadOk,
-        { status: 200, body: { tags: {} } },
-      );
-
-      await makeProvider().describeImage(makeUnderstandingRequest('tags', { threshold: 0.5 }));
-      const body = JSON.parse(calls[1].init?.body as string);
-      expect(body.threshold).toBe(0.5);
-    });
-
-    it('passes temperature and maxNewTokens to captioning body', async () => {
-      const calls = mockFetchSequence(
-        uploadOk,
-        { status: 200, body: { caption: 'test' } },
-      );
-
-      await makeProvider().describeImage(makeUnderstandingRequest('caption', {
-        temperature: 0.8,
-        maxNewTokens: 200,
-      }));
-      const body = JSON.parse(calls[1].init?.body as string);
-      expect(body.temperature).toBe(0.8);
-      expect(body.maxNewTokens).toBe(200);
-    });
-
-    it('uploads data URL then sends hosted URL as mediaUrl', async () => {
-      const calls = mockFetchSequence(
-        uploadOk,
-        { status: 200, body: { tags: { 'test': 0.5 } } },
-      );
-
-      await makeProvider().describeImage(makeUnderstandingRequest('tags'));
-      expect(calls[0].url).toContain('/v2/consumer/recipes/imageUpload');
-      const tagBody = JSON.parse(calls[1].init?.body as string);
-      expect(tagBody.mediaUrl).toBe('https://cdn.civitai.com/test.png');
+      await expect(makeProvider().describeImage(makeUnderstandingRequest('both')))
+        .rejects.toThrow(/Buzz 余额不足/);
     });
 
     it('throws when reference has no dataUrl or url', async () => {
@@ -526,37 +538,6 @@ describe('CivitaiImageProvider', () => {
       });
       await expect(makeProvider().describeImage(req))
         .rejects.toThrow('提炼图片缺少 dataUrl 或 url');
-    });
-
-    it('returns empty positiveDraft when no tags found', async () => {
-      mockFetchSequence(uploadOk, { status: 200, body: { tags: {} } });
-
-      const result = await makeProvider().describeImage(makeUnderstandingRequest('tags'));
-      expect(result.positiveDraft).toBe('');
-      expect(result.tags).toBeUndefined();
-    });
-
-    it('throws on wdTagging HTTP error', async () => {
-      mockFetchSequence(uploadOk, { status: 500, text: 'Internal error' });
-
-      await expect(makeProvider().describeImage(makeUnderstandingRequest('tags')))
-        .rejects.toThrow(/WD Tagging 失败.*500/);
-    });
-
-    it('throws on mediaCaptioning HTTP error', async () => {
-      mockFetchSequence(uploadOk, { status: 402, text: 'Insufficient Buzz' });
-
-      await expect(makeProvider().describeImage(makeUnderstandingRequest('caption')))
-        .rejects.toThrow(/Media Captioning 失败.*402/);
-    });
-
-    it('sets provider to civitai in result', async () => {
-      mockFetchSequence(uploadOk, { status: 200, body: { caption: 'test' } });
-
-      const result = await makeProvider().describeImage(makeUnderstandingRequest('caption'));
-      expect(result.provider).toBe('civitai');
-      expect(result.task).toBe('caption');
-      expect(result.createdAt).toBeGreaterThan(0);
     });
   });
 

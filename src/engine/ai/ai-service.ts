@@ -17,6 +17,7 @@
  */
 import type { APIConfig, GenerateOptions, UsageType, APIAssignment, APIProviderType, AIMessage } from './types';
 import { API_TIMEOUT_MS, requestTimeoutMinutesToMs } from './types';
+import { contentToText, messagesToDebugSafe } from './content-blocks';
 import type { BaseProvider } from './providers/base-provider';
 import { OpenAIProvider } from './providers/openai-provider';
 import { ClaudeProvider } from './providers/claude-provider';
@@ -257,6 +258,7 @@ export class AIService {
 
     // 设置 → 高级设置 → "AI API 完整记录" 的消费点（2026-08-26 死控件修复）。
     // 记录实际发送的最终消息数组（strict/prefill 变换后）；绝不记录 apiKey。
+    // 多模态消息经 debug-safe 转换：图片块记占位符，base64 绝不进 console。
     const aiLogging = isAiLoggingEnabled();
     if (aiLogging) {
       console.log('[AI-LOG] request', {
@@ -265,7 +267,7 @@ export class AIService {
         model: effectiveConfig.model,
         url: effectiveConfig.url,
         stream: effectiveOptions.stream === true,
-        messages: effectiveOptions.messages,
+        messages: messagesToDebugSafe(effectiveOptions.messages),
       });
     }
 
@@ -312,7 +314,8 @@ export class AIService {
     const collectedPrefill: string[] = [];
 
     while (result.length > 0 && result[result.length - 1].role === 'assistant') {
-      collectedPrefill.unshift(result.pop()!.content);
+      // prefill 一律是引擎生成的纯文本；万一带块内容则压平为文本（图片块无 prefill 语义）
+      collectedPrefill.unshift(contentToText(result.pop()!.content));
     }
 
     if (collectedPrefill.length === 0) return messages;

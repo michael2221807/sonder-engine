@@ -677,15 +677,12 @@ export class ContextAssemblyStage implements PipelineStage {
 
       // Legacy: enforcement + user input
       const enforcement = this.promptAssembler.renderSingle('narratorEnforcement', variables);
-      const userMessage: AIMessage = {
-        role: 'user',
-        content: enforcement
-          ? `${enforcement}\n\n<玩家输入>\n${ctx.userInput}\n</玩家输入>`
-          : ctx.userInput,
-      };
-      appendUserTurn(messages, messageSources, userMessage.content);
+      const userTurnContent = enforcement
+        ? `${enforcement}\n\n<玩家输入>\n${ctx.userInput}\n</玩家输入>`
+        : ctx.userInput;
+      appendUserTurn(messages, messageSources, userTurnContent);
       if (splitStep2Messages && splitStep2Sources) {
-        appendUserTurn(splitStep2Messages, splitStep2Sources, userMessage.content);
+        appendUserTurn(splitStep2Messages, splitStep2Sources, userTurnContent);
       }
 
       console.debug('[ContextAssembly][Legacy] Messages:', messages.length);

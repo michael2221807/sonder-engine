@@ -8,7 +8,8 @@
  *
  * 对应 STEP-03B M2.4。
  */
-import type { APIConfig, GenerateOptions } from '../types';
+import type { APIConfig, GenerateOptions, AIMessage } from '../types';
+import { IMAGE_BLOCK_TOKEN_BUDGET, isBlockContent } from '../content-blocks';
 
 export abstract class BaseProvider {
   constructor(protected config: APIConfig) {}
@@ -34,19 +35,31 @@ export abstract class BaseProvider {
   /**
    * 估算消息的 token 数量（粗略）
    * CJK 字符约 1 token/字，西文约 4 字符/token
+   * 图片块按固定预算 IMAGE_BLOCK_TOKEN_BUDGET 计——base64 字符长度不是 token 数
    * 用于在请求前检查是否可能超出上下文窗口
    */
-  protected estimateTokens(messages: Array<{ content: string }>): number {
+  protected estimateTokens(messages: Array<Pick<AIMessage, 'content'>>): number {
     const overheadPerMessage = 8;
     return messages.reduce((sum, msg) => {
-      let cjkCount = 0;
-      for (const ch of msg.content) {
-        const code = ch.charCodeAt(0);
-        if (code >= 0x4e00 && code <= 0x9fff) cjkCount++;
+      if (isBlockContent(msg.content)) {
+        return sum + overheadPerMessage + msg.content.reduce((s, block) => (
+          block.type === 'image'
+            ? s + IMAGE_BLOCK_TOKEN_BUDGET
+            : s + this.estimateTextTokens(block.text)
+        ), 0);
       }
-      const nonCjkCount = Math.max(0, msg.content.length - cjkCount);
-      return sum + overheadPerMessage + cjkCount + Math.ceil(nonCjkCount / 4);
+      return sum + overheadPerMessage + this.estimateTextTokens(msg.content);
     }, 0);
+  }
+
+  private estimateTextTokens(text: string): number {
+    let cjkCount = 0;
+    for (const ch of text) {
+      const code = ch.charCodeAt(0);
+      if (code >= 0x4e00 && code <= 0x9fff) cjkCount++;
+    }
+    const nonCjkCount = Math.max(0, text.length - cjkCount);
+    return cjkCount + Math.ceil(nonCjkCount / 4);
   }
 
   /**
@@ -89,7 +102,7 @@ export abstract class BaseProvider {
    * 3. 未知模型不做裁剪
    */
   protected clampMaxTokens(
-    messages: Array<{ content: string }>,
+    messages: Array<Pick<AIMessage, 'content'>>,
     requestedMaxTokens: number,
   ): number {
     const contextWindow = this.getContextWindow(this.config.model);

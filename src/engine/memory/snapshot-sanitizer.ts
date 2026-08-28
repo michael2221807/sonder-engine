@@ -315,12 +315,29 @@ export function stripTagFromText(text: string, tag: string): string {
  *
  * - 返回新数组，不修改原数组中的 message 对象（浅拷贝每项）
  * - 无变更的 message 保持原引用（减少不必要的对象分配）
+ * - 多模态块内容：只处理 text 块，image 块原样保留
+ *
+ * 泛型约束刻意内联块形状而非 import AIContentBlock（本文件保持零依赖）；
+ * 未来新增块类型会走 `type !== 'text'` 分支被原样透传（安全无操作）。
  */
-export function stripTagFromMessages<T extends { content: string }>(
+export function stripTagFromMessages<
+  T extends { content: string | Array<{ type: 'text'; text: string } | { type: 'image'; dataUrl: string }> },
+>(
   messages: readonly T[],
   tag: string,
 ): T[] {
   return messages.map((msg) => {
+    if (Array.isArray(msg.content)) {
+      let changed = false;
+      const blocks = msg.content.map((block) => {
+        if (block.type !== 'text') return block;
+        const stripped = stripTagFromText(block.text, tag);
+        if (stripped === block.text) return block;
+        changed = true;
+        return { ...block, text: stripped };
+      });
+      return changed ? { ...msg, content: blocks } : msg;
+    }
     const stripped = stripTagFromText(msg.content, tag);
     if (stripped === msg.content) return msg;
     return { ...msg, content: stripped };

@@ -286,6 +286,8 @@ export type {
   ImageReferenceInput,
   ImageGenerationMode,
   ImageGenerationReferenceParams,
+  ImageUnderstandingEngine,
+  ImageUnderstandingTask,
   ImageUnderstandingRequest,
   ImageUnderstandingTag,
   ImageUnderstandingResult,

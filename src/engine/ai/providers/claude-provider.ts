@@ -12,6 +12,7 @@
  * 对应 STEP-03B M2.3。
  */
 import { BaseProvider } from './base-provider';
+import { contentToText, messagesHaveImageBlocks } from '../content-blocks';
 import type { GenerateOptions, AIMessage } from '../types';
 
 export class ClaudeProvider extends BaseProvider {
@@ -41,17 +42,24 @@ export class ClaudeProvider extends BaseProvider {
     systemPrompt: string;
     claudeMessages: Array<{ role: 'user' | 'assistant'; content: string }>;
   } {
+    // 图片块本期仅 OpenAIProvider 支持（图片提炼 epic D7）：Claude 直连缺乏
+    // 真实验证凭据，映射为原生 image source 未经实测，明确报错优于静默丢图。
+    if (messagesHaveImageBlocks(messages)) {
+      throw new Error('图片输入暂仅支持 OpenAI 兼容 API 配置（当前 provider: claude）。请在 API 管理中改用 OpenAI 兼容配置后重试。');
+    }
+
     let systemPrompt = '';
     const claudeMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
     for (const msg of messages) {
+      const text = contentToText(msg.content);
       if (msg.role === 'system') {
         // Claude 的 system 是顶层参数，多条 system 消息合并
-        systemPrompt += (systemPrompt ? '\n\n' : '') + msg.content;
+        systemPrompt += (systemPrompt ? '\n\n' : '') + text;
       } else {
         claudeMessages.push({
           role: msg.role as 'user' | 'assistant',
-          content: msg.content,
+          content: text,
         });
       }
     }
