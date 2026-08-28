@@ -1815,6 +1815,10 @@ const understandingMode = ref(false);
 const understandingFile = ref<File | null>(null);
 const understandingCoverDataUrl = ref<string | null>(null);
 const understandingTask = ref<'tags' | 'caption' | 'both'>('both');
+// 额外要求（可选）：原样附加到提炼提示词末尾，用来指定关注点/提醒细节/解释易误读的画面。
+// 刻意**不随新图片清空**——连续提炼同一批图时同一条要求通常要复用（与 understandingEngine
+// 的「会话内记忆」同类）。
+const understandingExtra = ref('');
 // 提炼引擎（重建 epic D1）：默认取设置值，面板内可切换，会话内记忆
 const understandingEngine = ref<import('@/engine/image/types').ImageUnderstandingEngine>(
   imageService?.getUnderstandingConfig().defaultEngine ?? 'civitai_vlm',
@@ -1897,6 +1901,7 @@ async function runUnderstanding() {
       engine: understandingEngine.value,
       image: { id: generateReferenceId(), role: 'source', source: 'data_url', dataUrl },
       task: understandingTask.value,
+      prompt: understandingExtra.value.trim() || undefined,
     });
     understandingResult.value = result;
     understandingEditDraft.value = result.positiveDraft;
@@ -4526,6 +4531,17 @@ function clearNpcImages() {
                   ]"
                   v-model="understandingTask"
                 />
+              </div>
+              <div class="form-section">
+                <label class="form-label">{{ $t('image.presets.extraLabel') }}</label>
+                <textarea
+                  data-testid="understanding-extra-input"
+                  v-model="understandingExtra"
+                  class="form-textarea"
+                  rows="3"
+                  :placeholder="$t('image.presets.extraPlaceholder')"
+                />
+                <span class="form-hint">{{ $t('image.presets.extraHint') }}</span>
               </div>
               <p v-if="understandingNoEngine" class="form-hint" style="color: var(--color-error, #f87171);" data-testid="understanding-no-engine">{{ $t('image.presets.engineNoneAvailable') }}</p>
               <p v-else class="form-hint" style="color: var(--color-amber-400, #fbbf24);">{{ $t('image.presets.analyzeEngineNote') }}</p>

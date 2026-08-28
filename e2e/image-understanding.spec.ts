@@ -110,6 +110,30 @@ test.describe('图片提炼 · 双引擎能力门 (offline: full)', () => {
       await expect(page.getByTestId('understanding-start-btn')).toBeEnabled();
     });
 
+  test('额外要求输入框：始终可见、可输入、关面板再开仍保留（会话内记忆）',
+    { tag: ['@regression', '@image', '@understanding-rebuild'] },
+    async ({ page }) => {
+      await seedSave(page, { tree: imageTree(), sessionType: 'play' });
+      await seedApiConfigs(page, [CIVITAI_IMAGE_CONFIG]);
+      await enterSeededGame(page);
+
+      await openUnderstandingPanel(page);
+
+      const extra = page.getByTestId('understanding-extra-input');
+      await expect(extra).toBeVisible();
+      await expect(extra).toHaveValue('');
+      await extra.fill('重点描述两人的姿势与接触部位');
+      await expect(extra).toHaveValue('重点描述两人的姿势与接触部位');
+
+      // 关面板再重新导入一张（同一组件状态，4 个提炼入口共用）——内容保留
+      await page.getByRole('button', { name: '关闭', exact: true }).click();
+      await expect(extra).toHaveCount(0);
+      await page.getByTestId('understanding-import-input').setInputFiles({
+        name: 'probe2.png', mimeType: 'image/png', buffer: TINY_PNG,
+      });
+      await expect(page.getByTestId('understanding-extra-input')).toHaveValue('重点描述两人的姿势与接触部位');
+    });
+
   test('设置区：旧 WD 控件已拆除，新提炼设置 + 主对话标示行就位',
     { tag: ['@regression', '@image', '@understanding-rebuild'] },
     async ({ page }) => {

@@ -63,6 +63,15 @@ describe('buildUnderstandingPrompt', () => {
     expect(taskText).toContain('重点关注服装细节');
     expect(buildUnderstandingPrompt('both', '   ').taskText).not.toContain('Additional requirements');
   });
+
+  it('用户额外要求排在所有内置指令之后（最后说的最响，UI 输入框的消费点）', () => {
+    const { taskText } = buildUnderstandingPrompt('both', '右侧是镜中倒影，不是第三个人');
+    const jsonOnlyAt = taskText.indexOf('Return ONLY the JSON object');
+    const extraAt = taskText.indexOf('Additional requirements from the user');
+    expect(jsonOnlyAt).toBeGreaterThan(-1);
+    expect(extraAt).toBeGreaterThan(jsonOnlyAt);
+    expect(taskText.trimEnd().endsWith('右侧是镜中倒影，不是第三个人')).toBe(true);
+  });
 });
 
 describe('parseUnderstandingResponse', () => {
