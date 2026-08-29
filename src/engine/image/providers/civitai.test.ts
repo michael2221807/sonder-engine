@@ -309,7 +309,7 @@ describe('CivitaiImageProvider', () => {
       );
 
       const ref = makeReference({ denoiseStrength: 0.7 });
-      await makeProvider().imageToImage('portrait', 'bad', 1024, 1024, ref);
+      await makeProvider().imageToImage('portrait', 'bad', 1024, 1024, [ref]);
 
       const body = JSON.parse(calls[0].init?.body as string);
       expect(body.sourceImage).toBe('data:image/png;base64,iVBORw0KGgo=');
@@ -318,13 +318,38 @@ describe('CivitaiImageProvider', () => {
       expect(body.negativePrompt).toBe('bad');
     });
 
+    // PO 决策① 2026-08-29：Civitai 不声明 multiReference（SD 配方官方文档
+    // 「a plain string URL (not a { url: ... } wrapper)」，无数组型图片字段）。
+    // UI 侧因此选不出第二张；这里钉死引擎兜底行为——取首张 + 告警，不静默。
+    it('多图输入降级取第 1 张并告警（不静默丢弃）', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const calls = mockFetchSequence(
+        { status: 200, body: { images: [{ id: 'x.jpeg', available: true, url: 'https://example.com/img', width: 1024, height: 1024 }] } },
+        { status: 200 },
+      );
+
+      const first = makeReference({ dataUrl: 'data:image/png;base64,FIRST' });
+      const second = makeReference({ dataUrl: 'data:image/png;base64,SECOND' });
+      await makeProvider().imageToImage('test', '', 1024, 1024, [first, second]);
+
+      const body = JSON.parse(calls[0].init?.body as string);
+      expect(body.sourceImage).toBe('data:image/png;base64,FIRST');
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('只支持单图'));
+      warn.mockRestore();
+    });
+
+    it('空参考图列表直接报错', async () => {
+      await expect(makeProvider().imageToImage('test', '', 1024, 1024, []))
+        .rejects.toThrow(/参考图列表为空/);
+    });
+
     it('uses same textToImage endpoint', async () => {
       const calls = mockFetchSequence(
         { status: 200, body: { images: [{ id: 'x.jpeg', available: true, url: 'https://example.com/img', width: 1024, height: 1024 }] } },
         { status: 200 },
       );
 
-      await makeProvider().imageToImage('test', '', 1024, 1024, makeReference());
+      await makeProvider().imageToImage('test', '', 1024, 1024, [makeReference()]);
       expect(calls[0].url).toContain('/v2/consumer/recipes/textToImage');
     });
 
@@ -334,7 +359,7 @@ describe('CivitaiImageProvider', () => {
         { status: 200 },
       );
 
-      await makeProvider().imageToImage('test', '', 1024, 1024, makeReference(), { allowMatureContent: true });
+      await makeProvider().imageToImage('test', '', 1024, 1024, [makeReference()], { allowMatureContent: true });
       expect(calls[0].url).toContain('allowMatureContent=true');
     });
 
@@ -344,7 +369,7 @@ describe('CivitaiImageProvider', () => {
         { status: 200 },
       );
 
-      await makeProvider().imageToImage('test', '', 1024, 1024, makeReference({ denoiseStrength: undefined }));
+      await makeProvider().imageToImage('test', '', 1024, 1024, [makeReference({ denoiseStrength: undefined })]);
       const body = JSON.parse(calls[0].init?.body as string);
       expect(body.sourceImageDenoiseStrenght).toBe(0.65);
     });
@@ -355,14 +380,14 @@ describe('CivitaiImageProvider', () => {
         { status: 200 },
       );
 
-      await makeProvider().imageToImage('test', '', 1024, 1024, makeReference({ denoiseStrength: 1.5 }));
+      await makeProvider().imageToImage('test', '', 1024, 1024, [makeReference({ denoiseStrength: 1.5 })]);
       const body = JSON.parse(calls[0].init?.body as string);
       expect(body.sourceImageDenoiseStrenght).toBe(1);
     });
 
     it('throws when reference has no dataUrl or url', async () => {
       const ref = makeReference({ dataUrl: undefined, url: undefined });
-      await expect(makeProvider().imageToImage('test', '', 1024, 1024, ref))
+      await expect(makeProvider().imageToImage('test', '', 1024, 1024, [ref]))
         .rejects.toThrow('参考图缺少 dataUrl 或 url');
     });
 
@@ -373,7 +398,7 @@ describe('CivitaiImageProvider', () => {
       );
 
       const ref = makeReference({ dataUrl: undefined, url: 'https://example.com/source.png' });
-      await makeProvider().imageToImage('test', '', 1024, 1024, ref);
+      await makeProvider().imageToImage('test', '', 1024, 1024, [ref]);
       const body = JSON.parse(calls[0].init?.body as string);
       expect(body.sourceImage).toBe('https://example.com/source.png');
     });
@@ -385,7 +410,7 @@ describe('CivitaiImageProvider', () => {
         { status: 200 },
       );
 
-      await makeProvider().imageToImage('test', '', 1024, 1024, makeReference(), {
+      await makeProvider().imageToImage('test', '', 1024, 1024, [makeReference()], {
         additionalNetworksJson: JSON.stringify(networks),
       });
       const body = JSON.parse(calls[0].init?.body as string);

@@ -27,7 +27,7 @@
   "save.backup.sectionTitle": "Full Backup",
   "save.backup.hint": "Package all characters, saves, settings, and prompt overrides into a single file for migrating to another device or restoring data.",
   "save.backup.includeRef": "Include reference asset images",
-  "save.backup.includeRefHint": "When checked, the backup file will include character reference images (portraits, avatars, etc.), significantly increasing file size. Uncheck to back up text data only.",
+  "save.backup.includeRefHint": "Also back up the images stashed in the reference library (large). Note: reference images already used in a generation are ALWAYS included, regardless of this toggle.",
   "save.backup.exportBtn": "Export Backup",
   "save.backup.exportBusy": "Exporting...",
   "save.backup.restoreBtn": "Restore Backup",

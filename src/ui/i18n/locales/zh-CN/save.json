@@ -27,7 +27,7 @@
   "save.backup.sectionTitle": "完整备份",
   "save.backup.hint": "将所有角色、存档、设置、Prompt 覆盖打包为单个文件，可用于迁移到其他设备或恢复数据。",
   "save.backup.includeRef": "包含参考素材图片",
-  "save.backup.includeRefHint": "勾选后备份文件会包含角色的参考素材图（如立绘、头像等），文件体积会显著增大。不勾选则仅备份文本数据。",
+  "save.backup.includeRefHint": "勾选后连同「参考素材库」里囤着的图片一起备份（体积大）。注意：**已经用于生图的参考图始终随档**，不受此开关影响。",
   "save.backup.exportBtn": "导出备份",
   "save.backup.exportBusy": "导出中…",
   "save.backup.restoreBtn": "恢复备份",

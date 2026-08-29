@@ -16,6 +16,9 @@ import { useI18n } from 'vue-i18n';
 import type { ImageBackendType, CivitaiLoraSnapshot, ImageReferenceInput } from '@/engine/image/types';
 
 import { PROVIDER_CAPABILITIES } from '@/engine/image/provider-capabilities';
+import { SEEDREAM_MAX_REFERENCE_IMAGES } from '@/engine/image/providers/volcengine';
+import MultiReferencePicker, { type MultiReferenceItem } from '@/ui/components/shared/MultiReferencePicker.vue';
+import { appendReferenceFiles } from '@/ui/components/shared/multi-reference-files';
 import { providerCatalog } from '@/engine/providers';
 import AgaSelect, { type SelectOption } from '@/ui/components/shared/AgaSelect.vue';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
@@ -45,6 +48,14 @@ const props = defineProps<{
   defaultDenoiseStrength?: number;
   /** Pre-activate reference redraw checkbox when opening */
   preActivateReference?: boolean;
+  /** 追加参考图的体积上限（取 系统.扩展.image.config.reference.maxUploadBytes） */
+  maxUploadBytes?: number;
+  /**
+   * 把追加的参考图落资产库，返回 assetId。**必填**：可选的话，未来新增调用点
+   * 忘了传就会让追加图静默退回"拿不到 assetId → 进不了备份"的旧状态，而且没有
+   * 任何运行时信号（review Minor 2026-08-29）。由面板注入，弹窗保持无状态。
+   */
+  persistUpload: (file: File, dataUrl: string) => Promise<string | null>;
 }>();
 
 const emit = defineEmits<{
@@ -52,7 +63,8 @@ const emit = defineEmits<{
     backend: ImageBackendType;
     positivePrompt: string;
     negativePrompt: string;
-    reference?: ImageReferenceInput;
+    /** 有序参考图：源图恒为图1，多图后端可在其后追加。 */
+    references?: ImageReferenceInput[];
   }): void;
   (e: 'cancel'): void;
 }>();
@@ -71,7 +83,40 @@ const canUseReference = computed(() =>
 const backendSupportsRefStrength = computed(() =>
   PROVIDER_CAPABILITIES[chosenBackend.value]?.referenceStrength === true,
 );
+/**
+ * 多图后端（豆包）可在源图之外**追加**参考图：源图恒为「图1」，追加的依次为
+ * 图2、图3…… 这样「把图2的服装换到图1的人身上」这类官方用法在迭代流程里直接可用。
+ * 不支持多图的后端不渲染此控件（无死控件）。
+ */
+const backendSupportsMultiRef = computed(() =>
+  PROVIDER_CAPABILITIES[chosenBackend.value]?.multiReference === true,
+);
+const extraReferences = ref<MultiReferenceItem[]>([]);
+/** 体积/数量被拒时的可见说明（弹窗内无 toast 通路，就地显示）。 */
+const overflowNote = ref('');
 watch(canUseReference, (can) => { if (!can) useReference.value = false; });
+watch(backendSupportsMultiRef, (can) => { if (!can) extraReferences.value = []; });
+
+/**
+ * 追加参考图。走共用助手 —— 顺序 await 保证「图N」编号与选择顺序一致
+ *（review Important 2026-08-29：原来的非等待 FileReader 循环会按读取完成
+ * 顺序乱序入列）；并经 `persistUpload` 落库，使其可被备份采集。
+ */
+async function onExtraRefFiles(files: FileList): Promise<void> {
+  const limit = props.maxUploadBytes ?? 10_485_760;
+  extraReferences.value = await appendReferenceFiles(files, {
+    max: SEEDREAM_MAX_REFERENCE_IMAGES - 1, // -1 = 源图恒占图1
+    current: extraReferences.value,
+    validate: (file) => {
+      if (file.size <= limit) return true;
+      overflowNote.value = t('image.regenerate.extraTooLarge', { limit: (limit / 1048576).toFixed(0) });
+      return false;
+    },
+    persist: props.persistUpload,
+    makeId: () => `extra_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    onOverflow: () => { overflowNote.value = t('image.multiRef.tooMany', { max: SEEDREAM_MAX_REFERENCE_IMAGES - 1 }); },
+  });
+}
 
 const imageService = inject<{ getAssetCache(): { retrieve(id: string): Promise<{ blob: Blob } | null> } } | null>('imageService', null);
 
@@ -115,11 +160,19 @@ async function confirm() {
       denoiseStrength: referenceDenoise.value,
     };
   }
+  // 源图恒为图1；追加图按选择/排序顺序接在后面。
+  const references = reference
+    ? [reference, ...(backendSupportsMultiRef.value
+        ? extraReferences.value.map((it) => (it.assetId
+            ? { id: it.id, role: 'source' as const, source: 'asset' as const, assetId: it.assetId, denoiseStrength: referenceDenoise.value }
+            : { id: it.id, role: 'source' as const, source: 'data_url' as const, dataUrl: it.dataUrl, denoiseStrength: referenceDenoise.value }))
+        : [])]
+    : undefined;
   emit('confirm', {
     backend: chosenBackend.value,
     positivePrompt: editedPositive.value,
     negativePrompt: editedNegative.value,
-    reference,
+    references,
   });
 }
 function cancel() {
@@ -210,6 +263,14 @@ onUnmounted(() => { document.removeEventListener('keydown', onKeydown); });
               <p v-else class="regen-hint" data-testid="regen-ref-strength-unsupported">
                 {{ $t('image.regenerate.strengthUnsupported') }}
               </p>
+              <p v-if="overflowNote" class="regen-hint" data-testid="regen-multi-ref-note">{{ overflowNote }}</p>
+              <MultiReferencePicker
+                v-if="backendSupportsMultiRef"
+                v-model="extraReferences"
+                :max="SEEDREAM_MAX_REFERENCE_IMAGES - 1"
+                testid="regen-multi-ref"
+                @add-files="onExtraRefFiles"
+              />
               <p v-if="blobCheckFailed" class="regen-hint regen-hint--error">
                 {{ $t('image.regenerate.cacheMissing') }}
               </p>

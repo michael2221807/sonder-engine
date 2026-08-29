@@ -132,6 +132,19 @@ export interface ImageTask {
     civitai?: CivitaiLoraSnapshot;
     reference?: {
       mode: 'image_to_image';
+      /**
+       * 参考图 asset id **有序**列表（多图参考重绘 epic S2，2026-08-29）。
+       * 顺序必须与发给 provider 的 `image` 数组同序——提示词里的「图1/图2」
+       * 按此下标指代，错序会让历史任务复现时语义漂移。
+       *
+       * 长度与 `image` 数组一致：**未持久化的参考图（仅 dataUrl）记空串占位**，
+       * 以保证 `sourceAssetIds[i]` 恒对应「图 i+1」。消费方需自行跳过空串。
+       *
+       * 旧存档的单值 `sourceAssetId` 由 save-migration 迁成单元素数组；
+       * `sourceAssetId` 仅为读取旧数据保留，新写入一律只写 `sourceAssetIds`。
+       */
+      sourceAssetIds?: string[];
+      /** @deprecated 旧单图字段，读旧存档用；写入请用 {@link sourceAssetIds} */
       sourceAssetId?: string;
       denoiseStrength?: number;
       provider: ImageBackendType;

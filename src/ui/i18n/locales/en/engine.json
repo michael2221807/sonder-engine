@@ -21,6 +21,8 @@
       "storageNotPersisted": "Browser did not grant persistent storage; saves may be cleared automatically when space runs low — please back up to the cloud soon",
       "storagePressure": "Local storage is at {usedMB}MB / {quotaMB}MB (>85%). When space runs low the browser may auto-clear saves and images — please back up to the cloud soon",
       "storageQuotaExceeded": "Browser storage is full and a write failed! Saves and images may be evicted at any time — back up to the cloud / export now",
+      "imageTasksEvicted": "Image history exceeded its cap; the oldest entries were removed along with any reference images nothing else uses",
+      "referenceLibraryLarge": "This backup carries about {mb}MB of reference material — uploads/downloads will be slower (images ship in 20MB chunks, so it will not fail). Untick “include reference material” if you do not need it.",
       "imageAssetsMissingOnExport": "This backup is missing {missing}/{total} referenced image(s) not found in the local cache (possibly cleared by the browser). Do NOT overwrite an image-bearing cloud/older backup with it",
       "importPreservedImages": "The imported backup references images but contains no image data; kept your existing local images to prevent loss",
       "imageRestoreFailed": "The save was restored, but writing images to local storage failed (storage may be full); some images may be missing",

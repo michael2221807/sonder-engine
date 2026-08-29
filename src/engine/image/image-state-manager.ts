@@ -299,6 +299,35 @@ export class ImageStateManager {
     eventBus.emit('engine:request-save');
   }
 
+  private static readonly TASKS_PATH = '系统.扩展.image.tasks';
+
+  /**
+   * 该图片资产是否仍被某个生图任务的参考图归档引用。
+   *
+   * **删素材库条目前必须问一次**（CRITICAL 修复 2026-08-29）：条目删除会连带删掉
+   * 图片本体，而任务归档里的 `sourceAssetIds` 不会跟着消失 →
+   * 备份采集器（backup-service `collectAssetIdsFromTree`，2026-08-29 起会遍历任务
+   * 参考图）继续把它算作"被引用"，导出时却拿不出来 → `referencedAssets >
+   * exportedAssets` → GitHub 云同步的退化守卫**永久硬阻断上传**，而它给用户的
+   * 提示是"下载找回图片"，对"被主动删掉"这种情形完全无效。
+   *
+   * 所以：条目可以删（那只是用户的素材清单），图片本体只要还被任何任务引用就必须留。
+   */
+  isAssetReferencedByTasks(assetId: string): boolean {
+    if (!assetId) return false;
+    const raw = this.stateManager.get<unknown>(ImageStateManager.TASKS_PATH);
+    if (!Array.isArray(raw)) return false;
+    return raw.some((task) => {
+      if (!task || typeof task !== 'object') return false;
+      const meta = (task as Record<string, unknown>).providerMeta as Record<string, unknown> | undefined;
+      const ref = meta?.reference as Record<string, unknown> | undefined;
+      if (!ref) return false;
+      const list = ref.sourceAssetIds;
+      if (Array.isArray(list) && list.includes(assetId)) return true;
+      return ref.sourceAssetId === assetId;   // 未迁移的旧任务
+    });
+  }
+
   updateReferenceLastUsed(id: string): void {
     const lib = this.getReferenceLibrary();
     if (!lib.some((e) => e.id === id)) return;

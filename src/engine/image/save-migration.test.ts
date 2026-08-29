@@ -338,6 +338,72 @@ describe('migrateImageState', () => {
     expect(sm.get('系统.扩展.image.config.understanding.maxNewTokensBumped')).toBe(true);
   });
 
+  // ── 多图参考重绘 epic S2（2026-08-29）：历史任务归档单值 → 有序数组 ──
+
+  describe('task reference sourceAssetId → sourceAssetIds[]', () => {
+    function seedWithTasks(tasks: unknown[]): void {
+      sm.set('系统.扩展.image', {
+        enabled: true,
+        config: {
+          civitai: { scheduler: 'Euler', loras: [] },
+          reference: { enabled: true },
+          understanding: { defaultEngine: 'civitai_vlm', maxNewTokensBumped: true },
+        },
+        referenceLibrary: [],
+        tasks,
+      }, 'system');
+      sm.set.mockClear();
+    }
+    const run = () => migrateImageState(sm as unknown as import('../core/state-manager').StateManager);
+    const refOf = (i: number) => sm.get(`系统.扩展.image.tasks.${i}.providerMeta.reference`) as Record<string, unknown>;
+
+    it('旧单值迁成单元素数组，且旧字段保留（双向兼容）', () => {
+      seedWithTasks([{
+        id: 't1',
+        providerMeta: { reference: { mode: 'image_to_image', sourceAssetId: 'asset_a', denoiseStrength: 0.6, provider: 'novelai' } },
+      }]);
+      expect(run()).toBe(true);
+      expect(refOf(0).sourceAssetIds).toEqual(['asset_a']);
+      expect(refOf(0).sourceAssetId).toBe('asset_a');   // 老版本读同一存档仍取得到
+      expect(refOf(0).denoiseStrength).toBe(0.6);       // 其余字段不动
+    });
+
+    it('幂等：已是数组的不动，二次运行不改数据', () => {
+      seedWithTasks([{
+        id: 't1',
+        providerMeta: { reference: { mode: 'image_to_image', sourceAssetIds: ['a', 'b', 'c'], provider: 'volcengine' } },
+      }]);
+      expect(run()).toBe(false);
+      expect(refOf(0).sourceAssetIds).toEqual(['a', 'b', 'c']);
+    });
+
+    it('多个任务混合：只迁需要迁的那些', () => {
+      seedWithTasks([
+        { id: 'old', providerMeta: { reference: { mode: 'image_to_image', sourceAssetId: 'x', provider: 'civitai' } } },
+        { id: 'new', providerMeta: { reference: { mode: 'image_to_image', sourceAssetIds: ['y', 'z'], provider: 'volcengine' } } },
+        { id: 'noref', providerMeta: { civitai: { loras: [] } } },
+        { id: 'nometa' },
+      ]);
+      expect(run()).toBe(true);
+      expect(refOf(0).sourceAssetIds).toEqual(['x']);
+      expect(refOf(1).sourceAssetIds).toEqual(['y', 'z']);
+    });
+
+    it('脏数据不炸：空串 / 非字符串 / null 任务一律跳过', () => {
+      seedWithTasks([
+        null,
+        { id: 'empty', providerMeta: { reference: { mode: 'image_to_image', sourceAssetId: '', provider: 'civitai' } } },
+        { id: 'wrongtype', providerMeta: { reference: { mode: 'image_to_image', sourceAssetId: 42, provider: 'civitai' } } },
+      ]);
+      expect(run()).toBe(false);
+    });
+
+    it('没有 tasks 数组时不做任何事', () => {
+      seedWithTasks([]);
+      expect(run()).toBe(false);
+    });
+  });
+
   it('full init includes understanding defaults', () => {
     migrateImageState(sm as unknown as import('../core/state-manager').StateManager);
     const u = sm.get('系统.扩展.image.config.understanding') as Record<string, unknown> | undefined;

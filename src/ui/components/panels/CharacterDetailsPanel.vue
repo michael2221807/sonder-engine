@@ -37,6 +37,9 @@ import type { ImageBackendType, CivitaiLoraSnapshot, SecretPartType } from '@/en
 import { buildPromptStyleInjection, type PromptStylePresetLike } from '@/engine/image/style-preset-injection';
 import { resolveStyleParams } from '@/engine/image/style-param-resolver';
 import { PROVIDER_CAPABILITIES } from '@/engine/image/provider-capabilities';
+import { SEEDREAM_MAX_REFERENCE_IMAGES } from '@/engine/image/providers/volcengine';
+import MultiReferencePicker, { type MultiReferenceItem } from '@/ui/components/shared/MultiReferencePicker.vue';
+import { appendReferenceFiles, readFileAsDataUrl } from '@/ui/components/shared/multi-reference-files';
 import type { ArtistPreset } from '@/engine/image/types';
 import { generateReferenceId } from '@/engine/image/utils';
 
@@ -187,6 +190,84 @@ const playerGenerating = ref(false);
 const playerGenError = ref('');
 
 const playerRefEnabled = ref(false);
+/** 多图参考（仅豆包等声明 multiReference 的后端渲染；PO 决策① 2026-08-29）。 */
+const playerMultiRefItems = ref<MultiReferenceItem[]>([]);
+const playerBackendSupportsMultiRef = computed(() =>
+  PROVIDER_CAPABILITIES[playerDefaultBackend.value]?.multiReference === true,
+);
+/** 体积校验：与同文件的单图路径 onPlayerRefFileChange 用同一条规则。 */
+function validatePlayerRefSize(file: File): boolean {
+  if (file.size <= playerRefConfigMaxBytes.value) return true;
+  const limitMB = (playerRefConfigMaxBytes.value / 1048576).toFixed(0);
+  eventBus.emit('ui:toast', { type: 'error', message: t('character.toast.fileSizeLimit', { limit: limitMB }), duration: 3000 });
+  return false;
+}
+
+/** 落资产库 + 进参考素材库；`persistUploadedReferences` 关掉时返回 null（沿用单图路径的语义）。 */
+async function persistPlayerRef(file: File): Promise<string | null> {
+  if (!imageService || !playerRefConfigPersist.value) return null;
+  const aid = `ref_upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  try {
+    await imageService.getAssetCache().store({
+      id: aid, taskId: '', storageKey: aid,
+      mimeType: file.type || 'image/png', width: 0, height: 0,
+      sizeBytes: file.size, backend: 'civitai', createdAt: Date.now(), origin: 'upload',
+    }, file);
+    imageService.state.addReferenceEntry({
+      id: generateReferenceId(), assetId: aid,
+      name: file.name.replace(/\.\w+$/, ''),
+      mimeType: file.type || 'image/png', width: 0, height: 0,
+      sizeBytes: file.size, source: 'upload', createdAt: Date.now(),
+    });
+    return aid;
+  } catch { return null; }
+}
+
+async function onPlayerMultiRefFiles(files: FileList): Promise<void> {
+  playerMultiRefItems.value = await appendReferenceFiles(files, {
+    max: SEEDREAM_MAX_REFERENCE_IMAGES,
+    current: playerMultiRefItems.value,
+    validate: validatePlayerRefSize,
+    persist: (file) => persistPlayerRef(file),
+    makeId: () => `pmr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    onOverflow: () => eventBus.emit('ui:toast', {
+      type: 'warning',
+      message: t('image.multiRef.tooMany', { max: SEEDREAM_MAX_REFERENCE_IMAGES }),
+      duration: 3000,
+    }),
+  });
+}
+
+/** 快捷来源：恢复切到多图后端后丢失的「用头像 / 用立绘」（review Minor 修复）。 */
+const playerQuickSources = computed(() => {
+  const archive = get('角色.图片档案') as Record<string, unknown> | undefined;
+  const out: Array<{ key: string; label: string }> = [];
+  if (String(archive?.['已选头像图片ID'] ?? '')) out.push({ key: 'avatar', label: t('character.image.reference.sourceAvatar') });
+  if (String(archive?.['已选立绘图片ID'] ?? '')) out.push({ key: 'portrait', label: t('character.image.reference.sourcePortrait') });
+  return out;
+});
+
+async function onPlayerQuickSource(key: string): Promise<void> {
+  const archive = get('角色.图片档案') as Record<string, unknown> | undefined;
+  const assetId = String((key === 'avatar' ? archive?.['已选头像图片ID'] : archive?.['已选立绘图片ID']) ?? '');
+  if (!assetId || !imageService) return;
+  if (playerMultiRefItems.value.length >= SEEDREAM_MAX_REFERENCE_IMAGES) return;
+  if (playerMultiRefItems.value.some((it) => it.assetId === assetId)) return;
+  try {
+    const entry = await imageService.getAssetCache().retrieve(assetId);
+    if (!entry) return;
+    const label = key === 'avatar'
+      ? t('character.image.reference.sourceAvatar')
+      : t('character.image.reference.sourcePortrait');
+    const dataUrl = await readFileAsDataUrl(new File([entry.blob], label, { type: entry.metadata.mimeType }));
+    playerMultiRefItems.value = [...playerMultiRefItems.value, {
+      id: `pmr_${Date.now()}`, dataUrl, assetId, label,
+    }];
+  } catch (err) {
+    console.warn('[CharacterDetailsPanel] 快捷来源加入多图参考失败:', err);
+  }
+}
+
 const playerRefSource = ref('upload');
 const playerRefDenoise = ref(0.65);
 const playerRefFile = ref<File | null>(null);
@@ -429,10 +510,21 @@ async function generatePlayerImage() {
     const playerStyleApplicability = playerPngObj ? resolveStyleParams(playerPngObj, defaultBackend, configuredModelFor(defaultBackend)) : null;
 
     // Build reference if enabled
+    let playerReferences: import('@/engine/image/types').ImageReferenceInput[] | undefined;
     let playerReference: import('@/engine/image/types').ImageReferenceInput | undefined;
     if (playerRefEnabled.value && PROVIDER_CAPABILITIES[defaultBackend]?.imageToImage) {
       const refId = `ref_player_${Date.now()}`;
-      if (playerRefSource.value === 'upload' && (playerRefAssetId.value || playerRefDataUrl.value)) {
+      if (PROVIDER_CAPABILITIES[defaultBackend]?.multiReference) {
+        // 多图后端：**独立分支**——列表为空也不许回落到单图逻辑。
+        // 单图控件此时根本没渲染，playerRefSource 可能还留着上一个后端选的
+        // 'avatar'，回落会把用户看不见的旧选择当成参考图发出去
+        //（review Important 2026-08-29）。
+        if (playerMultiRefItems.value.length > 0) {
+          playerReferences = playerMultiRefItems.value.map((it) => (it.assetId
+            ? { id: `${refId}_${it.id}`, role: 'source' as const, source: 'asset' as const, assetId: it.assetId, denoiseStrength: playerRefDenoise.value }
+            : { id: `${refId}_${it.id}`, role: 'source' as const, source: 'data_url' as const, dataUrl: it.dataUrl, denoiseStrength: playerRefDenoise.value }));
+        }
+      } else if (playerRefSource.value === 'upload' && (playerRefAssetId.value || playerRefDataUrl.value)) {
         playerReference = playerRefAssetId.value
           ? { id: refId, role: 'source', source: 'asset', assetId: playerRefAssetId.value, denoiseStrength: playerRefDenoise.value }
           : { id: refId, role: 'source', source: 'data_url', dataUrl: playerRefDataUrl.value!, denoiseStrength: playerRefDenoise.value };
@@ -460,7 +552,7 @@ async function generatePlayerImage() {
       extraNegative: styleInjection.extraNegative,
       npcDataJson: JSON.stringify(npcData, null, 2),
       preset: w && h ? { id: 'custom', name: '自定义', positivePrefix: '', positiveSuffix: '', negative: '', width: w, height: h, source: 'manual' } : undefined,
-      reference: playerReference,
+      references: playerReferences ?? (playerReference ? [playerReference] : undefined),
       styleParamOverrides: playerStyleApplicability?.applied,
     });
 
@@ -575,7 +667,7 @@ function cancelPlayerRegenerate() {
   playerRegenPayload.value = null;
 }
 
-async function confirmPlayerRegenerate(opts: { backend: ImageBackendType; positivePrompt: string; negativePrompt: string; reference?: import('@/engine/image/types').ImageReferenceInput }) {
+async function confirmPlayerRegenerate(opts: { backend: ImageBackendType; positivePrompt: string; negativePrompt: string; references?: import('@/engine/image/types').ImageReferenceInput[] }) {
   if (!imageService || !playerRegenPayload.value || playerRegenBusy.value) return;
   const p = playerRegenPayload.value;
   playerRegenBusy.value = true;
@@ -590,7 +682,7 @@ async function confirmPlayerRegenerate(opts: { backend: ImageBackendType; positi
       height: p.height,
       backend: opts.backend,
       artStyle: p.artStyle,
-      reference: opts.reference,
+      references: opts.references,
     });
     if (task.status === 'failed') {
       eventBus.emit('ui:toast', { type: 'error', message: t('character.toast.regenFailed', { error: task.error ?? '' }), duration: 2500 });
@@ -1307,7 +1399,7 @@ async function generatePlayerSecretPartWithReference(partKey: 'breast' | 'vagina
       artistPrefix: styleInjection.artistPrefix,
       extraNegative: styleInjection.extraNegative,
       extraPrompt: playerSecretExtraPrompt.value || undefined,
-      reference: secretRef,
+      references: [secretRef],
       anchorPositive: anchor?.enabled !== false ? String(anchor?.positivePrompt ?? '') || undefined : undefined,
       anchorNegative: anchor?.enabled !== false ? String(anchor?.negativePrompt ?? '') || undefined : undefined,
     });
@@ -2064,21 +2156,33 @@ const avatarInitial = computed<string>(() => {
                 <AgaToggle v-model="playerRefEnabled" />
               </div>
               <div v-if="playerRefEnabled" style="display:flex;flex-direction:column;gap:6px;padding-left:12px;border-left:2px solid rgba(163,190,140,0.3);margin-top:6px;">
-                <label class="pi-label">{{ $t('character.image.reference.source') }}</label>
-                <AgaSelect
-                  :options="[
-                    { label: $t('character.image.reference.sourceUpload'), value: 'upload' },
-                    { label: $t('character.image.reference.sourceAvatar'), value: 'avatar' },
-                    { label: $t('character.image.reference.sourcePortrait'), value: 'portrait' },
-                  ]"
-                  v-model="playerRefSource"
+                <!-- 多图后端（豆包）走多图选择器；其余后端保持单张控件（无死控件） -->
+                <MultiReferencePicker
+                  v-if="playerBackendSupportsMultiRef"
+                  v-model="playerMultiRefItems"
+                  :max="SEEDREAM_MAX_REFERENCE_IMAGES"
+                  :quick-sources="playerQuickSources"
+                  testid="player-multi-ref"
+                  @add-files="onPlayerMultiRefFiles"
+                  @add-quick="onPlayerQuickSource"
                 />
-                <div v-if="playerRefSource === 'upload'" style="margin-top:4px;">
-                  <label style="display:inline-block;padding:4px 12px;font-size:0.8rem;border:1px dashed var(--color-border);border-radius:6px;color:var(--color-text-secondary);cursor:pointer;">
-                    {{ playerRefFile ? playerRefFile.name : $t('character.image.reference.selectFile') }}
-                    <input type="file" accept="image/*" style="display:none" @change="onPlayerRefFileChange" />
-                  </label>
-                </div>
+                <template v-else>
+                  <label class="pi-label">{{ $t('character.image.reference.source') }}</label>
+                  <AgaSelect
+                    :options="[
+                      { label: $t('character.image.reference.sourceUpload'), value: 'upload' },
+                      { label: $t('character.image.reference.sourceAvatar'), value: 'avatar' },
+                      { label: $t('character.image.reference.sourcePortrait'), value: 'portrait' },
+                    ]"
+                    v-model="playerRefSource"
+                  />
+                  <div v-if="playerRefSource === 'upload'" style="margin-top:4px;">
+                    <label style="display:inline-block;padding:4px 12px;font-size:0.8rem;border:1px dashed var(--color-border);border-radius:6px;color:var(--color-text-secondary);cursor:pointer;">
+                      {{ playerRefFile ? playerRefFile.name : $t('character.image.reference.selectFile') }}
+                      <input type="file" accept="image/*" style="display:none" @change="onPlayerRefFileChange" />
+                    </label>
+                  </div>
+                </template>
                 <template v-if="PROVIDER_CAPABILITIES[playerDefaultBackend]?.referenceStrength">
                   <label class="pi-label" style="margin-top:4px;">{{ $t('character.image.reference.denoise') }}</label>
                   <div style="display:flex;align-items:center;gap:8px;">
@@ -2349,6 +2453,8 @@ const avatarInitial = computed<string>(() => {
       :busy="playerRegenBusy"
       :civitai-lora-snapshot="playerRegenPayload.civitaiLoraSnapshot"
       :source-asset-id="playerRegenPayload.sourceAssetId"
+      :max-upload-bytes="playerRefConfigMaxBytes"
+      :persist-upload="(f) => persistPlayerRef(f)"
       :default-denoise-strength="Number(get('系统.扩展.image.config.reference.defaultDenoiseStrength') ?? 0.65)"
       :pre-activate-reference="playerRegenPayload.preActivateReference"
       @confirm="confirmPlayerRegenerate"

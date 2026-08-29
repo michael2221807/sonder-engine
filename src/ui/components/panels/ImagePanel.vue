@@ -6,7 +6,7 @@
  * This is a simplified first-pass that provides actual usable controls.
  * Full ImageManagerModal (7-tab system) will be built on top of this foundation.
  */
-import { ref, computed, inject, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, inject, onMounted, onUnmounted, watch, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import type { ImageService } from '@/engine/image/image-service';
@@ -28,6 +28,9 @@ import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import AgaTabBar, { type TabItem } from '@/ui/components/shared/AgaTabBar.vue';
 import AgaProgressBar from '@/ui/components/shared/AgaProgressBar.vue';
 import AgaConfirmModal from '@/ui/components/shared/AgaConfirmModal.vue';
+import MultiReferencePicker, { type MultiReferenceItem } from '@/ui/components/shared/MultiReferencePicker.vue';
+import { appendReferenceFiles, readFileAsDataUrl } from '@/ui/components/shared/multi-reference-files';
+import { SEEDREAM_MAX_REFERENCE_IMAGES } from '@/engine/image/providers/volcengine';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import { useGameState } from '@/ui/composables/useGameState';
 import { useBackdropClose } from '@/ui/composables/useBackdropClose';
@@ -115,12 +118,29 @@ const backendSupportsImg2Img = computed(() =>
 const backendSupportsRefStrength = computed(() =>
   PROVIDER_CAPABILITIES[backend.value]?.referenceStrength === true,
 );
+/**
+ * 多图参考（PO 决策① 2026-08-29）：只有声明 `multiReference` 的后端（当前仅
+ * 豆包 Seedream）渲染多图选择器；其余后端保持原有单张控件，绝不出现「选了 5 张
+ * 只有 1 张生效」的死控件。
+ */
+const backendSupportsMultiRef = computed(() =>
+  PROVIDER_CAPABILITIES[backend.value]?.multiReference === true,
+);
 const npcReferenceEnabled = ref(false);
+const npcReferenceItems = ref<MultiReferenceItem[]>([]);
 const npcReferenceSource = ref('upload');
 const npcReferenceDenoise = ref(0.65);
 const npcReferenceFile = ref<File | null>(null);
 const npcReferenceDataUrl = ref<string | null>(null);
 const npcReferenceAssetId = ref<string | null>(null);
+// 换 NPC 必须清空参考图：留着上一个角色的图会被当成这个角色的参考发出去。
+// 单图时代就存在，多图把影响面从「1 张」放大到「14 张」（review Minor 2026-08-29）。
+watch(selectedNpc, () => {
+  npcReferenceItems.value = [];
+  npcReferenceFile.value = null;
+  npcReferenceDataUrl.value = null;
+  npcReferenceAssetId.value = null;
+});
 const npcReferenceNoise = ref(0.1);
 const refConfigDenoiseDefault = computed(() =>
   (get('系统.扩展.image.config.reference.defaultDenoiseStrength') as number | undefined) ?? 0.65,
@@ -176,6 +196,85 @@ async function persistUploadedReference(file: File, _dataUrl: string): Promise<s
     console.warn('[ImagePanel] Failed to persist uploaded reference:', err);
     return null;
   }
+}
+
+/**
+ * 多图选择器的追加入口。读取/校验/持久化/溢出提示全部走共用助手
+ * `appendReferenceFiles`（顺序 await，保证「图N」编号与选择顺序一致）。
+ */
+async function addMultiRefFiles(
+  target: Ref<MultiReferenceItem[]>,
+  files: FileList,
+): Promise<void> {
+  target.value = await appendReferenceFiles(files, {
+    max: SEEDREAM_MAX_REFERENCE_IMAGES,
+    current: target.value,
+    validate: validateUploadSize,
+    persist: persistUploadedReference,
+    makeId: generateReferenceId,
+    onOverflow: () => eventBus.emit('ui:toast', {
+      type: 'warning',
+      message: t('image.multiRef.tooMany', { max: SEEDREAM_MAX_REFERENCE_IMAGES }),
+      duration: 3000,
+    }),
+  });
+}
+
+/** 把一张已有资产追加进多图列表（快捷来源：头像 / 壁纸等；重复不加）。 */
+async function addAssetToMultiRef(
+  target: Ref<MultiReferenceItem[]>,
+  assetId: string,
+  label: string,
+): Promise<void> {
+  if (!assetId || !imageService) return;
+  if (target.value.length >= SEEDREAM_MAX_REFERENCE_IMAGES) return;
+  if (target.value.some((it) => it.assetId === assetId)) return;
+  try {
+    const entry = await imageService.getAssetCache().retrieve(assetId);
+    if (!entry) return;
+    const dataUrl = await readFileAsDataUrl(new File([entry.blob], label, { type: entry.metadata.mimeType }));
+    target.value = [...target.value, { id: generateReferenceId(), dataUrl, assetId, label }];
+  } catch (err) {
+    console.warn('[ImagePanel] 快捷来源加入多图参考失败:', err);
+  }
+}
+
+function onNpcMultiRefFiles(files: FileList): void {
+  void addMultiRefFiles(npcReferenceItems, files);
+}
+function onSceneMultiRefFiles(files: FileList): void {
+  void addMultiRefFiles(sceneReferenceItems, files);
+}
+// 模板里 ref 会被解包成数组，拿不到 ref 本体 → 各配一个薄 handler
+function onNpcQuickSource(): void {
+  void addAssetToMultiRef(npcReferenceItems, npcAvatarAssetId.value, t('image.manual.refAvatar'));
+}
+function onSceneQuickSource(): void {
+  void addAssetToMultiRef(sceneReferenceItems, sceneWallpaperAssetId.value, t('image.scene.refWallpaper'));
+}
+
+/** 当前 NPC 已选头像/立绘的资产 id（多图选择器的快捷来源按钮据此显隐）。 */
+const npcAvatarAssetId = computed(() => {
+  const archive = selectedNpcData.value?.['图片档案'] as Record<string, unknown> | undefined;
+  return String(archive?.['已选头像图片ID'] ?? archive?.['已选立绘图片ID'] ?? '') || '';
+});
+const npcQuickSources = computed(() => (npcAvatarAssetId.value
+  ? [{ key: 'avatar', label: t('image.manual.refAvatar') }]
+  : []));
+const sceneWallpaperAssetId = computed(() =>
+  String(get('系统.扩展.image.sceneArchive.当前壁纸图片ID') ?? '') || '');
+const sceneQuickSources = computed(() => (sceneWallpaperAssetId.value
+  ? [{ key: 'wallpaper', label: t('image.scene.refWallpaper') }]
+  : []));
+
+/** 多图选择器 → 引擎入参。顺序原样保留（= 提示词里的「图N」）。 */
+function multiRefToInputs(
+  items: MultiReferenceItem[],
+  denoise: number,
+): import('@/engine/image/types').ImageReferenceInput[] {
+  return items.map((it) => (it.assetId
+    ? { id: generateReferenceId(), role: 'source' as const, source: 'asset' as const, assetId: it.assetId, denoiseStrength: denoise }
+    : { id: generateReferenceId(), role: 'source' as const, source: 'data_url' as const, dataUrl: it.dataUrl, denoiseStrength: denoise }));
 }
 
 async function onNpcReferenceFileChange(e: Event) {
@@ -579,22 +678,28 @@ async function submitGenerate() {
     const bodyText = String(npc?.['身材描写'] ?? npc?.['身材'] ?? '');
     const outfitText = String(npc?.['衣着风格'] ?? npc?.['衣着'] ?? '');
 
-    let reference: import('@/engine/image/types').ImageReferenceInput | undefined;
+    let references: import('@/engine/image/types').ImageReferenceInput[] | undefined;
     if (npcReferenceEnabled.value && backendSupportsImg2Img.value) {
-      if (npcReferenceSource.value === 'upload' && (npcReferenceAssetId.value || npcReferenceDataUrl.value)) {
-        reference = npcReferenceAssetId.value
+      if (backendSupportsMultiRef.value) {
+        // 多图后端（豆包）：整个列表按序下发，「图N」= 列表里的第 N 张。
+        if (npcReferenceItems.value.length > 0) {
+          references = multiRefToInputs(npcReferenceItems.value, npcReferenceDenoise.value);
+        }
+      } else if (npcReferenceSource.value === 'upload' && (npcReferenceAssetId.value || npcReferenceDataUrl.value)) {
+        references = [npcReferenceAssetId.value
           ? { id: generateReferenceId(), role: 'source', source: 'asset', assetId: npcReferenceAssetId.value, denoiseStrength: npcReferenceDenoise.value }
-          : { id: generateReferenceId(), role: 'source', source: 'data_url', dataUrl: npcReferenceDataUrl.value!, denoiseStrength: npcReferenceDenoise.value };
+          : { id: generateReferenceId(), role: 'source', source: 'data_url', dataUrl: npcReferenceDataUrl.value!, denoiseStrength: npcReferenceDenoise.value }];
       } else if (npcReferenceSource.value === 'avatar') {
         const archive = selectedNpcData.value?.['图片档案'] as Record<string, unknown> | undefined;
         const avatarId = String(archive?.['已选头像图片ID'] ?? archive?.['已选立绘图片ID'] ?? '');
-        if (avatarId) reference = { id: `ref_npc_${Date.now()}`, role: 'source', source: 'asset', assetId: avatarId, denoiseStrength: npcReferenceDenoise.value };
+        if (avatarId) references = [{ id: `ref_npc_${Date.now()}`, role: 'source', source: 'asset', assetId: avatarId, denoiseStrength: npcReferenceDenoise.value }];
       }
-      if (!reference) {
+      if (!references?.length) {
         eventBus.emit('ui:toast', { type: 'warning', message: t('image.manual.refWarning'), duration: 3000 });
       }
-      if (reference && backend.value === 'novelai') {
-        reference.providerMeta = { noise: npcReferenceNoise.value };
+      // NovelAI 的 noise 是单图专属参数；多图后端（豆包）没有它，不需要分发。
+      if (references?.length && backend.value === 'novelai') {
+        references[0].providerMeta = { noise: npcReferenceNoise.value };
       }
     }
 
@@ -619,7 +724,7 @@ async function submitGenerate() {
       extraNegative: styleInjection.extraNegative,
       npcDataJson: JSON.stringify(npcBaseData, null, 2),
       useTransformer: get('系统.扩展.image.config.useTransformer') !== false,
-      reference,
+      references,
       styleParamOverrides: styleApplicability?.applied,
     });
     lastTask.value = task;
@@ -861,7 +966,7 @@ async function generateSecretPartWithReference(partKey: 'breast' | 'vagina' | 'a
       artistPrefix: styleInjection.artistPrefix,
       extraNegative: styleInjection.extraNegative,
       extraPrompt: secretExtraPrompt.value || undefined,
-      reference: secretRef,
+      references: [secretRef],
     });
     lastTask.value = task;
     secretStatusText.value = task.status === 'failed'
@@ -926,7 +1031,7 @@ function cancelRegenerate() {
   regenPayload.value = null;
 }
 
-async function confirmRegenerate(opts: { backend: ImageBackendType; positivePrompt: string; negativePrompt: string; reference?: import('@/engine/image/types').ImageReferenceInput }) {
+async function confirmRegenerate(opts: { backend: ImageBackendType; positivePrompt: string; negativePrompt: string; references?: import('@/engine/image/types').ImageReferenceInput[] }) {
   if (!imageService || !regenPayload.value || regenBusy.value) return;
   const p = regenPayload.value;
   regenBusy.value = true;
@@ -942,7 +1047,7 @@ async function confirmRegenerate(opts: { backend: ImageBackendType; positiveProm
       height: p.height,
       backend: opts.backend,
       artStyle: p.artStyle,
-      reference: opts.reference,
+      references: opts.references,
     });
     if (task.status === 'failed') {
       eventBus.emit('ui:toast', { type: 'error', message: t('image.regenerate.failed', { error: task.error ?? t('common.fallback.unknownError') }), duration: 2500 });
@@ -1237,6 +1342,7 @@ const sceneGenerating = ref(false);
 const sceneError = ref('');
 const sceneStatusText = ref('');
 const sceneReferenceEnabled = ref(false);
+const sceneReferenceItems = ref<MultiReferenceItem[]>([]);
 const sceneReferenceSource = ref('upload');
 const sceneReferenceDenoise = ref(0.55);
 const sceneReferenceNoise = ref(0.1);
@@ -1523,21 +1629,25 @@ async function generateScene() {
       selectedScenePreset.value,
       selectedScenePngPreset.value,
     ]);
-    let sceneRef: import('@/engine/image/types').ImageReferenceInput | undefined;
+    let sceneRefs: import('@/engine/image/types').ImageReferenceInput[] | undefined;
     if (sceneReferenceEnabled.value && backendSupportsImg2Img.value) {
-      if (sceneReferenceSource.value === 'upload' && (sceneReferenceAssetId.value || sceneReferenceDataUrl.value)) {
-        sceneRef = sceneReferenceAssetId.value
+      if (backendSupportsMultiRef.value) {
+        if (sceneReferenceItems.value.length > 0) {
+          sceneRefs = multiRefToInputs(sceneReferenceItems.value, sceneReferenceDenoise.value);
+        }
+      } else if (sceneReferenceSource.value === 'upload' && (sceneReferenceAssetId.value || sceneReferenceDataUrl.value)) {
+        sceneRefs = [sceneReferenceAssetId.value
           ? { id: generateReferenceId(), role: 'source', source: 'asset', assetId: sceneReferenceAssetId.value, denoiseStrength: sceneReferenceDenoise.value }
-          : { id: generateReferenceId(), role: 'source', source: 'data_url', dataUrl: sceneReferenceDataUrl.value!, denoiseStrength: sceneReferenceDenoise.value };
+          : { id: generateReferenceId(), role: 'source', source: 'data_url', dataUrl: sceneReferenceDataUrl.value!, denoiseStrength: sceneReferenceDenoise.value }];
       } else if (sceneReferenceSource.value === 'wallpaper') {
         const wallId = String(get('系统.扩展.image.sceneArchive.当前壁纸图片ID') ?? '');
-        if (wallId) sceneRef = { id: generateReferenceId(), role: 'source', source: 'asset', assetId: wallId, denoiseStrength: sceneReferenceDenoise.value };
+        if (wallId) sceneRefs = [{ id: generateReferenceId(), role: 'source', source: 'asset', assetId: wallId, denoiseStrength: sceneReferenceDenoise.value }];
       }
-      if (!sceneRef) {
+      if (!sceneRefs?.length) {
         eventBus.emit('ui:toast', { type: 'warning', message: t('image.toast.sceneRefWarning'), duration: 3000 });
       }
-      if (sceneRef && backend.value === 'novelai') {
-        sceneRef.providerMeta = { noise: sceneReferenceNoise.value };
+      if (sceneRefs?.length && backend.value === 'novelai') {
+        sceneRefs[0].providerMeta = { noise: sceneReferenceNoise.value };
       }
     }
     const scenePngPresetObj = selectedScenePngPreset.value ? artistPresets.value.find((p) => p.id === selectedScenePngPreset.value) : undefined;
@@ -1579,7 +1689,7 @@ async function generateScene() {
       artistPrefix: styleInjection.artistPrefix,
       extraNegative: styleInjection.extraNegative,
       preset: { id: 'scene_custom', name: '场景自定义', positivePrefix: '', positiveSuffix: '', negative: '', source: 'manual', width: sceneW, height: sceneH },
-      reference: sceneRef,
+      references: sceneRefs,
       styleParamOverrides: sceneStyleApplicability?.applied,
       presentNpcs: filteredPresentNpcs,
       npcDetails: selectedNpcDetails.length > 0 ? selectedNpcDetails : undefined,
@@ -1994,12 +2104,20 @@ async function deleteReferenceEntry(id: string) {
   const lib = imageService.state.getReferenceLibrary();
   const entry = lib.find((e) => e.id === id);
   imageService.state.removeReferenceEntry(id);
-  if (entry?.assetId) {
+  // 仍被生图任务引用的图片**本体不能删**：任务归档里的 sourceAssetIds 不会跟着
+  // 消失，删了会让备份「引用数 > 导出数」，进而被云同步退化守卫永久硬阻断
+  //（CRITICAL 修复 2026-08-29）。条目本身照删——那只是用户的素材清单。
+  const stillUsed = entry?.assetId ? imageService.state.isAssetReferencedByTasks(entry.assetId) : false;
+  if (entry?.assetId && !stillUsed) {
     try { await imageService.getAssetCache().delete(entry.assetId); } catch { /* best effort */ }
     const { [entry.assetId]: _, ...rest } = refLibThumbnails.value;
     refLibThumbnails.value = rest;
   }
-  eventBus.emit('ui:toast', { type: 'info', message: t('image.toast.deletedReference'), duration: 1500 });
+  eventBus.emit('ui:toast', {
+    type: 'info',
+    message: stillUsed ? t('image.toast.deletedReferenceKept') : t('image.toast.deletedReference'),
+    duration: stillUsed ? 3500 : 1500,
+  });
 }
 
 async function importPng(event: Event) {
@@ -2656,7 +2774,7 @@ interface CombinedHistoryEntry {
   height?: number;
   backend?: ImageBackendType;
   part?: 'breast' | 'vagina' | 'anus';
-  providerMeta?: { civitai?: CivitaiLoraSnapshot; reference?: { mode: string; sourceAssetId?: string; denoiseStrength?: number; provider?: string } };
+  providerMeta?: { civitai?: CivitaiLoraSnapshot; reference?: { mode: string; sourceAssetIds?: string[]; sourceAssetId?: string; denoiseStrength?: number; provider?: string } };
 }
 
 const combinedHistory = computed<CombinedHistoryEntry[]>(() => {
@@ -2874,7 +2992,7 @@ interface GalleryImage {
   height?: number;
   /** Backend that produced the record; initial value when opening the regen modal. */
   backend?: ImageBackendType;
-  providerMeta?: { civitai?: CivitaiLoraSnapshot; reference?: { mode: string; sourceAssetId?: string; denoiseStrength?: number; provider?: string } };
+  providerMeta?: { civitai?: CivitaiLoraSnapshot; reference?: { mode: string; sourceAssetIds?: string[]; sourceAssetId?: string; denoiseStrength?: number; provider?: string } };
 }
 
 // Player archive for Gallery/History integration (__player__ pseudo-NPC)
@@ -3293,20 +3411,32 @@ function clearNpcImages() {
                 <AgaToggle v-model="npcReferenceEnabled" data-testid="ref-redraw-toggle" />
               </div>
               <div v-if="npcReferenceEnabled" class="ref-controls">
-                <label class="form-label">{{ $t('image.manual.refSource') }}</label>
-                <AgaSelect
-                  :options="[
-                    { label: $t('image.manual.refUpload'), value: 'upload' },
-                    { label: $t('image.manual.refAvatar'), value: 'avatar' },
-                  ]"
-                  v-model="npcReferenceSource"
+                <!-- 多图后端（豆包）：整块换成多图选择器；其余后端保持单张控件 -->
+                <MultiReferencePicker
+                  v-if="backendSupportsMultiRef"
+                  v-model="npcReferenceItems"
+                  :max="SEEDREAM_MAX_REFERENCE_IMAGES"
+                  :quick-sources="npcQuickSources"
+                  testid="npc-multi-ref"
+                  @add-files="onNpcMultiRefFiles"
+                  @add-quick="onNpcQuickSource"
                 />
-                <div v-if="npcReferenceSource === 'upload'" style="margin-top: var(--space-xs);">
-                  <label class="ref-upload-btn">
-                    {{ npcReferenceFile ? npcReferenceFile.name : $t('image.manual.refSelectFile') }}
-                    <input type="file" accept="image/*" style="display:none" @change="onNpcReferenceFileChange" />
-                  </label>
-                </div>
+                <template v-else>
+                  <label class="form-label">{{ $t('image.manual.refSource') }}</label>
+                  <AgaSelect
+                    :options="[
+                      { label: $t('image.manual.refUpload'), value: 'upload' },
+                      { label: $t('image.manual.refAvatar'), value: 'avatar' },
+                    ]"
+                    v-model="npcReferenceSource"
+                  />
+                  <div v-if="npcReferenceSource === 'upload'" style="margin-top: var(--space-xs);">
+                    <label class="ref-upload-btn">
+                      {{ npcReferenceFile ? npcReferenceFile.name : $t('image.manual.refSelectFile') }}
+                      <input type="file" accept="image/*" style="display:none" @change="onNpcReferenceFileChange" />
+                    </label>
+                  </div>
+                </template>
                 <template v-if="backendSupportsRefStrength">
                   <label class="form-label" style="margin-top: var(--space-xs);">{{ $t('image.manual.refDenoiseLabel') }}</label>
                   <div style="display:flex;align-items:center;gap:8px;">
@@ -3912,23 +4042,35 @@ function clearNpcImages() {
             <div v-if="backendSupportsImg2Img" class="scene-section">
               <div class="form-section form-section--inline">
                 <label class="form-label">{{ $t('image.scene.refComposition') }}</label>
-                <AgaToggle v-model="sceneReferenceEnabled" />
+                <AgaToggle v-model="sceneReferenceEnabled" data-testid="scene-ref-redraw-toggle" />
               </div>
               <div v-if="sceneReferenceEnabled" class="ref-controls">
-                <label class="form-label">{{ $t('image.scene.refSource') }}</label>
-                <AgaSelect
-                  :options="[
-                    { label: $t('image.scene.refUpload'), value: 'upload' },
-                    { label: $t('image.scene.refWallpaper'), value: 'wallpaper' },
-                  ]"
-                  v-model="sceneReferenceSource"
+                <!-- 多图后端（豆包）走多图选择器；其余后端保持单张控件 -->
+                <MultiReferencePicker
+                  v-if="backendSupportsMultiRef"
+                  v-model="sceneReferenceItems"
+                  :max="SEEDREAM_MAX_REFERENCE_IMAGES"
+                  :quick-sources="sceneQuickSources"
+                  testid="scene-multi-ref"
+                  @add-files="onSceneMultiRefFiles"
+                  @add-quick="onSceneQuickSource"
                 />
-                <div v-if="sceneReferenceSource === 'upload'" style="margin-top:var(--space-xs);">
-                  <label class="ref-upload-btn">
-                    {{ sceneReferenceFile ? sceneReferenceFile.name : $t('image.scene.refSelectFile') }}
-                    <input type="file" accept="image/*" style="display:none" @change="onSceneReferenceFileChange" />
-                  </label>
-                </div>
+                <template v-else>
+                  <label class="form-label">{{ $t('image.scene.refSource') }}</label>
+                  <AgaSelect
+                    :options="[
+                      { label: $t('image.scene.refUpload'), value: 'upload' },
+                      { label: $t('image.scene.refWallpaper'), value: 'wallpaper' },
+                    ]"
+                    v-model="sceneReferenceSource"
+                  />
+                  <div v-if="sceneReferenceSource === 'upload'" style="margin-top:var(--space-xs);">
+                    <label class="ref-upload-btn">
+                      {{ sceneReferenceFile ? sceneReferenceFile.name : $t('image.scene.refSelectFile') }}
+                      <input type="file" accept="image/*" style="display:none" @change="onSceneReferenceFileChange" />
+                    </label>
+                  </div>
+                </template>
                 <template v-if="backendSupportsRefStrength">
                   <label class="form-label" style="margin-top:var(--space-xs);">{{ $t('image.scene.refDenoiseLabel') }}</label>
                   <div style="display:flex;align-items:center;gap:8px;">
@@ -5773,6 +5915,8 @@ function clearNpcImages() {
       :busy="regenBusy"
       :civitai-lora-snapshot="regenPayload.civitaiLoraSnapshot"
       :source-asset-id="regenPayload.sourceAssetId"
+      :max-upload-bytes="refConfigMaxUploadBytes"
+      :persist-upload="persistUploadedReference"
       :default-denoise-strength="refConfigDenoiseDefault"
       :pre-activate-reference="regenPayload.preActivateReference"
       @confirm="confirmRegenerate"

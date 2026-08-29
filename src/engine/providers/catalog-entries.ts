@@ -142,7 +142,11 @@ export function registerBuiltinProviders(catalog: ProviderCatalog): void {
     // model/prompt/image/size/sequential_image_generation/stream/response_format/
     // watermark 等，**没有任何重绘强度参数** → UI 隐藏「重绘幅度」滑块，改由提示词
     // 表达改动幅度（避免死控件）。
-    capabilities: { textToImage: true, imageToImage: true, imageCaptioning: false, imageTagging: false, inpainting: false },
+    // multiReference：三家里唯一支持多参考图的后端（官方 `image` 字段是
+    // anyOf string|array，5.0-lite/4.5/4.0 上限 14 张）。NovelAI / Civitai 的
+    // 图生图都只吃单图，故不声明——查证见
+    // docs/design/seedream-multi-reference-implementation.md §1。
+    capabilities: { textToImage: true, imageToImage: true, imageCaptioning: false, imageTagging: false, inpainting: false, multiReference: true },
     // Medium 套餐唯一图片模型（PO 指定 2026-08-27，真实出图验证）。
     defaultModel: 'doubao-seedream-5.0-lite',
   });

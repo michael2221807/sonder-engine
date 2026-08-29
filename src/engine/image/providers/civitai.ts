@@ -201,15 +201,29 @@ export class CivitaiImageProvider
 
   // ── image-to-image ──
 
+  /**
+   * Civitai 的 SD 系配方只吃**单图**：官方文档原文「`image` is a plain string
+   * URL (not a `{ url: ... }` wrapper)」，整个配方没有数组型图片字段。其
+   * `imageStyleReferences`（≤10 张）属于 MAI / Krea / Grok 等闭源模型的其它
+   * 配方，不在我们这条路线上。故取首张并对多余项告警；UI 侧不声明
+   * `multiReference`（查证见
+   * docs/design/seedream-multi-reference-implementation.md §1）。
+   */
   async imageToImage(
     prompt: string,
     negative: string,
     width: number,
     height: number,
-    reference: ImageReferenceInput,
+    references: ImageReferenceInput[],
     options?: Record<string, unknown>,
   ): Promise<Blob> {
     const body = this.buildTextToImageBody(prompt, negative, width, height, options);
+
+    const reference = references[0];
+    if (!reference) throw new Error('[Civitai] 参考图列表为空');
+    if (references.length > 1) {
+      console.warn(`[Civitai] 收到 ${references.length} 张参考图，SD 配方只支持单图，已取第 1 张`);
+    }
 
     const rawSource = reference.dataUrl ?? reference.url;
     if (!rawSource) {

@@ -404,6 +404,60 @@ describe('collectAssetIdsFromTree', () => {
     expect(ids.has('ref2')).toBe(true);
   });
 
+  // ── 参考重绘用过的图必须随档（PO 2026-08-29「参考图需要入存档」）──
+  // 此前 providerMeta.reference 只写不读：默认不勾「包含参考素材」时恢复即丢图，
+  // 任务归档里的 sourceAssetIds 全变悬空引用。
+
+  it('collects task reference sourceAssetIds — 不受 includeReferenceAssets 门控', () => {
+    const tree = {
+      系统: { 扩展: { image: { tasks: [
+        { id: 't1', providerMeta: { reference: { mode: 'image_to_image', sourceAssetIds: ['r1', 'r2'], provider: 'volcengine' } } },
+      ] } } },
+    } as Record<string, unknown>;
+    for (const flag of [false, true]) {
+      const ids = new Set<string>();
+      collectAssetIdsFromTree(tree, ids, flag);
+      expect(ids.has('r1')).toBe(true);
+      expect(ids.has('r2')).toBe(true);
+    }
+  });
+
+  it('collects the legacy single sourceAssetId too（未迁移的树也要保住图）', () => {
+    const ids = new Set<string>();
+    collectAssetIdsFromTree({
+      系统: { 扩展: { image: { tasks: [
+        { id: 'old', providerMeta: { reference: { mode: 'image_to_image', sourceAssetId: 'legacy1', provider: 'novelai' } } },
+      ] } } },
+    } as Record<string, unknown>, ids);
+    expect(ids.has('legacy1')).toBe(true);
+  });
+
+  it('skips the empty-string placeholders used for unpersisted references', () => {
+    const ids = new Set<string>();
+    collectAssetIdsFromTree({
+      系统: { 扩展: { image: { tasks: [
+        { id: 't', providerMeta: { reference: { mode: 'image_to_image', sourceAssetIds: ['', 'real', ''], provider: 'volcengine' } } },
+      ] } } },
+    } as Record<string, unknown>, ids);
+    expect(ids.has('')).toBe(false);
+    expect(ids.has('real')).toBe(true);
+    expect(ids.size).toBe(1);
+  });
+
+  it('脏数据不炸：null 任务 / 无 providerMeta / reference 非对象', () => {
+    const ids = new Set<string>();
+    expect(() => collectAssetIdsFromTree({
+      系统: { 扩展: { image: { tasks: [
+        null,
+        { id: 'a' },
+        { id: 'b', providerMeta: {} },
+        { id: 'c', providerMeta: { reference: null } },
+        { id: 'd', providerMeta: { reference: { sourceAssetIds: 'not-an-array' } } },
+      ] } } },
+    } as Record<string, unknown>, ids)).not.toThrow();
+    expect(ids.size).toBe(0);
+  });
+
   it('ignores empty assetId in referenceLibrary', () => {
     const ids = new Set<string>();
     collectAssetIdsFromTree({

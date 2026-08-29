@@ -21,7 +21,9 @@ import { ImageProviderRegistry } from './provider-registry';
 import { ImageAssetCache } from './asset-cache';
 import { ImageTaskQueue } from './task-queue';
 import type { ImageTask, ImageAsset, ImageBackendType, ImageSubjectType, CharacterAnchor, StylePreset, CivitaiLoraShelfItem, CivitaiLoraSnapshot, ImageReferenceInput, ImageUnderstandingRequest, ImageUnderstandingResult, SecretPartType } from './types';
-import { supportsImageToImage, supportsImageUnderstanding } from './provider-capabilities';
+import { supportsImageToImage, supportsImageUnderstanding, clampReferencesForBackend } from './provider-capabilities';
+// 「还有谁在引用」与备份采集器同源——见 cleanupEvictedTaskAssets 的注释。
+import { collectAssetIdsFromTree } from '../persistence/backup-service';
 import { describeImageWithGeneralLlm, getGeneralLlmInfo, type GeneralLlmInfo } from './llm-understanding';
 import type { ImageUnderstandingEngine } from './reference-types';
 import { blobToDataUrl } from './utils';
@@ -79,6 +81,7 @@ export class ImageService {
         // Empty payload → the global toast listener ignores it (no status).
         eventBus.emit('image:task-update', {});
       },
+      onEvict: (evicted) => { void this.cleanupEvictedTaskAssets(evicted); },
     });
 
     // Listen for game load events to restore tasks from state tree
@@ -290,7 +293,8 @@ export class ImageService {
     artistPrefix?: string;
     extraNegative?: string;
     backend: ImageBackendType;
-    reference?: ImageReferenceInput;
+    /** 参考图**有序**列表（多图参考重绘 epic S2）。顺序=提示词里的「图N」。 */
+    references?: ImageReferenceInput[];
     styleParamOverrides?: Record<string, unknown>;
   }): Promise<ImageTask> {
     if (!this.enabled) throw new Error('[ImageService] Image generation is disabled');
@@ -366,8 +370,19 @@ export class ImageService {
         loraSnapshot = prep.snapshot;
       }
 
-      const refMeta = params.reference ? {
-        reference: { mode: 'image_to_image' as const, sourceAssetId: params.reference.assetId, denoiseStrength: params.reference.denoiseStrength, provider: params.backend },
+      const refMeta = params.references?.length ? {
+        reference: {
+          mode: 'image_to_image' as const,
+          // 有序：归档的 id 序列必须与发给 provider 的 image 数组同序，否则
+          // 「图1/图2」的语义在复现历史任务时会错位。
+          // 与 image 数组**下标对齐**：未持久化的项（dataUrl-only）记空串占位。
+          // 早先的 .filter() 会把中间项抽掉，让 index 1 实际指向图3——正好违反
+          // 本字段自己声明的顺序契约（review Important 2026-08-29）。
+          sourceAssetIds: params.references.map((r) => r.assetId ?? ''),
+          // 幅度是整单一个值（NovelAI/Civitai 单图；豆包无此参数）→ 取首张。
+          denoiseStrength: params.references[0].denoiseStrength,
+          provider: params.backend,
+        },
       } : {};
       this.queue.updateStatus(task.id, 'generating', {
         positivePrompt: composed.positive,
@@ -376,7 +391,7 @@ export class ImageService {
       });
       eventBus.emit('image:task-update', { taskId: task.id, status: 'generating' });
 
-      const blob = await this.callProvider(params.backend, composed, civitaiProviderParams, params.reference, params.styleParamOverrides);
+      const blob = await this.callProvider(params.backend, composed, civitaiProviderParams, params.references, params.styleParamOverrides);
       const asset = await this.storeAsset(task, blob, params.backend);
 
       this.queue.updateStatus(task.id, 'complete', { resultAssetId: asset.id });
@@ -421,7 +436,8 @@ export class ImageService {
      *  Default: true. Forced true for NovelAI backend.
      *  FRONTEND TODO: Settings tab "使用词组转化器" toggle (Phase 7) */
     useTransformer?: boolean;
-    reference?: ImageReferenceInput;
+    /** 参考图**有序**列表（多图参考重绘 epic S2）。顺序=提示词里的「图N」。 */
+    references?: ImageReferenceInput[];
     styleParamOverrides?: Record<string, unknown>;
   }): Promise<ImageTask> {
     if (!this.enabled) throw new Error('[ImageService] Image generation is disabled');
@@ -525,8 +541,19 @@ export class ImageService {
         loraSnapshot = prep.snapshot;
       }
 
-      const refMeta = params.reference ? {
-        reference: { mode: 'image_to_image' as const, sourceAssetId: params.reference.assetId, denoiseStrength: params.reference.denoiseStrength, provider: params.backend },
+      const refMeta = params.references?.length ? {
+        reference: {
+          mode: 'image_to_image' as const,
+          // 有序：归档的 id 序列必须与发给 provider 的 image 数组同序，否则
+          // 「图1/图2」的语义在复现历史任务时会错位。
+          // 与 image 数组**下标对齐**：未持久化的项（dataUrl-only）记空串占位。
+          // 早先的 .filter() 会把中间项抽掉，让 index 1 实际指向图3——正好违反
+          // 本字段自己声明的顺序契约（review Important 2026-08-29）。
+          sourceAssetIds: params.references.map((r) => r.assetId ?? ''),
+          // 幅度是整单一个值（NovelAI/Civitai 单图；豆包无此参数）→ 取首张。
+          denoiseStrength: params.references[0].denoiseStrength,
+          provider: params.backend,
+        },
       } : {};
       this.queue.updateStatus(task.id, 'generating', {
         positivePrompt: composed.positive,
@@ -535,7 +562,7 @@ export class ImageService {
       });
       eventBus.emit('image:task-update', { taskId: task.id, status: 'generating' });
 
-      const blob = await this.callProvider(params.backend, composed, civitaiProviderParams, params.reference, params.styleParamOverrides);
+      const blob = await this.callProvider(params.backend, composed, civitaiProviderParams, params.references, params.styleParamOverrides);
       const asset = await this.storeAsset(task, blob, params.backend);
 
       this.queue.updateStatus(task.id, 'complete', { resultAssetId: asset.id });
@@ -596,7 +623,8 @@ export class ImageService {
     /** Overall art style label (画风 grid: 通用/动漫/写实/古风). Omitted = no style line. */
     artStyle?: string;
     backend: ImageBackendType;
-    reference?: ImageReferenceInput;
+    /** 参考图**有序**列表（多图参考重绘 epic S2）。顺序=提示词里的「图N」。 */
+    references?: ImageReferenceInput[];
     styleParamOverrides?: Record<string, unknown>;
   }): Promise<ImageTask> {
     if (!this.enabled) throw new Error('[ImageService] Image generation is disabled');
@@ -690,8 +718,19 @@ export class ImageService {
         loraSnapshot = prep.snapshot;
       }
 
-      const refMeta = params.reference ? {
-        reference: { mode: 'image_to_image' as const, sourceAssetId: params.reference.assetId, denoiseStrength: params.reference.denoiseStrength, provider: params.backend },
+      const refMeta = params.references?.length ? {
+        reference: {
+          mode: 'image_to_image' as const,
+          // 有序：归档的 id 序列必须与发给 provider 的 image 数组同序，否则
+          // 「图1/图2」的语义在复现历史任务时会错位。
+          // 与 image 数组**下标对齐**：未持久化的项（dataUrl-only）记空串占位。
+          // 早先的 .filter() 会把中间项抽掉，让 index 1 实际指向图3——正好违反
+          // 本字段自己声明的顺序契约（review Important 2026-08-29）。
+          sourceAssetIds: params.references.map((r) => r.assetId ?? ''),
+          // 幅度是整单一个值（NovelAI/Civitai 单图；豆包无此参数）→ 取首张。
+          denoiseStrength: params.references[0].denoiseStrength,
+          provider: params.backend,
+        },
       } : {};
       this.queue.updateStatus(task.id, 'generating', {
         positivePrompt: composed.positive,
@@ -700,7 +739,7 @@ export class ImageService {
       });
       eventBus.emit('image:task-update', { taskId: task.id, status: 'generating' });
 
-      const blob = await this.callProvider(params.backend, composed, civitaiProviderParams, params.reference, params.styleParamOverrides);
+      const blob = await this.callProvider(params.backend, composed, civitaiProviderParams, params.references, params.styleParamOverrides);
       const asset = await this.storeAsset(task, blob, params.backend);
 
       this.queue.updateStatus(task.id, 'complete', { resultAssetId: asset.id });
@@ -805,7 +844,8 @@ export class ImageService {
     part?: import('./types').SecretPartType;
     /** Optional metadata passthrough for audit/display */
     artStyle?: string;
-    reference?: ImageReferenceInput;
+    /** 参考图**有序**列表（多图参考重绘 epic S2）。顺序=提示词里的「图N」。 */
+    references?: ImageReferenceInput[];
     styleParamOverrides?: Record<string, unknown>;
   }): Promise<ImageTask> {
     if (!this.enabled) throw new Error('[ImageService] Image generation is disabled');
@@ -855,8 +895,19 @@ export class ImageService {
         loraSnapshot = prep.snapshot;
       }
 
-      const refMeta = params.reference ? {
-        reference: { mode: 'image_to_image' as const, sourceAssetId: params.reference.assetId, denoiseStrength: params.reference.denoiseStrength, provider: params.backend },
+      const refMeta = params.references?.length ? {
+        reference: {
+          mode: 'image_to_image' as const,
+          // 有序：归档的 id 序列必须与发给 provider 的 image 数组同序，否则
+          // 「图1/图2」的语义在复现历史任务时会错位。
+          // 与 image 数组**下标对齐**：未持久化的项（dataUrl-only）记空串占位。
+          // 早先的 .filter() 会把中间项抽掉，让 index 1 实际指向图3——正好违反
+          // 本字段自己声明的顺序契约（review Important 2026-08-29）。
+          sourceAssetIds: params.references.map((r) => r.assetId ?? ''),
+          // 幅度是整单一个值（NovelAI/Civitai 单图；豆包无此参数）→ 取首张。
+          denoiseStrength: params.references[0].denoiseStrength,
+          provider: params.backend,
+        },
       } : {};
       this.queue.updateStatus(task.id, 'generating', {
         positivePrompt: composed.positive,
@@ -865,7 +916,7 @@ export class ImageService {
       });
       eventBus.emit('image:task-update', { taskId: task.id, status: 'generating' });
 
-      const blob = await this.callProvider(params.backend, composed, civitaiProviderParams, params.reference, params.styleParamOverrides);
+      const blob = await this.callProvider(params.backend, composed, civitaiProviderParams, params.references, params.styleParamOverrides);
       const asset = await this.storeAsset(task, blob, params.backend);
 
       this.queue.updateStatus(task.id, 'complete', { resultAssetId: asset.id });
@@ -1258,7 +1309,7 @@ export class ImageService {
     backend: ImageBackendType,
     composed: { positive: string; negative: string; width: number; height: number },
     presetParams?: Record<string, unknown>,
-    reference?: ImageReferenceInput,
+    references?: ImageReferenceInput[],
     styleParamOverrides?: Record<string, unknown>,
   ): Promise<Blob> {
     const config = this.aiService.getImageConfigForBackend(backend);
@@ -1299,7 +1350,7 @@ export class ImageService {
       resolvedParams = { ...resolvedParams, ...styleParamOverrides };
     }
 
-    if (reference) {
+    if (references?.length) {
       const refBase = '系统.扩展.image.config.reference';
       if (backend === 'civitai' && this.stateManager.get<boolean>(`${refBase}.civitai.imageToImageEnabled`) === false) {
         throw new Error('[ImageService] Civitai 参考重绘已在设置中禁用');
@@ -1310,7 +1361,18 @@ export class ImageService {
       if (!supportsImageToImage(provider)) {
         throw new Error(`[ImageService] "${backend}" 后端不支持参考图生成`);
       }
-      const resolved = await this.resolveReferenceAsset(reference);
+      // 多图门控（PO 决策① 2026-08-29）：不支持多图的后端在这里就截断到首张，
+      // 不把「其实只有第 1 张生效」留给 provider 去悄悄处理。UI 侧已按能力位
+      // 不给多选，走到这里说明是非 UI 调用方或历史任务复现。
+      const { effective, dropped } = clampReferencesForBackend(backend, references);
+      if (dropped > 0) {
+        console.warn(
+          `[ImageService] "${backend}" 不支持多参考图，${references.length} 张已截断为第 1 张（丢弃 ${dropped} 张）`,
+        );
+      }
+      // 顺序即语义（提示词里的「图1/图2」），resolve 必须保序 → 不能用
+      // Promise.all 之外的乱序写法；这里逐张 resolve 后原序传下去。
+      const resolved = await Promise.all(effective.map((r) => this.resolveReferenceAsset(r)));
       return provider.imageToImage(
         composed.positive,
         composed.negative,
@@ -1384,6 +1446,53 @@ export class ImageService {
       allowMatureContent: this.stateManager.get<boolean>('系统.扩展.image.config.civitai.allowMatureContent') === true,
     };
     return provider.describeImage(effective, providerOptions);
+  }
+
+  /**
+   * 任务队列淘汰收尾（PO 决策 2026-08-29：「沿用 50 条上限，给出提示，超出就删
+   * 最旧，该删的也删」）。
+   *
+   * 为什么必须做：备份采集器 `collectAssetIdsFromTree` 从任务归档里取参考图
+   * assetId。任务被淘汰后这些 id 就不再被采集——图片本体却还躺在 IndexedDB 里，
+   * 既不进备份也没人清，纯属越积越多的孤儿。
+   *
+   * 判定「还有没有人要」**复用备份采集器本身**，不另写一套：这个功能已经因为
+   * 「两套系统对『被引用』理解不一致」出过一次 CRITICAL（删素材库条目卡死云同步），
+   * 同源是唯一可靠的防线。素材库里的图（用户主动囤的）在 includeReferenceAssets
+   * =true 下也会被算作引用 → 永远不会被这里删掉。
+   */
+  private async cleanupEvictedTaskAssets(evicted: ImageTask[]): Promise<void> {
+    const candidates = new Set<string>();
+    for (const task of evicted) {
+      const ref = task.providerMeta?.reference;
+      if (!ref) continue;
+      for (const id of ref.sourceAssetIds ?? []) if (id) candidates.add(id);
+      if (ref.sourceAssetId) candidates.add(ref.sourceAssetId);
+    }
+    if (candidates.size === 0) return;
+
+    // 淘汰后的存档树里还被引用的一律保留（includeReferenceAssets=true：保护面
+    // 尽量大，宁可留下也不误删）。
+    const stillReferenced = new Set<string>();
+    const tree = this.stateManager.getTree() as unknown as Record<string, unknown>;
+    collectAssetIdsFromTree(tree, stillReferenced, true);
+
+    const orphans = [...candidates].filter((id) => !stillReferenced.has(id));
+    if (orphans.length === 0) return;
+
+    let deleted = 0;
+    for (const id of orphans) {
+      try { await this.cache.delete(id); deleted++; } catch { /* best effort */ }
+    }
+    console.debug(`[ImageService] 任务淘汰：清理 ${deleted}/${orphans.length} 张无人引用的参考图`);
+    eventBus.emit('ui:toast', {
+      type: 'info',
+      i18nKey: 'engine.toast.imageTasksEvicted',
+      message: `生图记录超过 ${ImageTaskQueue.MAX_FINISHED} 条，已移除最旧的 ${evicted.length} 条`
+        + (deleted > 0 ? `，并清理 ${deleted} 张不再被引用的参考图` : ''),
+      id: 'image-tasks-evicted',
+      duration: 4000,
+    });
   }
 
   /** 提炼设置（图片提炼重建 epic §4）；默认值与 save-migration 保持一致 */

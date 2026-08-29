@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { resolveSeedreamSize, seedreamSupportsSeed, VolcengineImageProvider } from './volcengine';
+import { resolveSeedreamSize, seedreamSupportsSeed, SEEDREAM_MAX_REFERENCE_IMAGES, VolcengineImageProvider } from './volcengine';
+import type { ImageReferenceInput } from '../reference-types';
 
 // NOTE: these ranges mirror the official docs as of 2026-08 and are pinned so
 // future tweaks are deliberate; the real-key calibration matrix (P1 acceptance)
@@ -143,6 +144,70 @@ describe('seed 机型门控（官方参数表 2026-08-28）', () => {
   it('从不转发 guidance_scale（官方：5.0-lite/4.5/4.0 不支持）', async () => {
     const body = await captureBody('doubao-seedream-5.0-lite', { seed: 7, cfgScale: 5, guidance_scale: 5 });
     expect(body.guidance_scale).toBeUndefined();
+  });
+});
+
+describe('多图参考重绘（PO 决策① 2026-08-29：只有豆包支持）', () => {
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+  function makeRef(i: number): ImageReferenceInput {
+    return { id: `r${i}`, role: 'source', source: 'data_url', dataUrl: `data:image/png;base64,IMG${i}` };
+  }
+
+  function captureI2iBody(refs: ImageReferenceInput[]): Promise<Record<string, unknown>> {
+    return new Promise((resolve) => {
+      vi.stubGlobal('fetch', vi.fn(async (_url: unknown, init: unknown) => {
+        resolve(JSON.parse(String((init as RequestInit).body)) as Record<string, unknown>);
+        return new Response(JSON.stringify({ data: [{ b64_json: 'AAAA' }] }), { status: 200 });
+      }));
+      const provider = new VolcengineImageProvider('https://ark.example.com', 'k', 'doubao-seedream-5.0-lite');
+      void provider.imageToImage('a cat', '', 2048, 2048, refs);
+    });
+  }
+
+  it('全部参考图按顺序进入 image 数组（顺序=提示词里的「图N」）', async () => {
+    const body = await captureI2iBody([makeRef(1), makeRef(2), makeRef(3)]);
+    expect(body.image).toEqual([
+      'data:image/png;base64,IMG1',
+      'data:image/png;base64,IMG2',
+      'data:image/png;base64,IMG3',
+    ]);
+  });
+
+  it('单张时行为与改造前一致（数组仍是一元）', async () => {
+    const body = await captureI2iBody([makeRef(1)]);
+    expect(body.image).toEqual(['data:image/png;base64,IMG1']);
+  });
+
+  it(`超过 ${SEEDREAM_MAX_REFERENCE_IMAGES} 张截断为前 N 张并告警（不整单失败）`, async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const refs = Array.from({ length: SEEDREAM_MAX_REFERENCE_IMAGES + 3 }, (_, i) => makeRef(i));
+    const body = await captureI2iBody(refs);
+    expect((body.image as string[]).length).toBe(SEEDREAM_MAX_REFERENCE_IMAGES);
+    expect((body.image as string[])[0]).toBe('data:image/png;base64,IMG0');
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it('缺 dataUrl/url 的项被剔除时必须告警（剔除会让「图N」前移）；全空则报错', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const body = await captureI2iBody([
+      { id: 'bad', role: 'source', source: 'asset', assetId: 'a1' },
+      makeRef(9),
+    ]);
+    expect(body.image).toEqual(['data:image/png;base64,IMG9']);
+    // review Important 2026-08-29：此前静默剔除，与本文件「绝不静默丢弃」自相矛盾
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('编号相应前移'));
+
+    const provider = new VolcengineImageProvider('https://ark.example.com', 'k', 'doubao-seedream-5.0-lite');
+    await expect(provider.imageToImage('x', '', 2048, 2048, [])).rejects.toThrow(/参考图缺少/);
+  });
+
+  it('多图不影响既有 body 字段（size/watermark/无 seed）', async () => {
+    const body = await captureI2iBody([makeRef(1), makeRef(2)]);
+    expect(body.model).toBe('doubao-seedream-5.0-lite');
+    expect(body.size).toBe('2048x2048');
+    expect(body.watermark).toBe(false);
+    expect(body.seed).toBeUndefined();
   });
 });
 

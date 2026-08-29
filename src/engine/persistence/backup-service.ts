@@ -48,6 +48,12 @@ const ENGINE_VERSION = '0.1.0';
 const LS_KEY_PREFIXES = ['aga_', 'aga-'] as const;
 
 /**
+ * 勾选「包含参考素材」后，导出图片总量超过此值就提示一次（PO 决策 2026-08-29）。
+ * 纯提示、不阻断：图片走分卷上传（每卷 ~20MB），大只是慢，不会失败。
+ */
+const REFERENCE_LIBRARY_WARN_BYTES = 200 * 1024 * 1024;
+
+/**
  * Device-local localStorage keys that must NEVER travel in a backup / cloud sync.
  *
  * These hold per-device sync bookkeeping, not user content or portable settings.
@@ -1214,6 +1220,24 @@ export class BackupService {
         duration: 10000,
       });
     }
+    // 素材库体积提醒（PO 决策 2026-08-29）：图片是**分卷**上传的
+    //（chunked-bundle-packer 每卷 ~20MB，github-sync 逐卷流式推），所以体积只影响
+    // 上传/下载速度，不构成阻断理由 —— 因此这里只提示、绝不拦。
+    // 只针对**素材库**：任务用过的参考图是记录的一部分，没得选；而素材库是用户
+    // 囤着待用的，体积失控时值得让他知道可以取消勾选。
+    if (includeReferenceAssets) {
+      const libBytes = exported.reduce((n, a) => n + (a.metadata?.sizeBytes ?? 0), 0);
+      if (libBytes > REFERENCE_LIBRARY_WARN_BYTES) {
+        eventBus.emit('ui:toast', {
+          type: 'info',
+          i18nKey: 'engine.toast.referenceLibraryLarge',
+          i18nParams: { mb: Math.round(libBytes / 1_048_576) },
+          message: `本次备份含参考素材约 ${Math.round(libBytes / 1_048_576)}MB，上传/下载会变慢（图片按 20MB 分卷，不会失败）。不需要时可取消勾选「包含参考素材」。`,
+          id: 'reference-library-large',
+          duration: 6000,
+        });
+      }
+    }
     return { assets: exported, integrity };
   }
 
@@ -1944,6 +1968,31 @@ export function collectAssetIdsFromTree(tree: Record<string, unknown>, ids: Set<
       for (const entry of sceneHistory) {
         if (entry && typeof entry === 'object') addIfValid((entry as Record<string, unknown>).id);
       }
+    }
+  }
+
+  // 参考重绘**实际用过**的参考图（多图参考重绘 epic，2026-08-29）。
+  //
+  // 此前从不采集：`providerMeta.reference` 只被写入、从没被备份遍历过，于是一张
+  // 上传的参考图只有在用户勾了「包含参考素材」时才随素材库同行——默认关的情况下
+  // 恢复备份就丢图，任务归档里的 sourceAssetIds 全变悬空引用。
+  //
+  // 这里**不受 includeReferenceAssets 门控**，与素材库区别对待：
+  // - 素材库 = 用户囤着待用的素材，体量大且可能从没用过 → 保持 opt-in
+  // - 这里 = 已经参与过生成的图，属于"这张图是怎么来的"记录的一部分 → 必须随档
+  // 多数 id 与图库/头像重合，Set 去重后新增体积仅限"上传后未进图库"的参考图。
+  const tasks = image?.['tasks'];
+  if (Array.isArray(tasks)) {
+    for (const task of tasks) {
+      if (!task || typeof task !== 'object') continue;
+      const meta = (task as Record<string, unknown>)['providerMeta'] as Record<string, unknown> | undefined;
+      const ref = meta?.['reference'] as Record<string, unknown> | undefined;
+      if (!ref) continue;
+      const list = ref['sourceAssetIds'];
+      // 新格式：有序数组，未持久化项以空串占位 → addIfValid 自动跳过
+      if (Array.isArray(list)) for (const id of list) addIfValid(id);
+      // 旧格式：单值（save-migration 会补齐数组，但备份可能读到未迁移的树）
+      addIfValid(ref['sourceAssetId']);
     }
   }
 

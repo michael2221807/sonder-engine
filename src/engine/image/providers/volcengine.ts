@@ -34,6 +34,13 @@ const SEEDREAM5_MIN_PIXELS = 3_686_400;
 const SEEDREAM5_MAX_PIXELS = 16_777_216;
 
 /**
+ * 参考图张数上限（官方规格：doubao-seedream-5.0-lite / 4.5 / 4.0
+ * 「最多支持传入 14 张参考图」；另有「参考图 + 生成图 ≤ 15」的总量约束，本期
+ * 不做组图故生成图恒为 1，14 即有效上限）。UI 与 provider 共用此常量。
+ */
+export const SEEDREAM_MAX_REFERENCE_IMAGES = 14;
+
+/**
  * Map a requested width/height onto Seedream's allowed range, keeping aspect
  * ratio and rounding to multiples of 8:
  * - seedream-5.x: total PIXEL COUNT within [3686400, 16777216] (per-dimension
@@ -128,18 +135,46 @@ export class VolcengineImageProvider extends BaseImageProvider implements ImageT
     return this.request(this.buildBody(prompt, width, height, options));
   }
 
+  /**
+   * 多图参考重绘：`image` 收整组来源。官方 `anyOf: string | array`，
+   * 5.0-lite/4.5/4.0 上限 14 张（3.x / seededit 只吃单图，由上层能力门控与
+   * 机型选择保证；这里只做长度兜底，不按机型分叉——超限截断永远是安全的）。
+   * 顺序即语义：提示词里的「图1/图2」按本数组下标对应。
+   */
   async imageToImage(
     prompt: string,
     _negative: string,
     width: number,
     height: number,
-    reference: ImageReferenceInput,
+    references: ImageReferenceInput[],
     options?: Record<string, unknown>,
   ): Promise<Blob> {
-    const source = reference.dataUrl ?? reference.url;
-    if (!source) throw new Error('[Volcengine] 参考图缺少 dataUrl/url');
+    const sources = references
+      .map((r) => r.dataUrl ?? r.url)
+      .filter((s): s is string => !!s);
+    if (sources.length === 0) throw new Error('[Volcengine] 参考图缺少 dataUrl/url');
+    if (sources.length < references.length) {
+      // 剔除会让后面的「图N」整体前移——绝不能静默（本文件的一贯约定）。
+      // 正常链路不会走到：ImageService.resolveReferenceAsset 已保证每项有源。
+      console.warn(
+        `[Volcengine] ${references.length - sources.length} 张参考图缺少 dataUrl/url 已剔除，`
+        + '其后各图的「图N」编号相应前移',
+      );
+    }
+
+    let effective = sources;
+    if (sources.length > SEEDREAM_MAX_REFERENCE_IMAGES) {
+      // 兜底截断：UI 侧已按 multiReference 能力把上限卡在 14，走到这里说明有
+      // 非 UI 调用方越界——截断而不是整单失败，但必须留下可观测痕迹。
+      console.warn(
+        `[Volcengine] 参考图 ${sources.length} 张超过上限 ${SEEDREAM_MAX_REFERENCE_IMAGES}，`
+        + `已截断为前 ${SEEDREAM_MAX_REFERENCE_IMAGES} 张（提示词里的「图N」编号随之改变）`,
+      );
+      effective = sources.slice(0, SEEDREAM_MAX_REFERENCE_IMAGES);
+    }
+
     const body = this.buildBody(prompt, width, height, options);
-    body.image = [source];
+    body.image = effective;
     return this.request(body);
   }
 
@@ -204,6 +239,16 @@ export class VolcengineImageProvider extends BaseImageProvider implements ImageT
     const data = await response.json() as {
       data?: Array<{ b64_json?: string; url?: string }>;
     };
+
+    // 本期不做组图（PO 决策②，`sequential_image_generation` 未启用）→ 服务端
+    // 恒返回 1 张。若将来开了组图而这里仍只取首张，其余会被静默丢弃——留一条
+    // 可观测警告，别让下一个人像上次 seed 那样靠猜发现问题。
+    if ((data.data?.length ?? 0) > 1) {
+      console.warn(
+        `[Volcengine] 响应含 ${data.data!.length} 张图，当前只消费第 1 张`
+        + '（组图模式尚未接入，见 docs/design/seedream-multi-reference-implementation.md §4）',
+      );
+    }
 
     const b64 = data.data?.[0]?.b64_json;
     if (!b64) {

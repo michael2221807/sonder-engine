@@ -229,3 +229,53 @@ describe('ImageStateManager', () => {
     });
   });
 });
+
+// ─── isAssetReferencedByTasks（CRITICAL 修复 2026-08-29）───────────────
+//
+// 背景：备份采集器从 2026-08-29 起会遍历任务的参考图 assetId。若素材库删除
+// 时连图片本体一起删掉，任务归档里的引用就变成悬空 → 导出时「引用数 > 导出数」
+// → GitHub 云同步的退化守卫**永久硬阻断上传**，而它给用户的提示（"下载找回图片"）
+// 对"被主动删掉"完全无效。本组用例守住"仍被引用的图不许删本体"这条判断。
+describe('ImageStateManager.isAssetReferencedByTasks', () => {
+  let sm: ReturnType<typeof createMockStateManager>;
+  let ism: ImageStateManager;
+
+  beforeEach(() => {
+    sm = createMockStateManager();
+    ism = new ImageStateManager(sm as unknown as import('../core/state-manager').StateManager, TEST_PATHS as unknown as EnginePathConfig);
+  });
+
+  const seedTasks = (tasks: unknown[]) => sm.set('系统.扩展.image.tasks', tasks);
+
+  it('多图数组里命中任一张都算被引用', () => {
+    seedTasks([{ id: 't1', providerMeta: { reference: { sourceAssetIds: ['a', 'b', 'c'] } } }]);
+    expect(ism.isAssetReferencedByTasks('a')).toBe(true);
+    expect(ism.isAssetReferencedByTasks('c')).toBe(true);
+    expect(ism.isAssetReferencedByTasks('zzz')).toBe(false);
+  });
+
+  it('未迁移的旧任务（单值 sourceAssetId）同样算被引用', () => {
+    seedTasks([{ id: 'old', providerMeta: { reference: { sourceAssetId: 'legacy' } } }]);
+    expect(ism.isAssetReferencedByTasks('legacy')).toBe(true);
+  });
+
+  it('空串占位不算引用（未持久化的参考图本来就没有本体）', () => {
+    seedTasks([{ id: 't', providerMeta: { reference: { sourceAssetIds: ['', 'real'] } } }]);
+    expect(ism.isAssetReferencedByTasks('')).toBe(false);
+    expect(ism.isAssetReferencedByTasks('real')).toBe(true);
+  });
+
+  it('无任务 / 脏数据一律返回 false，绝不抛错（删除流程不能被它卡住）', () => {
+    expect(ism.isAssetReferencedByTasks('x')).toBe(false);
+    seedTasks([null, { id: 'a' }, { id: 'b', providerMeta: {} }, { id: 'c', providerMeta: { reference: null } }]);
+    expect(() => ism.isAssetReferencedByTasks('x')).not.toThrow();
+    expect(ism.isAssetReferencedByTasks('x')).toBe(false);
+    sm.set('系统.扩展.image.tasks', 'not-an-array');
+    expect(ism.isAssetReferencedByTasks('x')).toBe(false);
+  });
+
+  it('只被素材库收录、从没参与过生成的图 → 可以放心删本体', () => {
+    seedTasks([{ id: 't1', providerMeta: { reference: { sourceAssetIds: ['used'] } } }]);
+    expect(ism.isAssetReferencedByTasks('never_used')).toBe(false);
+  });
+});

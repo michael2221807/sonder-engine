@@ -154,15 +154,29 @@ export class NovelAIImageProvider extends BaseImageProvider implements ImageToIm
     });
   }
 
+  /**
+   * NovelAI img2img 只吃**单图**（`parameters.image` 是一个 base64 字符串）。
+   * 它的多图能力属于另一个功能 Vibe Transfer（`reference_image_multiple`，≤16，
+   * 且 V4+ 每张需付费编码）——语义是搬运画风而非照原图重绘，不并入本方法。
+   * 因此这里取首张并对多余项告警；UI 侧不声明 `multiReference`，正常路径下
+   * 根本选不出第二张（查证见
+   * docs/design/seedream-multi-reference-implementation.md §1）。
+   */
   async imageToImage(
     prompt: string,
     negative: string,
     width: number,
     height: number,
-    reference: ImageReferenceInput,
+    references: ImageReferenceInput[],
     options?: Record<string, unknown>,
   ): Promise<Blob> {
     const { model, parameters } = this.buildParameters(prompt, negative, width, height, options);
+
+    const reference = references[0];
+    if (!reference) throw new Error('[NovelAI] 参考图列表为空');
+    if (references.length > 1) {
+      console.warn(`[NovelAI] 收到 ${references.length} 张参考图，img2img 只支持单图，已取第 1 张`);
+    }
 
     const sourceDataUrl = reference.dataUrl ?? reference.url;
     if (!sourceDataUrl) throw new Error('[NovelAI] 参考图缺少 dataUrl 或 url');

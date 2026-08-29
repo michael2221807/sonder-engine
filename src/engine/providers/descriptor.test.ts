@@ -65,14 +65,15 @@ describe('built-in catalog entries', () => {
 
   it('PROVIDER_CAPABILITIES derivation matches the pre-P0 hand-written map (+ P1 volcengine)', () => {
     // Regression pin: first five verbatim from provider-capabilities.ts@8899da8;
-    // referenceStrength added 2026-08-27 (numeric 重绘幅度 support, see below).
+    // referenceStrength added 2026-08-27 (numeric 重绘幅度 support, see below);
+    // multiReference added 2026-08-29 (multi-image reference redraw, see below).
     expect(PROVIDER_CAPABILITIES).toEqual({
-      civitai: { textToImage: true, imageToImage: true, imageCaptioning: true, imageTagging: true, inpainting: false, referenceStrength: true },
-      novelai: { textToImage: true, imageToImage: true, imageCaptioning: false, imageTagging: false, inpainting: false, referenceStrength: true },
-      openai: { textToImage: true, imageToImage: false, imageCaptioning: false, imageTagging: false, inpainting: false, referenceStrength: false },
-      sd_webui: { textToImage: true, imageToImage: false, imageCaptioning: false, imageTagging: false, inpainting: false, referenceStrength: false },
-      comfyui: { textToImage: true, imageToImage: false, imageCaptioning: false, imageTagging: false, inpainting: false, referenceStrength: false },
-      volcengine: { textToImage: true, imageToImage: true, imageCaptioning: false, imageTagging: false, inpainting: false, referenceStrength: false },
+      civitai: { textToImage: true, imageToImage: true, imageCaptioning: true, imageTagging: true, inpainting: false, referenceStrength: true, multiReference: false },
+      novelai: { textToImage: true, imageToImage: true, imageCaptioning: false, imageTagging: false, inpainting: false, referenceStrength: true, multiReference: false },
+      openai: { textToImage: true, imageToImage: false, imageCaptioning: false, imageTagging: false, inpainting: false, referenceStrength: false, multiReference: false },
+      sd_webui: { textToImage: true, imageToImage: false, imageCaptioning: false, imageTagging: false, inpainting: false, referenceStrength: false, multiReference: false },
+      comfyui: { textToImage: true, imageToImage: false, imageCaptioning: false, imageTagging: false, inpainting: false, referenceStrength: false, multiReference: false },
+      volcengine: { textToImage: true, imageToImage: true, imageCaptioning: false, imageTagging: false, inpainting: false, referenceStrength: false, multiReference: true },
     });
   });
 
@@ -92,6 +93,26 @@ describe('built-in catalog entries', () => {
       .filter((d) => d.capabilities.imageToImage === true && d.capabilities.referenceStrength !== true)
       .map((d) => d.id);
     expect(img2imgNoStrength).toEqual(['volcengine']);
+  });
+
+  it('multiReference is declared only where the vendor API takes an image ARRAY', () => {
+    // 多图参考选择器按此位显隐（7 个 UI 入口）。查证见
+    // docs/design/seedream-multi-reference-implementation.md §1：
+    // - Seedream `image` 是 anyOf string|array，≤14 → 唯一 true
+    // - NovelAI img2img `parameters.image` 是单个 base64 字符串（多图属另一功能
+    //   Vibe Transfer，语义不同且另行计费）
+    // - Civitai SD 配方官方原文「a plain string URL (not a { url: ... } wrapper)」，
+    //   无数组型图片字段（imageStyleReferences 属其它模型配方）
+    const multi = providerCatalog.byCategory('image')
+      .filter((d) => d.capabilities.multiReference === true)
+      .map((d) => d.id);
+    expect(multi).toEqual(['volcengine']);
+    // 反向：声明了多图就必须先支持图生图，否则是自相矛盾的能力声明
+    for (const d of providerCatalog.byCategory('image')) {
+      if (d.capabilities.multiReference === true) {
+        expect(d.capabilities.imageToImage).toBe(true);
+      }
+    }
   });
 
   it('registerBuiltinProviders is single-shot (re-registration throws)', () => {

@@ -212,5 +212,40 @@ export function migrateImageState(stateManager: StateManager): boolean {
     stateManager.set(bumpFlagPath, true, 'system');
   }
 
+  // 历史任务的参考图归档：单值 sourceAssetId → 有序数组 sourceAssetIds
+  //（多图参考重绘 epic S2，2026-08-29）。幂等：已有 sourceAssetIds 的不动；
+  // 旧字段**保留不删**，让老版本读同一存档时仍能取到单图（双向兼容），新代码
+  // 一律只读 sourceAssetIds。
+  if (migrateTaskReferenceIds(stateManager)) migrated = true;
+
   return migrated;
+}
+
+/**
+ * `tasks[].providerMeta.reference.sourceAssetId`（单值）→ `sourceAssetIds`（数组）。
+ * 独立成函数便于单测直接打点。返回是否真的改了数据。
+ */
+function migrateTaskReferenceIds(stateManager: StateManager): boolean {
+  const tasks = stateManager.get<unknown>(`${IMAGE_ROOT_PATH}.tasks`);
+  if (!Array.isArray(tasks) || tasks.length === 0) return false;
+
+  let changed = false;
+  tasks.forEach((task, i) => {
+    if (task == null || typeof task !== 'object') return;
+    const ref = (task as Record<string, unknown>).providerMeta as
+      | { reference?: { sourceAssetId?: unknown; sourceAssetIds?: unknown } }
+      | undefined;
+    const node = ref?.reference;
+    if (!node) return;
+    if (Array.isArray(node.sourceAssetIds)) return;            // 已迁移 → 幂等跳过
+    if (typeof node.sourceAssetId !== 'string' || !node.sourceAssetId) return;
+    stateManager.set(
+      `${IMAGE_ROOT_PATH}.tasks.${i}.providerMeta.reference.sourceAssetIds`,
+      [node.sourceAssetId],
+      'system',
+    );
+    changed = true;
+  });
+  if (changed) console.debug('[ImageMigration] Migrated task reference sourceAssetId → sourceAssetIds[]');
+  return changed;
 }
