@@ -12,9 +12,14 @@
  * 桌面用 HTML5 拖拽，触屏用左右移动按钮——原生 drag 事件在移动端不触发，
  * 只做拖拽等于对手机用户关掉了这个功能。
  */
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Tooltip from './Tooltip.vue';
+import {
+  downscaleReferenceDataUrl,
+  estimateDataUrlBytes,
+  isReferenceOversized,
+} from '@/engine/image/reference-downscale';
 
 /** 已选参考图（UI 层轻量结构；提交时由父组件映射成 ImageReferenceInput）。 */
 export interface MultiReferenceItem {
@@ -59,6 +64,54 @@ const { t } = useI18n();
 
 const full = computed(() => props.modelValue.length >= props.max);
 const remaining = computed(() => Math.max(0, props.max - props.modelValue.length));
+
+/**
+ * 体积提示与「压缩」按钮（2026-09-02 多图超时修复，PO 决策：不静默压缩，
+ * 由用户自选）。上游按输入图总像素量做内容审核——大图会把单次请求拖到
+ * 三分钟以上（实测 2560×1440 ×3 = 216s）。这里把代价显性化：超标的图打
+ * 角标，并给一个一键压缩的出口。
+ */
+const oversizedCount = computed(() =>
+  props.modelValue.filter((it) => isReferenceOversized(it.dataUrl)).length);
+const totalBytes = computed(() =>
+  props.modelValue.reduce((sum, it) => sum + estimateDataUrlBytes(it.dataUrl), 0));
+const totalMB = computed(() => (totalBytes.value / 1048576).toFixed(1));
+const compressing = ref(false);
+
+function isOversized(dataUrl: string): boolean {
+  return isReferenceOversized(dataUrl);
+}
+
+/**
+ * 压缩所有超标图（逐张 fail-soft：某张失败不影响其余，也不改动它）。
+ *
+ * 并发安全：压缩是异步的（14 张大图的 JPEG 重编码不是一瞬间），期间用户完全
+ * 可能删图/加图/改顺序。所以**不能**把开工时的数组快照直接 commit 回去——那会
+ * 把用户中途的改动静默回滚。改为按 id 建立「压缩结果表」，收工时对着**当时最新**
+ * 的 modelValue 逐项贴用：已删的项自然落空，新加的项原样保留，顺序以用户的为准。
+ */
+async function compressOversized(): Promise<void> {
+  if (compressing.value) return;
+  compressing.value = true;
+  try {
+    const targets = props.modelValue.filter((it) => isReferenceOversized(it.dataUrl));
+    const compressed = new Map<string, string>();
+    await Promise.all(targets.map(async (it) => {
+      const dataUrl = await downscaleReferenceDataUrl(it.dataUrl);
+      if (dataUrl !== it.dataUrl) compressed.set(it.id, dataUrl);
+    }));
+    if (compressed.size === 0) return;
+    // 关键：这里重新读 props.modelValue（而不是用开工时的快照）
+    commit(props.modelValue.map((it) => {
+      const dataUrl = compressed.get(it.id);
+      // 压缩后与已存资产不再一致 → 丢掉 assetId，改以 dataUrl 提交，
+      // 否则引擎会按 assetId 重新取回未压缩的原图，压缩就白做了。
+      return dataUrl ? { ...it, dataUrl, assetId: null } : it;
+    }));
+  } finally {
+    compressing.value = false;
+  }
+}
 
 function commit(next: MultiReferenceItem[]): void {
   emit('update:modelValue', next);
@@ -125,6 +178,16 @@ function onDrop(i: number): void {
         <span class="mref-badge" :data-testid="`${testid}-badge-${i}`">
           {{ t('image.multiRef.nth', { n: i + 1 }) }}
         </span>
+        <!-- Tooltip 的 wrapper 是 position:relative，会抢走绝对定位角标的定位父级
+             （2026-09-02 截图目检抓到：角标被挤到缩略图外）→ 由外层槽位负责定位，
+             角标本身保持静态排布。 -->
+        <div v-if="isOversized(item.dataUrl)" class="mref-warn-slot">
+          <Tooltip :text="t('image.multiRef.oversizedTip')" fixed>
+            <span class="mref-warn-badge" :data-testid="`${testid}-oversized-${i}`">
+              {{ t('image.multiRef.oversizedMark') }}
+            </span>
+          </Tooltip>
+        </div>
         <div class="mref-actions">
           <!-- 触屏没有原生 drag：移动按钮是手机上排序的唯一途径，不是可选装饰 -->
           <Tooltip :text="t('image.multiRef.moveEarlier')">
@@ -165,6 +228,19 @@ function onDrop(i: number): void {
       </button>
     </div>
 
+    <!-- 体积代价显性化：超标才出现，不打扰正常用图的人 -->
+    <div v-if="oversizedCount > 0" class="mref-size" :data-testid="`${testid}-oversize-bar`">
+      <span class="form-hint">
+        {{ t('image.multiRef.oversizedNotice', { n: oversizedCount, mb: totalMB }) }}
+      </span>
+      <button
+        type="button" class="mref-addbtn" :disabled="compressing"
+        :data-testid="`${testid}-compress`" @click="compressOversized"
+      >
+        {{ compressing ? t('image.multiRef.compressing') : t('image.multiRef.compress') }}
+      </button>
+    </div>
+
     <p class="form-hint mref-hint">{{ t('image.multiRef.hint') }}</p>
   </div>
 </template>
@@ -198,6 +274,20 @@ function onDrop(i: number): void {
   font-size: 0.68rem; font-variant-numeric: tabular-nums;
   background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(4px);
   color: #fff; pointer-events: none;
+}
+
+.mref-warn-slot { position: absolute; top: 4px; right: 4px; z-index: 1; }
+.mref-warn-badge {
+  display: inline-block;
+  padding: 1px 6px; border-radius: 999px;
+  font-size: 0.68rem; line-height: 1.5;
+  background: rgba(251, 191, 36, 0.9); color: #1a1a1a;
+  cursor: help;
+}
+
+.mref-size {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: var(--space-xs);
 }
 
 .mref-actions {

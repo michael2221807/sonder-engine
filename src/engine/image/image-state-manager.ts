@@ -33,7 +33,14 @@ export const PLAYER_PSEUDO_NPC_ID = '__player__';
 const PLAYER_ARCHIVE_PATH = '角色.图片档案';
 
 export class ImageStateManager {
-  private static readonly LOCK_TIMEOUT_MS = 300_000;
+  /**
+   * 生成锁的自动过期时间。**必须显著大于 `IMAGE_GENERATE_TIMEOUT_MS`**：锁要活得
+   * 比整个生成流程更久，否则请求还在飞、锁却先过期，用户就能对同一个对象再发一次。
+   * 一次生成的总耗时 = 队列/提示词组装 + 参考图取回与 base64（最多 14 张）+ 网络
+   * （上限 IMAGE_GENERATE_TIMEOUT_MS）。2026-09-02 网络超时 180s→300s 后，原先的
+   * 120s 余量被吃光，故同步上调到 420s，保留 ~120s 缓冲。改动其一必须回看另一个。
+   */
+  private static readonly LOCK_TIMEOUT_MS = 420_000;
 
   private generatingMap = new Map<string, number>();
 
