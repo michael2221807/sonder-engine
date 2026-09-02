@@ -21,6 +21,7 @@
       "storageNotPersisted": "浏览器未授予持久化存储，存档可能在空间不足时被自动清除，请及时进行云备份",
       "storagePressure": "本地存储已用 {usedMB}MB / {quotaMB}MB（>85%），空间不足时浏览器可能自动清除存档与图片，请及时云备份",
       "storageQuotaExceeded": "浏览器存储已满，写入失败！存档与图片可能随时被自动清除，请立即进行云备份/导出",
+      "imageCacheRebuilt": "图片缓存异常，已自动重建。若发现图片缺失，请从云备份或存档重新导入",
       "imageTasksEvicted": "生图记录已超过上限，已移除最旧的若干条，并清理不再被引用的参考图",
       "referenceLibraryLarge": "本次备份含参考素材约 {mb}MB，上传/下载会变慢（图片按 20MB 分卷，不会失败）。不需要时可取消勾选「包含参考素材」。",
       "imageAssetsMissingOnExport": "本次备份有 {missing}/{total} 张已引用图片在本地缓存中找不到（可能被浏览器清除），备份将缺图。请勿用它覆盖含图的云端/旧备份",

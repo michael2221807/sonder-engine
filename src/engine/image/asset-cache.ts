@@ -13,6 +13,7 @@
  */
 // App doc: docs/user-guide/pages/game-save.md §3.2 (数据持久化与浏览器驱逐) · docs/user-guide/pages/image.md
 import type { ImageAsset } from './types';
+import { eventBus } from '../core/event-bus';
 
 const DB_NAME = 'aga_image_cache';
 const DB_VERSION = 1;
@@ -32,7 +33,47 @@ export class ImageAssetCache {
     if (this.db) return;
     if (this.openingPromise) return this.openingPromise;
 
-    this.openingPromise = new Promise<void>((resolve, reject) => {
+    this.openingPromise = this.openOnce(false)
+      .finally(() => { this.openingPromise = null; });
+
+    return this.openingPromise;
+  }
+
+  /**
+   * 删库（用于「库在但 store 不在」的坏状态自愈）。
+   *
+   * **`onblocked` 必须按失败处理**：blocked 只说明删除请求排在别的未关闭连接后面，
+   * 不代表删成功。若把它当成功继续往下 `open()`，那个 open 会一起排队等待，而平台
+   * 对此没有超时——一旦阻塞方永不关闭（devtools 里遗留的连接、还在跑旧代码的标签页），
+   * promise 永不 settle，`openingPromise` 又被所有调用方复用 → 整个图片缓存静默永久
+   * 挂死，比它要修的 NotFoundError 更糟（review CRITICAL 2026-09-02）。
+   * 这里明确 reject：调用方拿到响亮的错误，且 `openingPromise` 会被清空，
+   * 阻塞方关闭后的下一次调用即可自行恢复。
+   */
+  private deleteDatabase(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const req = indexedDB.deleteDatabase(DB_NAME);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error ?? new DOMException('deleteDatabase failed', 'UnknownError'));
+      req.onblocked = () => reject(new DOMException(
+        '图片缓存重建被另一个未关闭的连接阻塞（请关闭其他标签页后重试）', 'InvalidStateError',
+      ));
+    });
+  }
+
+  /**
+   * 打开连接；`rebuilt` 标记是否已经为修坏状态重建过一次（防无限递归）。
+   *
+   * **坏状态自愈（2026-09-02）**：如果库以 DB_VERSION 存在却没有 object store，
+   * 再怎么 `open(DB_NAME, DB_VERSION)` 都不会触发 `onupgradeneeded`（版本没变），
+   * store 永远建不出来 → 之后每一次 transaction 都是 NotFoundError，应用**永久性**
+   * 无法存取图片，且 `withRetry` 的重开对此无效（重开的还是同一个坏库）。
+   * 这种坏状态的成因不止一种：外部工具/扩展用不带版本号的 `indexedDB.open(name)`
+   * 建出过空库、升级过程被中断、存储驱逐半途失败等。既然此时库里本就没有数据可丢，
+   * 直接删库重建是安全且唯一能恢复功能的做法。
+   */
+  private openOnce(rebuilt: boolean): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onupgradeneeded = () => {
@@ -42,8 +83,50 @@ export class ImageAssetCache {
         }
       };
 
+      // 版本升级被其它连接阻塞时，open 也可能永不 settle —— 同样按失败处理。
+      request.onblocked = () => reject(new DOMException(
+        '图片缓存打开被另一个未关闭的连接阻塞（请关闭其他标签页后重试）', 'InvalidStateError',
+      ));
+
       request.onsuccess = () => {
         const db = request.result;
+
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          const otherStores = [...db.objectStoreNames];
+          db.close();
+          if (rebuilt) {
+            reject(new DOMException(
+              `Image cache store "${STORE_NAME}" missing after rebuild`, 'NotFoundError',
+            ));
+            return;
+          }
+          // 删库是整库操作。今天这个库只有 image-assets 一个 store，所以"没有数据可丢"
+          // 成立；但将来若加了第二个 store，缺 image-assets 时盲删会连带毁掉兄弟 store
+          // 的真实数据（review IMPORTANT 2026-09-02）。这里用代码而不是注释来守住。
+          if (otherStores.length > 0) {
+            reject(new DOMException(
+              `Image cache store "${STORE_NAME}" missing, but the database holds other `
+              + `stores (${otherStores.join(', ')}) — refusing to delete the whole database`,
+              'NotFoundError',
+            ));
+            return;
+          }
+          console.warn(
+            `[ImageAssetCache] 库存在但缺少 object store "${STORE_NAME}"，删库重建以恢复功能`,
+          );
+          // 存储健康事件必须让用户知道（沿用 idb-adapter 的先例）：本次重建虽然
+          // 删的是空库，但用户可能正处在"本地图片确实丢了"的状态，需要去核对云备份。
+          eventBus.emit('ui:toast', {
+            type: 'warning',
+            i18nKey: 'engine.toast.imageCacheRebuilt',
+            message: '图片缓存异常，已自动重建。若发现图片缺失，请从云备份或存档重新导入。',
+            id: 'image-cache-rebuilt',
+            duration: 8000,
+          });
+          this.deleteDatabase().then(() => this.openOnce(true)).then(resolve, reject);
+          return;
+        }
+
         // 连接被浏览器异常关闭（存储驱逐 / 另一标签页 deleteDatabase）→ 丢弃句柄，下次重开。
         db.onclose = () => { if (this.db === db) this.db = null; };
         // 另一标签页要求升级/删库 → 主动关闭让出，并丢弃句柄，避免阻塞对方。
@@ -53,9 +136,7 @@ export class ImageAssetCache {
       };
 
       request.onerror = () => reject(request.error);
-    }).finally(() => { this.openingPromise = null; });
-
-    return this.openingPromise;
+    });
   }
 
   /** 遇「连接已关闭/被删」类错误时丢弃句柄并重开一次再试 */
@@ -203,13 +284,27 @@ export class ImageAssetCache {
   async importEntries(entries: Array<{ id: string; metadata: ImageAsset; base64: string; mimeType: string }>): Promise<void> {
     if (entries.length === 0) return;
     await this.open();
+    const failures: string[] = [];
     for (const entry of entries) {
       try {
         const blob = base64ToBlob(entry.base64, entry.mimeType);
         await this.store(entry.metadata, blob);
-      } catch {
-        console.warn(`[ImageAssetCache] Failed to import asset "${entry.id}", skipping`);
+      } catch (err) {
+        // 原来是空 catch —— 31 张图全导入失败时只留下 31 行「skipping」，
+        // 完全无法诊断（2026-09-02 排查实录）。原因必须带出来。
+        failures.push(entry.id);
+        console.warn(
+          `[ImageAssetCache] Failed to import asset "${entry.id}", skipping:`,
+          err instanceof Error ? `${err.name}: ${err.message}` : err,
+        );
       }
+    }
+    // 逐条 warn 淹没在日志里，看不出「全军覆没」和「个别损坏」的区别 —— 补一条汇总。
+    if (failures.length > 0) {
+      console.error(
+        `[ImageAssetCache] ${failures.length}/${entries.length} 张图片资产导入失败`
+        + (failures.length === entries.length ? '（全部失败，通常是缓存不可用而非图片本身损坏）' : ''),
+      );
     }
   }
 }
