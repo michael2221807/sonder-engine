@@ -11,7 +11,7 @@
  * 异常关闭（存储驱逐 / 另一标签页 deleteDatabase）时丢弃句柄；所有操作经
  * `withRetry` 包裹，遇「连接已关闭」类错误自动重开一次再试，而非永久报错到刷新为止。
  */
-// App doc: docs/user-guide/pages/game-save.md §3.2 (数据持久化与浏览器驱逐) · docs/user-guide/pages/image.md
+// App doc: docs/user-guide/pages/game-save.md §3.2 (数据持久化与浏览器驱逐 · 图片缓存损坏自动重建) · docs/user-guide/pages/game-image.md
 import type { ImageAsset } from './types';
 import { eventBus } from '../core/event-bus';
 

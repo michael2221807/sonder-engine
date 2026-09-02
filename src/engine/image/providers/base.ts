@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-image.md §后台生成保护机制（请求超时保护）
 /**
  * Base image provider — abstract stub for Sprint Image-1.
  *
