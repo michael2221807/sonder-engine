@@ -13,7 +13,7 @@
  * tutorial. A key beside Send is something the player finds by looking, and the inserted
  * markers then teach the syntax by example.
  *
- * Self-gating, mirroring MicInputButton / AddLexiconTermButton: when world books are off
+ * Self-gating, mirroring MicInputButton / NameInserterButton: when world books are off
  * the key is disabled with a tooltip saying WHY, rather than silently accepting input
  * that would never be recorded.
  */

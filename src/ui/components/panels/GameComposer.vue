@@ -1,14 +1,15 @@
 <script setup lang="ts">
-// App doc: docs/user-guide/pages/game-main.md
+// App doc: docs/user-guide/pages/game-main.md §3.7 (输入区) · §3.16 (工具抽屉 + 名字速插)
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import MicInputButton from '@/ui/components/shared/MicInputButton.vue';
 import SettingTagButton from '@/ui/components/shared/SettingTagButton.vue';
+import NameInserterButton from '@/ui/components/shared/NameInserterButton.vue';
 import { eventBus } from '@/engine/core/event-bus';
 import { scanSettingTags, SETTING_QUALITY_WARN_CHARS } from '@/engine/prompt/setting-tag-scanner';
-import AddLexiconTermButton from '@/ui/components/shared/AddLexiconTermButton.vue';
 
 const ACTION_OPTIONS_COLLAPSED_KEY = 'aga_action_options_collapsed';
+const TOOLS_OPEN_KEY = 'aga_composer_tools_open';
 
 const props = withDefaults(defineProps<{
   actionOptions?: string[];
@@ -27,12 +28,32 @@ const emit = defineEmits<{
 
 const userInput = ref('');
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
+/** Passed to NameInserterButton so its panel opens above the WHOLE input area
+    (on a phone the keys sit on a second row below the textarea). */
+const inputAreaRef = ref<HTMLElement | null>(null);
 // 语音录音/听写期间置 textarea 为 readonly，防止并发键入被识别文本覆盖（MicInputButton
 // 的插入锚点在录音开始时快照）；readonly 不改变外观、保留焦点，程序化 v-model 更新照常。
 const micRecording = ref(false);
 const actionOptionsCollapsed = ref<boolean>(
   localStorage.getItem(ACTION_OPTIONS_COLLAPSED_KEY) === '1',
 );
+
+/**
+ * Tool drawer (rollback / names / setting-tag).
+ *
+ * Defaults to OPEN so a first-time player SEES the three keys and learns they can be
+ * tucked away — a drawer that starts closed hides its own contents, which is exactly
+ * the discoverability hole a「⋯」key normally digs. The choice is remembered per device.
+ */
+const toolsOpen = ref<boolean>(localStorage.getItem(TOOLS_OPEN_KEY) !== '0');
+const nameInserterRef = ref<InstanceType<typeof NameInserterButton> | null>(null);
+
+function toggleTools(): void {
+  toolsOpen.value = !toolsOpen.value;
+  localStorage.setItem(TOOLS_OPEN_KEY, toolsOpen.value ? '1' : '0');
+  // Collapsing with the name panel open would leave it floating with no anchor.
+  if (!toolsOpen.value) nameInserterRef.value?.close();
+}
 
 const canSend = computed(() => userInput.value.trim().length > 0 && !props.isGenerating);
 
@@ -168,7 +189,7 @@ defineExpose({
     </div>
   </div>
 
-  <div class="input-area">
+  <div ref="inputAreaRef" class="input-area">
     <button
       v-if="props.isGenerating"
       class="cancel-btn"
@@ -182,24 +203,6 @@ defineExpose({
     </button>
 
     <div :class="['input-row', { 'input-row--recording': micRecording }]">
-      <Tooltip
-        class="rollback-slot"
-        :text="props.canRollback ? $t('mainGame.composer.rollbackTitle') : $t('mainGame.composer.rollbackUnavailable')"
-        interactive
-      >
-        <button
-          class="rollback-btn"
-          :disabled="!props.canRollback"
-          :aria-label="$t('mainGame.composer.rollbackAriaLabel')"
-          @click="emit('request-rollback')"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-            <path d="M3 3v5h5" />
-          </svg>
-        </button>
-      </Tooltip>
-
       <textarea
         ref="textareaRef"
         v-model="userInput"
@@ -214,13 +217,75 @@ defineExpose({
       <!-- Grouped so mobile can move all trailing controls onto their own row
            below the textarea; desktop flattens the wrapper via display:contents. -->
       <div class="composer-actions">
-        <AddLexiconTermButton />
-        <SettingTagButton
-          class="setting-tag-slot"
-          v-model="userInput"
-          :textarea="textareaRef"
-          :disabled="props.isGenerating"
-        />
+        <!-- Tool drawer — `inert` (not just visually collapsed) so the hidden keys
+             leave the tab order and the a11y tree while rolled up. -->
+        <div
+          id="composer-tools"
+          class="tools-drawer"
+          :class="{ 'tools-drawer--open': toolsOpen }"
+          :inert="!toolsOpen"
+        >
+          <Tooltip
+            class="rollback-slot"
+            :text="props.canRollback ? $t('mainGame.composer.rollbackTitle') : $t('mainGame.composer.rollbackUnavailable')"
+            interactive
+          >
+            <button
+              class="rollback-btn"
+              :disabled="!props.canRollback"
+              :aria-label="$t('mainGame.composer.rollbackAriaLabel')"
+              @click="emit('request-rollback')"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+            </button>
+          </Tooltip>
+
+          <NameInserterButton
+            ref="nameInserterRef"
+            class="name-slot"
+            v-model="userInput"
+            :textarea="textareaRef"
+            :anchor="inputAreaRef"
+            :disabled="props.isGenerating"
+            @update:model-value="nextTick(autoResizeTextarea)"
+          />
+
+          <SettingTagButton
+            class="setting-tag-slot"
+            v-model="userInput"
+            :textarea="textareaRef"
+            :disabled="props.isGenerating"
+          />
+        </div>
+
+        <Tooltip
+          class="tools-slot"
+          :text="toolsOpen ? $t('mainGame.composer.toolsCollapseTooltip') : $t('mainGame.composer.toolsExpandTooltip')"
+          interactive
+        >
+          <button
+            class="tools-btn"
+            :class="{ 'tools-btn--open': toolsOpen }"
+            :aria-expanded="toolsOpen"
+            aria-controls="composer-tools"
+            :aria-label="toolsOpen ? $t('mainGame.composer.toolsCollapseAria') : $t('mainGame.composer.toolsExpandAria')"
+            @click="toggleTools"
+          >
+            <!-- Closed: three dots (there is more here). Open: a chevron pointing back
+                 at the edge (put them away). The icon IS the instruction. -->
+            <svg v-if="!toolsOpen" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" />
+            </svg>
+            <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </Tooltip>
+
         <MicInputButton
           v-model="userInput"
           :textarea="textareaRef"
@@ -466,6 +531,76 @@ defineExpose({
   display: contents;
 }
 
+/* ── Tool drawer ──────────────────────────────────────────────
+ * Rolls up horizontally into the「⋯」key. `max-width` (not `width`) animates
+ * cleanly without measuring, and the negative margin swallows the parent row's
+ * 0.5rem gap so a collapsed drawer leaves NO phantom space beside the textarea.
+ * `visibility` flips after the roll-up finishes, matching the action-options
+ * pattern above; `inert` in the template does the real focus/a11y removal. */
+.tools-drawer {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  max-width: 0;
+  margin-right: -0.5rem;
+  opacity: 0;
+  overflow: hidden;
+  visibility: hidden;
+  transition: max-width var(--duration-normal) var(--ease-out),
+              opacity var(--duration-fast) var(--ease-out),
+              margin-right var(--duration-normal) var(--ease-out),
+              visibility 0s var(--duration-normal);
+}
+.tools-drawer--open {
+  max-width: 240px;
+  margin-right: 0;
+  opacity: 1;
+  visibility: visible;
+  transition: max-width var(--duration-normal) var(--ease-out),
+              opacity var(--duration-fast) var(--ease-out),
+              margin-right var(--duration-normal) var(--ease-out),
+              visibility 0s;
+}
+
+.tools-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 42px;
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              background-color var(--duration-fast) var(--ease-out);
+}
+.tools-btn:hover {
+  color: var(--color-sage-100);
+  border-color: color-mix(in oklch, var(--color-sage-400) 45%, transparent);
+  background: var(--color-sage-muted);
+}
+/* Open is NOT a highlight state: the chevron already says "put these away", and a
+   filled key here would compete with Send for the eye (UI must recede — Principle 2). */
+.tools-btn--open {
+  color: var(--color-text-muted);
+  border-color: var(--color-border-subtle);
+}
+.tools-btn:focus-visible {
+  outline: 2px solid var(--color-sage-400);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tools-drawer,
+  .tools-drawer--open {
+    transition: none;
+  }
+}
+
 .message-input {
   flex: 1;
   box-sizing: border-box;
@@ -612,6 +747,11 @@ defineExpose({
   .composer-actions {
     display: flex;
     align-items: center;
+    /* An OPEN drawer puts six keys on this row (3 drawer + ⋯ + mic + send ≈ 304px
+       of 44px targets). Wrapping to a third row is the honest failure mode on a
+       375px phone — letting it overflow would bring back the horizontal-pan bug. */
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 0.5rem;
     margin-left: auto;
     min-width: 0;
@@ -622,11 +762,15 @@ defineExpose({
     width: 44px;
     height: 44px;
   }
-  .composer-actions :deep(.add-lex__btn),
   .composer-actions :deep(.mic-btn),
-  .composer-actions :deep(.setting-tag-btn) {
+  .composer-actions :deep(.setting-tag-btn),
+  .composer-actions :deep(.name-ins__btn),
+  .tools-btn {
     width: 44px;
     height: 44px;
+  }
+  .tools-drawer--open {
+    max-width: 100%;
   }
   /* Send is the primary action on this row — give it a filled resting state so
      the eye lands on it (desktop keeps the quiet outline; hover isn't a cue on touch). */
@@ -636,11 +780,10 @@ defineExpose({
 
   /* Recording: the compact rec-control (cancel/level/timer/stop) needs the whole
      row — hide the idle-only helpers and let the meter breathe. */
-  /* Hide each helper at its outermost wrapper (Tooltip root / component root)
-     so no empty flex item lingers to double the row gap. */
-  .input-row--recording .rollback-slot,
-  .input-row--recording .setting-tag-slot,
-  .input-row--recording .composer-actions :deep(.add-lex) {
+  /* Hide the whole drawer + its key at their outermost wrappers so no empty flex
+     item lingers to double the row gap. */
+  .input-row--recording .tools-drawer,
+  .input-row--recording .tools-slot {
     display: none;
   }
   .input-row--recording .composer-actions {
