@@ -1944,6 +1944,22 @@ const understandingLlmInfo = computed(() => {
   apiStore.apiConfigs; apiStore.apiAssignments; // reactivity deps
   return imageService?.getGeneralLlmInfo();
 });
+// Civitai 视觉模型速查清单（设置区「支持哪些模型？」）。
+// 模型 id 是 API 标识符，不翻译；备注走 i18n。三项均为 2026-08-27 真实探测过的
+// 名字，计量差异见 docs/status/image-understanding-api-verification-2026-08-27.md。
+const UNDERSTANDING_MODEL_PRESETS: ReadonlyArray<{ id: string; noteKey: string }> = [
+  { id: 'claude-sonnet-5', noteKey: 'image.settings.understandingModelNoteSonnet' },
+  { id: 'gpt-4o-mini', noteKey: 'image.settings.understandingModelNoteGpt' },
+  { id: 'gemini-2.5-flash', noteKey: 'image.settings.understandingModelNoteGemini' },
+];
+
+const understandingCivitaiModel = computed(() =>
+  String(get('系统.扩展.image.config.understanding.civitaiModel') ?? 'claude-sonnet-5'));
+
+function applyUnderstandingModel(id: string): void {
+  setValue('系统.扩展.image.config.understanding.civitaiModel', id);
+}
+
 const understandingEngineOptions = computed<Array<{
   label: string;
   value: import('@/engine/image/types').ImageUnderstandingEngine;
@@ -5550,10 +5566,41 @@ function clearNpcImages() {
             </div>
             <input
               type="text" class="form-input" style="max-width: 220px" data-testid="understanding-civitai-model"
-              :value="get('系统.扩展.image.config.understanding.civitaiModel') ?? 'claude-sonnet-5'"
+              :value="understandingCivitaiModel"
               @change="setValue('系统.扩展.image.config.understanding.civitaiModel', String(($event.target as HTMLInputElement).value).trim() || 'claude-sonnet-5')"
             />
           </div>
+          <!-- 模型速查清单：新用户不必去翻文档就知道能填什么（点击即填入） -->
+          <details class="form-advanced" data-testid="understanding-model-guide">
+            <summary>{{ $t('image.settings.understandingModelGuide') }}</summary>
+            <div class="model-guide">
+              <span class="form-hint">{{ $t('image.settings.understandingModelApply') }}</span>
+              <div class="model-guide-chips">
+                <button
+                  v-for="m in UNDERSTANDING_MODEL_PRESETS"
+                  :key="m.id"
+                  type="button"
+                  class="model-chip"
+                  :class="{ 'model-chip--active': understandingCivitaiModel === m.id }"
+                  :aria-pressed="understandingCivitaiModel === m.id"
+                  :data-testid="`understanding-model-chip-${m.id}`"
+                  @click="applyUnderstandingModel(m.id)"
+                >
+                  <span class="model-chip-id">{{ m.id }}</span>
+                  <span class="model-chip-note">{{ $t(m.noteKey) }}</span>
+                </button>
+              </div>
+              <ul class="model-guide-list">
+                <li>{{ $t('image.settings.understandingModelFormat') }}</li>
+                <li>
+                  {{ $t('image.settings.understandingModelCatalog') }}
+                  <a href="https://openrouter.ai/models" target="_blank" rel="noopener" class="model-guide-link">openrouter.ai/models</a>
+                </li>
+                <li>{{ $t('image.settings.understandingModelBilling') }}</li>
+                <li>{{ $t('image.settings.understandingModelInvalid') }}</li>
+              </ul>
+            </div>
+          </details>
           <!-- D3B「必须标明」：通用 LLM 引擎 = 主对话模型配置 -->
           <div class="settings-row">
             <span class="form-hint" data-testid="understanding-llm-note">
@@ -6842,6 +6889,23 @@ function clearNpcImages() {
 .understanding-tags { display: flex; flex-wrap: wrap; gap: 4px; }
 .understanding-tag { font-size: 0.7rem; padding: 2px 6px; border-radius: var(--radius-sm); background: rgba(163, 190, 140, 0.1); color: var(--color-sage-300, #b5cea8); }
 .understanding-tag-conf { color: var(--color-text-muted); margin-left: 2px; }
+.model-guide { display: flex; flex-direction: column; gap: var(--space-xs); padding-top: var(--space-xs); }
+.model-guide-chips { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+.model-chip {
+  display: flex; flex-direction: column; gap: 1px; text-align: left; cursor: pointer;
+  padding: 4px 8px; border: none; border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04); color: var(--color-text-secondary);
+  font-family: inherit; transition: background 0.15s ease, color 0.15s ease;
+}
+.model-chip:hover { background: rgba(163, 190, 140, 0.12); color: var(--color-text-primary); }
+.model-chip--active { background: rgba(163, 190, 140, 0.16); color: var(--color-sage-300, #b5cea8); }
+.model-chip-id { font-size: 0.75rem; font-family: var(--font-mono, monospace); }
+.model-chip-note { font-size: 0.65rem; color: var(--color-text-muted); }
+.model-guide-list { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 2px; }
+.model-guide-list li { font-size: 0.7rem; color: var(--color-text-muted); line-height: 1.5; }
+.model-guide-link { color: var(--color-sage-300, #b5cea8); text-decoration: none; }
+.model-guide-link:hover { text-decoration: underline; }
+@media (prefers-reduced-motion: reduce) { .model-chip { transition: none; } }
 .understanding-save-row { display: flex; gap: var(--space-sm); }
 .ref-lib-section { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-sm); margin-bottom: var(--space-sm); }
 .ref-lib-header { margin-bottom: var(--space-xs); }

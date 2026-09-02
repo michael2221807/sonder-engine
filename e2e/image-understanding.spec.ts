@@ -134,6 +134,40 @@ test.describe('图片提炼 · 双引擎能力门 (offline: full)', () => {
       await expect(page.getByTestId('understanding-extra-input')).toHaveValue('重点描述两人的姿势与接触部位');
     });
 
+  test('设置区：模型速查清单可展开，点击 chip 直接填入模型名并迁移高亮',
+    { tag: ['@regression', '@image', '@understanding-rebuild'] },
+    async ({ page }) => {
+      await seedSave(page, { tree: imageTree(), sessionType: 'play' });
+      await enterSeededGame(page);
+      await goToGameTab(page, 'image');
+      await page.getByRole('tab', { name: '设置', exact: true }).click();
+
+      // GIVEN 折叠的速查清单
+      const guide = page.getByTestId('understanding-model-guide');
+      await guide.scrollIntoViewIfNeeded();
+      await guide.locator('summary').click();
+
+      const sonnet = page.getByTestId('understanding-model-chip-claude-sonnet-5');
+      const gpt = page.getByTestId('understanding-model-chip-gpt-4o-mini');
+      const input = page.getByTestId('understanding-civitai-model');
+
+      // THEN 默认模型的 chip 高亮（视觉 + 无障碍状态同步）
+      await expect(sonnet).toHaveClass(/model-chip--active/);
+      await expect(sonnet).toHaveAttribute('aria-pressed', 'true');
+      await expect(gpt).not.toHaveClass(/model-chip--active/);
+      await expect(gpt).toHaveAttribute('aria-pressed', 'false');
+
+      // WHEN 点击另一个 chip
+      await gpt.click();
+
+      // THEN 输入框被填入 + 高亮迁移（无死控件：点了就有可见变化）
+      await expect(input).toHaveValue('gpt-4o-mini');
+      await expect(gpt).toHaveClass(/model-chip--active/);
+      await expect(gpt).toHaveAttribute('aria-pressed', 'true');
+      await expect(sonnet).not.toHaveClass(/model-chip--active/);
+      await expect(sonnet).toHaveAttribute('aria-pressed', 'false');
+    });
+
   test('设置区：旧 WD 控件已拆除，新提炼设置 + 主对话标示行就位',
     { tag: ['@regression', '@image', '@understanding-rebuild'] },
     async ({ page }) => {
