@@ -101,7 +101,7 @@ describe('sortNpcEntries', () => {
     { name: '阿箬', present: true, affinity: undefined, lastInteraction: undefined },
   ];
 
-  it('present：在场优先，同组按名称（localeCompare = 拼音序，阿 < 沈）', () => {
+  it('present：在场优先，同组按名称（固定 zh 拼音序，阿 < 沈，跨平台稳定）', () => {
     expect(sortNpcEntries(list, 'present', true).map((n) => n.name)).toEqual(['阿箬', '沈砚舟', '苏婉']);
   });
 
@@ -142,9 +142,13 @@ describe('sortLocEntries', () => {
     expect(sortLocEntries(list, 'explored', true)[2].name).toBe('寒山寺');
   });
 
-  it('name：纯名称序', () => {
+  it('name：纯名称序（固定 zh 拼音序，不吃环境默认 locale）', () => {
+    // 断言必须用与实现同一套排序规则：裸 localeCompare 取环境默认 locale，
+    // 在 ubuntu CI(en-US) 上与中文 Windows(zh-CN) 结果相反 → 会假红。
+    const zh = new Intl.Collator('zh-Hans-CN');
     const asc = sortLocEntries(list, 'name', true).map((l) => l.name);
-    expect(asc).toEqual([...asc].sort((a, b) => a.localeCompare(b)));
+    expect(asc).toEqual([...asc].sort((a, b) => zh.compare(a, b)));
+    expect(asc).toEqual(['北市·当铺', '寒山寺', '西巷酒垆']);
   });
 });
 

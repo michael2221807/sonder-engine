@@ -163,6 +163,22 @@ export function harvestLocationEntries(
 }
 
 /**
+ * 名称排序用**固定 zh 拼音序**排序规则。
+ *
+ * 不带 locale 参数的 `localeCompare` 取运行环境的 ICU 默认 locale：中文 Windows 上是
+ * `zh-CN`(拼音序,阿 < 沈),Linux CI 与英文系统/浏览器上是 `en-US`(CJK 按码位,沈 < 阿)。
+ * 后果有两层:同一份存档在不同设备上名字顺序不一致;单测里写死的中文顺序在 ubuntu
+ * runner 上必红。
+ *
+ * **2026-09-03 事故:** 这条差异让 `npx vitest run` 在 CI 上失败,而 workflow 的
+ * `Run tests` 是阻塞步 —— build / upload-pages / deploy 被整段 skip,GitHub Pages
+ * 连续三个 commit(3f41ac3 / c977f48 / 27f443e)停在旧构建,线上功能与仓库脱节。
+ * 凡是要被单测断言、或要跨设备稳定的名称排序,一律显式指定 locale,不吃环境默认值。
+ */
+const NAME_COLLATOR = new Intl.Collator('zh-Hans-CN');
+const compareName = (a: string, b: string): number => NAME_COLLATOR.compare(a, b);
+
+/**
  * Sort NPC rows.
  *
  * `asc === true` is the mode's own natural order (在场优先 / 好感高优先 / 最近优先 /
@@ -171,7 +187,7 @@ export function harvestLocationEntries(
  */
 export function sortNpcEntries(list: NpcNameEntry[], mode: NpcSortMode, asc: boolean): NpcNameEntry[] {
   const dir = asc ? 1 : -1;
-  const byName = (a: NpcNameEntry, b: NpcNameEntry): number => a.name.localeCompare(b.name);
+  const byName = (a: NpcNameEntry, b: NpcNameEntry): number => compareName(a.name, b.name);
   return [...list].sort((a, b) => {
     let r = 0;
     switch (mode) {
@@ -208,7 +224,7 @@ export function sortNpcEntries(list: NpcNameEntry[], mode: NpcSortMode, asc: boo
 /** Sort location rows (see sortNpcEntries for the direction contract). */
 export function sortLocEntries(list: LocNameEntry[], mode: LocSortMode, asc: boolean): LocNameEntry[] {
   const dir = asc ? 1 : -1;
-  const byName = (a: LocNameEntry, b: LocNameEntry): number => a.name.localeCompare(b.name);
+  const byName = (a: LocNameEntry, b: LocNameEntry): number => compareName(a.name, b.name);
   return [...list].sort((a, b) => {
     let r = 0;
     switch (mode) {
