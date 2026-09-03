@@ -53,6 +53,15 @@ describe('stripJudgementForSpeech (判定不配音)', () => {
     expect(out).toContain('屋檐在脚下碎裂。');
   });
 
+  it('drops a real-world 判定 block reported by the PO (2026-09-02)', () => {
+    const raw = '他屏息辨认那道声响。〖判定:直觉,结果:成功,判定值:55,难度:53,基础:41,幸运:+4,环境:+2,状态:-2,难度加成:场所异样辨读+3〗辨出是水滴。';
+    const out = stripMarkersForSpeech(raw);
+    expect(out).not.toContain('判定值');
+    expect(out).not.toContain('难度加成');
+    expect(out).not.toContain('直觉');
+    expect(out).toBe('他屏息辨认那道声响。辨出是水滴。');
+  });
+
   it('drops 〖系统提示…〗 status blocks too', () => {
     expect(stripJudgementForSpeech('〖系统提示：好感度变化〗她低下头。')).toBe('她低下头。');
   });

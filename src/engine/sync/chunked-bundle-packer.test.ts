@@ -1,9 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   pack, packChunks, unpack, gzipCompress, gzipDecompress,
   sha256, sha256String, sha256Blob, ChecksumError,
 } from './chunked-bundle-packer';
 import type { ChunkManifest } from './chunked-bundle-packer';
+
+// 这个文件里的持久化门用例会真实打包 25MB+ 的 bundle(分块 + gzip + 双层 SHA-256),
+// 单独跑约 10s 就绪,但 `npx vitest run` 全量并行时 CPU 争用会把单个用例推过 vitest
+// 默认的 5s testTimeout —— 表现为"单跑全绿、全量随机红几个"的假失败。
+// 2026-09-03 事故:CI 的 `Run tests` 因此连续三个 commit 变红,build/deploy 被整段
+// skip,GitHub Pages 一直停在旧构建(线上功能看不到更新)。这里按文件放宽超时,
+// 不动被测逻辑,也不掩盖真实断言失败(超时以外的失败照常红)。
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 
 async function collectChunks(
   gen: AsyncGenerator<{ path: string; blob: Blob }, ChunkManifest, void>,
