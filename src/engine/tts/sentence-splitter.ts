@@ -4,7 +4,8 @@
  *
  * 两步:
  *   1. stripMarkersForSpeech — 去掉 AGA 正文的 markdown/inline marker 记号,避免把
- *      `【环境】` / 反引号 / 引号 / 表格竖线 等读出来。
+ *      `【环境】` / 反引号 / 引号 / 表格竖线 等读出来;并整块剔除 `〖判定/系统提示〗`
+ *      (stripJudgementForSpeech) —— 判定是系统层信息,朗读会打断沉浸感。
  *   2. splitSentences — 把清洗后的整段切成"句"级细片段(tokenizer)。
  *   3. groupSentencesBySize — 把细片段按「目标字数 + 最多句数」智能拼回"段",
  *      供分句流式流水线逐段合成:逐段请求 streaming=1,当前段播放时预取下一段,
@@ -19,7 +20,62 @@
  */
 
 /**
+ * 剔除「判定 / 系统提示」块 — 这些是系统层信息(骰值、难度、状态变化),
+ * 不属于叙事,朗读出来会打断沉浸感,故整块跳过而非去符号读内容。
+ *
+ * 覆盖三种写法:
+ *   1. `〖类型:结果,判定值:X,难度:Y,...〗` —— AGA 唯一合法判定格式(也含
+ *      `〖系统提示:好感度变化〗` 这类状态提示,pack core.md §四:`〖〗` = 系统判定/状态变化)。
+ *      与 formatted-text-parser.findJudgementSlices **逐字同规则**:遇 `〖` 吃到最近的
+ *      `〗`(嵌套的 `〖` 一并吞掉,与展示层一致),未闭合的 `〖` 不吞后文
+ *      (只把孤立符号本身抹掉)。两处规则必须同步改,否则"看不到却读得到"。
+ *   2. `<judge>...</judge>` 判定思考块 —— 正常链路里 response-parser 已剥掉标签,
+ *      这里兜底原始文本直接传入的情形。
+ *   3. `【判定:...】` / `【...,判定值:X,...】` / `【系统提示:...】` —— 模型偶尔用错括号
+ *      (core.md 明确警告「用〖〗不是【】」)。只在内容是 `判定:` / `系统提示:` 这类
+ *      冒号形式,或含 `判定值:` 字段时才剔除;`【环境】`、`【判定日快到了】`、
+ *      `【任务】难度:高` 这类叙事标签不受影响。
+ */
+export function stripJudgementForSpeech(raw: string): string {
+  if (!raw) return '';
+  let t = raw;
+  // 1) <judge>...</judge> 判定思考块(含未闭合时不吞尾,故要求闭合)
+  t = t.replace(/<\s*judge\s*>[\s\S]*?<\s*\/\s*judge\s*>/gi, '');
+  // 2) 〖...〗 判定/系统提示块 —— 用「最近的 〗 收口」逐段扫描,与展示层
+  //    formatted-text-parser.findJudgementSlices 逐字同规则:遇 `〖` 就吃到下一个
+  //    `〗`(即使中间又出现 `〖` 也一并吞掉,与展示层"孤立 〖 后的文本不渲染成正文"
+  //    一致);找不到闭合的 `〗` 则停手,不吞后文。若改成正则 /〖[^〖〗]*〗/,
+  //    孤立 `〖` 后面那段展示层不显示的文本会被朗读出来 —— 视听不一致。
+  let out = '';
+  let cursor = 0;
+  while (cursor < t.length) {
+    const open = t.indexOf('〖', cursor);
+    if (open === -1) break;
+    const close = t.indexOf('〗', open + 1);
+    if (close === -1) break; // 未闭合 → 后文原样保留(展示层同样忽略这个 〖)
+    out += t.slice(cursor, open);
+    cursor = close + 1;
+  }
+  t = out + t.slice(cursor);
+  // 3) 误用方括号的系统块:仅当内容确实是判定/系统提示语法时才剔除
+  t = t.replace(/【([^【】]*)】/g, (whole, inner: string) => {
+    const norm = inner.replace(/：/g, ':').replace(/，/g, ',').trim();
+    // 收紧到「确实是判定语法」:`判定:` 形式的类型冒号,或带 `判定值:` 字段。
+    // 不能只看「判定」两字开头 —— 那是日常词,会误伤 `【判定日快到了】`;
+    // 也不能只看难度/基础/幸运,太泛,会误伤 `【任务】难度:高`。
+    const looksLikeJudgement = /^判定\s*:/.test(norm) || /判定值\s*:/.test(norm);
+    // 系统提示同属系统层信息(与 〖系统提示:…〗 对齐),要求冒号形式避免误伤叙事。
+    const looksLikeSystemNote = /^系统提示\s*:/.test(norm);
+    return looksLikeJudgement || looksLikeSystemNote ? '' : whole;
+  });
+  // 残留的孤立 〖 / 〗(未闭合)不该被读出来
+  t = t.replace(/[〖〗]/g, '');
+  return t;
+}
+
+/**
  * 去掉朗读不需要的记号,保留纯可读文本。
+ * - 〖判定〗/系统提示块 → **整块跳过不朗读**(见 stripJudgementForSpeech)
  * - 【标签】环境标记 → 去掉方括号标签,保留内容? 环境标记 `【环境】xxx` 中
  *   `【环境】` 是分类标签不该读,内容要读 → 去掉 `【...】` 整体前缀标签,
  *   但普通正文里的书名号《》要保留。这里只剥离 AGA 已知的分类标签。
@@ -33,11 +89,14 @@ export function stripMarkersForSpeech(raw: string): string {
 
   // 代码块 ``` ... ``` 整体移除(朗读代码无意义)
   t = t.replace(/```[\s\S]*?```/g, ' ');
+  // 判定/系统提示块整块跳过 —— 必须早于反引号与 【】 处理,避免判定内容被
+  // 后续规则"去符号保留内容"重新混进朗读文本。
+  t = stripJudgementForSpeech(t);
   // 行内反引号:去引号读内容(AGA 内心独白 `...`)
   t = t.replace(/`([^`]*)`/g, '$1');
-  // AGA 分类标签:行首/句中的 【环境】【判定】等作为标签前缀 → 去掉方括号本身,
-  // 保留其后内容;〖判定〗同理。仅剥离括号,不吞内容。
-  t = t.replace(/[【〖]([^】〗]*)[】〗]/g, '$1，');
+  // AGA 分类标签:行首/句中的 【环境】等作为标签前缀 → 去掉方括号本身,保留其后
+  // 内容。判定类 〖…〗/【判定…】已在 stripJudgementForSpeech 整块剔除,不会走到这里。
+  t = t.replace(/【([^】]*)】/g, '$1，');
   // markdown 标题 #、引用 >、列表 -/*/数字. 前缀
   t = t.replace(/^\s{0,3}#{1,6}\s+/gm, '');
   t = t.replace(/^\s{0,3}>\s?/gm, '');

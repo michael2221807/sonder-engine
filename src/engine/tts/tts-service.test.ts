@@ -171,6 +171,24 @@ describe('TtsService stream mode (分句流式, default)', () => {
     expect(provider.streamUrlCalls[0]).not.toContain('`');
   });
 
+  it('never sends 判定 blocks to the provider (any transmission mode)', async () => {
+    const raw = '他一跃而上。〖行动:成功,判定值:45,难度:35,基础:30,幸运:+8,环境:+5,状态:+2〗屋檐碎裂。';
+
+    const streaming = makeFakeProvider();
+    await makeService(streaming, { transmissionMode: 'stream' }).speak(raw, 'r1');
+    expect(streaming.streamUrlCalls.join('')).not.toContain('判定值');
+    expect(streaming.streamUrlCalls.join('')).toContain('屋檐碎裂');
+
+    const pseudo = makeFakeProvider();
+    await makeService(pseudo, { transmissionMode: 'pseudo' }).speak(raw, 'r2');
+    expect(pseudo.synthCalls.join('')).not.toContain('判定值');
+
+    const full = makeFakeProvider();
+    await makeService(full, { transmissionMode: 'full' }).speak(raw, 'r3');
+    expect(full.synthCalls.join('')).not.toContain('判定值');
+    expect(full.synthCalls.join('')).toContain('他一跃而上');
+  });
+
   it('falls back to full (synthesize) when getStreamUrl returns null', async () => {
     const provider = makeFakeProvider({ getStreamUrl: () => null });
     const player = makeFakePlayer();
