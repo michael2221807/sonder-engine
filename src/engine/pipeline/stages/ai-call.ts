@@ -186,6 +186,8 @@ export class AICallStage implements PipelineStage {
       messageSources: step2DebugSources,
       generationId: `${ctx.generationId ?? ''}_step2`,
       roundNumber: ctx.meta.debugRoundNumber,
+      // Context Compiler v1: what was projected / stripped from THIS call and why.
+      compileTrace: ctx.meta.compileTrace,
     });
 
     const rawStep2 = await this.aiService.generate({

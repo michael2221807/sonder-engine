@@ -191,3 +191,112 @@ describe('CommandExecutor', () => {
     });
   });
 });
+
+// ─── §11.4 伪根路径：归位 / 拒绝（2026-09-04，Context Compiler 冒烟发现，PO 要求修复） ───
+describe('CommandExecutor · unknown path root → relocate or reject', () => {
+  const emitted = (eventBus as unknown as { _emitted: Array<{ event: string; payload: unknown }> })._emitted;
+
+  function make() {
+    const mock = createMockStateManager({
+      角色: {
+        基础信息: { 姓名: '主角', 当前位置: 'A·B' },
+        身体: { 反差体质失控度: 10, 部位: [{ 名称: '颈', 敏感度: 20 }] },
+        属性: { 等级: 3 },
+      },
+      世界: { 规则: { 等级: 1 }, 描述: 'w' },
+      社交: { 关系: [{ 名称: '甲', 好感度: 50 }] },
+      元数据: { 上次对话前快照: { 角色: { 身体: { 反差体质失控度: 5 } } } },
+    });
+    const ex = new CommandExecutor(mock.sm as never, ['角色', '世界', '社交', '元数据']);
+    (eventBus as unknown as { _clear: () => void })._clear();
+    return { sm: mock.sm, ex };
+  }
+
+  it('relocates a dropped-root path to its unique home (shallowest wins over the pre-round snapshot copy)', () => {
+    const { sm, ex } = make();
+    const r = ex.execute({ action: 'set', key: '身体.反差体质失控度', value: 42 });
+    expect(r.success).toBe(true);
+    expect(r.command.key).toBe('角色.身体.反差体质失控度');
+    expect(r.relocatedFrom).toBe('身体.反差体质失控度');
+    expect(sm.get('角色.身体.反差体质失控度')).toBe(42);
+    expect(sm.get('身体')).toBeUndefined(); // no top-level pseudo key
+    expect(sm.get('元数据.上次对话前快照.角色.身体.反差体质失控度')).toBe(5); // deeper copy untouched
+  });
+
+  it('drops a fabricated leading segment (builder piece title used as a root) and still relocates', () => {
+    const { sm, ex } = make();
+    const r = ex.execute({ action: 'add', key: '用户角色数据.身体.反差体质失控度', value: 5 });
+    expect(r.success).toBe(true);
+    expect(r.command.key).toBe('角色.身体.反差体质失控度');
+    expect(sm.get('角色.身体.反差体质失控度')).toBe(15);
+    expect(sm.get('用户角色数据')).toBeUndefined();
+  });
+
+  it('keeps filter segments intact when relocating', async () => {
+    // The mock's filter regex needs an ASCII-leading field name; the real StateManager
+    // resolves `[名称=颈]`, so this case runs against the real one.
+    const { StateManager } = await import('@/engine/core/state-manager');
+    const sm = new StateManager();
+    sm.loadTree({
+      角色: { 身体: { 反差体质失控度: 10, 部位: [{ 名称: '颈', 敏感度: 20 }] } },
+      世界: {}, 社交: {}, 元数据: {},
+    });
+    const ex = new CommandExecutor(sm, ['角色', '世界', '社交', '元数据']);
+    const r = ex.execute({ action: 'set', key: '身体.部位[名称=颈].敏感度', value: 60 });
+    expect(r.success).toBe(true);
+    expect(r.command.key).toBe('角色.身体.部位[名称=颈].敏感度');
+    expect(sm.get('角色.身体.部位[名称=颈].敏感度')).toBe(60);
+  });
+
+  it('rejects when nothing in the tree can host the path — no pseudo key is created', () => {
+    const { sm, ex } = make();
+    const r = ex.execute({ action: 'set', key: '人性锚点', value: 3 });
+    expect(r.success).toBe(false);
+    expect(r.error).toContain('已拒绝');
+    expect(sm.get('人性锚点')).toBeUndefined();
+    const r2 = ex.execute({ action: 'push', key: '记忆（甲）', value: 'x' });
+    expect(r2.success).toBe(false);
+    expect(sm.get('记忆（甲）')).toBeUndefined();
+  });
+
+  it('rejects an ambiguous path (two equally shallow homes) instead of guessing', () => {
+    const { sm, ex } = make();
+    const r = ex.execute({ action: 'set', key: '等级', value: 9 });
+    expect(r.success).toBe(false);
+    expect(r.error).toContain('不唯一');
+    expect(sm.get('角色.属性.等级')).toBe(3);
+    expect(sm.get('世界.规则.等级')).toBe(1);
+    expect(sm.get('等级')).toBeUndefined();
+  });
+
+  it('whitelisted roots are untouched and produce no toast', () => {
+    const { sm, ex } = make();
+    const r = ex.execute({ action: 'set', key: '角色.属性.等级', value: 4 });
+    expect(r.success).toBe(true);
+    expect(r.relocatedFrom).toBeUndefined();
+    expect(sm.get('角色.属性.等级')).toBe(4);
+    expect(emitted.filter((e) => e.event === 'ui:toast')).toHaveLength(0);
+  });
+
+  it('warns + toasts once per pseudo root per session, and batch results carry the outcome', () => {
+    const { ex } = make();
+    const batch = ex.executeBatch([
+      { action: 'set', key: '身体.反差体质失控度', value: 1 },
+      { action: 'set', key: '身体.反差体质失控度', value: 2 },
+      { action: 'set', key: '人性锚点', value: 3 },
+    ]);
+    expect(batch.results.map((r) => r.success)).toEqual([true, true, false]);
+    expect(batch.hasErrors).toBe(true);
+    expect(batch.results[0].relocatedFrom).toBe('身体.反差体质失控度');
+    expect(batch.results[2].error).toContain('已拒绝');
+    const toasts = emitted.filter((e) => e.event === 'ui:toast');
+    expect(toasts).toHaveLength(2); // 身体 once, 人性锚点 once
+  });
+
+  it('whitelist null → validation disabled (legacy behaviour preserved for tests / compat)', () => {
+    const mock = createMockStateManager({ 角色: {} });
+    const ex = new CommandExecutor(mock.sm as never, null);
+    const r = ex.execute({ action: 'set', key: '任意.路径', value: 1 });
+    expect(r.success).toBe(true);
+  });
+});

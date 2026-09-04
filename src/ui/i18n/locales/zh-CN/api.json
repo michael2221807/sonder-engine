@@ -190,6 +190,8 @@
   "api.aiSettings.streaming.desc": "逐字显示 AI 生成的叙事正文（仅影响主回合叙事和润色，不影响指令/选项等结构化数据）",
   "api.aiSettings.splitGen.label": "分步生成",
   "api.aiSettings.splitGen.desc": "主回合分两次 API 调用：第1步生成正文叙事，第2步生成指令和行动选项，提高稳定性",
+  "api.aiSettings.contextCompiler.label": "上下文去重（分步第二步）",
+  "api.aiSettings.contextCompiler.desc": "分步生成时，第 2 步只收到第 1 步没发过的内容：世界描述与 Engram 检索块不重发，地点表只保留当前地点附近的细节，世界事件只保留最近 5 条与相关 5 条，历史对话固定 2 对。每回合输入约省三成；关闭即恢复旧行为。装配面板的第 2 步快照可查看每一项省略原因。",
   "api.aiSettings.maxRetries.label": "失败重试次数",
   "api.aiSettings.maxRetries.desc": "请求失败后的最大重试次数（0–5）",
   "api.aiSettings.privacyRepairRetries.label": "扩展字段修复重试次数",

@@ -22,7 +22,7 @@ import type { EngramManager } from './engram-manager';
 import type { IMemoryRetriever } from '../../pipeline/types';
 import { loadEngramConfig } from './engram-config';
 import { stringifySnapshotForPrompt } from '../../memory/snapshot-sanitizer';
-import { loadShortTermInjectionSettings } from '../../memory/memory-manager';
+import { SUB_PIPELINE_HISTORY_PAIRS } from '../../prompt/context-compiler';
 
 // ─── MissingReport ───
 
@@ -681,11 +681,9 @@ export class EngramBatchSolidifyPipeline {
     );
     if (!Array.isArray(narrativeHistory) || narrativeHistory.length === 0) return [];
 
-    const injection = loadShortTermInjectionSettings();
-    if (injection.injectionStyle === 'single_assistant_block') return [];
-
-    const keepCount = injection.fewShotPairs * 2;
-    if (keepCount <= 0) return [];
+    // Recent narrative as CONTEXT for edge generation (not format examples). Constant since
+    // 2026-09-04 (Context Compiler v1, PO decision Q3 removed the player setting).
+    const keepCount = SUB_PIPELINE_HISTORY_PAIRS * 2;
     const tail = narrativeHistory.slice(-keepCount);
     return tail.map((m): AIMessage => {
       const role = m.role as AIMessage['role'];

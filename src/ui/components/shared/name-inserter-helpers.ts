@@ -117,12 +117,12 @@ export function harvestLocationEntries(
       const name = readString(row, f.name);
       if (!name || seen.has(name)) continue;
       seen.add(name);
-      // 上级 has no entry in locationFieldNames (the pack contract only maps
-      // name/description/connections/npcList); MapPanel reads it literally too.
+      // `parent` joined locationFieldNames on 2026-09-04 (Context Compiler v1 adjacency
+      // projection); read it through the mapping like every other field.
       const conn = row[f.connections];
       rows.push({
         name,
-        parent: readString(row, '上级'),
+        parent: readString(row, f.parent),
         connections: Array.isArray(conn) ? conn.filter((c): c is string => typeof c === 'string') : [],
       });
     }

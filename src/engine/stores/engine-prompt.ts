@@ -14,6 +14,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { AIMessage } from '../ai/types';
 import type { MessageSourceTag } from '../prompt/prompt-assembler';
+import type { CompileTrace } from '../pipeline/types';
 
 const MAX_SNAPSHOTS_PER_ROUND = 10;
 
@@ -50,6 +51,11 @@ export interface PromptSnapshot {
    * parser failures — lets the UI show exactly what the backend returned.
    */
   rawResponse?: string;
+  /**
+   * Context Compiler v1 (2026-09-04): what was projected / stripped from this call
+   * and why. Only the split-gen step2 snapshot carries it.
+   */
+  compileTrace?: CompileTrace;
 }
 
 export const usePromptDebugStore = defineStore('promptDebug', () => {
@@ -79,6 +85,7 @@ export const usePromptDebugStore = defineStore('promptDebug', () => {
     roundNumber?: number,
     messageSources?: MessageSourceTag[],
     generationId?: string,
+    compileTrace?: CompileTrace,
   ): void {
     const snapshot: PromptSnapshot = {
       flowId,
@@ -88,6 +95,7 @@ export const usePromptDebugStore = defineStore('promptDebug', () => {
       capturedAt: new Date().toISOString(),
       roundNumber,
       generationId,
+      ...(compileTrace ? { compileTrace } : {}),
     };
 
     // New round detected → clear old snapshots

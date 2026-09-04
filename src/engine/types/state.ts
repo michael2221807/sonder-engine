@@ -37,6 +37,11 @@ export interface CommandResult {
   command: Command;
   change?: StateChange;
   error?: string;
+  /**
+   * §11.4 归位：AI 写了伪根路径（如 `身体.X`），执行器把它唯一定位到白名单根下的
+   * 正确位置（如 `角色.身体.X`）后执行；这里记录原始 key，`command.key` 已是归位后的路径。
+   */
+  relocatedFrom?: string;
 }
 
 /** Result of executing a batch of commands */

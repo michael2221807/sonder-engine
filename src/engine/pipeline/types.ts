@@ -77,6 +77,13 @@ export interface PipelineMeta {
   /** 第 2 步消息来源标签 */
   splitStep2Sources?: string[];
   /**
+   * Context Compiler 开关（`aga_ai_settings.contextCompiler`，缺省 = 开）。
+   * 只影响分步生成的第 2 步输入；关 = 旧行为。GameOrchestrator 写、ContextAssembly 读。
+   */
+  contextCompiler?: boolean;
+  /** Context Compiler 的决策 trace（ContextAssembly 写 → AICall 发给调试面板）。 */
+  compileTrace?: CompileTrace;
+  /**
    * Canon Capture：本回合玩家输入含设定标记且功能开启（ContextAssembly 写）。
    * AICallStage 读它来把 `setting_updates` 加进 step2 收尾指令的必出字段清单 ——
    * 2026-08-25 事故：收尾指令只列四个字段，模型照单省略 setting_updates，
@@ -131,6 +138,27 @@ export interface PromptMetrics {
   step1: PromptStepMetrics;
   /** Present only in split-gen mode. */
   step2?: PromptStepMetrics;
+}
+
+/**
+ * One Context Compiler decision (v1, 2026-09-04). `reason` is an i18n key
+ * (`compiler.reason.*`); `before` / `after` are token estimates of the affected
+ * slice. Rendered by PromptAssemblyPanel; not persisted to the save.
+ */
+export interface CompileTraceEntry {
+  /** State path (`世界.地点信息`), template variable (`MEMORY_BLOCK`) or `history`. */
+  target: string;
+  action: 'strip' | 'project' | 'truncate';
+  reason: string;
+  before: number;
+  after: number;
+  /** Small structured detail for the panel (counts), never free text. */
+  detail?: Record<string, number | boolean>;
+}
+
+export interface CompileTrace {
+  entries: CompileTraceEntry[];
+  savedTokens: number;
 }
 
 export interface PipelineContext {
@@ -684,6 +712,22 @@ export interface EnginePathConfig {
   /** Location field names (Story 4 — Engram batch solidify needs location name/description/connections) */
   locationFieldNames: EngineLocationFieldNames;
 
+  /**
+   * Separator between the levels of a hierarchical location name (`S市·上城区·素家庄园`).
+   * Context Compiler uses it to derive the leaf name for world-event relevance matching.
+   */
+  locationPathSeparator: string;
+
+  /** World-event record field names (Context Compiler event-log projection). */
+  worldEventFieldNames: EngineWorldEventFieldNames;
+
+  /**
+   * Root key of the creation-flow world selection object (`world.name` / `world.description`).
+   * Read by SystemPromptBuilder for `world_prompt`; stripped from step2 by the Context Compiler
+   * because step1 already carries it.
+   */
+  worldSelection: string;
+
   /** NPC type value to exclude from Engram coverage (default: '普通') */
   npcTypeExclude: string;
 }
@@ -694,6 +738,18 @@ export interface EngineLocationFieldNames {
   description: string;
   connections: string;
   npcList: string[];
+  /** Parent location name (flat array + parent field = tree). Context Compiler adjacency projection. */
+  parent: string;
+}
+
+/** World-event record field name mappings (`社交.事件.事件记录[i]`). */
+export interface EngineWorldEventFieldNames {
+  /** Array of NPC names involved in the event. */
+  participants: string;
+  /** Free-text scope of impact. */
+  scope: string;
+  /** Free-text description. */
+  description: string;
 }
 
 /**
@@ -957,7 +1013,15 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
     description: '描述',
     connections: '连接',
     npcList: ['NPC', '常驻NPC'],
+    parent: '上级',
   },
+  locationPathSeparator: '·',
+  worldEventFieldNames: {
+    participants: '相关人物',
+    scope: '影响范围',
+    description: '事件描述',
+  },
+  worldSelection: 'world',
   npcTypeExclude: '普通',
   npcFieldNames: {
     // 基础信息（现有字段；本 sprint 前引擎代码硬编码，本 sprint 起统一走此映射）

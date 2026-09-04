@@ -42,7 +42,7 @@ import type { EngramEntity } from '../../memory/engram/entity-builder';
 import { loadEngramConfig } from '../../memory/engram/engram-config';
 import { eventBus } from '../../core/event-bus';
 import { stringifySnapshotForPrompt } from '../../memory/snapshot-sanitizer';
-import { loadShortTermInjectionSettings } from '../../memory/memory-manager';
+import { SUB_PIPELINE_HISTORY_PAIRS } from '../../prompt/context-compiler';
 import {
   findIncompleteFields,
   readRequiredFieldsConfig,
@@ -826,10 +826,9 @@ export class FieldRepairPipeline {
     const narrativeHistory = this.stateManager.get<NarrativeEntry[]>(this.paths.narrativeHistory);
     if (!Array.isArray(narrativeHistory) || narrativeHistory.length === 0) return [];
 
-    const injection = loadShortTermInjectionSettings();
-    if (injection.injectionStyle === 'single_assistant_block') return [];
-
-    const keepCount = injection.fewShotPairs * 2;
+    // Recent narrative as CONTEXT for the repair call. Constant since 2026-09-04
+    // (Context Compiler v1, PO decision Q3 removed the player setting).
+    const keepCount = SUB_PIPELINE_HISTORY_PAIRS * 2;
     const tail = narrativeHistory.slice(-keepCount);
     return tail.map((m): AIMessage => {
       const role = m.role as AIMessage['role'];

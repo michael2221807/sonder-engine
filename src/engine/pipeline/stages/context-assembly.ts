@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-prompt-assembly.md §5.3（上下文编译 · 分步第 2 步投影接线）· game-main.md §3.5（指标药丸）
 /**
  * 上下文组装阶段 — 将游戏状态、记忆、行为模块输出组装为 AI 消息列表
  *
@@ -24,8 +25,15 @@ import type { StateManager } from '../../core/state-manager';
 import type { PromptAssembler } from '../../prompt/prompt-assembler';
 import { eventBus } from '../../core/event-bus';
 import { stringifySnapshotForPrompt, stripTagFromMessages, NSFW_STRIP_TAG } from '../../memory/snapshot-sanitizer';
-import { loadShortTermInjectionSettings } from '../../memory/memory-manager';
-import { NpcPresenceService, type NpcRecord } from '../../social/npc-presence';
+import {
+  buildSentRegistry,
+  compileStep2Context,
+  historyTraceEntry,
+  LEGACY_FEW_SHOT_PAIRS,
+  STEP2_FEW_SHOT_PAIRS,
+} from '../../prompt/context-compiler';
+import { estimateMessagesTokens } from '../../core/metrics-helpers';
+import { NpcPresenceService, isColocatedLocation, type NpcRecord } from '../../social/npc-presence';
 import { NpcContextRenderer } from '../../social/npc-context-renderer';
 import { NpcRelevanceScorer, DEFAULT_NPC_RELEVANCE_CONFIG } from '../../social/npc-relevance-scorer';
 import { buildSystemPrompt } from '../../prompt/system-prompt-builder';
@@ -416,21 +424,13 @@ export class ContextAssemblyStage implements PipelineStage {
     const narrativeHistory =
       this.stateManager.get<NarrativeEntry[]>(this.paths.narrativeHistory) ?? [];
 
-    // ── 2026-04-14：按用户选择的注入模式裁剪 chatHistory ──
+    // ── few-shot 历史对裁剪 ──
     //
-    // 两种模式（`aga_memory_settings.shortTermInjectionStyle`）：
-    //
-    // A) `single_assistant_block`（Demo 风格 / 极省 token）：
-    //    完全清空 chatHistory，旧回合叙事全部通过 MEMORY_BLOCK 内的短期记忆压缩块
-    //    （`记忆.短期`）注入。最终 messages = system + user = 2 条（+ 中期/长期注入）。
-    //
-    // B) `few_shot_pairs`（推荐默认 / 保留 few-shot 信号）：
-    //    保留最近 N 对 (user, assistant)；更早历史依赖 MEMORY_BLOCK 内短期记忆。
-    //    messages = system + 2×N + user 条。N 默认 3。
-    //
-    // 旧版本行为（无裁剪）等价于 fewShotPairs = +∞，在长回合游戏中会爆 token。
-    const injection = loadShortTermInjectionSettings();
-
+    // 2026-09-04（Context Compiler v1，PO 决议 Q3）：`fewShotPairs` / `shortTermInjectionStyle`
+    // 两个玩家设置已移除。历史对数改为常量：新路径 step2 在编译器开启时 2 对
+    // （A/B：1 对出现 2/10 JSON 畸形，5 对 0/10；2 对是 schema 范例的最小充分量），
+    // 编译器关闭与 legacy 路径沿用旧默认 3 对。新路径 step1 不消费 chatHistory
+    // （builder 用短期记忆单块），所以这里只影响 step2 / legacy。
     const wrap = (m: NarrativeEntry): AIMessage => {
       const role = m.role as AIMessage['role'];
       let wrapped = m.content;
@@ -441,18 +441,9 @@ export class ContextAssemblyStage implements PipelineStage {
       }
       return { role, content: wrapped };
     };
-
-    let chatHistory: AIMessage[];
-    if (injection.injectionStyle === 'single_assistant_block') {
-      // 模式 A：不带任何历史轮次，全部交给 MEMORY_BLOCK 中的短期记忆压缩块
-      chatHistory = [];
-    } else {
-      // 模式 B：保留最近 N 对 (user, assistant)；假设历史中 user / assistant 严格交替
-      // 从尾部向前取 2N 条即可（超过起点则截断）
-      const keepCount = injection.fewShotPairs * 2;
-      const tail = narrativeHistory.slice(-keepCount);
-      chatHistory = tail.map(wrap);
-    }
+    // 假设历史中 user / assistant 严格交替：从尾部向前取 2N 条即可（超过起点则截断）
+    const historyPairs = (pairs: number): AIMessage[] => narrativeHistory.slice(-(pairs * 2)).map(wrap);
+    const chatHistory: AIMessage[] = historyPairs(LEGACY_FEW_SHOT_PAIRS);
 
     // ── 6c. Merge profile world books with this slot's auto-settings book ──
     //
@@ -586,10 +577,65 @@ export class ContextAssemblyStage implements PipelineStage {
 
       // For split-gen step2, use the old assembler (step2后面再做)
       if (splitGen) {
-        const step2Vars = {
+        let step2Vars: Record<string, string> = {
           ...variables,
           ...PlotInjector.buildStep2Variables(this.stateManager, this.paths, this.pack.engineFragments),
         };
+        let step2History = chatHistory;
+
+        // ── Context Compiler v1 (2026-09-04) — step2 gets a projection, not the ledger ──
+        //
+        // step1 and step2 were assembled by two renderers that never knew what the other
+        // sent: the world description, the 50-entry location list, the Engram block and the
+        // last five rounds of narrative all went out twice, and the whole world-event ledger
+        // (the only linearly growing item) rode along "so the model can write valid paths".
+        // R1b (30 real replays) showed dedup + event projection loses nothing; the short-term
+        // memory in step1 is load-bearing and is NOT touched here. Off switch = old behaviour.
+        // Design: docs/design/context-compiler-positioning.md; plan: context-compiler-v1-implementation-plan.md.
+        if (ctx.meta.contextCompiler !== false) {
+          // "Present" NPCs feed the world-event relevance check. `是否在场` is only
+          // deterministically synced when the presence system is on (PostProcess
+          // syncPresence, default off), so also count NPCs colocated with the player by
+          // the SAME hierarchical rule syncPresence uses (`isColocatedLocation`: exact
+          // match or parent/child by the location separator).
+          const npcNameKey = this.paths.npcFieldNames.name;
+          const isPresentKey = this.paths.npcFieldNames.isPresent;
+          const npcLocationKey = this.paths.npcFieldNames.location;
+          const separator = this.paths.locationPathSeparator;
+          const currentLocation = this.stateManager.get<string>(this.paths.playerLocation) ?? '';
+          const presentNpcNames = (this.stateManager.get<NpcRecord[]>(this.paths.relationships) ?? [])
+            .filter((npc) => npc[isPresentKey] === true
+              || isColocatedLocation(typeof npc[npcLocationKey] === 'string' ? (npc[npcLocationKey] as string) : '', currentLocation, separator))
+            .map((npc) => String(npc[npcNameKey] ?? ''))
+            .filter(Boolean);
+          const compiled = compileStep2Context({
+            snapshot: stateSnapshot,
+            nsfwMode,
+            additionalStripPaths: presenceEnabled ? [this.paths.relationships] : undefined,
+            registry: buildSentRegistry(Object.keys(buildResult.contextPieces)),
+            paths: this.paths,
+            presentNpcNames,
+            memoryBlock: memoryBlock,
+          });
+          step2Vars = {
+            ...step2Vars,
+            GAME_STATE_JSON: compiled.gameStateJson,
+            ...(compiled.memoryBlock !== undefined ? { MEMORY_BLOCK: compiled.memoryBlock } : {}),
+          };
+          step2History = historyPairs(STEP2_FEW_SHOT_PAIRS);
+          const trace = compiled.trace;
+          if (chatHistory.length !== step2History.length) {
+            const entry = historyTraceEntry(
+              estimateMessagesTokens(chatHistory),
+              estimateMessagesTokens(step2History),
+              Math.ceil(chatHistory.length / 2),
+              Math.ceil(step2History.length / 2),
+            );
+            trace.entries.push(entry);
+            trace.savedTokens += Math.max(0, entry.before - entry.after);
+          }
+          ctx.meta['compileTrace'] = trace;
+        }
 
         const step2OverrideId = ctx.meta.step2FlowOverride as string | undefined;
         const step2Flow = this.pack.promptFlows[step2OverrideId ?? 'splitGenMainRoundStep2'];
@@ -600,7 +646,7 @@ export class ContextAssemblyStage implements PipelineStage {
           console.warn(`[ContextAssembly] step2FlowOverride '${step2OverrideId}' not found, falling back to default`);
         }
         if (step2Flow) {
-          const s2 = this.promptAssembler.assemble(step2Flow, step2Vars, chatHistory);
+          const s2 = this.promptAssembler.assemble(step2Flow, step2Vars, step2History);
           splitStep2Messages = s2.messages;
           splitStep2Sources = s2.messageSources;
           // The current round's player input, verbatim. The legacy path always gave

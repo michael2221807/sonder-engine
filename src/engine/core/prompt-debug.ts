@@ -22,6 +22,7 @@
 import { eventBus } from './event-bus';
 import type { AIMessage } from '../ai/types';
 import type { MessageSourceTag } from '../prompt/prompt-assembler';
+import type { CompileTrace } from '../pipeline/types';
 
 /**
  * Match a raw AI response's thinking block(s). Mirrors
@@ -50,6 +51,8 @@ export interface EmitAssemblyDebugParams {
   messageSources?: MessageSourceTag[];
   generationId?: string;
   roundNumber?: number;
+  /** Context Compiler decisions for this call (split-gen step2 only). */
+  compileTrace?: CompileTrace;
 }
 
 /** Pre-call emission. Captures the fully-assembled messages the caller will send. */

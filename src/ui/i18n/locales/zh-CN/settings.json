@@ -212,12 +212,6 @@
   "settings.memory.midTermKeep.desc": "世界观演化后保留多少条最新中期（0 = 全部清空）。默认 0",
   "settings.memory.longTermCap.label": "长期记忆容量",
   "settings.memory.longTermCap.desc": "超过此数时触发「二级精炼」（最旧条目压缩为主题存档）。默认 30",
-  "settings.memory.injectionStyle.label": "短期记忆注入方式",
-  "settings.memory.injectionStyle.desc": "决定主回合 prompt 如何包含最近历史。单块注入：短期记忆合并成一条 assistant 消息（API 总消息固定 3 条，最省 token）。Few-shot 轮次：保留最近 N 对 user↔assistant 对话（每回合约 3+2N 条消息，更利于 AI 保持输出格式）。",
-  "settings.memory.injectionStyle.fewShot": "Few-shot 轮次（推荐）",
-  "settings.memory.injectionStyle.singleBlock": "单块注入（极省 token）",
-  "settings.memory.fewShotPairs.label": "Few-shot 对数",
-  "settings.memory.fewShotPairs.desc": "保留最近几对（user, assistant）真实对话作为格式示范。默认 3；超过 5 容易显著推高 token 成本。",
   "settings.memory.resetDefaults.label": "恢复默认",
   "settings.memory.resetDefaults.desc": "将以上所有阈值恢复为引擎默认值",
 

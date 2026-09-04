@@ -190,6 +190,8 @@
   "api.aiSettings.streaming.desc": "Display AI-generated narrative progressively (main round narrative + body polish only; structured data is always non-streaming)",
   "api.aiSettings.splitGen.label": "Split Generation",
   "api.aiSettings.splitGen.desc": "Main turn split into two API calls: Step 1 generates narrative text, Step 2 generates instructions and action options, improving stability",
+  "api.aiSettings.contextCompiler.label": "Context Dedup (Split Step 2)",
+  "api.aiSettings.contextCompiler.desc": "With split generation, step 2 only receives what step 1 has not already sent: world description and the Engram block are not resent, the location list keeps detail only around the current place, world events keep the latest 5 plus 5 relevant ones, and history is fixed at 2 pairs. Roughly 30% less input per turn; turn off to restore the previous behaviour. The step-2 snapshot in the Prompt Assembly panel explains every omission.",
   "api.aiSettings.maxRetries.label": "Failure Retry Count",
   "api.aiSettings.maxRetries.desc": "Maximum retry count after request failure (0-5)",
   "api.aiSettings.privacyRepairRetries.label": "Extended Field Repair Retries",

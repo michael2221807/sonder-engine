@@ -212,12 +212,6 @@
   "settings.memory.midTermKeep.desc": "How many latest mid-term entries to keep after worldview evolution (0 = clear all). Default: 0",
   "settings.memory.longTermCap.label": "Long-term Memory Capacity",
   "settings.memory.longTermCap.desc": "Triggers 'second-level refinement' (oldest entries compressed into topic archives) when exceeded. Default: 30",
-  "settings.memory.injectionStyle.label": "Short-term Memory Injection Style",
-  "settings.memory.injectionStyle.desc": "Determines how the main turn prompt includes recent history. Single block: merge short-term memory into one assistant message (fixed 3 API messages, most token-efficient). Few-shot turns: keep the most recent N user-assistant dialogue pairs (roughly 3+2N messages per turn, better for maintaining AI output format).",
-  "settings.memory.injectionStyle.fewShot": "Few-shot Turns (Recommended)",
-  "settings.memory.injectionStyle.singleBlock": "Single Block (Minimal tokens)",
-  "settings.memory.fewShotPairs.label": "Few-shot Pairs",
-  "settings.memory.fewShotPairs.desc": "Keep the most recent N (user, assistant) real dialogue pairs as format examples. Default: 3; more than 5 can significantly increase token costs.",
   "settings.memory.resetDefaults.label": "Restore Defaults",
   "settings.memory.resetDefaults.desc": "Restore all thresholds above to engine defaults",
 

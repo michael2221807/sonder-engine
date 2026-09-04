@@ -162,17 +162,13 @@ export interface MemoryPathConfig {
 }
 
 /**
- * 短期记忆注入主回合 prompt 的方式（2026-04-14 新增）
+ * localStorage 存储的 memory settings 形状（可选覆盖每个字段）
  *
- * - `single_assistant_block`: Demo 风格 —— 短期记忆拼成 **一条** assistant
- *   消息注入，API messages 固定 3 条（system + 该块 + user）。最省 token。
- * - `few_shot_pairs`: 保留最近 N 对 (user, assistant) 作为对话轮次，提供 few-shot
- *   格式信号。API messages = 3 + 2N（N 为 fewShotPairs 配置）。略多 token 但保留
- *   格式稳定效应。
+ * 2026-09-04（Context Compiler v1，PO 决议 Q3）：`shortTermInjectionStyle` /
+ * `fewShotPairs` 两个键已移除 —— 历史对数改为常量（见
+ * `prompt/context-compiler.ts` 的 `STEP2_FEW_SHOT_PAIRS` / `LEGACY_FEW_SHOT_PAIRS` /
+ * `SUB_PIPELINE_HISTORY_PAIRS`）。旧备份里残留的这两个键无人读取，无害。
  */
-export type ShortTermInjectionStyle = 'single_assistant_block' | 'few_shot_pairs';
-
-/** localStorage 存储的 memory settings 形状（可选覆盖每个字段） */
 export interface MemorySettingsOverride {
   shortTermLimit?: number;
   midTermRefineThreshold?: number;
@@ -180,56 +176,10 @@ export interface MemorySettingsOverride {
   longTermSummarizeCount?: number;
   midTermKeep?: number;
   longTermCap?: number;
-  /**
-   * 2026-04-14 新增：短期记忆注入方式
-   * 默认 'few_shot_pairs'（保留 few-shot 信号）
-   */
-  shortTermInjectionStyle?: ShortTermInjectionStyle;
-  /**
-   * 2026-04-14 新增：few_shot_pairs 模式下保留几对 (user, assistant) 轮次
-   * 默认 3，范围 1-10
-   */
-  fewShotPairs?: number;
 }
 
 /** localStorage key for user memory settings override */
 export const MEMORY_SETTINGS_KEY = 'aga_memory_settings';
-
-/** 短期注入相关的默认值 */
-export const DEFAULT_SHORT_TERM_INJECTION_STYLE: ShortTermInjectionStyle = 'few_shot_pairs';
-export const DEFAULT_FEW_SHOT_PAIRS = 3;
-
-/**
- * 读取短期记忆注入配置（供 ContextAssembly 使用，无需 MemoryManager 实例）
- *
- * 2026-04-14 新增：独立 helper，因为 context-assembly 不依赖 MemoryManager，
- * 只需要这两个值决定 chatHistory 如何裁剪。
- */
-export function loadShortTermInjectionSettings(): {
-  injectionStyle: ShortTermInjectionStyle;
-  fewShotPairs: number;
-} {
-  let style: ShortTermInjectionStyle = DEFAULT_SHORT_TERM_INJECTION_STYLE;
-  let pairs = DEFAULT_FEW_SHOT_PAIRS;
-  try {
-    const raw = localStorage.getItem(MEMORY_SETTINGS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as MemorySettingsOverride;
-      if (
-        parsed?.shortTermInjectionStyle === 'single_assistant_block'
-        || parsed?.shortTermInjectionStyle === 'few_shot_pairs'
-      ) {
-        style = parsed.shortTermInjectionStyle;
-      }
-      if (typeof parsed?.fewShotPairs === 'number' && Number.isFinite(parsed.fewShotPairs)) {
-        pairs = Math.max(1, Math.min(10, Math.floor(parsed.fewShotPairs)));
-      }
-    }
-  } catch {
-    /* localStorage 不可用 / JSON 破损 → 使用默认值 */
-  }
-  return { injectionStyle: style, fewShotPairs: pairs };
-}
 
 export class MemoryManager {
   /** S-01: 短期缓存 effective config（5 秒 TTL，覆盖一个完整回合周期） */

@@ -33,6 +33,7 @@ import type { CanonMutationInput } from '../../memory/engram/canon-projection';
 import type { SaveManager } from '../../persistence/save-manager';
 import { eventBus } from '../../core/event-bus';
 import { deduplicateLocations } from '../../behaviors/location-dedup';
+import { isColocatedLocation } from '../../social/npc-presence';
 import { estimateMessagesTokens, estimateTextTokens } from '../../core/metrics-helpers';
 import { extractPlotEvaluations } from '../../plot/types';
 
@@ -464,9 +465,9 @@ export class PostProcessStage implements PipelineStage {
       const npcLoc = (npc[f.location] as string) ?? '';
       if (!npcLoc) return npc;
 
-      const isColocated = npcLoc === playerLoc
-        || playerLoc.startsWith(npcLoc + '·')
-        || npcLoc.startsWith(playerLoc + '·');
+      // Shared with the Context Compiler's present-NPC fallback (context-assembly.ts) so
+      // both sides agree on what "colocated" means; separator comes from the path config.
+      const isColocated = isColocatedLocation(npcLoc, playerLoc, this.paths.locationPathSeparator);
 
       if (npc[f.isPresent] !== isColocated) {
         changed = true;

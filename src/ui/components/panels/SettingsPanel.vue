@@ -219,8 +219,9 @@ watch(actionOptions, () => {
 // 每个字段有合理范围 cap（见 MemoryManager.getEffectiveConfig 的 clamp 逻辑）。
 const MEMORY_SETTINGS_KEY = 'aga_memory_settings';
 
-type ShortTermInjectionStyle = 'single_assistant_block' | 'few_shot_pairs';
-
+// 2026-09-04（Context Compiler v1，PO 决议 Q3）：`shortTermInjectionStyle` / `fewShotPairs`
+// 两个控件已移除 —— few-shot 历史对数改为引擎常量（prompt/context-compiler.ts）。
+// localStorage 里的旧键无人读取，loadMemorySettings 的展开合并会原样带着它们，无害。
 interface MemorySettings {
   shortTermLimit: number;           // 1-50, default 5
   midTermRefineThreshold: number;   // 5-200, default 25
@@ -228,10 +229,6 @@ interface MemorySettings {
   longTermSummarizeCount: number;   // 1-200, default 50
   midTermKeep: number;              // 0-200, default 0
   longTermCap: number;              // 5-200, default 30
-  /** 2026-04-14 新增：短期记忆注入 prompt 的方式 */
-  shortTermInjectionStyle: ShortTermInjectionStyle;
-  /** 2026-04-14 新增：few_shot_pairs 模式下保留几对对话轮次 */
-  fewShotPairs: number;             // 1-10, default 3
 }
 
 const defaultMemorySettings: MemorySettings = {
@@ -241,8 +238,6 @@ const defaultMemorySettings: MemorySettings = {
   longTermSummarizeCount: 50,
   midTermKeep: 0,
   longTermCap: 30,
-  shortTermInjectionStyle: 'few_shot_pairs',
-  fewShotPairs: 3,
 };
 
 const memorySettings = ref<MemorySettings>({ ...defaultMemorySettings });
@@ -2040,44 +2035,8 @@ onBeforeUnmount(() => {
         />
       </div>
 
-      <!-- 2026-04-14 新增：短期记忆注入方式 + few-shot 对数 -->
-      <div class="setting-row">
-        <div class="setting-info">
-          <span class="setting-label">{{ $t('settings.memory.injectionStyle.label') }}</span>
-          <span class="setting-desc">
-            {{ $t('settings.memory.injectionStyle.desc') }}
-          </span>
-        </div>
-        <AgaSelect
-          :model-value="memorySettings.shortTermInjectionStyle"
-          :options="[
-            { value: 'few_shot_pairs', label: $t('settings.memory.injectionStyle.fewShot') },
-            { value: 'single_assistant_block', label: $t('settings.memory.injectionStyle.singleBlock') },
-          ]"
-          @update:model-value="memorySettings.shortTermInjectionStyle = $event as typeof memorySettings.shortTermInjectionStyle"
-        />
-      </div>
-
-      <div
-        v-if="memorySettings.shortTermInjectionStyle === 'few_shot_pairs'"
-        class="setting-row"
-      >
-        <div class="setting-info">
-          <span class="setting-label">{{ $t('settings.memory.fewShotPairs.label') }}</span>
-          <span class="setting-desc">
-            {{ $t('settings.memory.fewShotPairs.desc') }}
-          </span>
-        </div>
-        <input
-          type="number"
-          min="1"
-          max="10"
-          step="1"
-          v-model.number="memorySettings.fewShotPairs"
-          class="num-input"
-          :aria-label="$t('settings.memory.fewShotPairs.label')"
-        />
-      </div>
+      <!-- 短期记忆注入方式 / few-shot 对数两行已于 2026-09-04 移除（Context Compiler v1，PO 决议 Q3）：
+           分步第二步固定 2 对历史，子流程固定 3 对，见 src/engine/prompt/context-compiler.ts -->
 
       <div class="setting-row">
         <div class="setting-info">

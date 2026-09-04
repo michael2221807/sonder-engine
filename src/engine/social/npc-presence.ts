@@ -20,6 +20,19 @@ export interface PresencePartition {
   absent: NpcRecord[];
 }
 
+/**
+ * Colocation rule shared by PostProcess `syncPresence` (writes `是否在场`) and the Context
+ * Compiler's present-NPC fallback (reads it when presence is off). Locations are
+ * hierarchical names joined by `separator`: an NPC at `A·B` is colocated with a player at
+ * `A·B·C` and vice versa; `A·B` and `A·Bx` are not. Empty strings never match.
+ */
+export function isColocatedLocation(npcLocation: string, playerLocation: string, separator: string): boolean {
+  if (!npcLocation || !playerLocation) return false;
+  if (npcLocation === playerLocation) return true;
+  if (!separator) return false;
+  return playerLocation.startsWith(npcLocation + separator) || npcLocation.startsWith(playerLocation + separator);
+}
+
 export class NpcPresenceService {
   constructor(
     private stateManager: StateManager,

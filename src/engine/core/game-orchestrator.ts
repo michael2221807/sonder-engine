@@ -25,17 +25,19 @@ import type { PromptSettings } from '../prompt/world-book';
 import type { CapturedSettingLabels } from '../prompt/captured-entry-mutations';
 
 /** 从 localStorage 读取 AI 生成设置（每回合调用，确保设置变更立即生效） */
-function readAISettings(): { streaming: boolean; splitGen: boolean } {
+function readAISettings(): { streaming: boolean; splitGen: boolean; contextCompiler: boolean } {
   try {
     const raw = localStorage.getItem(AI_SETTINGS_STORAGE_KEY);
-    if (!raw) return { streaming: true, splitGen: false };
+    if (!raw) return { streaming: true, splitGen: false, contextCompiler: true };
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     return {
       streaming: parsed.streaming !== false,
       splitGen: parsed.splitGen === true,
+      // Context Compiler v1 (2026-09-04): default ON (PO decision Q2); absent key = on.
+      contextCompiler: parsed.contextCompiler !== false,
     };
   } catch {
-    return { streaming: true, splitGen: false };
+    return { streaming: true, splitGen: false, contextCompiler: true };
   }
 }
 
@@ -81,6 +83,7 @@ import type {
   IUnifiedRetriever,
   EnginePathConfig,
   PipelineContext,
+  CompileTrace,
 } from '../pipeline/types';
 import type { GamePack } from '../types';
 import type { GameTime } from '../image/scene-context';
@@ -391,6 +394,7 @@ export class GameOrchestrator {
         messageSources?: string[];
         generationId?: string;
         roundNumber?: number;
+        compileTrace?: CompileTrace;
       }>('ui:debug-prompt', (payload) => {
         if (!payload) return;
         try {
@@ -401,6 +405,7 @@ export class GameOrchestrator {
             payload.roundNumber,
             payload.messageSources,
             payload.generationId,
+            payload.compileTrace,
           );
         } catch (err) {
           // Pinia 未就绪时（测试环境）静默忽略，不影响管线
@@ -496,7 +501,7 @@ export class GameOrchestrator {
     this.abortController = new AbortController();
 
     // 每回合读取设置，确保 APIPanel 的变更立即生效（无需重启）
-    const { streaming, splitGen } = readAISettings();
+    const { streaming, splitGen, contextCompiler } = readAISettings();
 
     // 记录玩家进入本回合时的位置，用于检测位置变更 → 触发 NPC 生成子管线
     const paths = this.subPipelines.paths;
@@ -522,7 +527,7 @@ export class GameOrchestrator {
       worldEventTriggered: false,
       roundNumber: 0,
       generationId: generateId(),
-      meta: { splitGen },
+      meta: { splitGen, contextCompiler },
       abortSignal: this.abortController.signal,
       // 流式关闭时不设置 onStreamChunk，AICallStage 据此传 stream: false
       onStreamChunk: streaming

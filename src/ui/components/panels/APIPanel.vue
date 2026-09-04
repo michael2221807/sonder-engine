@@ -167,6 +167,12 @@ function loadAISettings() {
 const savedSettings = loadAISettings();
 const streamingEnabled = ref<boolean>(savedSettings.streaming !== false);
 const splitGenEnabled = ref<boolean>(savedSettings.splitGen === true);
+/**
+ * Context Compiler v1 (2026-09-04): dedup + projection of the split-gen SECOND call's
+ * context. Default ON (PO decision Q2); absent key = on. Read every round by
+ * game-orchestrator.ts `readAISettings` → ctx.meta.contextCompiler → ContextAssemblyStage.
+ */
+const contextCompilerEnabled = ref<boolean>(savedSettings.contextCompiler !== false);
 const maxRetries = ref<number>(savedSettings.maxRetries ?? 1);
 /**
  * §11.2 B: NSFW 私密信息修复重试次数（0-3）
@@ -190,8 +196,9 @@ function saveAISettings() {
   try {
     // Read-merge: `aga_ai_settings` is co-owned with SettingsPanel (lowLoadMode /
     // lowLoadMaxRequests). A full-object overwrite here would silently drop those
-    // keys on every toggle. Preserve any co-tenant keys and only write the 4 fields
-    // this panel owns. (Mirrors SettingsPanel.saveLowLoadSettings's read-merge.)
+    // keys on every toggle. Preserve any co-tenant keys and only write the fields
+    // this panel owns (streaming / splitGen / contextCompiler / maxRetries /
+    // privacyRepairRetries / requestTimeoutMinutes). (Mirrors SettingsPanel.saveLowLoadSettings's read-merge.)
     // Clamp timeout to the legal range so localStorage / backups never hold an
     // out-of-bounds value even if the number input is bypassed. Route through the
     // engine's canonical clamp helper (single source of truth) instead of a hand-rolled
@@ -207,6 +214,7 @@ function saveAISettings() {
       ...existing,
       streaming: streamingEnabled.value,
       splitGen: splitGenEnabled.value,
+      contextCompiler: contextCompilerEnabled.value,
       maxRetries: maxRetries.value,
       privacyRepairRetries: privacyRepairRetries.value,
       requestTimeoutMinutes: clampedTimeout,
@@ -1135,6 +1143,19 @@ function getAssignableAPIOptions(type: UsageType): SelectOption[] {
             :modelValue="splitGenEnabled"
             :label="$t('api.aiSettings.splitGen.label')"
             @update:modelValue="v => { splitGenEnabled = v; saveAISettings(); }"
+          />
+        </div>
+
+        <!-- Context Compiler (split-gen step2 dedup + projection; docs/design/context-compiler-positioning.md) -->
+        <div class="setting-row" data-testid="api-context-compiler-row">
+          <div class="setting-info">
+            <span class="setting-label">{{ $t('api.aiSettings.contextCompiler.label') }}</span>
+            <span class="setting-desc">{{ $t('api.aiSettings.contextCompiler.desc') }}</span>
+          </div>
+          <AgaToggle
+            :modelValue="contextCompilerEnabled"
+            :label="$t('api.aiSettings.contextCompiler.label')"
+            @update:modelValue="v => { contextCompilerEnabled = v; saveAISettings(); }"
           />
         </div>
 

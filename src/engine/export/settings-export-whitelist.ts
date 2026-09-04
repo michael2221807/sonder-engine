@@ -27,7 +27,7 @@
 export const SETTINGS_EXPORT_WHITELIST: readonly string[] = [
   'aga_user_settings',           // 字体/主题/语言/动画/自动保存间隔 — SettingsPanel.vue:24
   'aga_action_options_settings', // 行动选项 模式/节奏/自定义提示 — :179
-  'aga_memory_settings',         // 记忆阈值（短/中/长期） — :212
+  'aga_memory_settings',         // 记忆阈值（短/中/长期） — :212（2026-09-04 起不再含 fewShotPairs / shortTermInjectionStyle；旧备份残留键无消费者）
   'aga_nsfw_settings',           // nsfwMode / 性别过滤（导入端 Story 6 与玩家偏好协调） — :289/301
   'aga_plot_settings',           // 剧情系统配置 — :468
   'aga_feature_toggles',         // 功能开关（文本优化/心跳/NPC生成/CoT 等） — :832

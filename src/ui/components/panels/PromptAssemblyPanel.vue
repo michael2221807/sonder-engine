@@ -17,7 +17,7 @@ import Modal from '@/ui/components/common/Modal.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 
 const debugStore = usePromptDebugStore();
 
@@ -38,6 +38,27 @@ const flowId = computed(() => activeSnapshot.value?.flowId ?? '');
 const messages = computed(() => activeSnapshot.value?.messages ?? []);
 const variables = computed(() => activeSnapshot.value?.variables ?? {});
 const messageSources = computed(() => activeSnapshot.value?.messageSources ?? []);
+
+// ─── Context Compiler trace (split-gen step2 only, 2026-09-04) ──
+// Answers "why is X not in this request?" — the compiler projected / stripped
+// it and recorded before→after tokens. Reasons are i18n keys emitted by the
+// engine (`compiler.reason.*`); targets are state paths or well-known names.
+const compileTrace = computed(() => activeSnapshot.value?.compileTrace ?? null);
+function compileTargetLabel(target: string): string {
+  const key = `promptAssembly.compile.target.${target}`;
+  return te(key) ? t(key) : target;
+}
+/** One-line tooltip for the action badge: the entry's structured counts, labelled. */
+function compileDetailText(detail: Record<string, number | boolean> | undefined): string {
+  if (!detail) return '';
+  return Object.entries(detail)
+    .map(([k, v]) => {
+      const key = `promptAssembly.compile.detail.${k}`;
+      const label = te(key) ? t(key) : k;
+      return `${label} ${typeof v === 'boolean' ? (v ? '✓' : '✗') : v.toLocaleString()}`;
+    })
+    .join(' · ');
+}
 
 // ─── Per-snapshot CoT (replaces old global "AI 推理历史" section) ──
 // 2026-04-19: thinking is now attached to each snapshot via
@@ -512,6 +533,30 @@ function memorySegmentsFor(index: number): MemorySegment[] {
         </div>
       </section>
 
+      <!-- ─── Context Compiler trace (what step2 did NOT get, and why) ─── -->
+      <section
+        v-if="compileTrace && compileTrace.entries.length > 0"
+        class="compile-trace"
+        data-testid="prompt-compile-trace"
+      >
+        <div class="compile-trace-header">
+          <Tooltip :text="$t('promptAssembly.compile.tooltip')">
+            <span class="compile-trace-title">{{ $t('promptAssembly.compile.title') }}</span>
+          </Tooltip>
+          <span class="compile-trace-saved">{{ $t('promptAssembly.compile.saved', { tokens: compileTrace.savedTokens.toLocaleString() }) }}</span>
+        </div>
+        <ul class="compile-trace-list">
+          <li v-for="(entry, i) in compileTrace.entries" :key="`${entry.target}-${i}`" class="compile-trace-row">
+            <Tooltip :text="compileDetailText(entry.detail)" :disabled="!entry.detail">
+              <span class="compile-trace-action" :data-action="entry.action">{{ $t(`promptAssembly.compile.action.${entry.action}`) }}</span>
+            </Tooltip>
+            <span class="compile-trace-target">{{ compileTargetLabel(entry.target) }}</span>
+            <span class="compile-trace-reason">{{ $t(entry.reason) }}</span>
+            <span class="compile-trace-tokens">{{ $t('promptAssembly.compile.tokens', { before: entry.before.toLocaleString(), after: entry.after.toLocaleString() }) }}</span>
+          </li>
+        </ul>
+      </section>
+
       <!-- ─── Per-snapshot CoT (thinking) ─── -->
       <section v-if="thinkingText" class="snapshot-cot">
         <button class="snapshot-cot-header" @click="cotOpen = !cotOpen">
@@ -711,6 +756,91 @@ function memorySegmentsFor(index: number): MemorySegment[] {
 .source-breakdown-count {
   font-weight: 400;
   opacity: 0.65;
+}
+
+/* Context Compiler trace (2026-09-04). Sits right under the source chips: the
+   chips say what IS in the request, this card says what was projected or left
+   out and why — the two together let the user audit the second call without
+   opening every message. Same quiet surface as .source-breakdown. */
+.compile-trace {
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--color-border, #2a2a3a);
+  border-radius: 8px;
+}
+.compile-trace-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.compile-trace-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #8888a0);
+  cursor: help;
+}
+.compile-trace-saved {
+  font-size: 0.68rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: var(--color-sage-300, #9fbf9a);
+}
+.compile-trace-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.compile-trace-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'action target tokens'
+    'reason reason reason';
+  column-gap: 8px;
+  row-gap: 2px;
+  align-items: baseline;
+  font-size: 0.68rem;
+}
+/* The action badge is wrapped in <Tooltip> (its root span is the grid child). */
+.compile-trace-row > .tt-wrap {
+  grid-area: action;
+}
+.compile-trace-action {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid color-mix(in oklch, var(--color-sage-400) 45%, transparent);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: var(--color-sage-300, #9fbf9a);
+  background: color-mix(in oklch, var(--color-sage-400) 8%, transparent);
+}
+.compile-trace-action[data-action='strip'] {
+  border-color: color-mix(in oklch, var(--color-amber-400, #d9a441) 45%, transparent);
+  color: var(--color-amber-300, #e2b968);
+  background: color-mix(in oklch, var(--color-amber-400, #d9a441) 8%, transparent);
+}
+.compile-trace-target {
+  grid-area: target;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: var(--color-text, #e6e6f0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.compile-trace-tokens {
+  grid-area: tokens;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: var(--color-text-secondary, #8888a0);
+  white-space: nowrap;
+}
+.compile-trace-reason {
+  grid-area: reason;
+  color: var(--color-text-secondary, #8888a0);
+  opacity: 0.85;
 }
 
 /* Per-snapshot CoT card. Replaces the old global 推理历史 section — the CoT
