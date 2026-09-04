@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-main.md §3.5（指标药丸 · 分步两次调用合计计量）
 /**
  * AI 调用阶段 — 将组装好的消息列表发送给 AI 并解析响应
  *
@@ -12,12 +13,13 @@
  *
  * 对应 STEP-03B M3.4 AICallStage。
  */
-import type { PipelineStage, PipelineContext } from '../types';
+import type { PipelineStage, PipelineContext, PromptMetrics, PromptStepMetrics } from '../types';
 import type { AIService } from '../../ai/ai-service';
 import type { ResponseParser } from '../../ai/response-parser';
 import type { AIMessage, AIResponse } from '../../ai/types';
 import { eventBus } from '../../core/event-bus';
 import { emitPromptAssemblyDebug } from '../../core/prompt-debug';
+import { estimateMessagesTokens, estimateTextTokens } from '../../core/metrics-helpers';
 
 export class AICallStage implements PipelineStage {
   name = 'AICall';
@@ -62,7 +64,10 @@ export class AICallStage implements PipelineStage {
     const captureThinking = ctx.meta.cotEnabled === true;
     const parsedResponse = this.responseParser.parse(rawResponse, { captureThinking });
     emitDebugPromptResponse('mainRound', ctx.generationId, parsedResponse.thinking, rawResponse);
-    return { ...ctx, rawResponse, parsedResponse, aiCallStartedAt, aiCallDurationMs };
+    const promptMetrics: PromptMetrics = {
+      step1: buildStepMetrics(ctx.messages, ctx.messageSources, rawResponse),
+    };
+    return { ...ctx, rawResponse, parsedResponse, aiCallStartedAt, aiCallDurationMs, promptMetrics };
   }
 
   /**
@@ -225,12 +230,19 @@ export class AICallStage implements PipelineStage {
 
     // Phase 1 (2026-04-19): persist step2 raw on ctx.meta so PostProcess can
     // attach it to the narrative entry as `_rawResponseStep2` for the raw viewer.
+    // R1 prompt ledger P0 (2026-09-03): meter BOTH calls. step2 was ~1.6× step1 on real
+    // saves and had never been recorded — `_metrics.inputTokens` only saw `ctx.messages`.
+    const promptMetrics: PromptMetrics = {
+      step1: buildStepMetrics(ctx.messages, ctx.messageSources, rawStep1),
+      step2: buildStepMetrics(step2Messages, step2DebugSources, rawStep2),
+    };
     return {
       ...ctx,
       rawResponse: rawStep1,
       parsedResponse,
       aiCallStartedAt,
       aiCallDurationMs,
+      promptMetrics,
       meta: { ...ctx.meta, rawResponseStep2: rawStep2 },
     };
   }
@@ -343,4 +355,21 @@ function emitDebugPromptResponse(
   } catch {
     /* debug-only, never throw */
   }
+}
+
+/**
+ * Same estimator as the persisted `_metrics` (metrics-helpers) so the offline prompt
+ * ledger, the debug panel and the save all agree on the numbers. `sources` is the parallel
+ * provenance array from ContextAssembly (`builder:*`, `module:*`, `history:*`, …); a missing
+ * tag is recorded as `unknown` rather than dropped so the breakdown always sums to the total.
+ */
+function buildStepMetrics(messages: AIMessage[], sources: string[] | undefined, raw: string): PromptStepMetrics {
+  return {
+    inputTokens: estimateMessagesTokens(messages),
+    outputTokens: estimateTextTokens(raw),
+    breakdown: messages.map((m, i) => ({
+      source: sources?.[i] ?? 'unknown',
+      tokens: estimateMessagesTokens([m]),
+    })),
+  };
 }

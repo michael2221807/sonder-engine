@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-main.md §3.5（回合分隔线 · token 药丸 = 分步两次调用合计）
 /**
  * Pure helpers for the RoundDivider + MainGamePanel divider placement.
  * Extracted from the .vue files so unit tests don't need @vue/test-utils.
@@ -9,9 +10,25 @@ import { estimateTextTokens } from '@/engine/core/metrics-helpers';
 export interface RoundMetrics {
   roundNumber: number;
   durationMs: number;
+  /** step1 / narrative-call input (historical meaning kept for old saves). */
   inputTokens: number;
   outputTokens: number;
   startedAt: number;
+  /** Split-gen second call (R1 P0, 2026-09-03). Absent on single-call rounds and old saves. */
+  step2InputTokens?: number;
+  step2OutputTokens?: number;
+  /** Whole-round totals (step1 + step2). What the divider pill shows when present. */
+  totalInputTokens?: number;
+  totalOutputTokens?: number;
+  /**
+   * Per-message provenance → tokens for each API call of the round (R1 P0). Not rendered
+   * by the divider; consumed by the research helper `research-cloud-save-readonly.mjs
+   * breakdown` to build the per-source budget report the Context Compiler needs.
+   */
+  breakdown?: {
+    step1: Array<{ source: string; tokens: number }>;
+    step2?: Array<{ source: string; tokens: number }>;
+  };
 }
 
 export interface DividerMsg {
@@ -99,11 +116,13 @@ export function deriveDisplayMetrics(
     typeof metrics.inputTokens === 'number' &&
     typeof metrics.outputTokens === 'number';
   if (hasFullMetrics) {
+    // Prefer whole-round totals: a split-gen round is two API calls and the player pays
+    // for both. Old saves only carry the step1 figure, which is the best we have there.
     return {
       roundNumber: metrics.roundNumber as number,
       durationMs: metrics.durationMs as number,
-      inputTokens: metrics.inputTokens as number,
-      outputTokens: metrics.outputTokens as number,
+      inputTokens: typeof metrics.totalInputTokens === 'number' ? metrics.totalInputTokens : (metrics.inputTokens as number),
+      outputTokens: typeof metrics.totalOutputTokens === 'number' ? metrics.totalOutputTokens : (metrics.outputTokens as number),
     };
   }
   // Legacy / partial entry — recover what we can from content, mark the rest as unknown.

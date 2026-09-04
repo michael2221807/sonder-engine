@@ -183,6 +183,38 @@ describe('PostProcessStage — Phase 1 per-turn metadata', () => {
     expect(metrics.outputTokens).toBeGreaterThan(0);
   });
 
+  it('persists step2 + total token fields and the per-source breakdown when promptMetrics is present (R1 P0)', async () => {
+    const ctx = makeCtx({
+      promptMetrics: {
+        step1: { inputTokens: 100, outputTokens: 10, breakdown: [{ source: 'builder:a', tokens: 60 }, { source: 'builder:b', tokens: 40 }] },
+        step2: { inputTokens: 300, outputTokens: 30, breakdown: [{ source: 'module:core', tokens: 300 }] },
+      },
+    });
+    await stage.execute(ctx);
+
+    const m = getAssistantEntry()?._metrics as Record<string, unknown>;
+    expect(m).toMatchObject({
+      inputTokens: 100, outputTokens: 10,
+      step2InputTokens: 300, step2OutputTokens: 30,
+      totalInputTokens: 400, totalOutputTokens: 40,
+    });
+    const breakdown = m.breakdown as { step1: unknown[]; step2: unknown[] };
+    expect(breakdown.step1).toHaveLength(2);
+    expect(breakdown.step2).toHaveLength(1);
+  });
+
+  it('single-call round: no step2/total fields, breakdown has step1 only', async () => {
+    const ctx = makeCtx({
+      promptMetrics: { step1: { inputTokens: 100, outputTokens: 10, breakdown: [{ source: 'builder:a', tokens: 100 }] } },
+    });
+    await stage.execute(ctx);
+    const m = getAssistantEntry()?._metrics as Record<string, unknown>;
+    expect(m.inputTokens).toBe(100);
+    expect(m.step2InputTokens).toBeUndefined();
+    expect(m.totalInputTokens).toBeUndefined();
+    expect((m.breakdown as { step2?: unknown }).step2).toBeUndefined();
+  });
+
   it('sets _metrics even when AICall did not populate timing (defensive defaults)', async () => {
     const ctx = makeCtx(); // no aiCallStartedAt / aiCallDurationMs
     await stage.execute(ctx);

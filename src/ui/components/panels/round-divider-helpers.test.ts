@@ -87,6 +87,22 @@ describe('deriveDisplayMetrics', () => {
     });
   });
 
+  it('prefers whole-round totals (step1+step2) when the round was metered in split-gen mode (R1 P0)', () => {
+    const msg: DividerMsg = {
+      role: 'assistant',
+      content: 'x',
+      _metrics: {
+        roundNumber: 8, durationMs: 10, startedAt: 1,
+        inputTokens: 100, outputTokens: 5,
+        step2InputTokens: 300, step2OutputTokens: 40,
+        totalInputTokens: 400, totalOutputTokens: 45,
+      },
+    };
+    const out = deriveDisplayMetrics(msg, 0);
+    expect(out.inputTokens).toBe(400);
+    expect(out.outputTokens).toBe(45);
+  });
+
   it('estimates outputTokens from content when _metrics missing', () => {
     const msg: DividerMsg = {
       role: 'assistant',

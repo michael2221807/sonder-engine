@@ -746,6 +746,7 @@ export class ContextAssemblyStage implements PipelineStage {
       stateSnapshot,
       chatHistory,
       messages,
+      messageSources,
       worldEventTriggered,
       meta: {
         ...ctx.meta,

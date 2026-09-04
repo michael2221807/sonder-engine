@@ -111,6 +111,28 @@ export interface PipelineMeta {
   polishDurationMs?: number;
 }
 
+/** Token estimate for ONE API call of the round (same estimator as `_metrics`). */
+export interface PromptStepMetrics {
+  inputTokens: number;
+  outputTokens: number;
+  /** Per-message cost by provenance tag, in the order the messages were sent. */
+  breakdown: Array<{ source: string; tokens: number }>;
+}
+
+/**
+ * Per-step prompt cost (R1 prompt ledger P0, 2026-09-03).
+ *
+ * Before this existed, `_metrics.inputTokens` only estimated `ctx.messages` — the step1
+ * call. In split-gen mode the second call carries the whole state-tree JSON plus the
+ * few-shot history and is ~1.6× larger, yet it was never metered anywhere. Filled by
+ * AICallStage, persisted by PostProcessStage.
+ */
+export interface PromptMetrics {
+  step1: PromptStepMetrics;
+  /** Present only in split-gen mode. */
+  step2?: PromptStepMetrics;
+}
+
 export interface PipelineContext {
   /** 用户输入文本（PreProcessStage 可能 prepend 了 action queue 内容） */
   userInput: string;
@@ -183,6 +205,15 @@ export interface PipelineContext {
    * 并写入 `_metrics.durationMs`。
    */
   aiCallDurationMs?: number;
+  /**
+   * Provenance of `messages` — a parallel array with one source tag per message
+   * (`builder:world_map`, `history:user`, `short_term_memory`, …). Set by
+   * ContextAssemblyStage; AICallStage folds it into `promptMetrics.breakdown` so the
+   * persisted `_metrics` can say which context piece cost what.
+   */
+  messageSources?: string[];
+  /** Per-call prompt cost for this round — see [[PromptMetrics]]. Set by AICallStage. */
+  promptMetrics?: PromptMetrics;
   /**
    * 本回合开始前的状态树深拷贝（由 PreProcessStage 在递增回合序号前捕获）
    * PostProcessStage 将其写入 `paths.preRoundSnapshot`，用于 Rollback 功能

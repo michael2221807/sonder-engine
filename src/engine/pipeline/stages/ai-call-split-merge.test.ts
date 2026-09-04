@@ -60,6 +60,29 @@ function splitCtx(): PipelineContext {
   } as unknown as PipelineContext;
 }
 
+describe('AICallStage · prompt metrics (R1 P0)', () => {
+  it('meters BOTH calls with a per-message provenance breakdown', async () => {
+    const stage = new AICallStage(fakeAiService(), new ResponseParser());
+    const ctx = splitCtx();
+    ctx.messageSources = ['builder:test'];
+    ctx.meta.splitStep2Sources = ['module:step2'];
+    const out = await stage.execute(ctx);
+
+    expect(out.promptMetrics?.step1.inputTokens).toBeGreaterThan(0);
+    expect(out.promptMetrics?.step1.breakdown).toEqual([{ source: 'builder:test', tokens: out.promptMetrics!.step1.inputTokens }]);
+    // step2 = flow base + step1 response + followup → strictly more than the 1-message step1
+    expect(out.promptMetrics?.step2?.inputTokens).toBeGreaterThan(out.promptMetrics!.step1.inputTokens);
+    const sources = out.promptMetrics!.step2!.breakdown.map((b) => b.source);
+    expect(sources[0]).toBe('module:step2');
+    expect(sources).toContain('step1_response');
+    expect(sources.at(-1)).toBe('step2_followup');
+    expect(out.promptMetrics?.step2?.outputTokens).toBeGreaterThan(0);
+    // breakdown always sums to the total (no silently dropped message)
+    const sum = out.promptMetrics!.step2!.breakdown.reduce((n, b) => n + b.tokens, 0);
+    expect(sum).toBe(out.promptMetrics!.step2!.inputTokens);
+  });
+});
+
 describe('AICallStage · split-gen merge whitelist', () => {
   it('carries setting_updates from step2 into the merged response', async () => {
     const stage = new AICallStage(fakeAiService(), new ResponseParser());

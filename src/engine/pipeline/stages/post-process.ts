@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-main.md §3.5（指标药丸 · 分步两次调用合计计量）
 /**
  * 后处理阶段 — 管线的倒数第二个阶段，处理记忆、行为钩子和持久化
  *
@@ -309,12 +310,31 @@ export class PostProcessStage implements PipelineStage {
     //   1. context-assembly.ts:wrap() only reads role/content when building chatHistory
     //   2. snapshot-sanitizer.ts strips 元数据.叙事历史 from GAME_STATE_JSON entirely
     // See docs/research/mrjh-migration/06-round-divider-plan.md §1.1 for file:line refs.
+    // `inputTokens` / `outputTokens` keep their historical meaning (the step1 / narrative
+    // call) so older saves and tooling stay comparable. The split-gen second call is metered
+    // in the step2* / total* fields (R1 prompt ledger P0, 2026-09-03: step2 was ~1.6× step1
+    // on real saves and had never been recorded). `breakdown` says which context piece cost
+    // what — the raw material for Context-Compiler budgeting.
+    const pm = ctx.promptMetrics;
+    const step1Input = pm?.step1.inputTokens ?? estimateMessagesTokens(ctx.messages);
+    const step1Output = pm?.step1.outputTokens ?? estimateTextTokens(ctx.rawResponse ?? '');
     assistantEntry._metrics = {
       roundNumber: ctx.roundNumber,
       durationMs: ctx.aiCallDurationMs ?? 0,
-      inputTokens: estimateMessagesTokens(ctx.messages),
-      outputTokens: estimateTextTokens(ctx.rawResponse ?? ''),
+      inputTokens: step1Input,
+      outputTokens: step1Output,
       startedAt: ctx.aiCallStartedAt ?? 0,
+      ...(pm?.step2
+        ? {
+            step2InputTokens: pm.step2.inputTokens,
+            step2OutputTokens: pm.step2.outputTokens,
+            totalInputTokens: step1Input + pm.step2.inputTokens,
+            totalOutputTokens: step1Output + pm.step2.outputTokens,
+          }
+        : {}),
+      ...(pm
+        ? { breakdown: { step1: pm.step1.breakdown, ...(pm.step2 ? { step2: pm.step2.breakdown } : {}) } }
+        : {}),
     };
     if (ctx.parsedResponse.thinking) {
       assistantEntry._thinking = ctx.parsedResponse.thinking;
