@@ -41,7 +41,18 @@ test.describe('图片缓存 · 坏状态自愈 (offline: full)', () => {
         bad.close();
 
         // WHEN 应用打开缓存
-        const mod = await import('/src/engine/image/asset-cache.ts');
+        // Variable specifier: resolved by the Vite dev server in the browser, not by tsc
+        // (a literal '/src/...' specifier is TS2307 under typecheck:e2e — the cause of the
+        // e2e-smoke CI lane being red since c977f48).
+        const assetCacheUrl = '/src/engine/image/asset-cache.ts';
+        const mod = (await import(/* @vite-ignore */ assetCacheUrl)) as {
+          ImageAssetCache: new () => {
+            open(): Promise<void>;
+            store(meta: never, blob: Blob): Promise<unknown>;
+            retrieve(id: string): Promise<unknown>;
+            importEntries(entries: unknown[]): Promise<unknown>;
+          };
+        };
         const cache = new mod.ImageAssetCache();
         await cache.open();
 
@@ -92,7 +103,18 @@ test.describe('图片缓存 · 坏状态自愈 (offline: full)', () => {
         });
         other.close();
 
-        const mod = await import('/src/engine/image/asset-cache.ts');
+        // Variable specifier: resolved by the Vite dev server in the browser, not by tsc
+        // (a literal '/src/...' specifier is TS2307 under typecheck:e2e — the cause of the
+        // e2e-smoke CI lane being red since c977f48).
+        const assetCacheUrl = '/src/engine/image/asset-cache.ts';
+        const mod = (await import(/* @vite-ignore */ assetCacheUrl)) as {
+          ImageAssetCache: new () => {
+            open(): Promise<void>;
+            store(meta: never, blob: Blob): Promise<unknown>;
+            retrieve(id: string): Promise<unknown>;
+            importEntries(entries: unknown[]): Promise<unknown>;
+          };
+        };
         const cache = new mod.ImageAssetCache();
         let error = '';
         try { await cache.open(); } catch (e) { error = `${(e as Error).name}: ${(e as Error).message}`; }
