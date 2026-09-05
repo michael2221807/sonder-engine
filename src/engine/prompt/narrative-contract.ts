@@ -203,6 +203,29 @@ export function buildNarrativeContractBlock(params: BuildNarrativeContractBlockP
   return lines.join('\n');
 }
 
+export interface NarrativeContractFromState {
+  contract: NarrativeContractState;
+  cast: string[];
+  /** Rendered block, `''` when nothing is to be injected. */
+  block: string;
+}
+
+/**
+ * One-call convenience for every flow that injects the contract (main round,
+ * NPC private chat, plot decomposition): read the contract, derive the cast from
+ * the relationship list, render the block with the pack fragments.
+ */
+export function buildNarrativeContractFromState(
+  state: NarrativeContractReadPort,
+  paths: Pick<EnginePathConfig, 'narrativeContract' | 'relationships' | 'npcFieldNames' | 'npcTypeExclude'>,
+  engineFragments: Record<string, unknown> | undefined,
+): NarrativeContractFromState {
+  const contract = readNarrativeContract(state, paths);
+  const cast = resolveFocalCast(state.get<unknown>(paths.relationships), paths);
+  const block = buildNarrativeContractBlock({ contract, cast, fragments: resolveNarrativeContractFragments(engineFragments) });
+  return { contract, cast, block };
+}
+
 /** Compile-trace entry: the contract is kept verbatim in both steps (never deduplicated). */
 export function narrativeContractTraceEntry(tokens: number, clauseCount: number, castCount: number): CompileTraceEntry {
   return {

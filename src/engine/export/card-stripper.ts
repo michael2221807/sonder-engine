@@ -221,6 +221,9 @@ export function stripStateTreeForCard(
 
   // 3. Heroine plan (剧情规划·女主线): strip unless kept.
   if (!flags.includedHeroinePlan) deleteByPath(t, paths.heroinePlan.split('.'));
+  // Narrative Contract (R2): the author's melody rides along unless unticked. No reset
+  // needed — clauses carry no progress; the cast is derived from the card's own NPCs.
+  if (!flags.includedNarrativeContract) deleteByPath(t, paths.narrativeContract.split('.'));
 
   // 4. Plot direction (剧情走向): strip unless kept; if kept, reset progress to baseline.
   if (!flags.includedPlotDirection) {

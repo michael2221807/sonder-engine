@@ -56,6 +56,7 @@ import {
 import { formatMemoryEntry } from '../../social/npc-memory-format';
 import { isDuplicateMemory } from '../../social/memory-dedup';
 import { buildEnvironmentBlock } from '../../prompt/environment-block';
+import { buildNarrativeContractFromState } from '../../prompt/narrative-contract';
 
 /** 单条私聊消息结构 — 存储在 NPC.私聊历史 数组中 */
 export interface NpcChatMessage {
@@ -571,6 +572,14 @@ export class NpcChatPipeline {
       environment: this.stateManager.get<unknown>(this.paths.environmentTags),
     });
 
+    // Narrative Contract (R2 second batch, 2026-09-05): a private chat develops a
+    // character directly, so the player's clauses (e.g. an NPC's true colours) and
+    // the focal cast reach it through the same block the main round gets. Empty
+    // contract → '' → the `narrativeContract` flow module is skipped.
+    const { block: narrativeContractBlock } = buildNarrativeContractFromState(
+      this.stateManager, this.paths, this.gamePack.engineFragments,
+    );
+
     return {
       NPC_NAME: npcName,
       NPC_PROFILE: this.formatNpcProfile(npc),
@@ -582,6 +591,8 @@ export class NpcChatPipeline {
       CHAT_HISTORY: this.formatChatHistory(npc),
       USER_INPUT: userMessage,
       ENVIRONMENT_BLOCK: environmentBlock,
+      NARRATIVE_CONTRACT: narrativeContractBlock ? '1' : '',
+      NARRATIVE_CONTRACT_BLOCK: narrativeContractBlock,
     };
   }
 

@@ -26,6 +26,7 @@ import type { WorldBook } from '../prompt/world-book';
 import type { PlotNode, PlotGauge, OpportunityTier, PlotArc, PlotDirectionState, ThreadActivation, ThreadTrigger } from './types';
 import { DEFAULT_GAUGE_MAX_DELTA, DEFAULT_MAX_ACTIVE_THREADS } from './types';
 import { buildEnvironmentBlock } from '../prompt/environment-block';
+import { buildNarrativeContractFromState } from '../prompt/narrative-contract';
 import { readGameTimeStamp } from './game-time-stamp';
 
 export interface DecomposeResult {
@@ -295,10 +296,17 @@ export class PlotDecomposer {
     });
   }
 
-  /** §7.2 — four sections, in priority order. */
+  /**
+   * §7.2 — four sections, in priority order, preceded by the player's Narrative
+   * Contract when this save has one (R2 second batch, 2026-09-05): nodes decomposed
+   * without the melody produced "task-shaped" beats that contradicted it (P3 86-乙).
+   * Empty contract → nothing prepended, context byte-identical to before.
+   */
   buildContext(): string {
     const L = this.labels();
+    const { block: contractBlock } = buildNarrativeContractFromState(this.stateManager, this.paths, this.pack.engineFragments);
     return [
+      contractBlock,
       this.buildLedger(L),
       this.buildWorldFacts(L),
       this.buildMemoryBlock(L),

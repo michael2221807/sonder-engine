@@ -43,6 +43,12 @@ export interface CardStripPaths {
    * Putting it in the unconditional list would make that choice impossible to honour.
    */
   capturedSettings: string;
+  /**
+   * Narrative Contract (`系统.扩展.narrativeContract`, R2 2026-09-05) — the author's
+   * "melody" for the world. Kept by default (it is part of "how this world is written");
+   * deleted only when the author unticks it (`includedNarrativeContract`).
+   */
+  narrativeContract: string;
   /** Variable attributes reset to baseline (reputation→0, vitals→full) — injected so the stripper stays literal-free. */
   variableReset: {
     reputationPath: string;
@@ -140,6 +146,7 @@ export function buildDefaultCardStripPaths(p: EnginePathConfig = DEFAULT_ENGINE_
     plotDirection: p.plotDirection,               // 元数据.剧情导向
     engramMemory: p.engramMemory,                 // 系统.扩展.engramMemory
     capturedSettings: p.slotWorldBooks,           // 系统.扩展.slotWorldBooks
+    narrativeContract: p.narrativeContract,       // 系统.扩展.narrativeContract
     variableReset: {
       reputationPath: p.reputation,               // 角色.可变属性.声望
       vitalPaths: [p.vitalHealth, p.vitalEnergy], // 角色.可变属性.体力 / 精力

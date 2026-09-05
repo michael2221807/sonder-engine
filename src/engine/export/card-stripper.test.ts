@@ -26,6 +26,7 @@ function flags(overrides: Partial<ExportFlags> = {}): ExportFlags {
     includedPromptSettings: false,
     includedHeroinePlan: false,
     includedPlotDirection: false,
+    includedNarrativeContract: false,
     ...overrides,
   };
 }
@@ -112,6 +113,7 @@ function makeTree(): Record<string, unknown> {
       actionOptions: ['x'],
       扩展: {
         engramMemory: { entities: [{ id: 'e1' }], v2Edges: [{ id: 'edge1' }] },
+        narrativeContract: { enabled: true, clauses: [{ id: 'c1', text: '契约条款', enabled: true, source: 'player', createdRound: 7 }] },
         image: {
           config: { transformer: { apiKey: 'sk-IMAGE-LEAK', endpoint: 'http://leak' } },
           tasks: [{ prompt: 'task' }],
@@ -299,5 +301,20 @@ describe('collectStringsAtPath', () => {
     const tree = makeTree();
     const found = collectStringsAtPath(tree, '角色.身体'.split('.'));
     expect(found).toContain('肉棒插入小穴的身体细节文本');
+  });
+});
+
+describe('Narrative Contract (R2) — includedNarrativeContract', () => {
+  it('keeps the contract verbatim when included (no reset: clauses carry no progress)', () => {
+    const out = stripStateTreeForCard(makeTree(), PATHS, flags({ includedNarrativeContract: true }), 'fixed');
+    expect(getByPath(out, '系统.扩展.narrativeContract')).toEqual({
+      enabled: true, clauses: [{ id: 'c1', text: '契约条款', enabled: true, source: 'player', createdRound: 7 }],
+    });
+  });
+
+  it('deletes the contract when the author unticks it, leaving the rest of 系统.扩展 alone', () => {
+    const out = stripStateTreeForCard(makeTree(), PATHS, flags({ includedNarrativeContract: false }), 'fixed');
+    expect(getByPath(out, '系统.扩展.narrativeContract')).toBeUndefined();
+    expect(getByPath(out, '系统.扩展')).toBeDefined();
   });
 });

@@ -66,6 +66,8 @@ function makeTree(): Record<string, unknown> {
           v2Edges: [{ id: 'edge1', sourceEntity: '萧寒', targetEntity: 'NPC1', fact: '相识', episodes: [], is_embedded: true, createdAtRound: 1, lastSeenRound: 2, core: true }],
         },
         image: { config: { transformer: { apiKey: IMAGE_API_KEY, endpoint: 'http://img-leak' } } },
+        // Narrative Contract (R2): travels with the card unless the author unticks it.
+        narrativeContract: { enabled: true, clauses: [{ id: 'c1', text: 'NPC1 底色是护不是猎。', enabled: true, source: 'player', createdRound: 7 }] },
       },
     },
   };
@@ -113,7 +115,7 @@ function makeOptions(over: Partial<ExportOptions> = {}): ExportOptions {
       containsNsfw: false, includedGenerationHistory: false, includedReferenceGallery: false,
       includedSettings: true, includedApiTemplate: true, includedEngineConfig: true,
       includedWorldBooks: true, includedBuiltinOverrides: true, includedPromptSettings: true,
-      includedHeroinePlan: false, includedPlotDirection: true,
+      includedHeroinePlan: false, includedPlotDirection: true, includedNarrativeContract: true,
     },
     ...over,
   };
@@ -188,6 +190,23 @@ describe('export → import round-trip (real services)', () => {
     // the scheduled thread's trigger still points at a surviving node id
     expect(arcs[2].activation).toEqual({ mode: 'auto', triggers: [{ type: 'node_completed', arcId: 'arc-a', nodeId: 'a2' }] });
     expect((arcs[0].nodes as Array<Record<string, unknown>>).some(n => n.id === 'a2')).toBe(true);
+  });
+
+  it('叙事契约往返：默认随卡片走（条款原样）；作者不勾则卡里没有', async () => {
+    const svc = makeExportService(makeTree());
+    const kept = await decodeAndValidateCard((await svc.exportCard('p', 's', makeOptions())).blob, mockPack);
+    expect(kept.ok).toBe(true);
+    if (!kept.ok) return;
+    expect(_get(kept.mergedTree, '系统.扩展.narrativeContract.clauses')).toEqual([
+      { id: 'c1', text: 'NPC1 底色是护不是猎。', enabled: true, source: 'player', createdRound: 7 },
+    ]);
+
+    const unticked = makeOptions({ checklist: { ...makeOptions().checklist, includedNarrativeContract: false } });
+    const dropped = await decodeAndValidateCard((await svc.exportCard('p', 's', unticked)).blob, mockPack);
+    expect(dropped.ok).toBe(true);
+    if (!dropped.ok) return;
+    expect(_get(dropped.mergedTree, '系统.扩展.narrativeContract.clauses') ?? []).toEqual([]);
+    expect(JSON.stringify(dropped.mergedTree)).not.toContain('底色是护不是猎');
   });
 
   it('★SC-9 往返：真实导出→导入后的 bundle JSON 不含任何密钥/私密', async () => {

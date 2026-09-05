@@ -39,11 +39,8 @@ import { NpcRelevanceScorer, DEFAULT_NPC_RELEVANCE_CONFIG } from '../../social/n
 import { buildSystemPrompt } from '../../prompt/system-prompt-builder';
 import {
   activeClauses,
-  buildNarrativeContractBlock,
+  buildNarrativeContractFromState,
   narrativeContractTraceEntry,
-  readNarrativeContract,
-  resolveFocalCast,
-  resolveNarrativeContractFragments,
 } from '../../prompt/narrative-contract';
 import { hasSettingTag, parseSettingTagNames } from '../../prompt/setting-tag-scanner';
 import { DEFAULT_PROMPT_SETTINGS } from '../../prompt/world-book';
@@ -342,13 +339,11 @@ export class ContextAssemblyStage implements PipelineStage {
     // Compiler never deduplicates it. Empty contract → '' → nothing injected, so saves
     // that never use the feature keep byte-identical prompts.
     // Design: docs/design/narrative-contract-positioning.md §4.2.
-    const narrativeContract = readNarrativeContract(this.stateManager, this.paths);
-    const focalCast = resolveFocalCast(this.stateManager.get<unknown>(this.paths.relationships), this.paths);
-    const narrativeContractBlock = buildNarrativeContractBlock({
+    const {
       contract: narrativeContract,
       cast: focalCast,
-      fragments: resolveNarrativeContractFragments(this.pack.engineFragments),
-    });
+      block: narrativeContractBlock,
+    } = buildNarrativeContractFromState(this.stateManager, this.paths, this.pack.engineFragments);
 
     const variables: Record<string, string> = {
       PLAYER_NAME: this.stateManager.get<string>(this.paths.playerName) ?? '',

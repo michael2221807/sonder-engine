@@ -109,6 +109,7 @@ function defaultFlags(): ExportFlags {
     includedPromptSettings: false,
     includedHeroinePlan: false,
     includedPlotDirection: true, // OD1: plot direction default ON (reset, no spoiler)
+    includedNarrativeContract: true, // R2 Q2: the author's melody travels with the card by default
   };
 }
 

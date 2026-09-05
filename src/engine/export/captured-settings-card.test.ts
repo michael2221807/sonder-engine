@@ -61,6 +61,7 @@ const FLAGS: ExportFlags = {
   includedPromptSettings: false,
   includedHeroinePlan: false,
   includedPlotDirection: false,
+  includedNarrativeContract: false,
   includedGenerationHistory: false,
   includedReferenceGallery: false,
 } as unknown as ExportFlags;

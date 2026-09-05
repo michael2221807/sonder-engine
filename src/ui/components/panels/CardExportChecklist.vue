@@ -22,6 +22,7 @@ const CREATIVE: { field: keyof ExportFlags; key: string }[] = [
   { field: 'includedPromptSettings', key: 'promptSettings' },
   { field: 'includedHeroinePlan', key: 'heroinePlan' },
   { field: 'includedPlotDirection', key: 'plotDirection' },
+  { field: 'includedNarrativeContract', key: 'narrativeContract' },
   { field: 'includedSettings', key: 'settings' },
   { field: 'includedApiTemplate', key: 'apiTemplate' },
 ];
