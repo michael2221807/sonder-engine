@@ -382,7 +382,7 @@
   "save.export.checklist.plotDirection.label": "剧情走向 · 故事弧线",
   "save.export.checklist.plotDirection.hint": "你设计的剧情节点；导出会重置进度，让玩家从头开始。",
   "save.export.checklist.narrativeContract.label": "叙事契约 · 故事的调子",
-  "save.export.checklist.narrativeContract.hint": "你写下的人物底色、主线方向与作者权边界；随卡片走，玩家可在自己的存档里改",
+  "save.export.checklist.narrativeContract.hint": "你写下的人物底色、主线方向与作者权边界；随卡片走，玩家可在自己的存档里改。",
   "save.export.checklist.settings.label": "设置（无密钥）",
   "save.export.checklist.settings.hint": "界面 / 玩法 / AI 参数，帮新手快速起步；不含任何密钥。",
   "save.export.checklist.apiTemplate.label": "API 模板（无密钥）",
