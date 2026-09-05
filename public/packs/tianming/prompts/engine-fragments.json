@@ -89,5 +89,10 @@
   "plotCtxTimeSep": " · 时间：",
   "plotCtxNpcLabel": "在场人物（名字·身份）：",
   "plotCtxNpcLine": "- {name}{type}{desc}",
-  "plotCtxSummaryLine": "玩家：{player}，当前位置：{location}，回合：{round}"
+  "plotCtxSummaryLine": "玩家：{player}，当前位置：{location}，回合：{round}",
+  "narrativeContractTitle": "【叙事契约】",
+  "narrativeContractAuthority": "以下由玩家声明，优先级高于你从状态与记忆里的推断：",
+  "narrativeContractCastLabel": "【主线人物】",
+  "narrativeContractPeripheralRule": "以上人物可作为推动本回合的力量；不在名单里、且近期剧情几乎没有出场的人物，最多作为背景。",
+  "narrativeContractCastSeparator": "、"
 }

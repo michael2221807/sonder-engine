@@ -32,11 +32,19 @@ import {
   LEGACY_FEW_SHOT_PAIRS,
   STEP2_FEW_SHOT_PAIRS,
 } from '../../prompt/context-compiler';
-import { estimateMessagesTokens } from '../../core/metrics-helpers';
+import { estimateMessagesTokens, estimateTextTokens } from '../../core/metrics-helpers';
 import { NpcPresenceService, isColocatedLocation, type NpcRecord } from '../../social/npc-presence';
 import { NpcContextRenderer } from '../../social/npc-context-renderer';
 import { NpcRelevanceScorer, DEFAULT_NPC_RELEVANCE_CONFIG } from '../../social/npc-relevance-scorer';
 import { buildSystemPrompt } from '../../prompt/system-prompt-builder';
+import {
+  activeClauses,
+  buildNarrativeContractBlock,
+  narrativeContractTraceEntry,
+  readNarrativeContract,
+  resolveFocalCast,
+  resolveNarrativeContractFragments,
+} from '../../prompt/narrative-contract';
 import { hasSettingTag, parseSettingTagNames } from '../../prompt/setting-tag-scanner';
 import { DEFAULT_PROMPT_SETTINGS } from '../../prompt/world-book';
 import type { PromptSettings } from '../../prompt/world-book';
@@ -324,6 +332,24 @@ export class ContextAssemblyStage implements PipelineStage {
       promptSettings.enableSettingCapture !== false &&
       hasSettingTag(ctx.originalUserInput ?? ctx.userInput ?? '', settingTagNames);
 
+    // ── 6c. Narrative Contract (R2, 2026-09-05) ──
+    //
+    // The player's sparse "melody" for this save (clauses at `paths.narrativeContract`)
+    // plus the focal cast derived every round from the relationship list (「重点」 type
+    // ∪ 「关注」 flag — PO decision Q5-D, no stored list). Computed ONCE here and sent to
+    // BOTH split steps via `NARRATIVE_CONTRACT_BLOCK`: step1 as a builder piece, step2
+    // (and the legacy flows) as a flow module gated by `NARRATIVE_CONTRACT`. The Context
+    // Compiler never deduplicates it. Empty contract → '' → nothing injected, so saves
+    // that never use the feature keep byte-identical prompts.
+    // Design: docs/design/narrative-contract-positioning.md §4.2.
+    const narrativeContract = readNarrativeContract(this.stateManager, this.paths);
+    const focalCast = resolveFocalCast(this.stateManager.get<unknown>(this.paths.relationships), this.paths);
+    const narrativeContractBlock = buildNarrativeContractBlock({
+      contract: narrativeContract,
+      cast: focalCast,
+      fragments: resolveNarrativeContractFragments(this.pack.engineFragments),
+    });
+
     const variables: Record<string, string> = {
       PLAYER_NAME: this.stateManager.get<string>(this.paths.playerName) ?? '',
       CURRENT_LOCATION: this.stateManager.get<string>(this.paths.playerLocation) ?? '',
@@ -339,6 +365,10 @@ export class ContextAssemblyStage implements PipelineStage {
       // PromptAssembler only does template rendering and never strips feature comments,
       // so an HTML-comment block would be shipped to the model verbatim.
       SETTING_CAPTURE_ACTIVE: settingCaptureActive ? '1' : '',
+
+      // Narrative Contract: flow-module condition + the rendered block (see 6c above).
+      NARRATIVE_CONTRACT: narrativeContractBlock ? '1' : '',
+      NARRATIVE_CONTRACT_BLOCK: narrativeContractBlock,
 
       // Action options wiring — 条件变量 + 内容注入
       ACTION_OPTIONS_MODE: actionMode,
@@ -511,6 +541,7 @@ export class ContextAssemblyStage implements PipelineStage {
           ? [String(ctx.meta['worldEventContext'] ?? '')].filter(Boolean)
           : [],
         settingCaptureActive,
+        narrativeContractBlock,
       });
 
       // Park the auto-captured hit list for SettingCaptureStage. The builder is a pure
@@ -633,6 +664,15 @@ export class ContextAssemblyStage implements PipelineStage {
             );
             trace.entries.push(entry);
             trace.savedTokens += Math.max(0, entry.before - entry.after);
+          }
+          // The contract is the one block deliberately sent to both steps — record it so
+          // the Prompt Assembly panel can answer "why is this in step2 as well?".
+          if (narrativeContractBlock) {
+            trace.entries.push(narrativeContractTraceEntry(
+              estimateTextTokens(narrativeContractBlock),
+              activeClauses(narrativeContract).length,
+              focalCast.length,
+            ));
           }
           ctx.meta['compileTrace'] = trace;
         }

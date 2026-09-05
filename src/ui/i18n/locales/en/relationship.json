@@ -202,7 +202,7 @@
   "relationship.editForm.nsfw.removeBodyPart": "Remove",
   "relationship.editForm.nsfw.addBodyPart": "+ Add Body Part",
   "relationship.editForm.sectionFlags": "Flags",
-  "relationship.editForm.flags.watch": "Watch (pin to top)",
+  "relationship.editForm.flags.watch": "Watch (pin to top; counts as main cast in the narrative contract)",
   "relationship.editForm.flags.heartbeatLock": "Heartbeat Lock (AI won't update this NPC)",
   "relationship.toast.nameRequired": "NPC name cannot be empty",
 

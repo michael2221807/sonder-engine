@@ -86,6 +86,14 @@ describe('stringifySnapshotForPrompt — always-strip paths', () => {
     const out = stringifySnapshotForPrompt(buildSnapshot(), false);
     expect(out).not.toContain('be-stripped');
   });
+
+  it('strips 系统.扩展.narrativeContract (R2: reaches the model only via its own block)', () => {
+    const out = stringifySnapshotForPrompt(buildSnapshot({
+      系统: { 扩展: { narrativeContract: { enabled: true, clauses: [{ id: 'c', text: 'contract-clause', enabled: true, source: 'player', createdRound: 1 }] } } },
+    }), false);
+    expect(out).not.toContain('narrativeContract');
+    expect(out).not.toContain('contract-clause');
+  });
 });
 
 describe('stringifySnapshotForPrompt — NSFW strip paths', () => {

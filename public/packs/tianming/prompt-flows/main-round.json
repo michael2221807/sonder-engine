@@ -10,6 +10,7 @@
     { "promptId": "core", "role": "system", "order": 1, "depth": 0 },
     { "promptId": "cot-no-thinking-guard", "role": "system", "order": 1.1, "depth": 0, "condition": "COT_DISABLED" },
     { "promptId": "cot-judge", "role": "system", "order": 1.2, "depth": 0, "condition": "COT_JUDGE_ENABLED" },
+    {"promptId": "narrativeContract", "role": "system", "order": 1.4, "depth": 0, "condition": "NARRATIVE_CONTRACT"},
     { "promptId": "presencePartition", "role": "system", "order": 1.5, "depth": 0, "condition": "NPC_PRESENCE_ENABLED" },
     { "promptId": "actionOptions", "role": "system", "order": 2, "depth": 0, "condition": "ACTION_OPTIONS_MODE_IS_ACTION" },
     { "promptId": "actionOptionsStory", "role": "system", "order": 2, "depth": 0, "condition": "ACTION_OPTIONS_MODE_IS_STORY" },

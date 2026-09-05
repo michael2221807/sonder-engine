@@ -285,6 +285,15 @@ export const BUILTIN_SLOTS: Record<string, BuiltinSlotDefinition> = {
     description: '按玩家要求重写改写预览中的一个节点，保持与前后节点衔接（续写/改写 epic）',
     defaultPromptId: 'plotReviseNode',
   },
+
+  // ─── Narrative Contract (R2, 2026-09-05) ────────────────────
+  narrative_contract: {
+    id: 'narrative_contract',
+    title: '叙事契约',
+    category: '叙事契约',
+    description: '玩家为本存档声明的主旋律（人物底色 / 主线 / 主线人物 / 作者权边界）；分步两步都注入，契约为空时不出现',
+    defaultPromptId: 'narrativeContract',
+  },
 } as const;
 
 /**

@@ -8,6 +8,7 @@
     { "promptId": "splitGenStep1", "role": "system", "order": 0, "depth": 0 },
     { "promptId": "core", "role": "system", "order": 1, "depth": 0 },
     { "promptId": "splitGenContext", "role": "system", "order": 2, "depth": 0 },
+    { "promptId": "narrativeContract", "role": "system", "order": 2.2, "depth": 0, "condition": "NARRATIVE_CONTRACT" },
     { "promptId": "presencePartition", "role": "system", "order": 2.5, "depth": 0, "condition": "NPC_PRESENCE_ENABLED" },
     { "promptId": "plotDirective", "role": "system", "order": 850, "depth": 1, "condition": "PLOT_DIRECTIVE" },
     { "promptId": "historyFraming", "role": "system", "order": 10, "depth": 0 }

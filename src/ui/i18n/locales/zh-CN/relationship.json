@@ -202,7 +202,7 @@
   "relationship.editForm.nsfw.removeBodyPart": "移除",
   "relationship.editForm.nsfw.addBodyPart": "+ 追加其他部位",
   "relationship.editForm.sectionFlags": "标记",
-  "relationship.editForm.flags.watch": "关注（置顶显示）",
+  "relationship.editForm.flags.watch": "关注（置顶显示，并进叙事契约的主线人物）",
   "relationship.editForm.flags.heartbeatLock": "心跳锁定（AI 不更新此 NPC）",
   "relationship.toast.nameRequired": "NPC 名称不能为空",
 

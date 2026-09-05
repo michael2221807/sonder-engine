@@ -57,6 +57,8 @@ export const COMPILE_REASON = {
   currentNotFound: 'compiler.reason.currentNotFound',
   recentAndRelevant: 'compiler.reason.recentAndRelevant',
   fewShotFixed: 'compiler.reason.fewShotFixed',
+  /** Narrative contract: never deduplicated — the player's melody is sent to both steps. */
+  sentInBothSteps: 'compiler.reason.sentInBothSteps',
 } as const;
 
 /**

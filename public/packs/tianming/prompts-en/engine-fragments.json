@@ -89,5 +89,10 @@
   "plotCtxTimeSep": " · Time: ",
   "plotCtxNpcLabel": "Characters present (name · role):",
   "plotCtxNpcLine": "- {name}{type}{desc}",
-  "plotCtxSummaryLine": "Player: {player}, location: {location}, round: {round}"
+  "plotCtxSummaryLine": "Player: {player}, location: {location}, round: {round}",
+  "narrativeContractTitle": "[Narrative Contract]",
+  "narrativeContractAuthority": "Declared by the player; it outranks whatever you infer from state and memory:",
+  "narrativeContractCastLabel": "[Main cast] ",
+  "narrativeContractPeripheralRule": "These characters may drive this turn; anyone not listed who has barely appeared recently is background at most.",
+  "narrativeContractCastSeparator": ", "
 }

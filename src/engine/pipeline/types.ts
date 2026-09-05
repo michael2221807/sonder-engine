@@ -146,9 +146,10 @@ export interface PromptMetrics {
  * slice. Rendered by PromptAssemblyPanel; not persisted to the save.
  */
 export interface CompileTraceEntry {
-  /** State path (`世界.地点信息`), template variable (`MEMORY_BLOCK`) or `history`. */
+  /** State path (`世界.地点信息`), template variable (`MEMORY_BLOCK`), `history` or `contract`. */
   target: string;
-  action: 'strip' | 'project' | 'truncate';
+  /** `keep` = deliberately sent unchanged (the narrative contract goes to both steps). */
+  action: 'strip' | 'project' | 'truncate' | 'keep';
   reason: string;
   before: number;
   after: number;
@@ -640,6 +641,18 @@ export interface EnginePathConfig {
    */
   settingCaptureLast: string;
   /**
+   * Narrative Contract (R2, 2026-09-05) — the player's sparse "melody" for this save
+   * (e.g. "系统.扩展.narrativeContract"): `{ enabled, clauses[] }`, see
+   * `prompt/narrative-contract.ts`.
+   *
+   * Lives in the state tree for the same reasons as `slotWorldBooks`: slot-scoped,
+   * rolls back with the round, carried by save / backup / cloud sync / card for free.
+   * Stripped from `GAME_STATE_JSON` (`PROMPT_ALWAYS_STRIP_PATHS`); it reaches the model
+   * only through its own block, sent in BOTH split steps.
+   * Design: docs/design/narrative-contract-positioning.md §4.1.
+   */
+  narrativeContract: string;
+  /**
    * 玩家已探索地点名称数组（如 "系统.探索记录"）
    * 由引擎 PostProcessStage 在每回合自动维护，无需 AI 命令写入。
    * 用于地图面板的探索状态节点样式（已探索绿边框 / 未探索降低透明度）。
@@ -899,6 +912,14 @@ export interface EngineNpcFieldNames {
    */
   isMajorRole: string;
   /**
+   * 玩家「关注」标记 boolean key（默认 '关注'）
+   *
+   * 关系面板的眼睛图标写入（置顶显示）。自 R2 叙事契约起被引擎读取：
+   * `关注 === true` 的 NPC 与「重点」类型 NPC 一起构成主线人物名单
+   * （`prompt/narrative-contract.ts` `resolveFocalCast`，PO 决议 Q5-D）。
+   */
+  attention: string;
+  /**
    * 关系状态文本 key（默认 '关系状态'）
    *
    * 玩家与 NPC 的关系标签（如 陌生/朋友/恋人/敌对）。具体标签值由 pack prompt
@@ -1001,6 +1022,7 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
   preRoundSnapshot: '元数据.上次对话前快照',
   slotWorldBooks: '系统.扩展.slotWorldBooks',
   settingCaptureLast: '系统.扩展.settingCaptureLast',
+  narrativeContract: '系统.扩展.narrativeContract',
   explorationRecord: '系统.探索记录',
   reasoningHistory: '元数据.推理历史',
   storyPlan: '元数据.剧情规划',
@@ -1046,6 +1068,7 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
     memorySummaries: '总结记忆',
     isPresent: '是否在场',
     isMajorRole: '是否主要角色',
+    attention: '关注',
     relationshipStatus: '关系状态',
     corePersonality: '核心性格特征',
     affinityBreakthrough: '好感度突破条件',

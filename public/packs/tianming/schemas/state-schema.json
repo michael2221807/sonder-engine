@@ -640,6 +640,15 @@
               "default": [],
               "items": { "type": "object" }
             },
+            "narrativeContract": {
+              "type": "object",
+              "$comment": "叙事契约（R2，2026-09-05）：玩家为本存档声明的稀疏主旋律 { enabled, clauses: [{ id, text, enabled, source: player|proposed|accepted, createdRound }] }。主线人物名单不落盘，每回合由 社交.关系 的 类型≠普通 ∪ 关注=true 实时推导。DEFAULT_ENGINE_PATHS.narrativeContract 指向此路径；已加入 PROMPT_ALWAYS_STRIP_PATHS，只经契约块注入（分步两步都发）。",
+              "default": { "enabled": true, "clauses": [] },
+              "properties": {
+                "enabled": { "type": "boolean", "default": true },
+                "clauses": { "type": "array", "default": [], "items": { "type": "object" } }
+              }
+            },
             "语义记忆": {
               "type": "object",
               "$comment": "语义三元组知识库。TripleBuilder 从 AI response 的 semantic_memory.triples 追加；UnifiedRetriever 按 keyword+importance+recency 评分检索。独立于 engramMemory 的 events/entities/relations。",

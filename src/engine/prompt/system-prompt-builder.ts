@@ -129,6 +129,13 @@ export interface SystemPromptBuildParams {
    * reaches the model — the feature costs nothing on ordinary rounds.
    */
   settingCaptureActive?: boolean;
+  /**
+   * Narrative Contract block (R2, 2026-09-05) — pre-rendered by the caller
+   * (`prompt/narrative-contract.ts`); the player's clauses + focal cast. Emitted as the
+   * `narrative_contract` piece right after the narrative constraints. Empty / absent →
+   * no piece, not one extra character (same guarantee as `settingCaptureActive`).
+   */
+  narrativeContractBlock?: string;
 }
 
 /**
@@ -626,6 +633,21 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   const styleContent = renderPackPrompt(stylePromptId);
   const fullConstraints = [constraintsBase, styleContent ? `\n\n【剧情风格偏好】\n${styleContent}` : ''].filter(Boolean).join('');
   push('narrative_constraints', '叙事总约束 + 风格偏好', '系统', 'system', fullConstraints);
+
+  // ── 20b. Narrative Contract (R2) — DYNAMIC, never in the gproxy static prefix ──
+  // The slot text (pack `narrativeContract.md`, player-overridable) wraps the block
+  // built by the caller; the block placeholder is rendered here because the shared
+  // `slot()` helper only knows the static template vars.
+  if (params.narrativeContractBlock) {
+    const contractRaw = resolveSlotContent('narrative_contract', builtinOverrides, packPrompts);
+    const contractContent = renderPromptPipeline(
+      'narrative_contract',
+      contractRaw || '{{NARRATIVE_CONTRACT_BLOCK}}',
+      { ...templateVars, NARRATIVE_CONTRACT_BLOCK: params.narrativeContractBlock },
+      settings,
+    );
+    push('narrative_contract', '叙事契约', '系统', 'system', contractContent);
+  }
 
   // ── 21. Extra Prompt ──
   if (settings.customSystemPrompt?.trim()) {

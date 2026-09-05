@@ -30,13 +30,14 @@ import { BUILTIN_SLOTS } from '@/engine/prompt/builtin-slots';
 import { createEmptyHeroinePlan, type HeroinePlan, type HeroineEntry, type HeroineInteractionEvent } from '@/engine/story/heroine-plan';
 import type { PromptRegistry } from '@/engine/prompt/prompt-registry';
 import WorldBookTab from './WorldBookTab.vue';
+import NarrativeContractTab from './NarrativeContractTab.vue';
 
 const pack = inject<GamePack>('gamePack');
 const promptRegistry = inject<PromptRegistry>('promptRegistry');
 const { get, setValue } = useGameState();
 
 // ─── Tab state ──────────────────────────────────────────────
-type PanelTab = 'prompts' | 'settings' | 'heroine' | 'worldbook';
+type PanelTab = 'prompts' | 'settings' | 'heroine' | 'worldbook' | 'contract';
 const route = useRoute();
 
 /**
@@ -46,7 +47,7 @@ const route = useRoute();
  * book: an "undo / view" affordance that dumps you on the wrong tab is barely better
  * than no affordance.
  */
-const TAB_IDS: readonly PanelTab[] = ['prompts', 'settings', 'heroine', 'worldbook'];
+const TAB_IDS: readonly PanelTab[] = ['prompts', 'settings', 'heroine', 'worldbook', 'contract'];
 function initialTab(): PanelTab {
   const requested = route.query['tab'];
   const value = Array.isArray(requested) ? requested[0] : requested;
@@ -725,6 +726,7 @@ function previewContent(content: string, maxLen = 100): string {
           <button :class="['tab-btn', { 'tab-btn--active': activeTab === 'settings' }]" @click="activeTab = 'settings'">{{ $t('prompt.tab.settings') }}</button>
           <button :class="['tab-btn', { 'tab-btn--active': activeTab === 'heroine' }]" @click="activeTab = 'heroine'">{{ $t('prompt.tab.heroine') }}</button>
           <button :class="['tab-btn', { 'tab-btn--active': activeTab === 'worldbook' }]" @click="activeTab = 'worldbook'">{{ $t('prompt.tab.worldbook') }}</button>
+          <button :class="['tab-btn', { 'tab-btn--active': activeTab === 'contract' }]" data-testid="prompt-tab-contract" @click="activeTab = 'contract'">{{ $t('prompt.tab.contract') }}</button>
         </div>
       </header>
 
@@ -938,6 +940,9 @@ function previewContent(content: string, maxLen = 100): string {
 
       <!-- ═══ Tab: 世界书 ═══ -->
       <WorldBookTab v-if="activeTab === 'worldbook'" />
+
+      <!-- ═══ Tab: 叙事契约 (R2) ═══ -->
+      <NarrativeContractTab v-if="activeTab === 'contract'" />
 
       <!-- ═══ Tab: 内置提示词 ═══ -->
       <template v-if="activeTab === 'prompts'">

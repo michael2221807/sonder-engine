@@ -233,6 +233,7 @@
   "promptAssembly.memory.lineRange": "Lines {start} – {end}",
 
   "promptAssembly.builder.aiRole": "AI Role Declaration",
+  "promptAssembly.builder.narrativeContract": "Narrative contract",
   "promptAssembly.builder.worldPrompt": "World Setting",
   "promptAssembly.builder.worldMap": "Map & Buildings",
   "promptAssembly.builder.npcAway": "Absent Characters",
@@ -288,12 +289,16 @@
   "promptAssembly.compile.action.strip": "omitted",
   "promptAssembly.compile.action.project": "projected",
   "promptAssembly.compile.action.truncate": "trimmed",
+  "promptAssembly.compile.action.keep": "kept",
   "promptAssembly.compile.tokens": "{before} → {after}",
   "promptAssembly.compile.target.MEMORY_BLOCK": "Engram retrieval block",
   "promptAssembly.compile.target.history": "Dialogue history",
+  "promptAssembly.compile.target.contract": "Narrative contract",
   "promptAssembly.compile.detail.detail": "kept with detail",
   "promptAssembly.compile.detail.skeleton": "skeleton only",
   "promptAssembly.compile.detail.currentNotFound": "current location missing",
+  "promptAssembly.compile.detail.clauses": "clauses",
+  "promptAssembly.compile.detail.cast": "cast",
   "promptAssembly.compile.detail.recent": "recent",
   "promptAssembly.compile.detail.relevant": "relevant",
   "promptAssembly.compile.detail.dropped": "dropped",
@@ -303,5 +308,6 @@
   "compiler.reason.adjacency": "Detail kept only for the current place, its parent, siblings and children; the rest keep name and parent",
   "compiler.reason.currentNotFound": "Current location is not in the location list (inconsistent data): only its children keep detail; the rest keep name and parent",
   "compiler.reason.recentAndRelevant": "Latest 5 entries plus up to 5 relevant to present NPCs / the current place",
-  "compiler.reason.fewShotFixed": "History fixed at 2 pairs (minimum sufficient format example)"
+  "compiler.reason.fewShotFixed": "History fixed at 2 pairs (minimum sufficient format example)",
+  "compiler.reason.sentInBothSteps": "Sent to both steps (the player contract is never deduplicated)"
 }

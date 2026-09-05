@@ -6,6 +6,7 @@
     { "promptId": "splitGenStep2", "role": "system", "order": 0, "depth": 0 },
     { "promptId": "core", "role": "system", "order": 1, "depth": 0 },
     { "promptId": "splitGenContext", "role": "system", "order": 2, "depth": 0 },
+    { "promptId": "narrativeContract", "role": "system", "order": 2.2, "depth": 0, "condition": "NARRATIVE_CONTRACT" },
     { "promptId": "presencePartition", "role": "system", "order": 2.5, "depth": 0, "condition": "NPC_PRESENCE_ENABLED" },
     { "promptId": "actionOptions", "role": "system", "order": 3, "depth": 0, "condition": "ACTION_OPTIONS_MODE_IS_ACTION" },
     { "promptId": "actionOptionsStory", "role": "system", "order": 3, "depth": 0, "condition": "ACTION_OPTIONS_MODE_IS_STORY" },
