@@ -851,6 +851,7 @@ async function bootstrap(): Promise<void> {
   app.provide('saveManager', saveManager);
   app.provide('promptStorage', promptStorage);
   if (plotDecomposer) app.provide('plotDecomposer', plotDecomposer);
+  if (characterVectorProposePipeline) app.provide('characterVectorPropose', characterVectorProposePipeline);
   if (plotReviser) app.provide('plotReviser', plotReviser);
   // Lets the PlotPanel confirmation gate advance a confirmed critical node
   // immediately, instead of waiting for the next main round's evaluation pass.

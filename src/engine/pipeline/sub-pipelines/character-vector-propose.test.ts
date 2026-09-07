@@ -122,3 +122,30 @@ describe('CharacterVectorProposePipeline.execute', () => {
     expect(CharacterVectorProposePipeline.isCadenceRound(CHARACTER_VECTOR_PROPOSE_INTERVAL + 1)).toBe(false);
   });
 });
+
+describe('CharacterVectorProposePipeline.executeDetailed (manual trigger)', () => {
+  it('reports each outcome by status so the button can toast it', async () => {
+    const off = makeState({ 系统: { 扩展: { characterVectors: { enabled: false, entries: [] } } } });
+    expect((await makePipeline('{}', off).pipeline.executeDetailed({ manual: true })).status).toBe('disabled');
+    expect((await makePipeline('{"vectors":[]}', makeState(), []).pipeline.executeDetailed()).status).toBe('noCandidates');
+    expect((await makePipeline('garbage').pipeline.executeDetailed()).status).toBe('empty');
+    const failing = makePipeline('x');
+    (failing.generate as unknown as { mockImplementation: (f: () => Promise<string>) => void }).mockImplementation(() => Promise.reject(new Error('no config')));
+    expect((await failing.pipeline.executeDetailed()).status).toBe('failed');
+    const ok = makePipeline('{"vectors":[{"name":"沈墨琛","toward":"当藏品"}]}');
+    expect(await ok.pipeline.executeDetailed()).toMatchObject({ status: 'written', applied: 1, candidates: ['沈墨琛'] });
+  });
+
+  it('manual: an old save whose mid-term memory is gone still gets candidates from long-term memory and the latest narrative', async () => {
+    const state = makeState();
+    const { pipeline, generate, assemble } = makePipeline('{"vectors":[{"name":"沈墨琛","toward":"当藏品"},{"name":"林晚照","toward":"完全信赖"}]}', state, []);
+    // Automatic run: no mid-term material → skip, no call.
+    expect((await pipeline.executeDetailed()).status).toBe('noCandidates');
+    expect(generate).not.toHaveBeenCalled();
+    // Manual run: 沈墨琛 is named in the latest narrative ('沈墨琛披上大衣。'); 林晚照 is nowhere → not a candidate.
+    const r = await pipeline.executeDetailed({ manual: true });
+    expect(r).toMatchObject({ status: 'written', applied: 1, candidates: ['沈墨琛'] });
+    expect((assemble.mock.calls[0]![1]).CANDIDATE_NAMES).toBe('沈墨琛');
+    expect(state.get<CharacterVectorsState>(paths.characterVectors)!.entries.map((e) => e.name)).toEqual(['沈墨琛']);
+  });
+});

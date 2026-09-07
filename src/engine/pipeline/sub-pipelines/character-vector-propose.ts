@@ -47,6 +47,33 @@ const MAX_MID_TERM_ENTRIES = 25;
 
 interface HistoryEntry { role?: unknown; content?: unknown }
 
+/** Why a proposal run ended the way it did — surfaced to the player by the manual trigger. */
+export type CharacterVectorProposeStatus =
+  | 'written'        // ≥1 proposal merged into the state tree
+  | 'disabled'       // master switch off
+  | 'noFlow'         // pack has no characterVectorExtract flow
+  | 'noCandidates'   // nobody on the main cast has recent material
+  | 'failed'         // the model call threw
+  | 'empty'          // the response carried no usable vector
+  | 'unchanged';     // every proposal targeted a player-written entry
+
+export interface CharacterVectorProposeResult {
+  status: CharacterVectorProposeStatus;
+  /** Entries written (0 unless `written`). */
+  applied: number;
+  /** Names the model was asked about. */
+  candidates: string[];
+}
+
+export interface CharacterVectorProposeOptions {
+  /**
+   * Player-triggered run (the "让世界写向量" button). Widens the candidate rule so an old
+   * save whose mid-term memory has already been summarised still gets its cast covered:
+   * main cast ∩ (mid-term roles ∪ names in long-term memory ∪ names in the last narratives).
+   */
+  manual?: boolean;
+}
+
 function formatMemory(entries: MidTermEntry[]): string {
   return entries.map((e, i) => {
     const roles = Array.isArray(e.相关角色) && e.相关角色.length > 0 ? `【相关角色: ${e.相关角色.join('、')}】` : '';
@@ -71,28 +98,43 @@ export class CharacterVectorProposePipeline {
   }
 
   /**
-   * Run one proposal. Returns true when the state was updated, false on no-op (switch
-   * off, no candidates, no flow) or failure. Never throws.
+   * Run one proposal (the post-round trigger). Returns true when the state was updated,
+   * false on no-op (switch off, no candidates, no flow) or failure. Never throws.
    */
   async execute(): Promise<boolean> {
+    return (await this.executeDetailed()).status === 'written';
+  }
+
+  /** Same run with a detailed outcome — the manual trigger turns it into a toast. */
+  async executeDetailed(options: CharacterVectorProposeOptions = {}): Promise<CharacterVectorProposeResult> {
+    const done = (status: CharacterVectorProposeStatus, candidates: string[] = [], applied = 0): CharacterVectorProposeResult => ({ status, applied, candidates });
     const current = readCharacterVectors(this.stateManager, this.paths);
-    if (!current.enabled) return false;
+    if (!current.enabled) return done('disabled');
     const flow = this.gamePack.promptFlows['characterVectorExtract'];
     if (!flow) {
       logger.warn('[CharacterVectors] No "characterVectorExtract" prompt flow in Game Pack');
-      return false;
+      return done('noFlow');
     }
 
     const playerName = this.stateManager.get<string>(this.paths.playerName) ?? '';
     const relationships = this.stateManager.get<unknown>(this.paths.relationships);
     const cast = resolveFocalCast(relationships, this.paths).filter((n) => n !== playerName);
     const midTerm = this.memoryManager.getMidTermEntries().slice(-MAX_MID_TERM_ENTRIES);
+    const longTerm = this.memoryManager.getLongTermEntries();
+    const history = this.stateManager.get<HistoryEntry[]>(this.paths.narrativeHistory) ?? [];
+    const recentTurns = history.filter((h) => h.role === 'assistant' && typeof h.content === 'string').slice(-RECENT_NARRATIVE_TURNS);
     const recentNames = new Set<string>();
     for (const e of midTerm) for (const r of e.相关角色 ?? []) recentNames.add(r);
-    const candidates = cast.filter((n) => recentNames.has(n));
+    let candidates = cast.filter((n) => recentNames.has(n));
+    if (options.manual) {
+      // An old save may have had its mid-term memory summarised away: fall back to any
+      // main-cast name the long-term memory or the latest narratives still mention.
+      const haystack = longTerm.map((e) => e.content).join('\n') + '\n' + recentTurns.map((h) => String(h.content)).join('\n');
+      candidates = cast.filter((n) => recentNames.has(n) || haystack.includes(n));
+    }
     if (candidates.length === 0) {
       logger.debug('[CharacterVectors] no main-cast member with recent material — skip');
-      return false;
+      return done('noCandidates');
     }
 
     const F = this.paths.npcFieldNames;
@@ -108,10 +150,7 @@ export class CharacterVectorProposePipeline {
       }).join('\n');
 
     const { block: contractBlock } = buildNarrativeContractFromState(this.stateManager, this.paths, this.gamePack.engineFragments);
-    const longTerm = this.memoryManager.getLongTermEntries();
-    const history = this.stateManager.get<HistoryEntry[]>(this.paths.narrativeHistory) ?? [];
-    const recent = history.filter((h) => h.role === 'assistant' && typeof h.content === 'string').slice(-RECENT_NARRATIVE_TURNS)
-      .map((h, i) => `--- ${i + 1} ---\n${String(h.content)}`).join('\n');
+    const recent = recentTurns.map((h, i) => `--- ${i + 1} ---\n${String(h.content)}`).join('\n');
     const existing = current.entries.filter((e) => candidates.includes(e.name))
       .map((e) => JSON.stringify({ name: e.name, toward: e.toward, never: e.never, direction: e.direction, hidden: e.hidden, source: e.source }))
       .join('\n');
@@ -136,24 +175,24 @@ export class CharacterVectorProposePipeline {
       raw = await this.aiService.generate({ messages: assembled.messages, usageType: 'memory_summary' });
     } catch (err) {
       logger.error('[CharacterVectors] proposal call failed', err);
-      return false;
+      return done('failed', candidates);
     }
     emitPromptResponseDebug({ flow: 'characterVectorExtract', generationId, thinking: extractThinkingFromRaw(raw), rawResponse: raw });
 
     const proposals = this.parse(raw, candidates, playerName);
     if (proposals.length === 0) {
       logger.warn('[CharacterVectors] response carried no usable vectors');
-      return false;
+      return done('empty', candidates);
     }
     const round = this.stateManager.get<number>(this.paths.roundNumber) ?? 0;
     const { next, applied } = mergeProposals(current, proposals, round);
     if (applied === 0) {
       logger.debug('[CharacterVectors] every proposal targeted a player-written entry — nothing to write');
-      return false;
+      return done('unchanged', candidates);
     }
     this.stateManager.set(this.paths.characterVectors, next, 'system');
     logger.debug(`[CharacterVectors] ${applied} proposals merged (entries now ${next.entries.length})`);
-    return true;
+    return done('written', candidates, applied);
   }
 
   /** Parse `{"vectors":[…]}`; keep only candidates, never the protagonist. */

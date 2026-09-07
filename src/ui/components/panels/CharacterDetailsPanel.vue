@@ -26,6 +26,7 @@ import type { SelectOption } from '@/ui/components/shared/AgaSelect.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import CharacterVectorCard from '@/ui/components/panels/CharacterVectorCard.vue';
+import { useCharacterVectors } from '@/ui/composables/useCharacterVectors';
 import { eventBus } from '@/engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import { readStatFields } from '@/engine/pack/stat-section-reader';
@@ -1131,6 +1132,9 @@ interface RelationEntry {
 }
 
 const relationships = useValue<RelationEntry[]>(P.relationships);
+// Character Vectors (R2 second half): the one-click "let the world write vectors" trigger
+// shares its in-flight state with the contract tab (module-level ref in the composable).
+const { canPropose: canProposeVectors, proposing: proposingVectors, proposeNow: proposeVectorsNow } = useCharacterVectors();
 
 const relationList = computed<RelationEntry[]>(() => {
   const raw = relationships.value;
@@ -1919,6 +1923,15 @@ const avatarInitial = computed<string>(() => {
 
       <!-- ─── Tab: 关系 ─── -->
       <template v-else-if="activeTab === 'relations'">
+        <!-- Character Vectors: one click asks the world to write vectors for the main cast now
+             (an old save need not wait for the 5-round cadence) -->
+        <div v-if="relationList.length" class="relation-toolbar">
+          <Tooltip :text="$t('relationship.vector.propose.hint')" interactive>
+            <AgaButton variant="secondary" size="sm" :loading="proposingVectors" :disabled="!canProposeVectors" data-testid="vector-generate" @click="proposeVectorsNow">
+              {{ proposingVectors ? $t('relationship.vector.propose.running') : $t('relationship.vector.propose.button') }}
+            </AgaButton>
+          </Tooltip>
+        </div>
         <div v-if="relationList.length" class="relation-list">
           <div
             v-for="(rel, idx) in relationList"
@@ -3258,6 +3271,12 @@ const avatarInitial = computed<string>(() => {
 }
 
 /* ── Relations ── */
+.relation-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
 .relation-list {
   display: flex;
   flex-direction: column;

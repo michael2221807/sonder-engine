@@ -133,4 +133,29 @@ test.describe('Character Vectors surfaces', () => {
       await expect(page.getByText(`- ${KEY_NPC}：`).first()).toBeVisible();
       expect(pageErrors, 'no uncaught page errors during a vectors-on assembly').toEqual([]);
     });
+
+  test('"让世界写向量" runs the proposal pipeline on demand: offline it degrades to one error toast, no page errors',
+    { tag: ['@regression', '@relationships'] },
+    async ({ page, gameShell }) => {
+      await seedSave(page, { tree: vectorTree() });
+      await enterSeededGame(page);
+      const pageErrors: string[] = [];
+      page.on('pageerror', (e) => pageErrors.push(e.message));
+      await openRelations(page, gameShell);
+
+      const button = page.locator('[data-testid="vector-generate"]');
+      await expect(button).toBeEnabled();
+      await button.click();
+      // Offline the run degrades to one toast — `noCandidates` (the seed has no memory naming the
+      // cast) or `failed` (no API config) — and never throws; the round is untouched.
+      await expect(page.getByText(/世界写向量失败|记忆里还没有主线人物的材料|Writing vectors failed|no material on the main cast/)).toBeVisible({ timeout: 15_000 });
+      await expect(button).toBeEnabled();
+      await expect(page.locator('[data-testid="vector-card"]').first().locator('[data-testid="vector-add"]')).toBeVisible();
+      expect(pageErrors).toEqual([]);
+
+      // The same trigger lives on the contract tab next to the vectors section.
+      await gameShell.goTab('prompts');
+      await page.locator('[data-testid="prompt-tab-contract"]').click();
+      await expect(page.locator('[data-testid="contract-vector-generate"]')).toBeVisible();
+    });
 });

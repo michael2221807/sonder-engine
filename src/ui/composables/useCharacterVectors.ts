@@ -1,4 +1,4 @@
-// App doc: docs/user-guide/pages/game-relationships.md §人物向量 (vector card data flow)
+// App doc: docs/user-guide/pages/game-relationships.md §人物向量 (vector card data flow · 让世界写向量)
 // Design: docs/design/character-vector-v1-implementation-plan.md S3
 /**
  * useCharacterVectors — the single read/write port for the per-NPC "potential vectors".
@@ -10,11 +10,16 @@
  *
  * World-written entries (`source: 'proposed'`) are first-class here: the player edits or
  * deletes them like any other, never "accepts" them (PO decision, 2026-09-05).
+ *
+ * `proposeNow()` is the player-triggered run of the same world-proposal pipeline the
+ * post-round hook uses (PO request 2026-09-07: an old save should not wait five rounds).
  */
-import { computed } from 'vue';
+import { computed, inject, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useGameState } from './useGameState';
 import { eventBus } from '@/engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
+import type { CharacterVectorProposePipeline, CharacterVectorProposeResult } from '@/engine/pipeline/sub-pipelines/character-vector-propose';
 import {
   readCharacterVectors,
   activeVectorEntries,
@@ -32,6 +37,9 @@ export { CHARACTER_VECTOR_LINE_MAX_CHARS, CHARACTER_VECTOR_HIDDEN_MAX_CHARS };
 
 /** The four editable lines of one entry. */
 export type CharacterVectorFields = Pick<CharacterVectorEntry, 'toward' | 'never' | 'direction' | 'hidden'>;
+
+/** Module-level so two panels (relations tab, contract tab) share one in-flight run. */
+const proposing = ref(false);
 
 function newId(): string {
   return typeof crypto.randomUUID === 'function'
@@ -51,6 +59,8 @@ function clampFields(fields: Partial<CharacterVectorFields>): CharacterVectorFie
 
 export function useCharacterVectors() {
   const { get, setValue, useValue } = useGameState();
+  const { t } = useI18n();
+  const proposer = inject<CharacterVectorProposePipeline | null>('characterVectorPropose', null);
 
   const raw = useValue<unknown>(paths.characterVectors);
   const relationships = useValue<unknown>(paths.relationships);
@@ -112,5 +122,36 @@ export function useCharacterVectors() {
     write({ ...vectors.value, entries: vectors.value.entries.filter((e) => e.name !== name) });
   }
 
-  return { vectors, entries, enabled, projectedScope, setEnabled, entryFor, upsertEntry, toggleEntry, removeEntry };
+  /** The manual trigger can run when the pipeline exists, the switch is on and nothing is in flight. */
+  const canPropose = computed<boolean>(() => proposer !== null && enabled.value && !proposing.value);
+
+  /**
+   * Ask the world to write vectors now. The pipeline writes straight into the state tree;
+   * the card list re-renders from it, and the outcome is reported as one toast.
+   */
+  async function proposeNow(): Promise<CharacterVectorProposeResult | null> {
+    if (!proposer || proposing.value) return null;
+    proposing.value = true;
+    try {
+      const result = await proposer.executeDetailed({ manual: true });
+      const toast = (type: 'success' | 'info' | 'error', message: string) => eventBus.emit('ui:toast', { type, message, duration: 4000 });
+      switch (result.status) {
+        case 'written':
+          eventBus.emit('engine:request-save', undefined);
+          toast('success', t('relationship.vector.propose.written', { n: result.applied }));
+          break;
+        case 'noCandidates': toast('info', t('relationship.vector.propose.noCandidates')); break;
+        case 'unchanged': toast('info', t('relationship.vector.propose.unchanged')); break;
+        case 'disabled': toast('info', t('relationship.vector.propose.disabled')); break;
+        case 'empty': toast('error', t('relationship.vector.propose.empty')); break;
+        case 'noFlow':
+        case 'failed': toast('error', t('relationship.vector.propose.failed')); break;
+      }
+      return result;
+    } finally {
+      proposing.value = false;
+    }
+  }
+
+  return { vectors, entries, enabled, projectedScope, setEnabled, entryFor, upsertEntry, toggleEntry, removeEntry, canPropose, proposing, proposeNow };
 }

@@ -25,7 +25,7 @@ import Tooltip from '@/ui/components/shared/Tooltip.vue';
 const { t } = useI18n();
 const router = useRouter();
 const { clauses, enabled, focalCast, setEnabled, addClause, updateClauseText, toggleClause, removeClause } = useNarrativeContract();
-const { entries: vectorEntries, enabled: vectorsEnabled, projectedScope, setEnabled: setVectorsEnabled } = useCharacterVectors();
+const { entries: vectorEntries, enabled: vectorsEnabled, projectedScope, setEnabled: setVectorsEnabled, canPropose: canProposeVectors, proposing: proposingVectors, proposeNow: proposeVectorsNow } = useCharacterVectors();
 
 /** One-line digest of an entry for the overview list: the first line that says something. */
 function vectorSummary(e: CharacterVectorEntry): string {
@@ -175,7 +175,16 @@ function goRelationships(): void {
             @update:model-value="setVectorsEnabled"
           />
         </div>
-        <p v-if="vectorEntries.length === 0" class="contract-empty">{{ t('prompt.contract.vectorsEmpty') }}</p>
+        <template v-if="vectorEntries.length === 0">
+          <p class="contract-empty">{{ t('prompt.contract.vectorsEmpty') }}</p>
+          <div class="contract-vectors__actions contract-vectors__actions--end">
+            <Tooltip :text="t('relationship.vector.propose.hint')" interactive fixed>
+              <AgaButton variant="secondary" size="sm" :loading="proposingVectors" :disabled="!canProposeVectors" data-testid="contract-vector-generate" @click="proposeVectorsNow">
+                {{ proposingVectors ? t('relationship.vector.propose.running') : t('relationship.vector.propose.button') }}
+              </AgaButton>
+            </Tooltip>
+          </div>
+        </template>
         <template v-else>
           <p class="contract-lede">{{ t('prompt.contract.vectorsScope') }}</p>
           <p v-if="projectedScope.length === 0" class="contract-empty">{{ t('prompt.contract.vectorsScopeEmpty') }}</p>
@@ -193,9 +202,16 @@ function goRelationships(): void {
               <span class="vector-row__summary">{{ vectorSummary(e) }}</span>
             </li>
           </ul>
-          <Tooltip :text="t('prompt.contract.vectorsHint')" interactive fixed>
-            <button class="contract-link" @click="goRelationships">{{ t('prompt.contract.vectorsEdit') }}</button>
-          </Tooltip>
+          <div class="contract-vectors__actions">
+            <Tooltip :text="t('prompt.contract.vectorsHint')" interactive fixed>
+              <button class="contract-link" @click="goRelationships">{{ t('prompt.contract.vectorsEdit') }}</button>
+            </Tooltip>
+            <Tooltip :text="t('relationship.vector.propose.hint')" interactive fixed>
+              <AgaButton variant="secondary" size="sm" :loading="proposingVectors" :disabled="!canProposeVectors" data-testid="contract-vector-generate" @click="proposeVectorsNow">
+                {{ proposingVectors ? t('relationship.vector.propose.running') : t('relationship.vector.propose.button') }}
+              </AgaButton>
+            </Tooltip>
+          </div>
         </template>
       </section>
     </div>
@@ -442,6 +458,8 @@ function goRelationships(): void {
 .vector-row--proposed { border-left-color: var(--color-amber-400); }
 .vector-row__name { color: var(--color-text-secondary); white-space: nowrap; }
 .vector-row__summary { color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.contract-vectors__actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.contract-vectors__actions--end { justify-content: flex-end; }
 
 @media (prefers-reduced-motion: reduce) {
   .contract-body, .contract-clause, .vector-row { transition: none; }
