@@ -151,6 +151,7 @@ function makeStory7Options(over: Partial<ExportOptions> = {}): ExportOptions {
       includedSettings: false, includedApiTemplate: false, includedEngineConfig: false,
       includedWorldBooks: false, includedBuiltinOverrides: false, includedPromptSettings: false,
       includedHeroinePlan: false, includedPlotDirection: true, includedNarrativeContract: true,
+      includedCharacterVectors: true,
     },
     ...over,
   };

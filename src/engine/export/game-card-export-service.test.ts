@@ -47,6 +47,7 @@ function makeFlags(overrides: Partial<ExportFlags> = {}): ExportFlags {
     includedHeroinePlan: true,
     includedPlotDirection: true,
     includedNarrativeContract: true,
+    includedCharacterVectors: true,
     ...overrides,
   };
 }

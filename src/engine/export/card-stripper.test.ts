@@ -27,6 +27,7 @@ function flags(overrides: Partial<ExportFlags> = {}): ExportFlags {
     includedHeroinePlan: false,
     includedPlotDirection: false,
     includedNarrativeContract: false,
+    includedCharacterVectors: true,
     ...overrides,
   };
 }
@@ -306,14 +307,14 @@ describe('collectStringsAtPath', () => {
 
 describe('Narrative Contract (R2) — includedNarrativeContract', () => {
   it('keeps the contract verbatim when included (no reset: clauses carry no progress)', () => {
-    const out = stripStateTreeForCard(makeTree(), PATHS, flags({ includedNarrativeContract: true }), 'fixed');
+    const out = stripStateTreeForCard(makeTree(), PATHS, flags({ includedNarrativeContract: true, includedCharacterVectors: true }), 'fixed');
     expect(getByPath(out, '系统.扩展.narrativeContract')).toEqual({
       enabled: true, clauses: [{ id: 'c1', text: '契约条款', enabled: true, source: 'player', createdRound: 7 }],
     });
   });
 
   it('deletes the contract when the author unticks it, leaving the rest of 系统.扩展 alone', () => {
-    const out = stripStateTreeForCard(makeTree(), PATHS, flags({ includedNarrativeContract: false }), 'fixed');
+    const out = stripStateTreeForCard(makeTree(), PATHS, flags({ includedNarrativeContract: false, includedCharacterVectors: true }), 'fixed');
     expect(getByPath(out, '系统.扩展.narrativeContract')).toBeUndefined();
     expect(getByPath(out, '系统.扩展')).toBeDefined();
   });

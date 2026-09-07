@@ -62,6 +62,7 @@ const FLAGS: ExportFlags = {
   includedHeroinePlan: false,
   includedPlotDirection: false,
   includedNarrativeContract: false,
+  includedCharacterVectors: true,
   includedGenerationHistory: false,
   includedReferenceGallery: false,
 } as unknown as ExportFlags;

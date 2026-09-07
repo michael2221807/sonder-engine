@@ -653,6 +653,14 @@ export interface EnginePathConfig {
    */
   narrativeContract: string;
   /**
+   * Character Vectors (R2 second half, 2026-09-06) — per-NPC "potential vectors"
+   * (e.g. "系统.扩展.characterVectors"): `{ enabled, entries[] }`, see
+   * `prompt/character-vectors.ts`. Same storage reasoning as `narrativeContract`;
+   * stripped from `GAME_STATE_JSON`, injected only through its own projected block.
+   * Design: docs/design/character-vector-v1-implementation-plan.md §1.
+   */
+  characterVectors: string;
+  /**
    * 玩家已探索地点名称数组（如 "系统.探索记录"）
    * 由引擎 PostProcessStage 在每回合自动维护，无需 AI 命令写入。
    * 用于地图面板的探索状态节点样式（已探索绿边框 / 未探索降低透明度）。
@@ -1023,6 +1031,7 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
   slotWorldBooks: '系统.扩展.slotWorldBooks',
   settingCaptureLast: '系统.扩展.settingCaptureLast',
   narrativeContract: '系统.扩展.narrativeContract',
+  characterVectors: '系统.扩展.characterVectors',
   explorationRecord: '系统.探索记录',
   reasoningHistory: '元数据.推理历史',
   storyPlan: '元数据.剧情规划',

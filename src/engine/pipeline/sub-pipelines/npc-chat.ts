@@ -57,6 +57,7 @@ import { formatMemoryEntry } from '../../social/npc-memory-format';
 import { isDuplicateMemory } from '../../social/memory-dedup';
 import { buildEnvironmentBlock } from '../../prompt/environment-block';
 import { buildNarrativeContractFromState } from '../../prompt/narrative-contract';
+import { buildCharacterVectorsFromState } from '../../prompt/character-vectors';
 
 /** 单条私聊消息结构 — 存储在 NPC.私聊历史 数组中 */
 export interface NpcChatMessage {
@@ -579,6 +580,11 @@ export class NpcChatPipeline {
     const { block: narrativeContractBlock } = buildNarrativeContractFromState(
       this.stateManager, this.paths, this.gamePack.engineFragments,
     );
+    // Character Vectors: a private chat develops ONE character, so only that NPC's line
+    // (and its hidden truth) is injected — presence does not matter here.
+    const { block: characterVectorsBlock } = buildCharacterVectorsFromState(
+      this.stateManager, this.paths, this.gamePack.engineFragments, { only: npcName },
+    );
 
     return {
       NPC_NAME: npcName,
@@ -593,6 +599,8 @@ export class NpcChatPipeline {
       ENVIRONMENT_BLOCK: environmentBlock,
       NARRATIVE_CONTRACT: narrativeContractBlock ? '1' : '',
       NARRATIVE_CONTRACT_BLOCK: narrativeContractBlock,
+      CHARACTER_VECTORS: characterVectorsBlock ? '1' : '',
+      CHARACTER_VECTORS_BLOCK: characterVectorsBlock,
     };
   }
 

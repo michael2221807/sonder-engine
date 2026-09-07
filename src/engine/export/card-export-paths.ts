@@ -49,6 +49,8 @@ export interface CardStripPaths {
    * deleted only when the author unticks it (`includedNarrativeContract`).
    */
   narrativeContract: string;
+  /** Character Vectors (`系统.扩展.characterVectors`, R2 second half 2026-09-06) — kept by default, deleted when unticked (`includedCharacterVectors`). */
+  characterVectors: string;
   /** Variable attributes reset to baseline (reputation→0, vitals→full) — injected so the stripper stays literal-free. */
   variableReset: {
     reputationPath: string;
@@ -147,6 +149,7 @@ export function buildDefaultCardStripPaths(p: EnginePathConfig = DEFAULT_ENGINE_
     engramMemory: p.engramMemory,                 // 系统.扩展.engramMemory
     capturedSettings: p.slotWorldBooks,           // 系统.扩展.slotWorldBooks
     narrativeContract: p.narrativeContract,       // 系统.扩展.narrativeContract
+    characterVectors: p.characterVectors,         // 系统.扩展.characterVectors
     variableReset: {
       reputationPath: p.reputation,               // 角色.可变属性.声望
       vitalPaths: [p.vitalHealth, p.vitalEnergy], // 角色.可变属性.体力 / 精力

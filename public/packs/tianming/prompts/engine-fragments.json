@@ -91,8 +91,15 @@
   "plotCtxNpcLine": "- {name}{type}{desc}",
   "plotCtxSummaryLine": "玩家：{player}，当前位置：{location}，回合：{round}",
   "narrativeContractTitle": "【叙事契约】",
-  "narrativeContractAuthority": "以下由玩家声明，优先级高于你从状态与记忆里的推断：",
+  "narrativeContractAuthority": "以下由玩家声明，优先级高于你从状态与记忆里的推断。本回合只有下方【主线人物】名单里的人可以承担推动作用；名单外、近期剧情几乎没有出场的人物只能作背景——不得成为场景中心、不得承担情感转折、不得被写成新的重点人物：",
   "narrativeContractCastLabel": "【主线人物】",
-  "narrativeContractPeripheralRule": "以上人物可作为推动本回合的力量；不在名单里、且近期剧情几乎没有出场的人物，最多作为背景。",
-  "narrativeContractCastSeparator": "、"
+  "narrativeContractPeripheralRule": "名单里近期没出场的人物也不必硬拉进来。",
+  "narrativeContractCastSeparator": "、",
+  "characterVectorHeader": "【人物向量】以下是这些人物在主角剧情里的当前走向。倾向不是结局：人物只是朝这个方向尝试，成不成由局面与判定决定，过程可失败、可偏离、可有惊喜；向量随剧情摆动，真相揭示后可反转，只列本回合相关人物。",
+  "characterVectorTowardLabel": "对主角｜",
+  "characterVectorNeverLabel": "不会做｜",
+  "characterVectorDirectionLabel": "潜在方向｜",
+  "characterVectorHiddenLabel": "【主角不知道的】只用于安排世界侧的行动与旁白反讽，任何形式不得进入主角的认知、推断或台词：",
+  "characterVectorFieldSeparator": " ",
+  "characterVectorHiddenSeparator": "；"
 }

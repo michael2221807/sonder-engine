@@ -92,6 +92,7 @@ import { parseSizeString } from '../image/image-size-options';
 import { ART_STYLE_PROMPT_LABELS } from '../image/tokenizer';
 import type { MemorySummaryPipeline } from '../pipeline/sub-pipelines/memory-summary';
 import type { MidTermRefinePipeline } from '../pipeline/sub-pipelines/mid-term-refine';
+import { CharacterVectorProposePipeline } from '../pipeline/sub-pipelines/character-vector-propose';
 import type { LongTermCompactPipeline } from '../pipeline/sub-pipelines/long-term-compact';
 import type { WorldHeartbeatPipeline } from '../pipeline/sub-pipelines/world-heartbeat';
 import type { NpcGenerationPipeline } from '../pipeline/sub-pipelines/npc-generation';
@@ -115,6 +116,8 @@ import type { OpeningStages } from '../pipeline/sub-pipelines/enhanced-opening';
 export interface SubPipelineBundle {
   memorySummary?: MemorySummaryPipeline;
   midTermRefine?: MidTermRefinePipeline;
+  /** R2 second half (2026-09-06): world-written character vectors (after refine / every N rounds) */
+  characterVectorPropose?: CharacterVectorProposePipeline;
   /** 2026-04-11 新增：长期记忆二级精炼（长期溢出 cap 时触发） */
   longTermCompact?: LongTermCompactPipeline;
   worldHeartbeat?: WorldHeartbeatPipeline;
@@ -626,6 +629,7 @@ export class GameOrchestrator {
     //
     // 详见 `memory-manager.ts` 顶部 JSDoc 的"四层设计"。
     const memMgr = this.subPipelines.memoryManager;
+    let vectorProposeDue = false;
     if (memMgr) {
       if (memMgr.shouldSummarizeLongTerm() && this.subPipelines.memorySummary) {
         try {
@@ -637,9 +641,25 @@ export class GameOrchestrator {
       } else if (memMgr.shouldRefineMidTerm() && this.subPipelines.midTermRefine) {
         try {
           const ok = await this.subPipelines.midTermRefine.execute();
-          if (ok) console.log('[Orchestrator] MidTermRefinePipeline (in-place compress) completed');
+          if (ok) {
+            console.log('[Orchestrator] MidTermRefinePipeline (in-place compress) completed');
+            vectorProposeDue = true;
+          }
         } catch (err) {
           console.error('[Orchestrator] MidTermRefinePipeline failed:', err);
+        }
+      }
+
+      // ── Character Vectors (R2 second half): the world proposes per-NPC vectors ──
+      // Fires after a successful refine (fresh, deduplicated material) and on a fixed
+      // cadence in between, so a save sees proposals long before the refine threshold.
+      const roundNow = stateManager.get<number>(this._paths.roundNumber) ?? 0;
+      if (this.subPipelines.characterVectorPropose && (vectorProposeDue || CharacterVectorProposePipeline.isCadenceRound(roundNow))) {
+        try {
+          const ok = await this.subPipelines.characterVectorPropose.execute();
+          if (ok) console.log('[Orchestrator] CharacterVectorProposePipeline completed');
+        } catch (err) {
+          console.error('[Orchestrator] CharacterVectorProposePipeline failed:', err);
         }
       }
 

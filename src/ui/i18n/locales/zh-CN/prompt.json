@@ -23,6 +23,13 @@
   "prompt.contract.castHint": "关系面板里类型为「重点」或点了「关注」的人物，实时生效",
   "prompt.contract.castEdit": "去关系面板调整",
   "prompt.contract.castEmpty": "关系面板里还没有「重点」或「关注」的人物。",
+  "prompt.contract.vectors": "人物向量",
+  "prompt.contract.vectorsEnabled": "启用人物向量",
+  "prompt.contract.vectorsHint": "逐人编辑在关系面板；这里只看下一回合会带上谁",
+  "prompt.contract.vectorsEmpty": "还没有任何人物向量。世界整理记忆时会提议，也可以去关系面板先写。",
+  "prompt.contract.vectorsScope": "下一回合会注入（在场，或上一回合提到）：",
+  "prompt.contract.vectorsScopeEmpty": "下一回合没有会被注入的人物。",
+  "prompt.contract.vectorsEdit": "去关系面板编辑",
 
   "prompt.actions.expand": "展开",
   "prompt.actions.collapse": "折叠",

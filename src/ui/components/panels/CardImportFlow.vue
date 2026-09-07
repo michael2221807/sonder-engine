@@ -205,6 +205,7 @@ const flagChips = computed(() => {
   add(f.includedHeroinePlan, 'heroinePlan');
   add(f.includedPlotDirection, 'plotDirection');
   add(f.includedNarrativeContract, 'narrativeContract');
+  add(f.includedCharacterVectors, 'characterVectors');
   add(f.includedEngineConfig, 'engineConfig');
   add(f.includedBuiltinOverrides, 'builtinOverrides');
   add(f.includedSettings, 'settings');

@@ -16,6 +16,8 @@ import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useNarrativeContract, CONTRACT_CLAUSE_MAX_CHARS } from '@/ui/composables/useNarrativeContract';
+import { useCharacterVectors } from '@/ui/composables/useCharacterVectors';
+import type { CharacterVectorEntry } from '@/engine/prompt/character-vectors';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
@@ -23,6 +25,12 @@ import Tooltip from '@/ui/components/shared/Tooltip.vue';
 const { t } = useI18n();
 const router = useRouter();
 const { clauses, enabled, focalCast, setEnabled, addClause, updateClauseText, toggleClause, removeClause } = useNarrativeContract();
+const { entries: vectorEntries, enabled: vectorsEnabled, projectedScope, setEnabled: setVectorsEnabled } = useCharacterVectors();
+
+/** One-line digest of an entry for the overview list: the first line that says something. */
+function vectorSummary(e: CharacterVectorEntry): string {
+  return e.toward || e.direction || e.never || e.hidden;
+}
 
 // ─── New clause draft ───
 const draft = ref('');
@@ -154,6 +162,41 @@ function goRelationships(): void {
         <div v-else class="contract-cast">
           <span v-for="name in focalCast" :key="name" class="contract-cast__chip" data-testid="contract-cast-chip">{{ name }}</span>
         </div>
+      </section>
+
+      <!-- Character vectors (R2 second half): overview + next-turn projection; edited per NPC in the relationships panel -->
+      <section class="contract-section" data-testid="contract-vectors">
+        <div class="contract-section__head">
+          <h4 class="contract-section__title">{{ t('prompt.contract.vectors') }}</h4>
+          <AgaToggle
+            :model-value="vectorsEnabled"
+            :label="t('prompt.contract.vectorsEnabled')"
+            data-testid="contract-vectors-enabled"
+            @update:model-value="setVectorsEnabled"
+          />
+        </div>
+        <p v-if="vectorEntries.length === 0" class="contract-empty">{{ t('prompt.contract.vectorsEmpty') }}</p>
+        <template v-else>
+          <p class="contract-lede">{{ t('prompt.contract.vectorsScope') }}</p>
+          <p v-if="projectedScope.length === 0" class="contract-empty">{{ t('prompt.contract.vectorsScopeEmpty') }}</p>
+          <div v-else class="contract-cast">
+            <span v-for="name in projectedScope" :key="name" class="contract-cast__chip" data-testid="contract-vector-chip">{{ name }}</span>
+          </div>
+          <ul class="vector-list">
+            <li
+              v-for="e in vectorEntries"
+              :key="e.id"
+              :class="['vector-row', { 'vector-row--off': !e.enabled, 'vector-row--proposed': e.source === 'proposed' }]"
+              data-testid="contract-vector-row"
+            >
+              <span class="vector-row__name">{{ e.name }}</span>
+              <span class="vector-row__summary">{{ vectorSummary(e) }}</span>
+            </li>
+          </ul>
+          <Tooltip :text="t('prompt.contract.vectorsHint')" interactive fixed>
+            <button class="contract-link" @click="goRelationships">{{ t('prompt.contract.vectorsEdit') }}</button>
+          </Tooltip>
+        </template>
       </section>
     </div>
   </div>
@@ -375,7 +418,32 @@ function goRelationships(): void {
   color: var(--color-text-secondary);
 }
 
+/* ─── Vectors overview ─── */
+.vector-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.vector-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: baseline;
+  padding: 4px 8px;
+  border-left: 2px solid var(--color-sage-400);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  transition: opacity 0.2s ease;
+}
+.vector-row--off { opacity: 0.5; }
+.vector-row--proposed { border-left-color: var(--color-amber-400); }
+.vector-row__name { color: var(--color-text-secondary); white-space: nowrap; }
+.vector-row__summary { color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 @media (prefers-reduced-motion: reduce) {
-  .contract-body, .contract-clause { transition: none; }
+  .contract-body, .contract-clause, .vector-row { transition: none; }
 }
 </style>

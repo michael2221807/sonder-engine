@@ -42,6 +42,12 @@ import {
   buildNarrativeContractFromState,
   narrativeContractTraceEntry,
 } from '../../prompt/narrative-contract';
+import {
+  activeVectorEntries,
+  buildCharacterVectorsFromState,
+  characterVectorsTraceEntry,
+  lastNarrativeText,
+} from '../../prompt/character-vectors';
 import { hasSettingTag, parseSettingTagNames } from '../../prompt/setting-tag-scanner';
 import { DEFAULT_PROMPT_SETTINGS } from '../../prompt/world-book';
 import type { PromptSettings } from '../../prompt/world-book';
@@ -345,6 +351,22 @@ export class ContextAssemblyStage implements PipelineStage {
       block: narrativeContractBlock,
     } = buildNarrativeContractFromState(this.stateManager, this.paths, this.pack.engineFragments);
 
+    // ── 6d. Character Vectors (R2 second half, 2026-09-06) ──
+    //
+    // Per-NPC "potential vectors" (`paths.characterVectors`), PROJECTED to this turn: only
+    // NPCs present in the scene, named in the player input or named in the previous
+    // narrative get a line; the protagonist never does. Sent to both split steps like the
+    // contract (builder piece `character_vectors` / flow module `characterVectors`).
+    // Empty scope → '' → byte-identical prompts. Design: character-vector-v1 plan §2.
+    const {
+      vectors: characterVectors,
+      scope: vectorScope,
+      block: characterVectorsBlock,
+    } = buildCharacterVectorsFromState(this.stateManager, this.paths, this.pack.engineFragments, {
+      userInput: ctx.originalUserInput ?? ctx.userInput ?? '',
+      lastNarrative: lastNarrativeText(this.stateManager, this.paths),
+    });
+
     const variables: Record<string, string> = {
       PLAYER_NAME: this.stateManager.get<string>(this.paths.playerName) ?? '',
       CURRENT_LOCATION: this.stateManager.get<string>(this.paths.playerLocation) ?? '',
@@ -364,6 +386,9 @@ export class ContextAssemblyStage implements PipelineStage {
       // Narrative Contract: flow-module condition + the rendered block (see 6c above).
       NARRATIVE_CONTRACT: narrativeContractBlock ? '1' : '',
       NARRATIVE_CONTRACT_BLOCK: narrativeContractBlock,
+      // Character Vectors: flow-module condition + the projected block (see 6d above).
+      CHARACTER_VECTORS: characterVectorsBlock ? '1' : '',
+      CHARACTER_VECTORS_BLOCK: characterVectorsBlock,
 
       // Action options wiring — 条件变量 + 内容注入
       ACTION_OPTIONS_MODE: actionMode,
@@ -537,6 +562,7 @@ export class ContextAssemblyStage implements PipelineStage {
           : [],
         settingCaptureActive,
         narrativeContractBlock,
+        characterVectorsBlock,
       });
 
       // Park the auto-captured hit list for SettingCaptureStage. The builder is a pure
@@ -667,6 +693,13 @@ export class ContextAssemblyStage implements PipelineStage {
               estimateTextTokens(narrativeContractBlock),
               activeClauses(narrativeContract).length,
               focalCast.length,
+            ));
+          }
+          if (characterVectorsBlock) {
+            trace.entries.push(characterVectorsTraceEntry(
+              estimateTextTokens(characterVectorsBlock),
+              activeVectorEntries(characterVectors).length,
+              vectorScope.length,
             ));
           }
           ctx.meta['compileTrace'] = trace;

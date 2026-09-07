@@ -224,6 +224,8 @@ export function stripStateTreeForCard(
   // Narrative Contract (R2): the author's melody rides along unless unticked. No reset
   // needed — clauses carry no progress; the cast is derived from the card's own NPCs.
   if (!flags.includedNarrativeContract) deleteByPath(t, paths.narrativeContract.split('.'));
+  // Character Vectors (R2 second half): same reasoning — no progress inside, names match the card's NPCs.
+  if (!flags.includedCharacterVectors) deleteByPath(t, paths.characterVectors.split('.'));
 
   // 4. Plot direction (剧情走向): strip unless kept; if kept, reset progress to baseline.
   if (!flags.includedPlotDirection) {

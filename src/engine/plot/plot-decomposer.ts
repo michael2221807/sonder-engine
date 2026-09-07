@@ -27,6 +27,7 @@ import type { PlotNode, PlotGauge, OpportunityTier, PlotArc, PlotDirectionState,
 import { DEFAULT_GAUGE_MAX_DELTA, DEFAULT_MAX_ACTIVE_THREADS } from './types';
 import { buildEnvironmentBlock } from '../prompt/environment-block';
 import { buildNarrativeContractFromState } from '../prompt/narrative-contract';
+import { buildCharacterVectorsFromState } from '../prompt/character-vectors';
 import { readGameTimeStamp } from './game-time-stamp';
 
 export interface DecomposeResult {
@@ -305,8 +306,11 @@ export class PlotDecomposer {
   buildContext(): string {
     const L = this.labels();
     const { block: contractBlock } = buildNarrativeContractFromState(this.stateManager, this.paths, this.pack.engineFragments);
+    // Character Vectors: an arc spans many scenes, so every active entry (no projection).
+    const { block: vectorsBlock } = buildCharacterVectorsFromState(this.stateManager, this.paths, this.pack.engineFragments, { all: true });
     return [
       contractBlock,
+      vectorsBlock,
       this.buildLedger(L),
       this.buildWorldFacts(L),
       this.buildMemoryBlock(L),

@@ -52,6 +52,8 @@ Step7: NPC Introduction Analysis
 - If evidence is insufficient, downgrade to rumor or off-screen activity level.
 
 Step8: Individual NPC Actions & Thoughts
+- First read the [Narrative Contract] and [Character Vectors] in context: from each character's lean toward the protagonist and their "never", deduce what they would and would not do right now.
+- The deduction decides actions and demeanour only, never lines: a character who does not explain or promise must not voice their motives, reasons or hidden truths, nor may the protagonist voice them; world-side reasons never enter anyone's dialogue.
 - Deduce step by step what each NPC would do, think, and would NOT do.
 - When a judgement is triggered, prepare a `<judge>` block and invoke the judgement protocol.
 

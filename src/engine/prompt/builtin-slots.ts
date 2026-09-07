@@ -294,6 +294,15 @@ export const BUILTIN_SLOTS: Record<string, BuiltinSlotDefinition> = {
     description: '玩家为本存档声明的主旋律（人物底色 / 主线 / 主线人物 / 作者权边界）；分步两步都注入，契约为空时不出现',
     defaultPromptId: 'narrativeContract',
   },
+
+  // ─── Character Vectors (R2 second half, 2026-09-06) ─────────
+  character_vectors: {
+    id: 'character_vectors',
+    title: '人物向量',
+    category: '叙事契约',
+    description: '主线人物在主角剧情里的当前走向（对主角 / 不会做 / 潜在方向 / 主角不知道的）；每回合只注入在场或被提及的人物，分步两步都注入，无相关人物时不出现',
+    defaultPromptId: 'characterVectors',
+  },
 } as const;
 
 /**

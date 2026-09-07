@@ -128,6 +128,7 @@ export interface ExportFlags {
   includedHeroinePlan: boolean;      // 剧情规划·女主线 (U7②)
   includedPlotDirection: boolean;    // 剧情走向 (U7③)
   includedNarrativeContract: boolean; // 叙事契约 (R2, 2026-09-05) — default ON
+  includedCharacterVectors: boolean;  // 人物向量 (R2 second half, 2026-09-06) — default ON
 }
 
 // ─── The bundle ──────────────────────────────────────────────────

@@ -234,6 +234,7 @@
 
   "promptAssembly.builder.aiRole": "AI角色声明",
   "promptAssembly.builder.narrativeContract": "叙事契约",
+  "promptAssembly.builder.characterVectors": "人物向量",
   "promptAssembly.builder.worldPrompt": "世界观",
   "promptAssembly.builder.worldMap": "地图建筑",
   "promptAssembly.builder.npcAway": "不在场角色",
@@ -294,6 +295,7 @@
   "promptAssembly.compile.target.MEMORY_BLOCK": "Engram 检索块",
   "promptAssembly.compile.target.history": "历史对话",
   "promptAssembly.compile.target.contract": "叙事契约",
+  "promptAssembly.compile.target.vectors": "人物向量",
   "promptAssembly.compile.detail.detail": "保留细节",
   "promptAssembly.compile.detail.skeleton": "只留骨架",
   "promptAssembly.compile.detail.currentNotFound": "当前地点缺失",
@@ -309,5 +311,5 @@
   "compiler.reason.currentNotFound": "当前地点不在地点表里（数据不一致）：只能保留其子级的细节，其余只留名称与上级",
   "compiler.reason.recentAndRelevant": "只保留最近 5 条，以及与在场人物 / 当前地点相关的最多 5 条",
   "compiler.reason.fewShotFixed": "历史对话固定 2 对（格式范例的最小充分量）",
-  "compiler.reason.sentInBothSteps": "两步都发（玩家契约不去重）"
+  "compiler.reason.sentInBothSteps": "两步都发（玩家写的契约 / 向量不去重）"
 }

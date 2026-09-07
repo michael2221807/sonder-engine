@@ -25,6 +25,7 @@ import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
 import type { SelectOption } from '@/ui/components/shared/AgaSelect.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
+import CharacterVectorCard from '@/ui/components/panels/CharacterVectorCard.vue';
 import { eventBus } from '@/engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import { readStatFields } from '@/engine/pack/stat-section-reader';
@@ -1951,6 +1952,8 @@ const avatarInitial = computed<string>(() => {
             <p v-if="rel.内心想法" class="relation-thought">
               <span class="thought-quote">「</span>{{ rel.内心想法 }}<span class="thought-quote">」</span>
             </p>
+            <!-- Character Vector (R2 second half): where this person is heading in the protagonist's story -->
+            <CharacterVectorCard :name="rel.名称" />
             <button class="btn-jump-social" @click="jumpToNpcEdit(rel.名称)">✏ {{ $t('relationship.detail.edit') }}</button>
           </div>
         </div>

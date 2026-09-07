@@ -142,6 +142,9 @@ const PROMPT_ALWAYS_STRIP_PATHS: readonly string[] = [
   // raw object in GAME_STATE_JSON would duplicate it and expose `proposed` clauses
   // the player has not accepted.
   '系统.扩展.narrativeContract',
+  // Character Vectors (R2 second half): projected per turn into their own block; the raw
+  // list would leak every NPC's hidden truth into GAME_STATE_JSON.
+  '系统.扩展.characterVectors',
   // '系统.扩展.语义记忆' — 暂不 strip：当前无检索链路消费该路径，
   // strip 会导致旧存档 triples 静默消失。待补 retrieval 注入后再启用。
   '系统.设置',

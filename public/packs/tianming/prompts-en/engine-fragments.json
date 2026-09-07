@@ -91,8 +91,15 @@
   "plotCtxNpcLine": "- {name}{type}{desc}",
   "plotCtxSummaryLine": "Player: {player}, location: {location}, round: {round}",
   "narrativeContractTitle": "[Narrative Contract]",
-  "narrativeContractAuthority": "Declared by the player; it outranks whatever you infer from state and memory:",
+  "narrativeContractAuthority": "Declared by the player; it outranks whatever you infer from state and memory. Only the [Main cast] listed below may drive this turn; anyone not listed who has barely appeared recently is background at most — never the centre of a scene, never the emotional turn, never promoted to a new lead:",
   "narrativeContractCastLabel": "[Main cast] ",
-  "narrativeContractPeripheralRule": "These characters may drive this turn; anyone not listed who has barely appeared recently is background at most.",
-  "narrativeContractCastSeparator": ", "
+  "narrativeContractPeripheralRule": "Listed characters who have not appeared recently need not be dragged in either.",
+  "narrativeContractCastSeparator": ", ",
+  "characterVectorHeader": "[Character Vectors] Where these characters are currently heading in the protagonist's story. A tendency is not an ending: they only try to move this way; whether they succeed is decided by the scene and the dice, and the path may fail, drift or surprise. Vectors shift with the plot and can flip when a truth comes out; only this turn's relevant characters are listed.",
+  "characterVectorTowardLabel": "toward the protagonist | ",
+  "characterVectorNeverLabel": "never | ",
+  "characterVectorDirectionLabel": "direction | ",
+  "characterVectorHiddenLabel": "[Unknown to the protagonist] Use only to steer world-side action and narrator irony; it must never reach the protagonist's cognition, inference or lines in any form: ",
+  "characterVectorFieldSeparator": " ",
+  "characterVectorHiddenSeparator": "; "
 }

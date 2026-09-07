@@ -1,0 +1,10 @@
+{
+  "id": "characterVectorExtract",
+  "$comment": "人物向量提炼子管线 flow（R2 后半段，2026-09-06）：世界在中期记忆精炼后 / 每 5 回合，为有近期材料的主线人物提议向量。一次性任务，不含 chatHistory，不需要 core / historyFraming。",
+  "modules": [
+    { "promptId": "jailbreak", "role": "system", "order": -2, "depth": 0 },
+    { "promptId": "narratorFrame", "role": "system", "order": -1, "depth": 0 },
+    { "promptId": "characterVectorExtract", "role": "system", "order": 0, "depth": 0 },
+    { "promptId": "characterVectorExtractInput", "role": "user", "order": 1, "depth": 0 }
+  ]
+}

@@ -234,6 +234,7 @@
 
   "promptAssembly.builder.aiRole": "AI Role Declaration",
   "promptAssembly.builder.narrativeContract": "Narrative contract",
+  "promptAssembly.builder.characterVectors": "Character vectors",
   "promptAssembly.builder.worldPrompt": "World Setting",
   "promptAssembly.builder.worldMap": "Map & Buildings",
   "promptAssembly.builder.npcAway": "Absent Characters",
@@ -294,6 +295,7 @@
   "promptAssembly.compile.target.MEMORY_BLOCK": "Engram retrieval block",
   "promptAssembly.compile.target.history": "Dialogue history",
   "promptAssembly.compile.target.contract": "Narrative contract",
+  "promptAssembly.compile.target.vectors": "Character vectors",
   "promptAssembly.compile.detail.detail": "kept with detail",
   "promptAssembly.compile.detail.skeleton": "skeleton only",
   "promptAssembly.compile.detail.currentNotFound": "current location missing",
@@ -309,5 +311,5 @@
   "compiler.reason.currentNotFound": "Current location is not in the location list (inconsistent data): only its children keep detail; the rest keep name and parent",
   "compiler.reason.recentAndRelevant": "Latest 5 entries plus up to 5 relevant to present NPCs / the current place",
   "compiler.reason.fewShotFixed": "History fixed at 2 pairs (minimum sufficient format example)",
-  "compiler.reason.sentInBothSteps": "Sent to both steps (the player contract is never deduplicated)"
+  "compiler.reason.sentInBothSteps": "Sent to both steps (the player's contract and vectors are never deduplicated)"
 }

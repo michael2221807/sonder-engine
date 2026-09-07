@@ -116,6 +116,7 @@ function makeOptions(over: Partial<ExportOptions> = {}): ExportOptions {
       includedSettings: true, includedApiTemplate: true, includedEngineConfig: true,
       includedWorldBooks: true, includedBuiltinOverrides: true, includedPromptSettings: true,
       includedHeroinePlan: false, includedPlotDirection: true, includedNarrativeContract: true,
+      includedCharacterVectors: true,
     },
     ...over,
   };
@@ -201,7 +202,7 @@ describe('export → import round-trip (real services)', () => {
       { id: 'c1', text: 'NPC1 底色是护不是猎。', enabled: true, source: 'player', createdRound: 7 },
     ]);
 
-    const unticked = makeOptions({ checklist: { ...makeOptions().checklist, includedNarrativeContract: false } });
+    const unticked = makeOptions({ checklist: { ...makeOptions().checklist, includedNarrativeContract: false, includedCharacterVectors: true } });
     const dropped = await decodeAndValidateCard((await svc.exportCard('p', 's', unticked)).blob, mockPack);
     expect(dropped.ok).toBe(true);
     if (!dropped.ok) return;

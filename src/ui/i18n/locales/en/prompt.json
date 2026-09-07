@@ -23,6 +23,13 @@
   "prompt.contract.castHint": "Characters typed “key” or marked “watch” in the relationships panel, live",
   "prompt.contract.castEdit": "Adjust in relationships",
   "prompt.contract.castEmpty": "No “key” or “watched” characters in the relationships panel yet.",
+  "prompt.contract.vectors": "Character vectors",
+  "prompt.contract.vectorsEnabled": "Enable character vectors",
+  "prompt.contract.vectorsHint": "Edit per character in the relationships panel; this only shows who the next turn will carry",
+  "prompt.contract.vectorsEmpty": "No character vectors yet. The world proposes them when it tidies memory; you can also write one in the relationships panel.",
+  "prompt.contract.vectorsScope": "Injected next turn (present, or named in the previous turn):",
+  "prompt.contract.vectorsScopeEmpty": "Nobody would be injected next turn.",
+  "prompt.contract.vectorsEdit": "Edit in the relationships panel",
 
   "prompt.actions.expand": "Expand",
   "prompt.actions.collapse": "Collapse",

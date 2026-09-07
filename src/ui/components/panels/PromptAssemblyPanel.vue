@@ -245,6 +245,7 @@ interface SourceDisplay {
 /** Map builder piece IDs to i18n keys */
 const BUILDER_I18N_MAP: Record<string, string> = {
   narrative_contract: 'promptAssembly.builder.narrativeContract',
+  character_vectors: 'promptAssembly.builder.characterVectors',
   ai_role: 'promptAssembly.builder.aiRole', world_prompt: 'promptAssembly.builder.worldPrompt',
   world_map: 'promptAssembly.builder.worldMap', npc_away: 'promptAssembly.builder.npcAway',
   other_prompts: 'promptAssembly.builder.otherPrompts', write_style: 'promptAssembly.builder.writeStyle',

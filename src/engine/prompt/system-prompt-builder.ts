@@ -136,6 +136,12 @@ export interface SystemPromptBuildParams {
    * no piece, not one extra character (same guarantee as `settingCaptureActive`).
    */
   narrativeContractBlock?: string;
+  /**
+   * Character Vectors block (R2 second half, 2026-09-06) — pre-rendered and projected by
+   * the caller (`prompt/character-vectors.ts`). Emitted as the `character_vectors` piece
+   * right after the contract. Empty / absent → no piece, not one extra character.
+   */
+  characterVectorsBlock?: string;
 }
 
 /**
@@ -647,6 +653,18 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
       settings,
     );
     push('narrative_contract', '叙事契约', '系统', 'system', contractContent);
+  }
+
+  // ── 20c. Character Vectors (R2 second half) — DYNAMIC, projected per turn, never static ──
+  if (params.characterVectorsBlock) {
+    const vectorsRaw = resolveSlotContent('character_vectors', builtinOverrides, packPrompts);
+    const vectorsContent = renderPromptPipeline(
+      'character_vectors',
+      vectorsRaw || '{{CHARACTER_VECTORS_BLOCK}}',
+      { ...templateVars, CHARACTER_VECTORS_BLOCK: params.characterVectorsBlock },
+      settings,
+    );
+    push('character_vectors', '人物向量', '系统', 'system', vectorsContent);
   }
 
   // ── 21. Extra Prompt ──

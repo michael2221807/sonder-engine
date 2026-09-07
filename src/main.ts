@@ -68,6 +68,7 @@ import { PromptAssembler } from './engine/prompt/prompt-assembler';
 import { CharacterInitPipeline } from './engine/pipeline/sub-pipelines/character-init';
 import { MemorySummaryPipeline } from './engine/pipeline/sub-pipelines/memory-summary';
 import { MidTermRefinePipeline } from './engine/pipeline/sub-pipelines/mid-term-refine';
+import { CharacterVectorProposePipeline } from './engine/pipeline/sub-pipelines/character-vector-propose';
 import { LongTermCompactPipeline } from './engine/pipeline/sub-pipelines/long-term-compact';
 import { WorldHeartbeatPipeline } from './engine/pipeline/sub-pipelines/world-heartbeat';
 import { NpcGenerationPipeline } from './engine/pipeline/sub-pipelines/npc-generation';
@@ -525,6 +526,7 @@ async function bootstrap(): Promise<void> {
   // - NpcGeneration: 玩家移动到新地点 → 生成 1-3 个 NPC
   let memorySummaryPipeline: MemorySummaryPipeline | undefined;
   let midTermRefinePipeline: MidTermRefinePipeline | undefined;
+  let characterVectorProposePipeline: CharacterVectorProposePipeline | undefined;
   let longTermCompactPipeline: LongTermCompactPipeline | undefined;
   let worldHeartbeatPipeline: WorldHeartbeatPipeline | undefined;
   let npcGenerationPipeline: NpcGenerationPipeline | undefined;
@@ -548,6 +550,16 @@ async function bootstrap(): Promise<void> {
       promptAssembler,
       memoryManager,
       pack,
+    );
+    // Character Vectors (R2 second half, 2026-09-06): the world proposes per-NPC vectors after
+    // the mid-term refine and every CHARACTER_VECTOR_PROPOSE_INTERVAL rounds.
+    characterVectorProposePipeline = new CharacterVectorProposePipeline(
+      aiService,
+      promptAssembler,
+      stateManager,
+      memoryManager,
+      pack,
+      DEFAULT_ENGINE_PATHS,
     );
     longTermCompactPipeline = new LongTermCompactPipeline(
       aiService,
@@ -751,6 +763,7 @@ async function bootstrap(): Promise<void> {
       {                 // §G2 + §11.2 B: 子管线包
         memorySummary: memorySummaryPipeline,
         midTermRefine: midTermRefinePipeline,
+        characterVectorPropose: characterVectorProposePipeline,
         longTermCompact: longTermCompactPipeline, // 2026-04-11 新增：长期二级精炼
         worldHeartbeat: worldHeartbeatPipeline,
         npcGeneration: npcGenerationPipeline,
