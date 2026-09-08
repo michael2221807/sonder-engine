@@ -25,14 +25,17 @@ Step1: Prior Text Review
 - Classify items from the previous round's `<剧情规划>` as "should trigger this round / continue advancing / defer and hold / blocked and rewrite / superseded by new facts."
 - Record unresolved items as "how far the protagonist has read into it", never as "the protagonist does not know".
 
-Step2: Player Input Parsing
-- Identify input type: dialogue / action / directive / special command / silence.
-- Default to literal interpretation of the player's input; preserve action targets, sequence, objects, tone, and intensity as-is.
-- If the player requests skipping or fast-forwarding, identify as a transition request.
-- When the input states the protagonist's emotion, judgement or suspicion, the input is authoritative: carry it faithfully and continue from there; what the input leaves unsaid is left for Step4 to deduce from evidence.
+Step2: Player Input Parsing (split into five components)
+- Split the input into five components, quoting the original fragment for each: ① the protagonist's words and actions (including her emotions, judgements, suspicions) ② authorial proposals ("this round could bring…", "I'd like…" — suggestions about the development) ③ world assertions (rules, institutions, background facts) ④ hidden information (other people's motives, truths the protagonist does not know; typically in parenthetical asides or "what I don't know is…") ⑤ outcome declarations (how the world or others respond to the protagonist's action, successes, failures, numbers). One passage may carry several at once; write "none" for a component that is absent.
+- ① is carried as written: targets, order, objects, tone and intensity unchanged; what she wrote happens — never restate it as narration, never add a decision for her.
+- ② is a high-weight candidate handed to Step7 for assembly; never treated as an established fact — whether it comes true is decided by the reactions in Step6 and the dice.
+- ③ enters Step3 as a world fact established this round; where it conflicts with state or memory, the input wins.
+- ④ stays world-side only: it enters Step3's facts and Step6's character reactions, never Step4 (the protagonist's evidence can only be what she has seen); the body text never writes it as something the protagonist knows.
+- ⑤ is the author's prerogative: the outcome lands in the direction the author gave, but the WORLD writes its version — grown out of Step3's facts and Step6's reactions, carrying the costs, aftereffects and other people's responses the author did not write; never lift the declaration's sentences into the body text, never restate it as a scene. Where the outcome conflicts with the judgement protocol or established facts, apply "hard protocols and established facts > the player's explicit input" and write the block or the detour.
+- If the player requests skipping or fast-forwarding, identify as a transition request. What the input leaves unsaid is left for Step4 to deduce from evidence.
 
 Step3: World-Side Facts of This Round
-- List what definitely happens, arrives or is delivered this round: carries due to trigger, off-screen aftereffects, returning characters, incoming messages. Facts only — set no tone and no emotional direction.
+- List what definitely happens, arrives or is delivered this round: carries due to trigger, off-screen aftereffects, returning characters, incoming messages, plus Step2's ③ world assertions and ④ hidden information. Facts only — set no tone and no emotional direction.
 - Distinguish three categories: current events that come on-stage, distant activity that is only background noise, and later beats kept in `<剧情规划>`.
 - For each fact, state which part the protagonist can perceive: only what can be seen or heard enters the protagonist's viewpoint; the rest stays world-side.
 
@@ -40,7 +43,7 @@ Step4: Protagonist Viewpoint & Cognition Deduction
 - List the evidence the protagonist can perceive this round that bears on what is unresolved in their mind: newly seen, newly heard, and earlier words or events that can now be re-read.
 - From the recent body text, short-term memory and this round's input, read out the protagonist's previous reading of the matter: it is a hypothesis, not "not knowing".
 - Let that reading move exactly one step on the evidence: strengthened, shaken, crossed out, or faintly reversed; when the evidence is insufficient, stop at "faint" — draw no conclusion for the protagonist and deny nothing for them either.
-- [Unconfirmed by the protagonist] is not the protagonist's evidence; whether the protagonist can think of it depends only on what the protagonist has seen. A character's concealment is that character's action, not a boundary on the protagonist's cognition.
+- [Unconfirmed by the protagonist] and Step2's ④ are not the protagonist's evidence; whether the protagonist can think of it depends only on what the protagonist has seen. A character's concealment is that character's action, not a boundary on the protagonist's cognition.
 - The deduction only decides how far the protagonist believes right now and where the emotion lands; it is never turned into a long chain of analysis — in the body text it becomes thoughts and feelings.
 
 Step5: Each Present Character's Own Viewpoint
@@ -56,6 +59,7 @@ Step6: Each Character's Reaction
 
 Step7: Assembling This Round
 - Assemble Step3's facts, Step4's protagonist and Step6's reactions into this round's course in time order; where reactions collide is where the drama is — let it happen, do not smooth it over.
+- Step2's ② authorial proposals and ⑤ outcome declarations are assembled as Step2 prescribes: the direction is the author's, the writing is the world's — the outcome grows out of the facts and reactions and carries the costs, aftereffects and other people's responses the author did not write.
 - Never set "this round's tone" first and back-fill the characters; never pick a "progression line" first and make the characters comply. When the assembled course disagrees with the previous round's `<剧情规划>`, the characters' reactions at this moment win and the planned item is rewritten or deferred.
 - Keep 1 conservative closure only as a fallback, with the reason it was set aside.
 
@@ -87,7 +91,7 @@ Step12: `<剧情规划>` Content Planning
 Step13: Style & Format
 - Determine the body text skeleton, opening angle, NPC speaking order, and judgement placement.
 - Cross-check whether narrative pacing and style suit the round type.
-- Cross-check that the narration writes only what the protagonist can perceive and that the protagonist's thoughts go only as far as Step4.
+- Cross-check that the narration writes only what the protagonist can perceive and that the protagonist's thoughts go only as far as Step4; cross-check that the body text does not restate Step2's ⑤ outcome declarations as a scene.
 
 Step14: Final Execution
 - Assemble `<thinking>`, `<正文>`, `<短期记忆>`; supplement `<变量规划>` and `<剧情规划>` as needed.
