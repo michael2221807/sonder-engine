@@ -28,24 +28,23 @@ const F = P.npcFieldNames;
 
 const FRAGMENTS = {
   characterVectorHeader: '【人物向量】倾向不是结局。',
-  characterVectorTowardLabel: '对主角｜',
-  characterVectorNeverLabel: '不会做｜',
-  characterVectorDirectionLabel: '潜在方向｜',
-  characterVectorHiddenLabel: '【主角不知道的】',
+  characterVectorHeadingLabel: '走向｜',
+  characterVectorTensionLabel: '拉扯｜',
+  characterVectorUnconfirmedLabel: '【主角尚未证实的事】',
   characterVectorFieldSeparator: ' ',
-  characterVectorHiddenSeparator: '；',
+  characterVectorUnconfirmedSeparator: '；',
 };
 const SLOT_TEXT = '{{CHARACTER_VECTORS_BLOCK}}\n\n向量使用说明。';
 
 function entry(over: Partial<CharacterVectorEntry> & { name: string }): CharacterVectorEntry {
-  return { id: over.name, toward: '', never: '', direction: '', hidden: '', enabled: true, source: 'player', updatedRound: 1, ...over };
+  return { id: over.name, heading: '', tension: '', unconfirmed: '', enabled: true, source: 'player', updatedRound: 1, ...over };
 }
 
 const VECTORS: CharacterVectorsState = { enabled: true, entries: [
-  entry({ name: '沈墨琛', toward: '当藏品', never: '不解释', hidden: '他叫停了调教' }),   // present
-  entry({ name: '林晚照', toward: '完全信赖' }),                                          // absent, unmentioned → out
-  entry({ name: '乔诗诗', direction: '继续牵线', source: 'proposed' }),                   // named in previous narrative → in
-  entry({ name: '韩素琴', toward: '主角，绝不渲染' }),                                    // protagonist → out
+  entry({ name: '沈墨琛', heading: '往护偏', tension: '护了，却不认', unconfirmed: '他叫停了调教' }),   // present
+  entry({ name: '林晚照', heading: '往更信赖偏' }),                                                  // absent, unmentioned → out
+  entry({ name: '乔诗诗', tension: '想探底，又怕害了她', source: 'proposed' }),                     // named in previous narrative → in
+  entry({ name: '韩素琴', heading: '主角，绝不渲染' }),                                              // protagonist → out
 ] };
 
 interface StageOptions { vectors?: CharacterVectorsState | 'absent'; useNewBuilder?: boolean }
@@ -127,9 +126,9 @@ function makeCtx(input = '我回头看他。', contextCompiler?: boolean): Pipel
 
 const EXPECTED_BLOCK = [
   '【人物向量】倾向不是结局。',
-  '- 沈墨琛：对主角｜当藏品 不会做｜不解释',
-  '- 乔诗诗：潜在方向｜继续牵线',
-  '【主角不知道的】他叫停了调教',
+  '- 沈墨琛：走向｜往护偏 拉扯｜护了，却不认',
+  '- 乔诗诗：拉扯｜想探底，又怕害了她',
+  '【主角尚未证实的事】他叫停了调教',
 ].join('\n');
 
 const step1Text = (out: PipelineContext) => out.messages.map((m) => String(m.content));
@@ -143,14 +142,14 @@ describe('ContextAssembly · Character Vectors (projected, both steps)', () => {
     expect(idx).toBeGreaterThan(sources.indexOf('builder:narrative_constraints'));
     expect(idx).toBeLessThan(sources.indexOf('builder:player_input'));
     expect(step1Text(out)[idx]).toBe(`${EXPECTED_BLOCK}\n\n向量使用说明。`);
-    expect(step1Text(out).join('\n')).not.toContain('完全信赖');
+    expect(step1Text(out).join('\n')).not.toContain('往更信赖偏');
     expect(step1Text(out).join('\n')).not.toContain('主角，绝不渲染');
   });
 
-  it('the player input widens the projection: naming an absent NPC pulls her line in', async () => {
-    const out = await makeStage().execute(makeCtx('我给林晚照发消息。'));
+  it('the player input widens the projection: naming an absent NPC (by her short name) pulls her line in', async () => {
+    const out = await makeStage().execute(makeCtx('我给晚照发消息。'));
     const idx = (out.messageSources ?? []).indexOf('builder:character_vectors');
-    expect(step1Text(out)[idx]).toContain('- 林晚照：对主角｜完全信赖');
+    expect(step1Text(out)[idx]).toContain('- 林晚照：走向｜往更信赖偏');
   });
 
   it('step2 carries the same block through the flow module and the compiler keeps it (trace entry)', async () => {
@@ -166,7 +165,7 @@ describe('ContextAssembly · Character Vectors (projected, both steps)', () => {
     const out = await makeStage().execute(makeCtx());
     for (const text of [step1Text(out).join('\n'), step2Text(out).join('\n')]) {
       expect(text).not.toContain('characterVectors');
-      expect(text).not.toContain('"hidden"');
+      expect(text).not.toContain('"unconfirmed"');
     }
   });
 
@@ -174,7 +173,7 @@ describe('ContextAssembly · Character Vectors (projected, both steps)', () => {
     const bare = await makeStage({ vectors: 'absent' }).execute(makeCtx());
     const empty = await makeStage({ vectors: { enabled: true, entries: [] } }).execute(makeCtx());
     const off = await makeStage({ vectors: { ...VECTORS, enabled: false } }).execute(makeCtx());
-    const outOfScope = await makeStage({ vectors: { enabled: true, entries: [entry({ name: '林晚照', toward: '完全信赖' })] } }).execute(makeCtx());
+    const outOfScope = await makeStage({ vectors: { enabled: true, entries: [entry({ name: '林晚照', heading: '往更信赖偏' })] } }).execute(makeCtx());
     for (const out of [empty, off, outOfScope]) {
       expect(step1Text(out)).toEqual(step1Text(bare));
       expect(step2Text(out)).toEqual(step2Text(bare));

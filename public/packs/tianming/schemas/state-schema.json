@@ -651,7 +651,7 @@
             },
             "characterVectors": {
               "type": "object",
-              "$comment": "人物向量（R2 后半段，2026-09-06）：主线人物在主角剧情里的当前走向 { enabled, entries: [{ id, name, toward, never, direction, hidden, enabled, source: player|proposed|accepted, updatedRound }] }。不含主角；每回合只投影在场 / 输入提及 / 上回合正文提及的人物。DEFAULT_ENGINE_PATHS.characterVectors 指向此路径；已加入 PROMPT_ALWAYS_STRIP_PATHS，只经向量块注入（分步两步都发）。",
+              "$comment": "人物向量（R2 后半段，2026-09-06；v2 视角原则 2026-09-08）：主线人物在主角剧情里的当前动向 { enabled, entries: [{ id, name, heading, tension, unconfirmed, enabled, source: player|proposed|accepted, updatedRound }] }（走向 / 拉扯 / 主角尚未证实的事）。v1 条目 { toward, never, direction, hidden } 由 normalizeCharacterVectorEntry 读取时迁移，文件不改写。不含主角；每回合只投影在场 / 输入提及（全名或去姓短名）/ 上回合正文提及的人物。DEFAULT_ENGINE_PATHS.characterVectors 指向此路径；已加入 PROMPT_ALWAYS_STRIP_PATHS，只经向量块注入（分步两步都发）。",
               "default": { "enabled": true, "entries": [] },
               "properties": {
                 "enabled": { "type": "boolean", "default": true },

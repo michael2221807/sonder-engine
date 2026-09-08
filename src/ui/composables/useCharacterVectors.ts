@@ -26,17 +26,17 @@ import {
   resolveVectorScope,
   lastNarrativeText,
   CHARACTER_VECTOR_LINE_MAX_CHARS,
-  CHARACTER_VECTOR_HIDDEN_MAX_CHARS,
+  CHARACTER_VECTOR_UNCONFIRMED_MAX_CHARS,
   type CharacterVectorEntry,
   type CharacterVectorsState,
 } from '@/engine/prompt/character-vectors';
 
 const paths = DEFAULT_ENGINE_PATHS;
 
-export { CHARACTER_VECTOR_LINE_MAX_CHARS, CHARACTER_VECTOR_HIDDEN_MAX_CHARS };
+export { CHARACTER_VECTOR_LINE_MAX_CHARS, CHARACTER_VECTOR_UNCONFIRMED_MAX_CHARS };
 
-/** The four editable lines of one entry. */
-export type CharacterVectorFields = Pick<CharacterVectorEntry, 'toward' | 'never' | 'direction' | 'hidden'>;
+/** The three editable lines of one entry (v2: heading / tension / unconfirmed). */
+export type CharacterVectorFields = Pick<CharacterVectorEntry, 'heading' | 'tension' | 'unconfirmed'>;
 
 /** Module-level so two panels (relations tab, contract tab) share one in-flight run. */
 const proposing = ref(false);
@@ -50,10 +50,9 @@ function newId(): string {
 function clampFields(fields: Partial<CharacterVectorFields>): CharacterVectorFields {
   const line = (v: string | undefined) => (v ?? '').trim().slice(0, CHARACTER_VECTOR_LINE_MAX_CHARS);
   return {
-    toward: line(fields.toward),
-    never: line(fields.never),
-    direction: line(fields.direction),
-    hidden: (fields.hidden ?? '').trim().slice(0, CHARACTER_VECTOR_HIDDEN_MAX_CHARS),
+    heading: line(fields.heading),
+    tension: line(fields.tension),
+    unconfirmed: (fields.unconfirmed ?? '').trim().slice(0, CHARACTER_VECTOR_UNCONFIRMED_MAX_CHARS),
   };
 }
 
@@ -99,6 +98,11 @@ export function useCharacterVectors() {
   /**
    * Create or replace the entry for `name` with the given lines. Refuses the protagonist
    * (the player writes her). Returns false when nothing was written.
+   *
+   * Editing a world-proposed entry marks it `accepted`: the player's edit must survive the
+   * next proposal (only `proposed` entries are replaced by `mergeProposals`) — "the world
+   * writes, the player edits" is meaningless if the next run overwrites the edit
+   * (PO question, 2026-09-08).
    */
   function upsertEntry(name: string, fields: Partial<CharacterVectorFields>): boolean {
     const trimmedName = name.trim();
@@ -107,7 +111,7 @@ export function useCharacterVectors() {
     const round = get<number>(paths.roundNumber) ?? 0;
     const existing = entryFor(trimmedName);
     const next: CharacterVectorEntry = existing
-      ? { ...existing, ...clamped, updatedRound: round }
+      ? { ...existing, ...clamped, updatedRound: round, source: existing.source === 'proposed' ? 'accepted' : existing.source }
       : { id: newId(), name: trimmedName, ...clamped, enabled: true, source: 'player', updatedRound: round };
     const others = vectors.value.entries.filter((e) => e.name !== trimmedName);
     write({ ...vectors.value, entries: existing ? vectors.value.entries.map((e) => (e.name === trimmedName ? next : e)) : [...others, next] });

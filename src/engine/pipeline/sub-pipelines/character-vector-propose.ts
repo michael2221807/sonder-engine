@@ -6,8 +6,9 @@
  * The "world writes, the player edits" half of the feature: after the mid-term memory
  * refine (and on a fixed cadence in between), the model reads exactly what the refine
  * saw — contract, main-cast profiles, memory, the last narrative turns, the vectors that
- * already exist — and proposes `{name, toward, never, direction, hidden}` for the main
- * cast members that have RECENT MATERIAL (named in the mid-term entries). Proposals land
+ * already exist — and proposes `{name, heading, tension, unconfirmed}` (v2 three lines;
+ * legacy four-field responses are migrated by the normaliser) for the main cast members
+ * that have RECENT MATERIAL (named in the mid-term entries). Proposals land
  * as `source: 'proposed'` entries that inject immediately; the player deletes or edits
  * them in the relationships panel, never "accepts" (PO decision 2026-09-05).
  *
@@ -16,9 +17,10 @@
  * protagonist is never written. Everything is bounded by the same normaliser the reader
  * uses, so a wild response cannot smuggle an over-long line into the state tree.
  *
- * Gate evidence (G-V, §3.7): six extractions, zero hard-rule violations; the two biases
- * found there are handled here — `hidden` is defined against the PROTAGONIST's knowledge
- * in the pack prompt, and candidates are limited by recent material in code.
+ * Gate evidence (G-V, §3.7; v2 §7.1): six extractions, zero hard-rule violations; the two
+ * biases found there are handled here — `unconfirmed` is defined against the PROTAGONIST's
+ * knowledge in the pack prompt (a deed she has not confirmed, with the material's line that
+ * says so, else empty), and candidates are limited by recent material in code.
  */
 import type { AIService } from '../../ai/ai-service';
 import type { PromptAssembler } from '../../prompt/prompt-assembler';
@@ -34,6 +36,7 @@ import { buildNarrativeContractFromState, resolveFocalCast } from '../../prompt/
 import {
   readCharacterVectors,
   normalizeCharacterVectorEntry,
+  hasVectorContent,
   type CharacterVectorEntry,
   type CharacterVectorsState,
 } from '../../prompt/character-vectors';
@@ -152,7 +155,7 @@ export class CharacterVectorProposePipeline {
     const { block: contractBlock } = buildNarrativeContractFromState(this.stateManager, this.paths, this.gamePack.engineFragments);
     const recent = recentTurns.map((h, i) => `--- ${i + 1} ---\n${String(h.content)}`).join('\n');
     const existing = current.entries.filter((e) => candidates.includes(e.name))
-      .map((e) => JSON.stringify({ name: e.name, toward: e.toward, never: e.never, direction: e.direction, hidden: e.hidden, source: e.source }))
+      .map((e) => JSON.stringify({ name: e.name, heading: e.heading, tension: e.tension, unconfirmed: e.unconfirmed, source: e.source }))
       .join('\n');
 
     const variables: Record<string, string> = {
@@ -204,7 +207,7 @@ export class CharacterVectorProposePipeline {
     list.forEach((item, i) => {
       const e = normalizeCharacterVectorEntry(item, i);
       if (!e || e.name === playerName || !candidates.includes(e.name) || seen.has(e.name)) return;
-      if (!(e.toward || e.never || e.direction || e.hidden)) return;
+      if (!hasVectorContent(e)) return;
       seen.add(e.name);
       out.push(e);
     });
@@ -230,10 +233,9 @@ export function mergeProposals(
     const merged: CharacterVectorEntry = {
       id: existing?.id ?? p.id,
       name: p.name,
-      toward: p.toward,
-      never: p.never,
-      direction: p.direction,
-      hidden: p.hidden,
+      heading: p.heading,
+      tension: p.tension,
+      unconfirmed: p.unconfirmed,
       enabled: existing?.enabled ?? true,
       source: 'proposed',
       updatedRound: round,

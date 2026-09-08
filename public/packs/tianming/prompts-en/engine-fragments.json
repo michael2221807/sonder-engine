@@ -95,11 +95,10 @@
   "narrativeContractCastLabel": "[Main cast] ",
   "narrativeContractPeripheralRule": "Listed characters who have not appeared recently need not be dragged in either.",
   "narrativeContractCastSeparator": ", ",
-  "characterVectorHeader": "[Character Vectors] Where these characters are currently heading in the protagonist's story. A tendency is not an ending: they only try to move this way; whether they succeed is decided by the scene and the dice, and the path may fail, drift or surprise. Vectors shift with the plot and can flip when a truth comes out; only this turn's relevant characters are listed.",
-  "characterVectorTowardLabel": "toward the protagonist | ",
-  "characterVectorNeverLabel": "never | ",
-  "characterVectorDirectionLabel": "direction | ",
-  "characterVectorHiddenLabel": "[Unknown to the protagonist] Use only to steer world-side action and narrator irony; it must never reach the protagonist's cognition, inference or lines in any form: ",
+  "characterVectorHeader": "[Character Vectors] Where these characters are currently moving in the protagonist's story. A heading is a tendency, not an ending: they only try to move this way, and the scene and the dice decide; both sides of a tension are real and which prevails is decided by this moment's scene — never turn it into a rule; vectors shift with the plot and can flip when a truth comes out; only this turn's relevant characters are listed. The world keeps nobody's secret and reveals nobody's secret: characters act on what they know and want, the protagonist infers from what the protagonist has seen, the narration writes only what the protagonist can perceive.",
+  "characterVectorHeadingLabel": "heading | ",
+  "characterVectorTensionLabel": "tension | ",
+  "characterVectorUnconfirmedLabel": "[Unconfirmed by the protagonist] Used only to keep world-side action consistent; the person concerned does not explain it, reassure with it or spell it out, and the narration does not write it as known inside the protagonist's viewpoint; whether the protagonist can think of it depends only on what the protagonist has seen — never close that door for the protagonist, never confirm it for them: ",
   "characterVectorFieldSeparator": " ",
-  "characterVectorHiddenSeparator": "; "
+  "characterVectorUnconfirmedSeparator": "; "
 }

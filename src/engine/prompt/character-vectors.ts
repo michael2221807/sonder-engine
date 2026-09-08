@@ -5,21 +5,28 @@
  *
  * A "potential vector" per main-cast NPC: which way the player hopes this character
  * develops *in the protagonist's story* — a tendency the world tries to move toward, never
- * a script (the outcome stays with the dice and the scene). Three short lines per NPC
- * (toward the protagonist / never / direction) plus an optional hidden truth the
- * protagonist does not know. Evidence: three replay rounds + three PO blind reads
- * (docs/research/textual-open-world-r2-contract-ab.md §3.4–§3.6) — the minimal form
- * without a protagonist line passed the PO's no-regression gate; six-dimension dumps
- * and preachy headers were harmful.
+ * a script (the outcome stays with the dice and the scene). A vector is not a portrait: it
+ * answers the three questions any character in a story answers — where they are HEADING,
+ * what TENSION pulls at them (both sides real), and which deed the protagonist has not
+ * CONFIRMED yet (a fact, usually empty). Evidence: three v1 replay rounds + three PO blind
+ * reads (docs/research/textual-open-world-r2-contract-ab.md §3.4–§3.6) and the v2
+ * perspective experiment (docs/design/character-vector-v2-perspective.md §7) — v1's verdict
+ * lines ("toward" / "never") and its "unknown to the protagonist" gate were judged too
+ * direct: the gate made the narrator police the protagonist's own inference (2026-09-08).
  *
  * Injection rules that came out of the experiments:
  *   - PROJECTION: only NPCs relevant to this turn get a line — present in the scene, named
- *     in the player input, or named in the previous narrative. The whole list is never sent.
+ *     in the player input, or named in the previous narrative (full or short name). The
+ *     whole list is never sent.
  *   - NO PROTAGONIST LINE: the player writes her; a world-written "she is warming to him"
  *     made the model realise the player's hope early (round 2, 81 B).
- *   - HIDDEN TRUTHS ride in a separate line and may only steer world-side action and
- *     narrator irony — never the protagonist's cognition or dialogue, in any form.
+ *   - UNCONFIRMED DEEDS ride in a separate line that only keeps world-side action
+ *     consistent: the person concerned does not explain or reveal it, and the narration
+ *     neither confirms it for the protagonist nor closes that door — the protagonist's
+ *     inference follows only what the protagonist has seen (v2 principle).
  *   - Same guarantee as the contract: no entries in scope → '' → byte-identical prompts.
+ *   - LEGACY: v1 entries ({toward, never, direction, hidden}) are migrated on read
+ *     (toward + direction → heading, never → tension, hidden → unconfirmed).
  *
  * Engine/content separation: every visible label comes from `GamePack.engineFragments`
  * (`characterVector*` keys); NPC field names come from `EnginePathConfig.npcFieldNames`.
@@ -35,14 +42,12 @@ export interface CharacterVectorEntry {
   id: string;
   /** Matches `社交.关系[].名称` by name (the relationship list is re-ordered by the model). */
   name: string;
-  /** How this character leans toward the protagonist. */
-  toward: string;
-  /** What this character will not do to the protagonist (evidenced boundaries only). */
-  never: string;
-  /** Where the relationship is heading — the hope, not the plan. */
-  direction: string;
-  /** A truth the protagonist does not know; world-side only. Empty when none. */
-  hidden: string;
+  /** Where this character is moving in the protagonist's story — a direction, never a verdict. */
+  heading: string;
+  /** The two sides pulling at this character (both real); which prevails is the scene's call. */
+  tension: string;
+  /** One deed of theirs the protagonist has not confirmed yet; world-side consistency only. Usually empty. */
+  unconfirmed: string;
   enabled: boolean;
   /**
    * `proposed` = written by the world. Unlike contract clauses, proposed entries ARE
@@ -58,9 +63,9 @@ export interface CharacterVectorsState {
   entries: CharacterVectorEntry[];
 }
 
-/** Hard caps (also enforced by the UI composable). */
+/** Hard caps (also enforced by the UI composable): heading / tension 60, unconfirmed 80. */
 export const CHARACTER_VECTOR_LINE_MAX_CHARS = 60;
-export const CHARACTER_VECTOR_HIDDEN_MAX_CHARS = 80;
+export const CHARACTER_VECTOR_UNCONFIRMED_MAX_CHARS = 80;
 
 /** Fresh empty state — a new object per call, never a shared mutable default. */
 export function emptyCharacterVectors(): CharacterVectorsState {
@@ -77,19 +82,30 @@ function str(v: unknown, max: number): string {
   return typeof v === 'string' ? v.trim().slice(0, max) : '';
 }
 
-/** Coerce one stored entry; undefined when it cannot be an entry (no name). */
+/**
+ * Coerce one stored entry; undefined when it cannot be an entry (no name).
+ *
+ * Legacy v1 shape ({toward, never, direction, hidden}, saves before 2026-09-08) is migrated
+ * here so old saves and cards keep working without a data pass: toward + direction become
+ * the heading, never becomes the tension (the boundary is the suppressed side of a
+ * tension), hidden becomes the unconfirmed deed. A v2 field, when present, always wins.
+ */
 export function normalizeCharacterVectorEntry(raw: unknown, index: number): CharacterVectorEntry | undefined {
   if (!isRecord(raw)) return undefined;
   const name = typeof raw.name === 'string' ? raw.name.trim() : '';
   if (!name) return undefined;
   const source = SOURCES.includes(raw.source as CharacterVectorSource) ? (raw.source as CharacterVectorSource) : 'player';
+  // Neutral separator (the file's own default), never a script-specific one: this runs for every pack.
+  const legacyHeading = [raw.toward, raw.direction].filter((v): v is string => typeof v === 'string' && v.trim() !== '').map((v) => v.trim()).join('; ');
+  const heading = typeof raw.heading === 'string' ? raw.heading : legacyHeading;
+  const tension = typeof raw.tension === 'string' ? raw.tension : raw.never;
+  const unconfirmed = typeof raw.unconfirmed === 'string' ? raw.unconfirmed : raw.hidden;
   return {
     id: typeof raw.id === 'string' && raw.id ? raw.id : `vector-${index}`,
     name,
-    toward: str(raw.toward, CHARACTER_VECTOR_LINE_MAX_CHARS),
-    never: str(raw.never, CHARACTER_VECTOR_LINE_MAX_CHARS),
-    direction: str(raw.direction, CHARACTER_VECTOR_LINE_MAX_CHARS),
-    hidden: str(raw.hidden, CHARACTER_VECTOR_HIDDEN_MAX_CHARS),
+    heading: str(heading, CHARACTER_VECTOR_LINE_MAX_CHARS),
+    tension: str(tension, CHARACTER_VECTOR_LINE_MAX_CHARS),
+    unconfirmed: str(unconfirmed, CHARACTER_VECTOR_UNCONFIRMED_MAX_CHARS),
     enabled: raw.enabled !== false,
     source,
     updatedRound: typeof raw.updatedRound === 'number' && Number.isFinite(raw.updatedRound) ? raw.updatedRound : 0,
@@ -116,7 +132,7 @@ export function readCharacterVectors(
 
 /** An entry says something only when at least one of its lines is non-empty. */
 export function hasVectorContent(e: CharacterVectorEntry): boolean {
-  return Boolean(e.toward || e.never || e.direction || e.hidden);
+  return Boolean(e.heading || e.tension || e.unconfirmed);
 }
 
 /** Entries the model may see: enabled and non-empty (proposed ones included — see `source`). */
@@ -139,8 +155,23 @@ export interface ResolveVectorScopeParams {
 }
 
 /**
+ * Short form a narrative or a player commonly uses for a compact name: the name minus its
+ * first character (a one-character family name) when the name is 3–4 characters long,
+ * written entirely in Han ideographs and carries no separator. `林晚照` → `晚照`. Names in
+ * other scripts get no short form: a 2–3 letter tail of a Latin name (`Kate` → `ate`) is an
+ * ordinary substring of prose and would pull an unmentioned NPC into the prompt. Only the
+ * script class and lengths are inspected — no pack content lives here.
+ */
+export function shortNameForm(name: string): string | undefined {
+  if (name.length < 3 || name.length > 4) return undefined;
+  if (!/^\p{Script=Han}+$/u.test(name)) return undefined;
+  return name.slice(1);
+}
+
+/**
  * Which candidates are relevant to this turn: present in the scene (`是否在场`), named
- * in the player input, or named in the previous narrative. Order follows `candidates`.
+ * in the player input, or named in the previous narrative (full name or short form —
+ * players write `晚照`, not `林晚照`; 2026-09-08). Order follows `candidates`.
  */
 export function resolveVectorScope(params: ResolveVectorScopeParams): string[] {
   const { relationships, candidates, userInput = '', lastNarrative = '', paths } = params;
@@ -154,11 +185,16 @@ export function resolveVectorScope(params: ResolveVectorScopeParams): string[] {
     }
   }
   const haystack = `${userInput}\n${lastNarrative}`;
+  const named = (name: string): boolean => {
+    if (haystack.includes(name)) return true;
+    const short = shortNameForm(name);
+    return short !== undefined && haystack.includes(short);
+  };
   const seen = new Set<string>();
   const out: string[] = [];
   for (const name of candidates) {
     if (!name || seen.has(name)) continue;
-    if (present.has(name) || haystack.includes(name)) {
+    if (present.has(name) || named(name)) {
       seen.add(name);
       out.push(name);
     }
@@ -170,27 +206,25 @@ export function resolveVectorScope(params: ResolveVectorScopeParams): string[] {
 
 /** Visible labels; all pack-provided (`engineFragments.characterVector*`). */
 export interface CharacterVectorFragments {
-  /** Block heading + the two-sentence framing (tendency, not ending; current, not permanent). */
+  /** Block heading: the framing (tendency, not ending; both sides of a tension real) + the perspective principle. */
   header: string;
-  towardLabel: string;
-  neverLabel: string;
-  directionLabel: string;
-  /** Prefix of the hidden-truth line (includes the "never reaches the protagonist" rule). */
-  hiddenLabel: string;
+  headingLabel: string;
+  tensionLabel: string;
+  /** Prefix of the unconfirmed-deeds line (world-side consistency only; never closes the protagonist's door). */
+  unconfirmedLabel: string;
   /** Between the fields of one entry line. */
   fieldSeparator: string;
-  /** Between hidden truths of different characters. */
-  hiddenSeparator: string;
+  /** Between unconfirmed deeds of different characters. */
+  unconfirmedSeparator: string;
 }
 
 export const CHARACTER_VECTOR_FRAGMENT_KEYS = {
   header: 'characterVectorHeader',
-  towardLabel: 'characterVectorTowardLabel',
-  neverLabel: 'characterVectorNeverLabel',
-  directionLabel: 'characterVectorDirectionLabel',
-  hiddenLabel: 'characterVectorHiddenLabel',
+  headingLabel: 'characterVectorHeadingLabel',
+  tensionLabel: 'characterVectorTensionLabel',
+  unconfirmedLabel: 'characterVectorUnconfirmedLabel',
   fieldSeparator: 'characterVectorFieldSeparator',
-  hiddenSeparator: 'characterVectorHiddenSeparator',
+  unconfirmedSeparator: 'characterVectorUnconfirmedSeparator',
 } as const;
 
 export function resolveCharacterVectorFragments(fragments?: Record<string, unknown>): CharacterVectorFragments {
@@ -200,12 +234,11 @@ export function resolveCharacterVectorFragments(fragments?: Record<string, unkno
   };
   return {
     header: pick(CHARACTER_VECTOR_FRAGMENT_KEYS.header),
-    towardLabel: pick(CHARACTER_VECTOR_FRAGMENT_KEYS.towardLabel),
-    neverLabel: pick(CHARACTER_VECTOR_FRAGMENT_KEYS.neverLabel),
-    directionLabel: pick(CHARACTER_VECTOR_FRAGMENT_KEYS.directionLabel),
-    hiddenLabel: pick(CHARACTER_VECTOR_FRAGMENT_KEYS.hiddenLabel),
+    headingLabel: pick(CHARACTER_VECTOR_FRAGMENT_KEYS.headingLabel),
+    tensionLabel: pick(CHARACTER_VECTOR_FRAGMENT_KEYS.tensionLabel),
+    unconfirmedLabel: pick(CHARACTER_VECTOR_FRAGMENT_KEYS.unconfirmedLabel),
     fieldSeparator: pick(CHARACTER_VECTOR_FRAGMENT_KEYS.fieldSeparator) || ' ',
-    hiddenSeparator: pick(CHARACTER_VECTOR_FRAGMENT_KEYS.hiddenSeparator) || '; ',
+    unconfirmedSeparator: pick(CHARACTER_VECTOR_FRAGMENT_KEYS.unconfirmedSeparator) || '; ',
   };
 }
 
@@ -241,14 +274,13 @@ export function buildCharacterVectorBlock(params: BuildCharacterVectorBlockParam
   const lines: string[] = [fragments.header];
   for (const e of chosen) {
     const fields = [
-      e.toward ? `${fragments.towardLabel}${e.toward}` : '',
-      e.never ? `${fragments.neverLabel}${e.never}` : '',
-      e.direction ? `${fragments.directionLabel}${e.direction}` : '',
+      e.heading ? `${fragments.headingLabel}${e.heading}` : '',
+      e.tension ? `${fragments.tensionLabel}${e.tension}` : '',
     ].filter(Boolean);
     if (fields.length > 0) lines.push(`- ${e.name}：${fields.join(fragments.fieldSeparator)}`);
   }
-  const hidden = chosen.map((e) => e.hidden).filter(Boolean);
-  if (hidden.length > 0 && fragments.hiddenLabel) lines.push(`${fragments.hiddenLabel}${hidden.join(fragments.hiddenSeparator)}`);
+  const unconfirmed = chosen.map((e) => e.unconfirmed).filter(Boolean);
+  if (unconfirmed.length > 0 && fragments.unconfirmedLabel) lines.push(`${fragments.unconfirmedLabel}${unconfirmed.join(fragments.unconfirmedSeparator)}`);
   // A block that carries nothing but the header says nothing — inject nothing.
   return lines.length > 1 ? lines.join('\n') : '';
 }

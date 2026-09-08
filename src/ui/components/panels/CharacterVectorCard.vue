@@ -3,16 +3,17 @@
 // Design: docs/design/character-vector-v1-implementation-plan.md S3
 /**
  * CharacterVectorCard — one NPC's "potential vector", shown under the inner-thought line
- * of the relationship card. Four short lines (toward / never / direction / hidden), a
- * source badge (world-written entries are amber and editable like any other — never
- * "accepted"), an inject toggle and delete. Edits commit on blur / Enter.
+ * of the relationship card. Three short lines (heading / tension / unconfirmed — v2, the
+ * perspective principle, 2026-09-08), a source badge (world-written entries are amber and
+ * editable like any other — never "accepted"), an inject toggle and delete. Edits commit
+ * on blur / Enter.
  */
 import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   useCharacterVectors,
   CHARACTER_VECTOR_LINE_MAX_CHARS,
-  CHARACTER_VECTOR_HIDDEN_MAX_CHARS,
+  CHARACTER_VECTOR_UNCONFIRMED_MAX_CHARS,
   type CharacterVectorFields,
 } from '@/ui/composables/useCharacterVectors';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
@@ -24,15 +25,17 @@ const { entryFor, upsertEntry, toggleEntry, removeEntry } = useCharacterVectors(
 
 const entry = computed(() => entryFor(props.name));
 const editing = ref(false);
-const draft = ref<CharacterVectorFields>({ toward: '', never: '', direction: '', hidden: '' });
+const draft = ref<CharacterVectorFields>({ heading: '', tension: '', unconfirmed: '' });
 
 type Line = keyof CharacterVectorFields;
-const LINES: readonly Line[] = ['toward', 'never', 'direction', 'hidden'];
-const maxFor = (line: Line): number => (line === 'hidden' ? CHARACTER_VECTOR_HIDDEN_MAX_CHARS : CHARACTER_VECTOR_LINE_MAX_CHARS);
+const LINES: readonly Line[] = ['heading', 'tension', 'unconfirmed'];
+const maxFor = (line: Line): number => (line === 'unconfirmed' ? CHARACTER_VECTOR_UNCONFIRMED_MAX_CHARS : CHARACTER_VECTOR_LINE_MAX_CHARS);
+/** Lines whose label carries a one-sentence hint (tension: both sides real; unconfirmed: world-side only). */
+const HINTED: Partial<Record<Line, string>> = { tension: 'relationship.vector.tensionHint', unconfirmed: 'relationship.vector.unconfirmedHint' };
 
 function loadDraft(): void {
   const e = entry.value;
-  draft.value = { toward: e?.toward ?? '', never: e?.never ?? '', direction: e?.direction ?? '', hidden: e?.hidden ?? '' };
+  draft.value = { heading: e?.heading ?? '', tension: e?.tension ?? '', unconfirmed: e?.unconfirmed ?? '' };
 }
 watch(entry, loadDraft, { immediate: true });
 
@@ -81,9 +84,9 @@ function onKeydown(e: KeyboardEvent): void {
         <dl class="vector-lines">
           <template v-for="line in LINES" :key="line">
             <template v-if="entry[line]">
-              <dt :class="['vector-lines__label', { 'vector-lines__label--hidden': line === 'hidden' }]">
-                <Tooltip v-if="line === 'hidden'" :text="t('relationship.vector.hiddenHint')" fixed>
-                  <span>◐ {{ t(`relationship.vector.${line}`) }}</span>
+              <dt :class="['vector-lines__label', { 'vector-lines__label--unconfirmed': line === 'unconfirmed' }]">
+                <Tooltip v-if="HINTED[line]" :text="t(HINTED[line] as string)" fixed>
+                  <span>{{ line === 'unconfirmed' ? '◐ ' : '' }}{{ t(`relationship.vector.${line}`) }}</span>
                 </Tooltip>
                 <span v-else>{{ t(`relationship.vector.${line}`) }}</span>
               </dt>
@@ -97,7 +100,7 @@ function onKeydown(e: KeyboardEvent): void {
     <!-- Edit view -->
     <div v-else class="vector-edit" data-testid="vector-edit-form">
       <label v-for="line in LINES" :key="line" class="vector-edit__row">
-        <span :class="['vector-lines__label', { 'vector-lines__label--hidden': line === 'hidden' }]">{{ t(`relationship.vector.${line}`) }}</span>
+        <span :class="['vector-lines__label', { 'vector-lines__label--unconfirmed': line === 'unconfirmed' }]">{{ t(`relationship.vector.${line}`) }}</span>
         <input
           v-model="draft[line]"
           class="vector-edit__input"
@@ -199,7 +202,7 @@ function onKeydown(e: KeyboardEvent): void {
   font-size: 0.72rem;
   padding-top: 1px;
 }
-.vector-lines__label--hidden { color: var(--color-amber-400); }
+.vector-lines__label--unconfirmed { color: var(--color-amber-400); }
 .vector-lines__text { margin: 0; color: var(--color-text-secondary); overflow-wrap: anywhere; }
 
 .vector-edit { display: flex; flex-direction: column; gap: 6px; }

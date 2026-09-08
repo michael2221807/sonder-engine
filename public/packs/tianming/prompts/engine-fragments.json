@@ -95,11 +95,10 @@
   "narrativeContractCastLabel": "【主线人物】",
   "narrativeContractPeripheralRule": "名单里近期没出场的人物也不必硬拉进来。",
   "narrativeContractCastSeparator": "、",
-  "characterVectorHeader": "【人物向量】以下是这些人物在主角剧情里的当前走向。倾向不是结局：人物只是朝这个方向尝试，成不成由局面与判定决定，过程可失败、可偏离、可有惊喜；向量随剧情摆动，真相揭示后可反转，只列本回合相关人物。",
-  "characterVectorTowardLabel": "对主角｜",
-  "characterVectorNeverLabel": "不会做｜",
-  "characterVectorDirectionLabel": "潜在方向｜",
-  "characterVectorHiddenLabel": "【主角不知道的】只用于安排世界侧的行动与旁白反讽，任何形式不得进入主角的认知、推断或台词：",
+  "characterVectorHeader": "【人物向量】以下是这些人物在主角剧情里的当前动向。走向是倾向不是结局：人物只是朝那边尝试，成不成由局面与判定决定；拉扯的两边都真，哪边压着哪边由此刻局面决定，不要把它写成守则；向量随剧情摆动，真相揭示后可反转；只列本回合相关人物。世界不替任何人守秘密，也不替任何人揭秘密：人物按自己知道与想要的行动，主角按自己看到的推断，旁白只写主角能感知的。",
+  "characterVectorHeadingLabel": "走向｜",
+  "characterVectorTensionLabel": "拉扯｜",
+  "characterVectorUnconfirmedLabel": "【主角尚未证实的事】只用来让世界侧的行动前后一致；当事人不解释、不用它宽慰或点破，旁白不在主角视角里把它写成已知；主角能否想到只看主角看到了什么，不替主角关门、不替主角证实：",
   "characterVectorFieldSeparator": " ",
-  "characterVectorHiddenSeparator": "；"
+  "characterVectorUnconfirmedSeparator": "；"
 }

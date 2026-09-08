@@ -1,8 +1,9 @@
 /**
  * Character Vectors — user-facing surfaces (ZERO real API).
  *
- * Pins what a player can see after the character-vector v1 plan (S3/S5):
- *   1. 角色 → 关系: a main-cast NPC's card carries a vector card; four lines typed + saved
+ * Pins what a player can see after the character-vector v1 plan (S3/S5), v2 lines
+ * (heading / tension / unconfirmed, 2026-09-08):
+ *   1. 角色 → 关系: a main-cast NPC's card carries a vector card; three lines typed + saved
  *      land in the card, survive a reload (state-tree persistence), and the 叙事契约 tab
  *      lists the NPC in "injected next turn" because the NPC is 在场;
  *   2. a real split-gen round assembles offline and the step1 snapshot in Prompt 组装
@@ -35,9 +36,9 @@ async function storedVectors(page: Page): Promise<{ enabled?: boolean; entries?:
 
 const KEY_NPC = '沈墨琛';
 const AWAY_NPC = '林晚照';
-const TOWARD = '当独一份的藏品，也当唯一敢对他生气的人';
-const NEVER = '不解释、不承诺';
-const HIDDEN = '他叫停了那场人为调教';
+const HEADING = '往护偏，独她一份';
+const TENSION = '占有着她，又护着她；护了，却不认、不承诺';
+const UNCONFIRMED = '他叫停了那场人为调教';
 
 function npc(name: string, present: boolean) {
   return { 名称: name, 类型: '重点', 好感度: 30, 位置: LOCATION_NAME, 描述: `${name}。`, 性别: '男', 年龄: 30, 是否在场: present, 记忆: [], 私聊历史: [] };
@@ -70,12 +71,13 @@ test.describe('Character Vectors surfaces', () => {
       // The key NPC's card is empty → open the editor and write three lines.
       const card = page.locator('[data-testid="vector-card"]').first();
       await card.locator('[data-testid="vector-add"]').click();
-      await card.locator('[data-testid="vector-input-toward"]').fill(TOWARD);
-      await card.locator('[data-testid="vector-input-never"]').fill(NEVER);
-      await card.locator('[data-testid="vector-input-hidden"]').fill(HIDDEN);
+      await card.locator('[data-testid="vector-input-heading"]').fill(HEADING);
+      await card.locator('[data-testid="vector-input-tension"]').fill(TENSION);
+      await card.locator('[data-testid="vector-input-unconfirmed"]').fill(UNCONFIRMED);
       await card.locator('[data-testid="vector-save"]').click();
-      await expect(card.locator('[data-testid="vector-line-toward"]')).toHaveText(TOWARD);
-      await expect(card.locator('[data-testid="vector-line-hidden"]')).toHaveText(HIDDEN);
+      await expect(card.locator('[data-testid="vector-line-heading"]')).toHaveText(HEADING);
+      await expect(card.locator('[data-testid="vector-line-tension"]')).toHaveText(TENSION);
+      await expect(card.locator('[data-testid="vector-line-unconfirmed"]')).toHaveText(UNCONFIRMED);
       await expect.poll(async () => (await storedVectors(page))?.entries?.length, { timeout: 10_000 }).toBe(1);
 
       // The contract tab lists the NPC as injected next turn (it is 在场).
@@ -88,7 +90,7 @@ test.describe('Character Vectors surfaces', () => {
       await page.reload();
       await enterSeededGame(page);
       await openRelations(page, gameShell);
-      await expect(page.locator('[data-testid="vector-card"]').first().locator('[data-testid="vector-line-toward"]')).toHaveText(TOWARD);
+      await expect(page.locator('[data-testid="vector-card"]').first().locator('[data-testid="vector-line-heading"]')).toHaveText(HEADING);
     });
 
   test('a real split-gen round assembles offline: the step1 snapshot in Prompt 组装 carries the 人物向量 piece with the NPC line',
@@ -116,9 +118,9 @@ test.describe('Character Vectors surfaces', () => {
       await openRelations(page, gameShell);
       const card = page.locator('[data-testid="vector-card"]').first();
       await card.locator('[data-testid="vector-add"]').click();
-      await card.locator('[data-testid="vector-input-toward"]').fill(TOWARD);
+      await card.locator('[data-testid="vector-input-heading"]').fill(HEADING);
       await card.locator('[data-testid="vector-save"]').click();
-      await expect(card.locator('[data-testid="vector-line-toward"]')).toHaveText(TOWARD);
+      await expect(card.locator('[data-testid="vector-line-heading"]')).toHaveText(HEADING);
 
       const pageErrors: string[] = [];
       page.on('pageerror', (e) => pageErrors.push(e.message));

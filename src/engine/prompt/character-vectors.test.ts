@@ -4,12 +4,14 @@ import {
   emptyCharacterVectors,
   activeVectorEntries,
   resolveVectorScope,
+  shortNameForm,
   buildCharacterVectorBlock,
   buildCharacterVectorsFromState,
   resolveCharacterVectorFragments,
   characterVectorsTraceEntry,
   lastNarrativeText,
   CHARACTER_VECTOR_LINE_MAX_CHARS,
+  CHARACTER_VECTOR_UNCONFIRMED_MAX_CHARS,
   type CharacterVectorEntry,
 } from './character-vectors';
 import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
@@ -18,16 +20,15 @@ const paths = DEFAULT_ENGINE_PATHS;
 
 const FRAGMENTS = {
   characterVectorHeader: '【人物向量】倾向不是结局。',
-  characterVectorTowardLabel: '对主角｜',
-  characterVectorNeverLabel: '不会做｜',
-  characterVectorDirectionLabel: '潜在方向｜',
-  characterVectorHiddenLabel: '【主角不知道的】',
+  characterVectorHeadingLabel: '走向｜',
+  characterVectorTensionLabel: '拉扯｜',
+  characterVectorUnconfirmedLabel: '【主角尚未证实的事】',
   characterVectorFieldSeparator: ' ',
-  characterVectorHiddenSeparator: '；',
+  characterVectorUnconfirmedSeparator: '；',
 };
 
 function entry(over: Partial<CharacterVectorEntry> & { name: string }): CharacterVectorEntry {
-  return { id: over.name, toward: '', never: '', direction: '', hidden: '', enabled: true, source: 'player', updatedRound: 1, ...over };
+  return { id: over.name, heading: '', tension: '', unconfirmed: '', enabled: true, source: 'player', updatedRound: 1, ...over };
 }
 
 function mockState(tree: Record<string, unknown>) {
@@ -56,26 +57,40 @@ describe('readCharacterVectors', () => {
 
   it('normalises entries: drops nameless, defaults source / enabled / round, trims and caps lines', () => {
     const long = 'a'.repeat(CHARACTER_VECTOR_LINE_MAX_CHARS + 20);
+    const longer = 'b'.repeat(CHARACTER_VECTOR_UNCONFIRMED_MAX_CHARS + 20);
     const s = readCharacterVectors(mockState(tree({ entries: [
-      { name: ' 沈墨琛 ', toward: ` ${long} `, source: 'bogus', updatedRound: 'x' },
-      { toward: 'no name' },
-      { name: '林晚照', hidden: '秘密', enabled: false, source: 'proposed', updatedRound: 7, id: 'keep' },
+      { name: ' 沈墨琛 ', heading: ` ${long} `, unconfirmed: longer, source: 'bogus', updatedRound: 'x' },
+      { heading: 'no name' },
+      { name: '林晚照', tension: '想靠着她，又怕拖累她', enabled: false, source: 'proposed', updatedRound: 7, id: 'keep' },
     ] })), paths);
     expect(s.enabled).toBe(true);
     expect(s.entries).toHaveLength(2);
     expect(s.entries[0]).toMatchObject({ name: '沈墨琛', source: 'player', enabled: true, updatedRound: 0, id: 'vector-0' });
-    expect(s.entries[0]!.toward).toHaveLength(CHARACTER_VECTOR_LINE_MAX_CHARS);
-    expect(s.entries[1]).toMatchObject({ name: '林晚照', source: 'proposed', enabled: false, updatedRound: 7, id: 'keep' });
+    expect(s.entries[0]!.heading).toHaveLength(CHARACTER_VECTOR_LINE_MAX_CHARS);
+    expect(s.entries[0]!.unconfirmed).toHaveLength(CHARACTER_VECTOR_UNCONFIRMED_MAX_CHARS);
+    expect(s.entries[1]).toMatchObject({ name: '林晚照', source: 'proposed', enabled: false, updatedRound: 7, id: 'keep', tension: '想靠着她，又怕拖累她' });
+  });
+
+  it('migrates v1 entries on read: toward + direction → heading, never → tension, hidden → unconfirmed; a v2 field always wins', () => {
+    const s = readCharacterVectors(mockState(tree({ entries: [
+      { name: '沈墨琛', toward: '当藏品', never: '不解释、不承诺', direction: '护在加深', hidden: '晚照的买家是他安排的' },
+      { name: '林晚照', toward: '完全信赖' },
+      { name: '乔诗诗', toward: '旧的', heading: '新的', hidden: '旧秘密', unconfirmed: '' },
+    ] })), paths);
+    expect(s.entries[0]).toMatchObject({ heading: '当藏品; 护在加深', tension: '不解释、不承诺', unconfirmed: '晚照的买家是他安排的' });
+    expect(s.entries[1]).toMatchObject({ heading: '完全信赖', tension: '', unconfirmed: '' });
+    expect(s.entries[2]).toMatchObject({ heading: '新的', unconfirmed: '' });
+    expect(s.entries[0]).not.toHaveProperty('toward');
   });
 });
 
 describe('activeVectorEntries', () => {
   it('keeps enabled entries with content, proposed ones included; drops empty and disabled', () => {
     const s = { enabled: true, entries: [
-      entry({ name: 'A', toward: 'x' }),
-      entry({ name: 'B', hidden: 'h', source: 'proposed' }),
+      entry({ name: 'A', heading: 'x' }),
+      entry({ name: 'B', unconfirmed: 'h', source: 'proposed' }),
       entry({ name: 'C' }),
-      entry({ name: 'D', toward: 'x', enabled: false }),
+      entry({ name: 'D', heading: 'x', enabled: false }),
     ] };
     expect(activeVectorEntries(s).map((e) => e.name)).toEqual(['A', 'B']);
   });
@@ -102,42 +117,57 @@ describe('resolveVectorScope', () => {
     expect(resolveVectorScope({ relationships: null, candidates: ['沈墨琛'], paths })).toEqual([]);
     expect(resolveVectorScope({ relationships: rels, candidates: ['乔诗诗'], userInput: '', lastNarrative: '', paths })).toEqual([]);
   });
+  it('matches the short form players actually write (林晚照 ← 晚照), never a separated, two-character or non-Han name', () => {
+    expect(shortNameForm('林晚照')).toBe('晚照');
+    expect(shortNameForm('马蒂尔达·罗西')).toBeUndefined();
+    expect(shortNameForm('小明')).toBeUndefined();
+    expect(shortNameForm('Kate')).toBeUndefined();
+    expect(shortNameForm('Amy')).toBeUndefined();
+    const scope = resolveVectorScope({
+      relationships: [{ 名称: '林晚照', 是否在场: false }, { 名称: '马蒂尔达·罗西', 是否在场: false }],
+      candidates: ['林晚照', '马蒂尔达·罗西'],
+      userInput: '直到第三天晚照才回来了',
+      lastNarrative: '罗西没有出现。',
+      paths,
+    });
+    expect(scope).toEqual(['林晚照']);
+  });
 });
 
 describe('buildCharacterVectorBlock', () => {
   const fragments = resolveCharacterVectorFragments(FRAGMENTS);
   const vectors = { enabled: true, entries: [
-    entry({ name: '沈墨琛', toward: '当藏品', never: '不解释', direction: '护在加深', hidden: '他叫停了调教' }),
-    entry({ name: '林晚照', toward: '完全信赖' }),
-    entry({ name: '主角', toward: '不该出现' }),
+    entry({ name: '沈墨琛', heading: '往护偏，独她一份', tension: '护了，却不认、不承诺', unconfirmed: '晚照的买家是他安排的' }),
+    entry({ name: '林晚照', heading: '往更信赖偏' }),
+    entry({ name: '主角', heading: '不该出现' }),
   ] };
 
-  it('renders header, one line per in-scope entry (only non-empty fields) and one hidden line', () => {
+  it('renders header, one line per in-scope entry (only non-empty fields) and one unconfirmed line', () => {
     const block = buildCharacterVectorBlock({ vectors, scope: ['沈墨琛', '林晚照', '主角'], protagonistName: '主角', fragments });
     expect(block).toBe([
       '【人物向量】倾向不是结局。',
-      '- 沈墨琛：对主角｜当藏品 不会做｜不解释 潜在方向｜护在加深',
-      '- 林晚照：对主角｜完全信赖',
-      '【主角不知道的】他叫停了调教',
+      '- 沈墨琛：走向｜往护偏，独她一份 拉扯｜护了，却不认、不承诺',
+      '- 林晚照：走向｜往更信赖偏',
+      '【主角尚未证实的事】晚照的买家是他安排的',
     ].join('\n'));
     expect(block).not.toContain('不该出现');
   });
 
-  it('is empty when disabled, when the scope has no entries, when the pack has no header, or when only hidden truths exist without a hidden label', () => {
+  it('is empty when disabled, when the scope has no entries, when the pack has no header, or when only unconfirmed deeds exist without their label', () => {
     expect(buildCharacterVectorBlock({ vectors: { ...vectors, enabled: false }, scope: ['沈墨琛'], protagonistName: '', fragments })).toBe('');
     expect(buildCharacterVectorBlock({ vectors, scope: ['乔诗诗'], protagonistName: '', fragments })).toBe('');
     expect(buildCharacterVectorBlock({ vectors, scope: ['沈墨琛'], protagonistName: '', fragments: resolveCharacterVectorFragments({}) })).toBe('');
-    const hiddenOnly = { enabled: true, entries: [entry({ name: '程彦', hidden: '没得手是沈阻止的' })] };
-    expect(buildCharacterVectorBlock({ vectors: hiddenOnly, scope: ['程彦'], protagonistName: '', fragments: { ...fragments, hiddenLabel: '' } })).toBe('');
-    expect(buildCharacterVectorBlock({ vectors: hiddenOnly, scope: ['程彦'], protagonistName: '', fragments })).toBe('【人物向量】倾向不是结局。\n【主角不知道的】没得手是沈阻止的');
+    const unconfirmedOnly = { enabled: true, entries: [entry({ name: '程彦', unconfirmed: '没得手是沈阻止的' })] };
+    expect(buildCharacterVectorBlock({ vectors: unconfirmedOnly, scope: ['程彦'], protagonistName: '', fragments: { ...fragments, unconfirmedLabel: '' } })).toBe('');
+    expect(buildCharacterVectorBlock({ vectors: unconfirmedOnly, scope: ['程彦'], protagonistName: '', fragments })).toBe('【人物向量】倾向不是结局。\n【主角尚未证实的事】没得手是沈阻止的');
   });
 });
 
 describe('buildCharacterVectorsFromState', () => {
   const stored = { enabled: true, entries: [
-    entry({ name: '沈墨琛', toward: '当藏品' }),
-    entry({ name: '林晚照', toward: '完全信赖' }),
-    entry({ name: '乔诗诗', toward: '帮衬' }),
+    entry({ name: '沈墨琛', heading: '往护偏' }),
+    entry({ name: '林晚照', heading: '往更信赖偏' }),
+    entry({ name: '乔诗诗', heading: '想帮衬' }),
   ] };
   const rels = [{ 名称: '沈墨琛', 是否在场: true }, { 名称: '林晚照' }, { 名称: '乔诗诗' }];
   const history = [{ role: 'user', content: 'x' }, { role: 'assistant', content: '乔诗诗发来消息。' }, { role: 'user', content: 'y' }];
@@ -162,6 +192,12 @@ describe('buildCharacterVectorsFromState', () => {
     const r = buildCharacterVectorsFromState(mockState(tree(undefined, rels, history)), paths, FRAGMENTS, { userInput: '沈墨琛' });
     expect(r.block).toBe('');
     expect(r.scope).toEqual([]);
+  });
+
+  it('a v1 save renders through the same builder after migration', () => {
+    const legacy = { enabled: true, entries: [{ name: '沈墨琛', toward: '当藏品', never: '不解释', hidden: '他叫停了调教' }] };
+    const r = buildCharacterVectorsFromState(mockState(tree(legacy, rels, history)), paths, FRAGMENTS, { userInput: '' });
+    expect(r.block).toBe('【人物向量】倾向不是结局。\n- 沈墨琛：走向｜当藏品 拉扯｜不解释\n【主角尚未证实的事】他叫停了调教');
   });
 });
 

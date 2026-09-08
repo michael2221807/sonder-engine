@@ -29,7 +29,7 @@ const { entries: vectorEntries, enabled: vectorsEnabled, projectedScope, setEnab
 
 /** One-line digest of an entry for the overview list: the first line that says something. */
 function vectorSummary(e: CharacterVectorEntry): string {
-  return e.toward || e.direction || e.never || e.hidden;
+  return e.heading || e.tension || e.unconfirmed;
 }
 
 // ─── New clause draft ───
