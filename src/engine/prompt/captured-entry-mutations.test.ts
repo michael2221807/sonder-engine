@@ -14,6 +14,7 @@ import {
   findCapturedBook,
   normalizeForIdentity,
   pinCapturedEntry,
+  removeCapturedEntry,
   restoreCapturedEntry,
   retractCapturedEntry,
   upsertCapturedBook,
@@ -226,6 +227,23 @@ describe('retract / restore', () => {
     const book = bookWith(candidate());
     expect(restoreCapturedEntry(book, 'nope').reason).toBe('not_found');
     expect(restoreCapturedEntry(book, book.entries[0].id).reason).toBe('not_retracted');
+  });
+});
+
+describe('remove (hard delete)', () => {
+  it('drops the row for good — unlike retract, nothing is left to restore', () => {
+    const book = bookWith(candidate(), candidate({ statement: '另一条。', anchors: ['另'] }));
+    const victim = book.entries[0].id;
+    const next = removeCapturedEntry(book, victim);
+    expect(next.entries.map((e) => e.id)).not.toContain(victim);
+    expect(next.entries).toHaveLength(1);
+    expect(next).not.toBe(book);
+    expect(book.entries).toHaveLength(2); // input untouched
+  });
+
+  it('removing an unknown id returns the same book (no pointless state write)', () => {
+    const book = bookWith(candidate());
+    expect(removeCapturedEntry(book, 'nope')).toBe(book);
   });
 });
 

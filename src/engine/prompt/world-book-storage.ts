@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-prompts.md §4（世界书 Tab · 存档集成）, game-save.md §3.2（完整备份）
 /**
  * World Book + Built-in Prompt persistence — IndexedDB storage
  *
@@ -261,6 +262,26 @@ export class WorldBookStorage {
   async clearAll(): Promise<void> {
     const db = await this.getDB();
     await db.clear('worldbooks');
+    await db.clear('builtin-prompts');
+    await db.clear('preset-groups');
+  }
+
+  /**
+   * Clear ONLY the `worldbooks` store.
+   *
+   * Backup import needs this split (2026-09-09 data-loss fix): a bundle that carries a
+   * `worldBooks` section replaces the local books exactly, but a bundle WITHOUT that
+   * section must leave hand-written books alone — while built-in overrides and preset
+   * groups keep their wipe-then-restore semantics via {@link clearNonWorldBookStores}.
+   */
+  async clearWorldBooks(): Promise<void> {
+    const db = await this.getDB();
+    await db.clear('worldbooks');
+  }
+
+  /** Clear every store EXCEPT `worldbooks` (see {@link clearWorldBooks}). */
+  async clearNonWorldBookStores(): Promise<void> {
+    const db = await this.getDB();
     await db.clear('builtin-prompts');
     await db.clear('preset-groups');
   }

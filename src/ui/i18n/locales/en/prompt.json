@@ -291,6 +291,8 @@
   "prompt.settingCapture.pinHint": "For settings with no obvious keyword (\"this world has two moons\"), tick this to send it every turn.",
   "prompt.settingCapture.retract": "Undo",
   "prompt.settingCapture.restore": "Restore",
+  "prompt.settingCapture.delete": "Delete",
+  "prompt.settingCapture.confirmDelete": "Delete this setting for good? It leaves the list and cannot be restored.",
   "prompt.settingCapture.disable": "Disable",
   "prompt.settingCapture.enableEntry": "Enable",
 
@@ -320,6 +322,11 @@
   "prompt.settingCapture.engram.retractedHint": "This setting was undone, so its graph edge was invalidated too. Restoring it rebuilds the edge.",
 
   "prompt.worldbook.noProfileBooks": "No profile world books yet — use New World Book above",
+  "prompt.worldbook.saveFailed": "The world book could not be written to local storage; your last change may not be saved. Retry, or export a backup first.",
+  "prompt.worldbook.saveNoProfile": "No active character profile — the world book cannot be saved. Open a save before editing.",
+  "prompt.worldbook.loadFailed": "Could not read the world book: local storage is temporarily unavailable. Nothing was deleted — refresh and try again.",
+  "prompt.worldbook.unsaved": "Unsaved",
+  "prompt.worldbook.retrySave": "Retry save",
   "prompt.worldbook.capturedBookTitle": "Captured Settings",
   "prompt.worldbook.capturedEmptyHint": "Text you mark with the Setting button in the composer lands here automatically. You can also add one by hand.",
 

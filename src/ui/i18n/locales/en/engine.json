@@ -26,6 +26,7 @@
       "referenceLibraryLarge": "This backup carries about {mb}MB of reference material — uploads/downloads will be slower (images ship in 20MB chunks, so it will not fail). Untick “include reference material” if you do not need it.",
       "imageAssetsMissingOnExport": "This backup is missing {missing}/{total} referenced image(s) not found in the local cache (possibly cleared by the browser). Do NOT overwrite an image-bearing cloud/older backup with it",
       "importPreservedImages": "The imported backup references images but contains no image data; kept your existing local images to prevent loss",
+      "importPreservedWorldBooks": "The imported backup carries no world-book data; kept your existing profile world books to prevent loss",
       "imageRestoreFailed": "The save was restored, but writing images to local storage failed (storage may be full); some images may be missing",
       "ttsNoConfig": "No usable voice (TTS) API configured — add a TTS-category endpoint under \"API Config\"",
       "ttsFailed": "Voice synthesis failed (this round is unaffected)"

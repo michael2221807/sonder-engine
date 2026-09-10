@@ -415,6 +415,21 @@ export function restoreCapturedEntry(book: WorldBook, entryId: string): RestoreR
   };
 }
 
+/**
+ * Permanently delete an entry — the hard counterpart of {@link retractCapturedEntry}.
+ *
+ * Retract keeps the row so it can be restored and so the Engram bridge can find its edge;
+ * delete is for when the player has decided the row itself is noise (a manual add they
+ * regret, a capture that was never right). The coordinator invalidates the Engram
+ * projection BEFORE the row disappears, because afterwards nothing remembers the id.
+ *
+ * Returns the same book when the id is unknown (no pointless state write).
+ */
+export function removeCapturedEntry(book: WorldBook, entryId: string): WorldBook {
+  if (!book.entries.some((e) => e.id === entryId)) return book;
+  return { ...book, entries: book.entries.filter((e) => e.id !== entryId), updatedAt: Date.now() };
+}
+
 export interface CapturedEntryPatch {
   content?: string;
   title?: string;

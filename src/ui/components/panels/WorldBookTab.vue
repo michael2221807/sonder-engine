@@ -48,6 +48,13 @@ const SHAPE_OPTIONS: Array<{ value: WorldBookEntryShape; labelKey: string }> = [
 // ─── State ─────────────────────────────────────────────────
 
 const books = ref<WorldBook[]>([]);
+/**
+ * Profile books whose last IndexedDB write failed (or had no profile to write under).
+ * The edited text stays on screen; this keeps a visible "未保存" marker on the book and a
+ * retry entry point until a write succeeds — a toast alone disappears in 8 seconds and
+ * then the screen quietly misrepresents what is on disk.
+ */
+const unsavedBookIds = ref(new Set<string>());
 const selectedBookId = ref<string>('');
 const selectedEntryId = ref<string>('');
 const newEntryShape = ref<WorldBookEntryShape>('normal');
@@ -103,6 +110,20 @@ function reportMutation(result: { ok: boolean; reason?: string; engramDegraded?:
 
 async function retractCaptured(entryId: string): Promise<void> {
   reportMutation(await captured.coordinator.retract(entryId));
+}
+
+/**
+ * Hard delete — for a manual add the player regrets or a capture that was never right.
+ * Retract keeps a restorable "已撤回" row; this removes the row for good (the coordinator
+ * invalidates the Engram projection first). Same confirm gate as profile-entry delete.
+ */
+async function deleteCaptured(entryId: string): Promise<void> {
+  if (!window.confirm(t('prompt.settingCapture.confirmDelete'))) return;
+  const result = await captured.coordinator.remove(entryId);
+  reportMutation(result);
+  if (result.ok && selectedEntryId.value === entryId) {
+    selectedEntryId.value = captured.capturedBook.value?.entries[0]?.id ?? '';
+  }
 }
 
 async function restoreCaptured(entryId: string): Promise<void> {
@@ -231,7 +252,21 @@ async function loadBooks() {
   if (!worldBookStorage) return;
   const pid = engineState.activeProfileId;
   if (!pid) return;
-  books.value = await worldBookStorage.loadWorldBooks(pid);
+  try {
+    books.value = await worldBookStorage.loadWorldBooks(pid);
+  } catch (err) {
+    // An unreadable store must not masquerade as "no books" — that is exactly how a
+    // player concludes their world book was lost.
+    console.error('[WorldBook] load failed:', err);
+    eventBus.emit('ui:toast', {
+      type: 'error',
+      i18nKey: 'prompt.worldbook.loadFailed',
+      message: t('prompt.worldbook.loadFailed'),
+      id: 'wb-load-failed',
+      duration: 8000,
+    });
+    return;
+  }
   if (!selectedBookId.value) {
     const first = allBooks.value[0];
     if (first) {
@@ -262,12 +297,44 @@ function scheduleSave(book: WorldBook) {
   }, 300));
 }
 
-async function persistBook(book: WorldBook) {
+/**
+ * Write one profile book to IndexedDB.
+ *
+ * A failed write MUST be loud: the panel keeps showing the edited text either way, so a
+ * swallowed error is indistinguishable from success until the next reload quietly shows
+ * the old version (2026-09-09 "世界书丢失" report). Likewise a missing active profile
+ * (no key to write under) is reported, not silently skipped.
+ */
+async function persistBook(book: WorldBook): Promise<void> {
   if (!worldBookStorage) return;
   const pid = engineState.activeProfileId;
-  if (!pid) return;
+  if (!pid) {
+    unsavedBookIds.value.add(book.id);
+    eventBus.emit('ui:toast', {
+      type: 'error',
+      i18nKey: 'prompt.worldbook.saveNoProfile',
+      message: t('prompt.worldbook.saveNoProfile'),
+      id: 'wb-save-no-profile',
+      duration: 6000,
+    });
+    return;
+  }
   book.updatedAt = Date.now();
-  await worldBookStorage.saveWorldBook(pid, book);
+  try {
+    await worldBookStorage.saveWorldBook(pid, book);
+  } catch (err) {
+    console.error('[WorldBook] persist failed:', err);
+    unsavedBookIds.value.add(book.id);
+    eventBus.emit('ui:toast', {
+      type: 'error',
+      i18nKey: 'prompt.worldbook.saveFailed',
+      message: t('prompt.worldbook.saveFailed'),
+      id: 'wb-save-failed',
+      duration: 8000,
+    });
+    return;
+  }
+  unsavedBookIds.value.delete(book.id);
   notifyEngine();
 }
 
@@ -563,6 +630,9 @@ const injectionModeOptions = computed(() => [
                 @input="!isCaptured(book) && updateBookTitle(book, ($event.target as HTMLInputElement).value)"
                 @click.stop
               />
+              <span v-if="unsavedBookIds.has(book.id)" class="wb-unsaved-badge">
+                {{ $t('prompt.worldbook.unsaved') }}
+              </span>
               <span v-if="isCaptured(book)" class="wb-auto-badge">
                 {{ $t('prompt.worldbook.capturedBadge') }}
               </span>
@@ -699,8 +769,15 @@ const injectionModeOptions = computed(() => [
               : toggleEntryEnabled(selectedEntry!)"
             :label="$t('prompt.worldbook.toggleEntryEnabled')"
           />
-          <!-- Captured entries are never hard-deleted: undo keeps the row so the player
-               can restore it, and so the Engram bridge can find the edge to invalidate. -->
+          <!-- A failed IndexedDB write keeps the text on screen but not on disk; the book
+               card shows 未保存 until a write succeeds, and this retries without another edit. -->
+          <AgaButton
+            v-if="!selectedIsCaptured && selectedBook && unsavedBookIds.has(selectedBook.id)"
+            variant="ghost" size="sm"
+            @click="persistBook(selectedBook!)"
+          >{{ $t('prompt.worldbook.retrySave') }}</AgaButton>
+          <!-- 撤回 keeps the row (restorable; the Engram edge is invalidated by id) — the
+               soft path. 删除 below is the hard path, added 2026-09-09. -->
           <template v-if="selectedIsCaptured">
             <AgaButton
               v-if="selectedCapture?.status === 'retracted'"
@@ -709,9 +786,15 @@ const injectionModeOptions = computed(() => [
             >{{ $t('prompt.settingCapture.restore') }}</AgaButton>
             <AgaButton
               v-else
-              variant="danger" size="sm"
+              variant="ghost" size="sm"
               @click="retractCaptured(selectedEntry!.id)"
             >{{ $t('prompt.settingCapture.retract') }}</AgaButton>
+            <!-- Retract is reversible (ghost); delete is not (danger). Without a real delete
+                 a manual add the player regretted could only ever become a "已撤回" ghost. -->
+            <AgaButton
+              variant="danger" size="sm"
+              @click="deleteCaptured(selectedEntry!.id)"
+            >{{ $t('prompt.settingCapture.delete') }}</AgaButton>
           </template>
           <AgaButton
             v-else
@@ -1178,6 +1261,16 @@ const injectionModeOptions = computed(() => [
   color: var(--color-text-muted);
 }
 
+.wb-unsaved-badge {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  background: color-mix(in oklch, var(--color-danger) 14%, transparent);
+  color: var(--color-danger);
+}
+
 .wb-retracted-badge {
   flex-shrink: 0;
   padding: 1px 6px;
@@ -1291,13 +1384,24 @@ const injectionModeOptions = computed(() => [
   color: var(--color-text-muted);
 }
 
+/* Same box recipe as .wb-content-editor — a bare textarea here rendered with browser
+   defaults (white box, black text) inside the dark panel. */
 .wb-manual-draft__input {
   width: 100%;
+  min-height: 84px;
+  padding: 10px;
+  box-sizing: border-box;
   resize: vertical;
   font-family: inherit;
   font-size: 0.85rem;
   line-height: 1.6;
+  color: var(--color-text);
+  background: var(--color-surface-input);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  outline: none;
 }
+.wb-manual-draft__input:focus { border-color: var(--color-sage-400); }
 
 .wb-manual-draft__actions {
   display: flex;

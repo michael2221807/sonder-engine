@@ -413,9 +413,11 @@ export class BackupService {
         }
         allBooks.push(...books);
       }
-      if (allBooks.length > 0) {
-        worldBooksExport = { version: 1, exportedAt: new Date().toISOString(), books: allBooks };
-      }
+      // Always emit the section, even when empty: an explicit empty list means "this
+      // machine has no hand-written books" and the importer replaces accordingly; an
+      // ABSENT section means "unknown / older exporter" and the importer keeps the local
+      // books instead of wiping them (2026-09-09 data-loss fix).
+      worldBooksExport = { version: 1, exportedAt: new Date().toISOString(), books: allBooks };
       // Builtin overrides are per-pack; use the first pack found in configs or skip
       const packIds = Object.keys(customPresets);
       if (packIds.length > 0) {
@@ -570,8 +572,10 @@ export class BackupService {
       /* ── 4. 恢复用户自定义创角预设（2026-04-14 新增） ── */
       await this.restoreCustomPresets(bundle.customPresets);
 
-      /* ── 4c. 恢复世界书（2026-05-19 新增） ── */
-      await this.restoreWorldBooks(bundle);
+      /* ── 4c. 恢复世界书（2026-05-19 新增；2026-09-09 缺段保留） ──
+         保留计数取自导入前快照：来包没有该段时 store 原样未动，快照里的书就是被保留的书
+         （含来包已不再携带的档案——它们的书留在库里，日后同 id 档案回来仍能用）。 */
+      await this.restoreWorldBooks(bundle, snapshot.worldBooksSnapshot?.books.length ?? 0);
 
       /* ── 5. 恢复 activeProfile 根指针 ── */
       if (bundle.activeProfile) {
@@ -744,14 +748,20 @@ export class BackupService {
       }
       await this.restoreVectors(vectors);
 
-      /* ── 4. 世界书整组替换（档案级） ── */
+      /* ── 4. 世界书整组替换（档案级）—— 仅当来包携带 worldBooks 段。
+         来包没有该段（旧导出器 / 手改包）视为"未知"而非"零本"：保留本地手写世界书并提示。
+         手写世界书是玩家最刻意的内容，绝不能因为一个缺失字段被静默抹掉（2026-09-09 数据丢失修复）。 ── */
       if (this.worldBookStorage) {
-        const existingBooks = await this.worldBookStorage.loadWorldBooks(profileId);
-        for (const b of existingBooks) {
-          await this.worldBookStorage.deleteWorldBook(profileId, b.id);
-        }
-        for (const book of bundle.worldBooks?.books ?? []) {
-          await this.worldBookStorage.saveWorldBook(profileId, book);
+        if (bundleCarriesWorldBooks(bundle)) {
+          const existingBooks = await this.worldBookStorage.loadWorldBooks(profileId);
+          for (const b of existingBooks) {
+            await this.worldBookStorage.deleteWorldBook(profileId, b.id);
+          }
+          for (const book of bundle.worldBooks.books) {
+            await this.worldBookStorage.saveWorldBook(profileId, book);
+          }
+        } else {
+          this.notifyPreservedWorldBooks(snapshot.worldBooks.length);
         }
       }
 
@@ -1241,11 +1251,19 @@ export class BackupService {
     return { assets: exported, integrity };
   }
 
-  /** 恢复世界书数据 — 从 BackupBundle 的 worldBooks 字段恢复 */
-  private async restoreWorldBooks(bundle: BackupBundle): Promise<void> {
+  /**
+   * 恢复世界书数据 — 从 BackupBundle 的 worldBooks 字段恢复。
+   *
+   * `wipeAll` 不再清空 `worldbooks` store：只有来包携带 worldBooks 段时才"清空后按包恢复"
+   * （与来源机器一模一样）；来包没有该段则保留本地手写世界书并提示（2026-09-09 数据丢失修复）。
+   */
+  private async restoreWorldBooks(bundle: BackupBundle, preservedLocalBooks: number): Promise<void> {
     if (!this.worldBookStorage) return;
-    if (bundle.worldBooks?.books && Array.isArray(bundle.worldBooks.books)) {
+    if (bundleCarriesWorldBooks(bundle)) {
+      // 不吞错：清空后半途失败必须让 importFullReplace 的外层 catch 触发快照回滚，否则
+      // worldbooks store 会停在"已清空、只恢复了一半"却对外报告导入成功（review 2026-09-09）。
       try {
+        await this.worldBookStorage.clearWorldBooks();
         const profileIds = Object.keys(bundle.profiles ?? {});
         for (const book of bundle.worldBooks.books) {
           const pid = (book as unknown as Record<string, unknown>)['_exportProfileId'] as string
@@ -1253,8 +1271,10 @@ export class BackupService {
           await this.worldBookStorage.saveWorldBook(pid, book);
         }
       } catch (err) {
-        console.warn('[BackupService] restoreWorldBooks failed:', err);
+        throw new Error(`世界书恢复失败：${extractErrorMessage(err)}`);
       }
+    } else {
+      this.notifyPreservedWorldBooks(preservedLocalBooks);
     }
     if (bundle.builtinPromptOverrides?.entries && Array.isArray(bundle.builtinPromptOverrides.entries)) {
       try {
@@ -1368,9 +1388,11 @@ export class BackupService {
     //    （历史：wipeAll 曾在此 clear()，一旦后续 restore 失败，captureCurrentState
     //    没有快照图片缓存 → 回滚也补不回图片 → 图片永久丢失。）
 
-    // 5. 清空世界书 IDB (aga-worldbook)
+    // 5. 清空世界书 IDB (aga-worldbook) 里的内置提示词覆盖 + 预设组。
+    //    `worldbooks` store 不在此清：由 restoreWorldBooks 在来包确实携带 worldBooks 段时
+    //    清空后恢复；来包没有该段则保留本地手写世界书（2026-09-09 数据丢失修复）。
     if (this.worldBookStorage) {
-      try { await this.worldBookStorage.clearAll(); } catch { /* best effort */ }
+      try { await this.worldBookStorage.clearNonWorldBookStores(); } catch { /* best effort */ }
     }
 
     // 6. 重置 ProfileManager 内存缓存（防止后续 getRoot 返回 stale 数据）
@@ -1553,17 +1575,19 @@ export class BackupService {
     // _exportProfileId 标记与全量导出一致，restore 侧按其归位。
     let worldBooksExport: BackupBundle['worldBooks'];
     if (this.worldBookStorage) {
+      // 读失败必须让导出整体失败（与 buildFullBundle 一致）：静默产出一个"缺段"包会让云端
+      // 副本悄悄没有世界书——正是本次修复要堵的形态（review 2026-09-09）。
+      let books: import('../prompt/world-book').WorldBook[];
       try {
-        const books = await this.worldBookStorage.loadWorldBooks(profileId);
-        for (const b of books) {
-          (b as unknown as Record<string, unknown>)['_exportProfileId'] = profileId;
-        }
-        if (books.length > 0) {
-          worldBooksExport = { version: 1, exportedAt: new Date().toISOString(), books };
-        }
+        books = await this.worldBookStorage.loadWorldBooks(profileId);
       } catch (err) {
-        console.warn('[BackupService] buildProfileBundle worldBooks failed:', err);
+        throw new Error(`导出世界书失败：${extractErrorMessage(err)}`);
       }
+      for (const b of books) {
+        (b as unknown as Record<string, unknown>)['_exportProfileId'] = profileId;
+      }
+      // Explicit even when empty — see buildFullBundle (absent = keep local on import).
+      worldBooksExport = { version: 1, exportedAt: new Date().toISOString(), books };
     }
 
     const bundle: BackupBundle = {
@@ -1586,6 +1610,24 @@ export class BackupService {
       type: 'application/json',
     });
     return { blob, imageIntegrity };
+  }
+
+  /**
+   * 来包没有 worldBooks 段 ⇒ 本地世界书原样保留。若确实保留了东西就告诉玩家：
+   * 沉默会掩盖"导入副本与本机现在不一致"这个事实。
+   *
+   * `kept` 由调用方从导入前快照取（全量：所有本地档案的书；档案级：该档案的书），
+   * 而不是回头再读 store 按来包档案数——来包里已没有的档案，它的书同样是被保留的。
+   */
+  private notifyPreservedWorldBooks(kept: number): void {
+    if (kept === 0) return;
+    eventBus.emit('ui:toast', {
+      type: 'warning',
+      i18nKey: 'engine.toast.importPreservedWorldBooks',
+      message: '导入的备份不含世界书数据，已保留本地现有的角色档案世界书以防丢失。',
+      id: 'import-preserved-worldbooks',
+      duration: 9000,
+    });
   }
 
   /** 本地全部档案 ID（供云端插槽迁移/自动同步枚举，避免上层直接依赖 ProfileManager）。 */
@@ -1799,6 +1841,19 @@ function hasVectorContent(data: {
     Object.keys(data.eventVectors).length > 0 ||
     Object.keys(data.entityVectors).length > 0
   );
+}
+
+/**
+ * True when the bundle carries an explicit world-book section (possibly an empty list).
+ *
+ * Absent section ⇒ the importer must NOT touch local hand-written books: exporters before
+ * 2026-09-09 omitted the key whenever a machine had zero books, so "absent" cannot be
+ * told apart from "older format" — and the safe reading of an unknown is "keep".
+ */
+function bundleCarriesWorldBooks(
+  bundle: BackupBundle,
+): bundle is BackupBundle & { worldBooks: import('../prompt/world-book').WorldBookExportData } {
+  return !!bundle.worldBooks && Array.isArray(bundle.worldBooks.books);
 }
 
 /**

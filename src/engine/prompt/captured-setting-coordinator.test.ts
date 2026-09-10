@@ -122,6 +122,43 @@ describe('CapturedSettingCoordinator — the three things a direct mutation woul
   });
 });
 
+describe('CapturedSettingCoordinator — hard delete', () => {
+  it('remove drops the row, invalidates the Engram edge by id, AND persists', async () => {
+    const { sm } = createMockStateManager({});
+    const [a, b] = seed(sm, 2);
+    const engram = makeBridge();
+    const { coordinator, persist } = makeCoordinator(sm, { engram });
+
+    const r = await coordinator.remove(a);
+
+    expect(r.ok).toBe(true);
+    expect(entry(sm, a)).toBeUndefined();
+    expect(entry(sm, b)).toBeDefined();
+    expect(engram.invalidate).toHaveBeenCalledWith(a);
+    expect(persist).toHaveBeenCalledTimes(1);
+  });
+
+  it('remove of an unknown id reports not_found and touches nothing', async () => {
+    const { sm } = createMockStateManager({});
+    seed(sm);
+    const { coordinator, persist } = makeCoordinator(sm);
+    const r = await coordinator.remove('ghost');
+    expect(r.ok).toBe(false);
+    expect(r.reason).toBe('not_found');
+    expect(persist).not.toHaveBeenCalled();
+  });
+
+  it('a failed persist puts the deleted row back', async () => {
+    const { sm } = createMockStateManager({});
+    const [id] = seed(sm);
+    const { coordinator } = makeCoordinator(sm, { persist: () => { throw new Error('disk full'); } });
+    const r = await coordinator.remove(id);
+    expect(r.ok).toBe(false);
+    expect(r.reason).toBe('persist_failed');
+    expect(entry(sm, id)).toBeDefined();
+  });
+});
+
 describe('CapturedSettingCoordinator — edit semantics decide the graph action', () => {
   it('editing the CONTENT re-projects (the setting now asserts something else)', async () => {
     const { sm } = createMockStateManager({});

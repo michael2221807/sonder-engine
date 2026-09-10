@@ -291,6 +291,8 @@
   "prompt.settingCapture.pinHint": "像「这个世界有两个月亮」这种没有明显关键词的设定，勾上以后每回合都会带给 AI。",
   "prompt.settingCapture.retract": "撤回",
   "prompt.settingCapture.restore": "恢复",
+  "prompt.settingCapture.delete": "删除",
+  "prompt.settingCapture.confirmDelete": "彻底删除这条设定？删除后不会再出现在列表里，也无法恢复。",
   "prompt.settingCapture.disable": "暂时停用",
   "prompt.settingCapture.enableEntry": "重新启用",
 
@@ -320,6 +322,11 @@
   "prompt.settingCapture.engram.retractedHint": "这条设定已被撤回，图谱里的连线也已失效。恢复它就会重新建立。",
 
   "prompt.worldbook.noProfileBooks": "暂无角色档案世界书，点上方「新建世界书」创建",
+  "prompt.worldbook.saveFailed": "世界书没能写入本地存储，刚才的修改可能没有保存。请重试，或先导出一份备份。",
+  "prompt.worldbook.saveNoProfile": "当前没有激活的角色档案，世界书无法保存。请先进入一个存档再编辑。",
+  "prompt.worldbook.loadFailed": "世界书读取失败：本地存储暂时不可用，条目并未删除。请刷新重试。",
+  "prompt.worldbook.unsaved": "未保存",
+  "prompt.worldbook.retrySave": "重试保存",
   "prompt.worldbook.capturedBookTitle": "自动设定集",
   "prompt.worldbook.capturedEmptyHint": "在主面板输入时用「设定」按钮标记的内容，会自动出现在这里。也可以直接手动添加。",
 

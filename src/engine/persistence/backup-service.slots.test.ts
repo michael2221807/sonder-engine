@@ -128,7 +128,12 @@ class FakeWorldBookStorage {
   overrides = new Map<string, unknown[]>();
   /** 仅对 id='boom' 的书抛错——让导入第 4 步失败，同时不妨碍回滚路径写回快照书。 */
   failSaveWorldBook = false;
-  async loadWorldBooks(pid: string) { return structuredClone(this.books.get(pid) ?? []); }
+  /** 读失败：档案导出必须整体失败，而不是静默产出"缺段"包。 */
+  failLoadWorldBooks = false;
+  async loadWorldBooks(pid: string) {
+    if (this.failLoadWorldBooks) throw new Error('load boom');
+    return structuredClone(this.books.get(pid) ?? []);
+  }
   async saveWorldBook(pid: string, book: FakeBook) {
     if (this.failSaveWorldBook && book.id === 'boom') throw new Error('worldbook boom');
     const arr = this.books.get(pid) ?? [];
@@ -140,6 +145,8 @@ class FakeWorldBookStorage {
     this.books.set(pid, (this.books.get(pid) ?? []).filter((b) => b.id !== id));
   }
   async clearAll() { this.books.clear(); this.overrides.clear(); }
+  async clearWorldBooks() { this.books.clear(); }
+  async clearNonWorldBookStores() { this.overrides.clear(); }
   async loadAllBuiltinOverrides(pid: string) { return structuredClone(this.overrides.get(pid) ?? []); }
   async saveBuiltinOverride(pid: string, entry: unknown) {
     this.overrides.set(pid, [...(this.overrides.get(pid) ?? []), structuredClone(entry)]);
@@ -264,6 +271,22 @@ describe('backup-service save-slot primitives', () => {
       // p2 的数据一概不出现
       expect(JSON.stringify(bundle)).not.toContain('save_p2');
       expect(bundle.saves['p2/s1']).toBeUndefined();
+    });
+
+    it('emits an EXPLICIT empty worldBooks section when the profile has no books (2026-09-09)', async () => {
+      // Absent vs empty must stay distinguishable: the importer keeps local books when the
+      // section is absent, and only an explicit empty list may clear them.
+      await seedTwoProfiles();
+      const { blob } = await service.exportProfileForSync('p1');
+      const bundle = JSON.parse(await blob.text()) as BackupBundle;
+      expect(bundle.worldBooks).toBeDefined();
+      expect(bundle.worldBooks?.books).toEqual([]);
+    });
+
+    it('fails the whole export when world books cannot be read — never a silent "absent section" bundle', async () => {
+      await seedTwoProfiles();
+      worldBooks.failLoadWorldBooks = true;
+      await expect(service.exportProfileForSync('p1')).rejects.toThrow('导出世界书失败');
     });
 
     it('throws for a nonexistent profile', async () => {
@@ -425,6 +448,70 @@ describe('backup-service save-slot primitives', () => {
     });
   });
 
+  // ── importAll（full）× 世界书（2026-09-09 数据丢失修复）──
+
+  describe('importAll (full) — world books', () => {
+    function fullBundle(opts?: { worldBooks?: BackupBundle['worldBooks'] }): BackupBundle {
+      return {
+        ...bundleBase(),
+        bundleType: 'full',
+        profiles: { p1: makeMeta('p1', ['s1']) },
+        saves: { 'p1/s1': makeSaveTree('imgA') },
+        vectors: {},
+        configs: { overlays: [] },
+        prompts: { entries: [] },
+        engineSettings: {},
+        worldBooks: opts?.worldBooks,
+      };
+    }
+
+    it('exportAll always carries the worldBooks section, even with zero books', async () => {
+      await seedTwoProfiles();
+      const blob = await service.exportAll();
+      const bundle = JSON.parse(await blob.text()) as BackupBundle;
+      expect(bundle.worldBooks?.books).toEqual([]);
+    });
+
+    it('keeps local world books when the full bundle carries NO worldBooks section', async () => {
+      await seedTwoProfiles();
+      worldBooks.books.set('p1', [{ id: 'hand-written' }]);
+      await service.importAll(toBlob(fullBundle()));
+      expect((await worldBooks.loadWorldBooks('p1')).map((b) => b.id)).toEqual(['hand-written']);
+      expect(emitted.some((e) => e.event === 'ui:toast'
+        && (e.payload as { i18nKey?: string }).i18nKey === 'engine.toast.importPreservedWorldBooks')).toBe(true);
+    });
+
+    it('replaces local world books exactly when the section is present (explicit empty clears)', async () => {
+      await seedTwoProfiles();
+      worldBooks.books.set('p1', [{ id: 'hand-written' }]);
+      await service.importAll(toBlob(fullBundle({ worldBooks: { version: 1, exportedAt: 'x', books: [] } })));
+      expect(await worldBooks.loadWorldBooks('p1')).toEqual([]);
+      await service.importAll(toBlob(fullBundle({
+        worldBooks: { version: 1, exportedAt: 'x', books: [{ id: 'from-bundle', _exportProfileId: 'p1' } as never] },
+      })));
+      expect((await worldBooks.loadWorldBooks('p1')).map((b) => b.id)).toEqual(['from-bundle']);
+    });
+
+    it('a failing world-book restore aborts the import and rolls the store back — never half-restored', async () => {
+      await seedTwoProfiles();
+      worldBooks.books.set('p1', [{ id: 'hand-written' }]);
+      worldBooks.failSaveWorldBook = true; // only id='boom' throws; the rollback re-save must still succeed
+      await expect(service.importAll(toBlob(fullBundle({
+        worldBooks: { version: 1, exportedAt: 'x', books: [{ id: 'boom', _exportProfileId: 'p1' } as never] },
+      })))).rejects.toThrow(/回滚/);
+      expect((await worldBooks.loadWorldBooks('p1')).map((b) => b.id)).toEqual(['hand-written']);
+    });
+
+    it('still reports preserved books when the only book belongs to a profile the full bundle drops', async () => {
+      await seedTwoProfiles();
+      worldBooks.books.set('p2', [{ id: 'p2-only' }]); // fullBundle() carries p1 only
+      await service.importAll(toBlob(fullBundle()));
+      expect(emitted.some((e) => e.event === 'ui:toast'
+        && (e.payload as { i18nKey?: string }).i18nKey === 'engine.toast.importPreservedWorldBooks')).toBe(true);
+      expect((await worldBooks.loadWorldBooks('p2')).map((b) => b.id)).toEqual(['p2-only']);
+    });
+  });
+
   // ── importProfileReplace ──
 
   describe('importProfileReplace', () => {
@@ -482,6 +569,30 @@ describe('backup-service save-slot primitives', () => {
       await service.importProfileReplace(toBlob(bundle));
       expect((await worldBooks.loadWorldBooks('p1')).map((b) => b.id)).toEqual(['new1']);
       expect((await worldBooks.loadWorldBooks('p2')).map((b) => b.id)).toEqual(['other']);
+    });
+
+    it('keeps local world books (and says so) when the bundle carries NO worldBooks section (2026-09-09)', async () => {
+      await seedTwoProfiles();
+      worldBooks.books.set('p1', [{ id: 'hand-written' }]);
+      await service.importProfileReplace(toBlob(p1ReplaceBundle())); // worldBooks: undefined → key absent
+      expect((await worldBooks.loadWorldBooks('p1')).map((b) => b.id)).toEqual(['hand-written']);
+      const toast = emitted.find((e) => e.event === 'ui:toast'
+        && (e.payload as { i18nKey?: string }).i18nKey === 'engine.toast.importPreservedWorldBooks');
+      expect(toast).toBeDefined();
+      // Same shape as the importPreservedImages precedent: stable id + long duration.
+      expect((toast!.payload as { id?: string; duration?: number; type?: string }))
+        .toMatchObject({ id: 'import-preserved-worldbooks', duration: 9000, type: 'warning' });
+    });
+
+    it('an EXPLICIT empty worldBooks section does clear the local books — and stays silent', async () => {
+      await seedTwoProfiles();
+      worldBooks.books.set('p1', [{ id: 'hand-written' }]);
+      await service.importProfileReplace(toBlob(p1ReplaceBundle({
+        worldBooks: { version: 1, exportedAt: 'x', books: [] },
+      })));
+      expect(await worldBooks.loadWorldBooks('p1')).toEqual([]);
+      expect(emitted.some((e) => e.event === 'ui:toast'
+        && (e.payload as { i18nKey?: string }).i18nKey === 'engine.toast.importPreservedWorldBooks')).toBe(false);
     });
 
     it('clears stale local vectors for slots the bundle carries no vectors for', async () => {

@@ -30,6 +30,7 @@ import {
   findCapturedBook,
   MAX_ACTIVE_CAPTURED_ENTRIES,
   pinCapturedEntry,
+  removeCapturedEntry,
   restoreCapturedEntry,
   retractCapturedEntry,
   upsertCapturedBook,
@@ -158,6 +159,16 @@ export class CapturedSettingCoordinator {
   /** Undo a capture (toast button or panel). Never deletes — the row stays restorable. */
   async retract(entryId: string): Promise<CapturedMutationResult> {
     return this.apply(entryId, (book) => ({ book: retractCapturedEntry(book, entryId) }), 'invalidate');
+  }
+
+  /**
+   * Permanently delete an entry (a manual add the player regrets, a capture that was never
+   * right). Unlike {@link retract} the row is gone for good, so the Engram edge is
+   * invalidated by id while the id is still known, and the persisted book no longer
+   * carries the row — the panel can offer this without leaving "已撤回" ghosts behind.
+   */
+  async remove(entryId: string): Promise<CapturedMutationResult> {
+    return this.apply(entryId, (book) => ({ book: removeCapturedEntry(book, entryId) }), 'invalidate');
   }
 
   /** Bring a retracted entry back. Subject to the same capacity cap as a fresh capture. */
