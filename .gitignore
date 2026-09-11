@@ -48,9 +48,10 @@ tools/vscode-coagent/
 # MUST be written under .playwright-mcp/ — never the repo root. See /e2e skill §7
 # "Artifact hygiene". Bare-filename screenshots at the root stay un-ignored on purpose
 # (so a stray one is visible in git status and gets cleaned up, not silently buried).
+# NOTE: e2e/smoke.spec.ts is the CI @smoke gate and MUST be tracked. It was ignored here from
+# 2026-06-11 to 2026-09-11, which left the e2e-smoke workflow with zero tests on every run.
 e2e/screenshots/
 e2e/test-results/
-e2e/smoke.spec.ts
 playwright-report/
 .playwright-mcp/
 
