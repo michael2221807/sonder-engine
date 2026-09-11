@@ -403,6 +403,21 @@ describe('upload — error handling', () => {
 // ─── upload: degraded-overwrite guardrail ───
 
 describe('upload — degraded-overwrite guardrail', () => {
+  it('blocks when the exported trees record world books but the export carries none (2026-09-10)', async () => {
+    const backup = createMockBackup(undefined, { referencedAssets: 2, exportedAssets: 2 });
+    const healthy = await backup.exportForSync();
+    backup.exportForSync.mockResolvedValue({
+      ...healthy,
+      worldBookIntegrity: { expectedBooks: 2, exportedBooks: 0, degradedProfiles: ['p1'] },
+    });
+    const sync = new GitHubSyncService(backup as never);
+    const err = await sync.upload().catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(DegradedUploadError);
+    expect((err as DegradedUploadError).detail).toMatchObject({
+      missingAssets: 0, worldBooksExpected: 2, worldBooksExported: 0,
+    });
+  });
+
   it('blocks (throws DegradedUploadError) on a TOTAL image-cache wipe (references 5, exported 0)', async () => {
     const backup = createMockBackup(undefined, { referencedAssets: 5, exportedAssets: 0 });
     const sync = new GitHubSyncService(backup as never);

@@ -250,5 +250,15 @@
   "mainGame.settingCapture.undo": "撤回",
   "mainGame.settingCapture.view": "查看",
   "mainGame.settingCapture.addManually": "手动添加",
+  "mainGame.saveHealth.title": "存档自检未通过",
+  "mainGame.saveHealth.lead": "第 {round} 回合生成前检查发现，这份存档依赖的本地数据有缺失。继续推进会让后面的回合建立在残缺的基础上。",
+  "mainGame.saveHealth.images": "图片：存档引用的 {total} 张图片中有 {missing} 张在本地找不到。",
+  "mainGame.saveHealth.worldBooksUnreadable": "世界书：本地世界书库无法读取。",
+  "mainGame.saveHealth.worldBooksLost": "世界书：存档记录着 {expected} 本角色档案世界书，本地现在一本都没有。",
+  "mainGame.saveHealth.vectorsLost": "记忆向量：{events} 条记忆已向量化，本地向量库却是空的。",
+  "mainGame.saveHealth.vectorsUnreadable": "记忆向量：本地向量库无法读取。",
+  "mainGame.saveHealth.hint": "建议先去存档管理，从云端找回缺失的数据再继续。选择继续，本次会话不再提醒；但在数据回来之前自动云同步会暂停，手动上传会要求二次确认，以免覆盖云端。",
+  "mainGame.saveHealth.goToSave": "去存档管理",
+  "mainGame.saveHealth.continue": "我知道了，继续生成",
   "mainGame.settingCapture.undone": "已撤回"
 }

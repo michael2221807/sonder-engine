@@ -18,6 +18,7 @@
  */
 
 import type { BackupService, ExportImageIntegrity, ProfileDisplayMeta } from '../persistence/backup-service';
+import type { WorldBookIntegrity } from '../persistence/save-health-baseline';
 import { packChunks, unpack, sha256String, sha256Blob, type ChunkManifest } from './chunked-bundle-packer';
 import { getDeviceStamp } from './device-identity';
 
@@ -70,6 +71,13 @@ export interface DegradedUploadDetail {
   exportedAssets: number;
   /** referencedAssets − exportedAssets: images that would be MISSING from the upload */
   missingAssets: number;
+  /**
+   * Present only when the world-book library is degraded (2026-09-10): the exported save
+   * trees record this many profile world books, but the export carries none — the local
+   * `aga-worldbook` store was lost, and uploading would erase the cloud's copy.
+   */
+  worldBooksExpected?: number;
+  worldBooksExported?: number;
 }
 
 /**
@@ -85,6 +93,36 @@ export class DegradedUploadError extends Error {
     super('degraded-upload-blocked');
     this.name = 'DegradedUploadError';
   }
+}
+
+/**
+ * The single degraded-upload gate for both upload pipelines (v2 whole-repo, v3 slots).
+ *
+ * Runs BEFORE any cloud file is created/overwritten, so a block leaves the cloud save
+ * fully intact. Blocks when the export references MORE image assets than it could
+ * produce (image cache evicted, totally or partially), OR when the exported trees record
+ * profile world books but the export carries none (world-book store lost — the
+ * 2026-09-09 "先丢再上传" shape). An internally-consistent export (a legitimately
+ * imageless / bookless save) is never blocked, so deliberate deletions upload freely.
+ * `force` (explicit second confirmation in the UI) bypasses both checks.
+ */
+function assertUploadNotDegraded(
+  image: ExportImageIntegrity,
+  worldBooks: WorldBookIntegrity | undefined,
+  force: boolean | undefined,
+): void {
+  if (force) return;
+  const imagesDegraded = image.referencedAssets > image.exportedAssets;
+  const booksDegraded = !!worldBooks && worldBooks.degradedProfiles.length > 0;
+  if (!imagesDegraded && !booksDegraded) return;
+  throw new DegradedUploadError({
+    referencedAssets: image.referencedAssets,
+    exportedAssets: image.exportedAssets,
+    missingAssets: Math.max(0, image.referencedAssets - image.exportedAssets),
+    ...(booksDegraded && worldBooks
+      ? { worldBooksExpected: worldBooks.expectedBooks, worldBooksExported: worldBooks.exportedBooks }
+      : {}),
+  });
 }
 
 /** Cloud-save summary returned by {@link GitHubSyncService.getCloudInfo}. */
@@ -304,11 +342,12 @@ export class GitHubSyncService {
     emit('uploading', '正在导出存档…');
     let exportBlob: Blob;
     let imageIntegrity: ExportImageIntegrity;
+    let worldBookIntegrity: WorldBookIntegrity | undefined;
     try {
       // Atomic export: the blob AND its image integrity come from the SAME call, so
       // the guard evaluates exactly this export (no shared-field TOCTOU with a
       // concurrent export).
-      ({ blob: exportBlob, imageIntegrity } = await this.backup.exportForSync());
+      ({ blob: exportBlob, imageIntegrity, worldBookIntegrity } = await this.backup.exportForSync());
     } catch (err) {
       throw stageError('导出存档', err);
     }
@@ -322,13 +361,7 @@ export class GitHubSyncService {
     // (21→15). An internally-consistent export (referenced === exported, incl. a
     // legitimately imageless save) is never blocked, so deliberate profile/image
     // deletion uploads freely without a false alarm.
-    if (!opts?.force && imageIntegrity.referencedAssets > imageIntegrity.exportedAssets) {
-      throw new DegradedUploadError({
-        referencedAssets: imageIntegrity.referencedAssets,
-        exportedAssets: imageIntegrity.exportedAssets,
-        missingAssets: imageIntegrity.referencedAssets - imageIntegrity.exportedAssets,
-      });
-    }
+    assertUploadNotDegraded(imageIntegrity, worldBookIntegrity, opts?.force);
 
     // Batch-fetch the existing v2/ listing up front (needed for the manifest.json
     // SHA on the in-place manifest write, and for cleaning up old chunks after the
@@ -719,20 +752,15 @@ export class GitHubSyncService {
     emit('uploading', '正在导出存档…');
     let blob: Blob;
     let imageIntegrity: ExportImageIntegrity;
+    let worldBookIntegrity: WorldBookIntegrity | undefined;
     let displayMeta: ProfileDisplayMeta;
     try {
-      ({ blob, imageIntegrity, displayMeta } = await this.backup.exportProfileForSync(profileId));
+      ({ blob, imageIntegrity, worldBookIntegrity, displayMeta } = await this.backup.exportProfileForSync(profileId));
     } catch (err) {
       throw stageError('导出存档', err);
     }
 
-    if (!opts?.force && imageIntegrity.referencedAssets > imageIntegrity.exportedAssets) {
-      throw new DegradedUploadError({
-        referencedAssets: imageIntegrity.referencedAssets,
-        exportedAssets: imageIntegrity.exportedAssets,
-        missingAssets: imageIntegrity.referencedAssets - imageIntegrity.exportedAssets,
-      });
-    }
+    assertUploadNotDegraded(imageIntegrity, worldBookIntegrity, opts?.force);
 
     const manifest = await this.uploadBundleToDir(
       owner, repo, `${SLOTS_DIR}/${profileId}`, blob, emit,

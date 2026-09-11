@@ -10,6 +10,7 @@ import { isSTLorebook, convertSTLorebook } from '@/engine/prompt/st-lorebook-con
 import { useRoute, useRouter } from 'vue-router';
 import { isCapturedBook } from '@/engine/prompt/world-book';
 import { useCapturedSettings } from '@/ui/composables/useCapturedSettings';
+import { useSaveHealthGate } from '@/ui/composables/useSaveHealthGate';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
@@ -48,6 +49,8 @@ const SHAPE_OPTIONS: Array<{ value: WorldBookEntryShape; labelKey: string }> = [
 // ─── State ─────────────────────────────────────────────────
 
 const books = ref<WorldBook[]>([]);
+/** Profile the current `books` list was loaded for — baseline writes are tagged with it. */
+let booksProfileId: string | null = null;
 /**
  * Profile books whose last IndexedDB write failed (or had no profile to write under).
  * The edited text stays on screen; this keeps a visible "未保存" marker on the book and a
@@ -67,6 +70,9 @@ const newEntryShape = ref<WorldBookEntryShape>('normal');
 // they are all "world book", but every write has to take the right road — which is what
 // `isCaptured()` below decides.
 const captured = useCapturedSettings();
+// Save-health baseline: every successful profile-book write / delete / import records the
+// ids now present into the save tree, so a deliberate edit never reads as a lost store.
+const saveHealthGate = useSaveHealthGate();
 const route = useRoute();
 const router = useRouter();
 
@@ -254,6 +260,7 @@ async function loadBooks() {
   if (!pid) return;
   try {
     books.value = await worldBookStorage.loadWorldBooks(pid);
+    booksProfileId = pid;
   } catch (err) {
     // An unreadable store must not masquerade as "no books" — that is exactly how a
     // player concludes their world book was lost.
@@ -340,6 +347,7 @@ async function persistBook(book: WorldBook): Promise<void> {
 
 function notifyEngine() {
   eventBus.emit('worldbook:updated', books.value.filter((b) => b.enabled !== false));
+  saveHealthGate.recordWorldBookIds(books.value.map((b) => b.id), booksProfileId);
 }
 
 onUnmounted(() => {
@@ -530,6 +538,7 @@ function importBooks() {
       }
       const count = await worldBookStorage.importWorldBooks(pid, agaData as unknown as WorldBookExportData);
       await loadBooks();
+      notifyEngine();
       eventBus.emit('ui:toast', { type: 'success', message: t('prompt.worldbook.importSuccess', { count }) });
     } catch (e) {
       console.error('[WorldBook] import failed:', e);

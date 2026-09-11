@@ -1330,10 +1330,14 @@ const showSettings = ref(false);
       <p class="confirm-text confirm-text--danger">
         {{ $t('save.github.uploadGuardText') }}
       </p>
-      <p v-if="ghUploadConfirmDetail" class="upload-guard-detail">
+      <p v-if="ghUploadConfirmDetail && ghUploadConfirmDetail.missingAssets > 0" class="upload-guard-detail">
         {{ $t('save.github.uploadGuardMissing', { referenced: ghUploadConfirmDetail.referencedAssets, missing: ghUploadConfirmDetail.missingAssets }) }}
       </p>
-      <p class="confirm-warning">{{ $t('save.github.uploadGuardHint') }}</p>
+      <p v-if="ghUploadConfirmDetail?.worldBooksExpected" class="upload-guard-detail">
+        {{ $t('save.github.uploadGuardWorldBooks', { expected: ghUploadConfirmDetail.worldBooksExpected }) }}
+      </p>
+      <p v-if="ghUploadConfirmDetail && ghUploadConfirmDetail.missingAssets > 0" class="confirm-warning">{{ $t('save.github.uploadGuardHint') }}</p>
+      <p v-if="ghUploadConfirmDetail?.worldBooksExpected" class="confirm-warning">{{ $t('save.github.uploadGuardHintWorldBooks') }}</p>
       <template #footer>
         <AgaButton variant="secondary" @click="ghShowUploadConfirm = false">{{ $t('save.github.uploadGuardCancel') }}</AgaButton>
         <AgaButton variant="danger" @click="ghConfirmForcedUpload">{{ $t('save.github.uploadGuardConfirm') }}</AgaButton>

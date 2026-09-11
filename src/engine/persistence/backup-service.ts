@@ -26,6 +26,8 @@ import type { CustomPresetStore, CustomPresetEntry } from './custom-preset-store
 import type { ImageAssetCache } from '../image/asset-cache';
 import type { ImageAsset } from '../image/types';
 import type { ProfileMeta } from '../types';
+import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
+import { computeWorldBookIntegrity, type WorldBookIntegrity } from './save-health-baseline';
 
 // ─── 常量 ───
 
@@ -338,14 +340,14 @@ export class BackupService {
    */
   async exportForSync(
     options?: { includeReferenceAssets?: boolean },
-  ): Promise<{ blob: Blob; imageIntegrity: ExportImageIntegrity }> {
+  ): Promise<{ blob: Blob; imageIntegrity: ExportImageIntegrity; worldBookIntegrity?: WorldBookIntegrity }> {
     return this.buildFullBundle(options);
   }
 
   /** 组装完整备份包，返回 Blob 及本次导出的图片完整性（referenced vs exported）。 */
   private async buildFullBundle(
     options?: { includeReferenceAssets?: boolean },
-  ): Promise<{ blob: Blob; imageIntegrity: ExportImageIntegrity }> {
+  ): Promise<{ blob: Blob; imageIntegrity: ExportImageIntegrity; worldBookIntegrity?: WorldBookIntegrity }> {
     const root = this.profileManager.getRoot();
 
     /* ── 1. 角色档案元数据 ── */
@@ -403,6 +405,7 @@ export class BackupService {
     // World book export — collect from all profiles
     let worldBooksExport: BackupBundle['worldBooks'];
     let builtinOverridesExport: BackupBundle['builtinPromptOverrides'];
+    let worldBookIntegrity: WorldBookIntegrity | undefined;
     if (this.worldBookStorage) {
       const allProfileIds = Object.keys(profiles);
       const allBooks: import('../prompt/world-book').WorldBook[] = [];
@@ -418,6 +421,22 @@ export class BackupService {
       // ABSENT section means "unknown / older exporter" and the importer keeps the local
       // books instead of wiping them (2026-09-09 data-loss fix).
       worldBooksExport = { version: 1, exportedAt: new Date().toISOString(), books: allBooks };
+      // Upload-guard input (2026-09-10): what the exported trees say should exist vs what
+      // this export actually carries. A wiped `aga-worldbook` exports 0 books while the
+      // trees still record them — the "先丢再上传" shape of the 2026-09-09 incident.
+      const treesByProfile = new Map<string, unknown[]>();
+      for (const [key, save] of Object.entries(saves)) {
+        const { profileId } = parseCompositeKey(key);
+        const list = treesByProfile.get(profileId) ?? [];
+        list.push(save);
+        treesByProfile.set(profileId, list);
+      }
+      const booksByProfile = new Map<string, number>();
+      for (const b of allBooks) {
+        const pid = String((b as unknown as Record<string, unknown>)['_exportProfileId']);
+        booksByProfile.set(pid, (booksByProfile.get(pid) ?? 0) + 1);
+      }
+      worldBookIntegrity = computeWorldBookIntegrity(treesByProfile, booksByProfile, DEFAULT_ENGINE_PATHS.storageHealth);
       // Builtin overrides are per-pack; use the first pack found in configs or skip
       const packIds = Object.keys(customPresets);
       if (packIds.length > 0) {
@@ -452,7 +471,7 @@ export class BackupService {
     const blob = new Blob([JSON.stringify(bundle, null, 2)], {
       type: 'application/json',
     });
-    return { blob, imageIntegrity };
+    return { blob, imageIntegrity, worldBookIntegrity };
   }
 
   /**
@@ -1504,8 +1523,8 @@ export class BackupService {
   async exportProfileForSync(
     profileId: string,
     options?: { includeReferenceAssets?: boolean },
-  ): Promise<{ blob: Blob; imageIntegrity: ExportImageIntegrity; displayMeta: ProfileDisplayMeta }> {
-    const { blob, imageIntegrity } = await this.buildProfileBundle(profileId, options);
+  ): Promise<{ blob: Blob; imageIntegrity: ExportImageIntegrity; worldBookIntegrity?: WorldBookIntegrity; displayMeta: ProfileDisplayMeta }> {
+    const { blob, imageIntegrity, worldBookIntegrity } = await this.buildProfileBundle(profileId, options);
     const meta = this.profileManager.getRoot().profiles[profileId];
     const slotIds = Object.keys(meta.slots);
     let lastPlayedAt: string | null = null;
@@ -1516,6 +1535,7 @@ export class BackupService {
     return {
       blob,
       imageIntegrity,
+      worldBookIntegrity,
       displayMeta: {
         profileId,
         profileName: meta.characterName,
@@ -1530,7 +1550,7 @@ export class BackupService {
   private async buildProfileBundle(
     profileId: string,
     options?: { includeReferenceAssets?: boolean },
-  ): Promise<{ blob: Blob; imageIntegrity: ExportImageIntegrity }> {
+  ): Promise<{ blob: Blob; imageIntegrity: ExportImageIntegrity; worldBookIntegrity?: WorldBookIntegrity }> {
     const profile = this.profileManager.getRoot().profiles[profileId];
     if (!profile) {
       throw new Error(`Profile "${profileId}" does not exist`);
@@ -1574,6 +1594,7 @@ export class BackupService {
     // 世界书是档案级数据，必须随档案包走（插槽下载后该档案的检索增强才完整）。
     // _exportProfileId 标记与全量导出一致，restore 侧按其归位。
     let worldBooksExport: BackupBundle['worldBooks'];
+    let worldBookIntegrity: WorldBookIntegrity | undefined;
     if (this.worldBookStorage) {
       // 读失败必须让导出整体失败（与 buildFullBundle 一致）：静默产出一个"缺段"包会让云端
       // 副本悄悄没有世界书——正是本次修复要堵的形态（review 2026-09-09）。
@@ -1588,6 +1609,11 @@ export class BackupService {
       }
       // Explicit even when empty — see buildFullBundle (absent = keep local on import).
       worldBooksExport = { version: 1, exportedAt: new Date().toISOString(), books };
+      worldBookIntegrity = computeWorldBookIntegrity(
+        new Map([[profileId, Object.values(saves)]]),
+        new Map([[profileId, books.length]]),
+        DEFAULT_ENGINE_PATHS.storageHealth,
+      );
     }
 
     const bundle: BackupBundle = {
@@ -1609,7 +1635,7 @@ export class BackupService {
     const blob = new Blob([JSON.stringify(bundle, null, 2)], {
       type: 'application/json',
     });
-    return { blob, imageIntegrity };
+    return { blob, imageIntegrity, worldBookIntegrity };
   }
 
   /**

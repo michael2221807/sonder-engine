@@ -243,6 +243,35 @@ describe('uploadSlot', () => {
     expect(fetchCalls.filter((c) => c.method === 'PUT')).toHaveLength(0);
   });
 
+  it('hard-blocks an export whose trees record world books but which carries none (2026-09-10)', async () => {
+    // The "先丢再上传" shape: images intact, but the local world-book store was lost.
+    const backup = createMockBackup();
+    const healthy = await backup.exportProfileForSync('p1');
+    backup.exportProfileForSync.mockResolvedValue({
+      ...healthy,
+      worldBookIntegrity: { expectedBooks: 1, exportedBooks: 0, degradedProfiles: ['p1'] },
+    });
+    const sync = new GitHubSyncService(backup as never);
+    const err = await sync.uploadSlot('p1').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(DegradedUploadError);
+    expect((err as DegradedUploadError).detail).toMatchObject({
+      missingAssets: 0, worldBooksExpected: 1, worldBooksExported: 0,
+    });
+    expect(fetchCalls.filter((c) => c.method === 'PUT')).toHaveLength(0);
+  });
+
+  it('a legitimately bookless export (nothing recorded) is never blocked by the world-book guard', async () => {
+    const backup = createMockBackup();
+    const healthy = await backup.exportProfileForSync('p1');
+    backup.exportProfileForSync.mockResolvedValue({
+      ...healthy,
+      worldBookIntegrity: { expectedBooks: 0, exportedBooks: 0, degradedProfiles: [] },
+    });
+    const sync = new GitHubSyncService(backup as never);
+    const outcome = await sync.uploadSlot('p1').catch((e: unknown) => e);
+    expect(outcome).not.toBeInstanceOf(DegradedUploadError);
+  });
+
   it('does not touch the cloud when profile export detects missing save data', async () => {
     const backup = createMockBackup();
     backup.exportProfileForSync.mockRejectedValue(

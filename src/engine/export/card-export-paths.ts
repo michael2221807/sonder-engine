@@ -115,6 +115,7 @@ export function buildDefaultCardStripPaths(p: EnginePathConfig = DEFAULT_ENGINE_
       p.storyPlan,                                // 元数据.剧情规划
       p.preRoundSnapshot,                         // 元数据.上次对话前快照
       '元数据.当前行动选项',
+      p.storageHealth,                            // 系统.扩展.storageHealth — this device's store baseline, never part of a card
       '记忆.短期', '记忆.中期', '记忆.长期', '记忆.隐式中期',
       p.statusEffects,                            // 角色.效果
       p.worldEvents,                              // 社交.事件.事件记录 (OD6: 全剥离)

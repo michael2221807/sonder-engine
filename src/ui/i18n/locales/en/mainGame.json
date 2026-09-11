@@ -250,5 +250,15 @@
   "mainGame.settingCapture.undo": "Undo",
   "mainGame.settingCapture.view": "View",
   "mainGame.settingCapture.addManually": "Add manually",
+  "mainGame.saveHealth.title": "Save check failed",
+  "mainGame.saveHealth.lead": "Before generating turn {round}, the check found local data this save relies on is missing. Continuing would build the next turns on a damaged base.",
+  "mainGame.saveHealth.images": "Images: {missing} of the {total} images this save references are not on this device.",
+  "mainGame.saveHealth.worldBooksUnreadable": "World books: the local world-book library cannot be read.",
+  "mainGame.saveHealth.worldBooksLost": "World books: the save records {expected} profile world book(s), but the library now holds none.",
+  "mainGame.saveHealth.vectorsLost": "Memory vectors: {events} memories are embedded, but the local vector store is empty.",
+  "mainGame.saveHealth.vectorsUnreadable": "Memory vectors: the local vector store cannot be read.",
+  "mainGame.saveHealth.hint": "Best to open Save Management first and recover the missing data from the cloud. If you continue, this session will not ask again; until the data is back, auto cloud sync pauses and a manual upload asks for a second confirmation so the cloud copy is not overwritten.",
+  "mainGame.saveHealth.goToSave": "Open Save Management",
+  "mainGame.saveHealth.continue": "I understand, generate anyway",
   "mainGame.settingCapture.undone": "Undone"
 }

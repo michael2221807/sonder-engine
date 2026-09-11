@@ -137,6 +137,9 @@ const PROMPT_ALWAYS_STRIP_PATHS: readonly string[] = [
   // Canon Capture round telemetry for the panel banner — pure UI feedback, never
   // something the model should read back.
   '系统.扩展.settingCaptureLast',
+  // Save-health baseline (2026-09-10): device-side bookkeeping of which world books the
+  // library held. Meaningless to the model and never something it should read.
+  '系统.扩展.storageHealth',
   // Narrative Contract (R2): the player's clauses reach the model through their own
   // block (sent to both split steps, see prompt/narrative-contract.ts). Leaving the
   // raw object in GAME_STATE_JSON would duplicate it and expose `proposed` clauses

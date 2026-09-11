@@ -32,11 +32,13 @@ import {
 } from '@/engine/sync/github-sync';
 import type { ProfileManager } from '@/engine/persistence/profile-manager';
 import { shouldAttemptAutoUpload } from './cloud-autosync';
+import { useSaveHealthStore } from '@/engine/stores/save-health';
 
 const { t } = useI18n();
 const { formatDateTime } = useLocale();
 const githubSync = inject<GitHubSyncService>('githubSync');
 const profileManager = inject<ProfileManager>('profileManager');
+const saveHealth = useSaveHealthStore();
 
 // ─── Local session state ──────────────────────────────────────
 
@@ -134,6 +136,23 @@ async function maybeAutoUpload(): Promise<void> {
   // never touch the network unless EVERY condition holds. dirty = legacy scalar OR
   // any per-slot pending (the v3 branch narrows to the ACTIVE profile below).
   const pendingMap = gh.getSlotPendingMap();
+  const dirty = gh.hasPendingSync() || Object.keys(pendingMap).length > 0;
+  // Save-health gate (2026-09-10): a save the pre-round check found damaged is never
+  // auto-uploaded — that is how a silent local loss would overwrite the healthy cloud
+  // copy. Said once per session, and only when every OTHER guard would have let an
+  // upload happen (nothing to say if there was nothing to upload). Auto-upload resumes
+  // by itself once the data is back.
+  if (saveHealth.damaged && dirty && gh.getAutoSyncEnabled() && gh.isConfigured()
+    && !gh.isSyncing() && !busy.value && !conflictOpen.value && !degradedActive.value
+    && saveHealth.markAutoSyncNoticeShown()) {
+    eventBus.emit('ui:toast', {
+      type: 'warning',
+      i18nKey: 'save.autoSyncCloud.pausedDamaged',
+      message: t('save.autoSyncCloud.pausedDamaged'),
+      id: 'cloud-autosync-damaged',
+      duration: 8000,
+    });
+  }
   if (!shouldAttemptAutoUpload({
     enabled: gh.getAutoSyncEnabled(),
     configured: gh.isConfigured(),
@@ -141,7 +160,8 @@ async function maybeAutoUpload(): Promise<void> {
     busy: busy.value,
     conflictOpen: conflictOpen.value,
     degradedActive: degradedActive.value,
-    dirty: gh.hasPendingSync() || Object.keys(pendingMap).length > 0,
+    saveDamaged: saveHealth.damaged,
+    dirty,
   })) return;
 
   busy.value = true;

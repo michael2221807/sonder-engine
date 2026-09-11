@@ -22,6 +22,12 @@ export interface AutoSyncGuardState {
   degradedActive: boolean;
   /** A save happened since the last successful upload — there is new data to back up. */
   dirty: boolean;
+  /**
+   * The pre-round save-health check found the active save damaged (2026-09-10). A damaged
+   * save must never be auto-uploaded — that is how a silent local loss would overwrite
+   * the healthy cloud copy behind the player's back.
+   */
+  saveDamaged: boolean;
 }
 
 /**
@@ -37,6 +43,7 @@ export function shouldAttemptAutoUpload(s: AutoSyncGuardState): boolean {
     !s.busy &&
     !s.conflictOpen &&
     !s.degradedActive &&
+    !s.saveDamaged &&
     s.dirty
   );
 }

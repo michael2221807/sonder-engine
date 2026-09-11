@@ -419,12 +419,20 @@ function formatTime(iso?: string): string {
     </Modal>
 
     <!-- 退化上传拦截：显式二次确认 -->
-    <Modal :modelValue="!!degradedDetail" @update:modelValue="degradedDetail = null" :title="t('save.cloudSlots.degradedTitle')" width="440px">
-      <p class="cs-modal-text">
+    <Modal
+      :modelValue="!!degradedDetail"
+      @update:modelValue="degradedDetail = null"
+      :title="(degradedDetail?.missingAssets ?? 0) > 0 ? t('save.cloudSlots.degradedTitle') : t('save.cloudSlots.degradedTitleWorldBooks')"
+      width="440px"
+    >
+      <p v-if="(degradedDetail?.missingAssets ?? 0) > 0" class="cs-modal-text">
         {{ t('save.cloudSlots.degradedText', {
           missing: degradedDetail?.missingAssets ?? 0,
           total: degradedDetail?.referencedAssets ?? 0,
         }) }}
+      </p>
+      <p v-if="degradedDetail?.worldBooksExpected" class="cs-modal-text">
+        {{ t('save.cloudSlots.degradedWorldBooks', { expected: degradedDetail?.worldBooksExpected ?? 0 }) }}
       </p>
       <div class="cs-modal-actions">
         <AgaButton variant="secondary" @click="degradedDetail = null">{{ t('common.actions.cancel') }}</AgaButton>

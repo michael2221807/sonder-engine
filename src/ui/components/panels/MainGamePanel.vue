@@ -57,6 +57,9 @@ import { useI18n } from 'vue-i18n';
 import { useGameState } from '@/ui/composables/useGameState';
 import { useSessionMode } from '@/ui/composables/useSessionMode';
 import { useRoundJump } from '@/ui/composables/useRoundJump';
+import { useSaveHealthGate } from '@/ui/composables/useSaveHealthGate';
+import { useRouter } from 'vue-router';
+import type { SaveHealthReport } from '@/engine/persistence/save-health';
 import type { EventBus } from '@/engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS, type BookmarkedRound } from '@/engine/pipeline/types';
 import Modal from '@/ui/components/common/Modal.vue';
@@ -64,6 +67,7 @@ import FormattedText from '@/ui/components/common/FormattedText.vue';
 import SettingTaggedText from '@/ui/components/common/SettingTaggedText.vue';
 import RoundDivider from '@/ui/components/panels/RoundDivider.vue';
 import GameComposer from '@/ui/components/panels/GameComposer.vue';
+import SaveHealthGateModal from '@/ui/components/common/SaveHealthGateModal.vue';
 import ThinkingViewer from '@/ui/components/panels/ThinkingViewer.vue';
 import CommandsViewer from '@/ui/components/panels/CommandsViewer.vue';
 import RawResponseViewer from '@/ui/components/panels/RawResponseViewer.vue';
@@ -350,6 +354,21 @@ const isUserScrolledUp = ref(false);
 
 const messagesContainer = ref<HTMLDivElement | null>(null);
 const composerRef = ref<{ restoreInput: (text: string) => void } | null>(null);
+
+// ── Pre-round save-health gate (2026-09-10) ──
+// Runs before `pipeline:user-input` is emitted, so a damaged save neither advances a
+// round nor triggers the auto cloud upload until the player has decided.
+const saveHealthGate = useSaveHealthGate();
+const router = useRouter();
+const healthGateOpen = ref(false);
+const healthGateReport = ref<SaveHealthReport | null>(null);
+let healthGatePendingText = '';
+/**
+ * The check awaits IndexedDB, and `isGenerating` only flips once the engine reports
+ * round-start — so without this flag a second Enter during the check would run a second
+ * gate and dispatch a second round (review finding, 2026-09-10).
+ */
+let healthGateInFlight = false;
 
 // ─── Computed ─────────────────────────────────────────────────
 
@@ -824,8 +843,66 @@ function onScroll(): void {
  */
 function handleComposerSend(text: string): void {
   const trimmed = text.trim();
-  if (!trimmed || isGenerating.value) return;
+  if (!trimmed || isGenerating.value || healthGateInFlight) return;
+  void gateThenSend(trimmed);
+}
 
+/**
+ * Pre-round save-health gate. The check reads three IndexedDB stores (metadata only) and
+ * compares them with what the save tree says should exist. Damage the player has not
+ * already waved through this session opens the gate modal; everything else — including
+ * a failure of the check itself — falls through to a normal send, because the gate must
+ * never be the thing that stops play.
+ */
+async function gateThenSend(trimmed: string): Promise<void> {
+  healthGateInFlight = true;
+  try {
+    let report: SaveHealthReport | null = null;
+    try {
+      report = await saveHealthGate.check();
+    } catch (err) {
+      console.warn('[MainGamePanel] save-health check failed (round allowed):', err);
+    }
+    if (saveHealthGate.needsDecision(report)) {
+      healthGatePendingText = trimmed;
+      healthGateReport.value = report;
+      healthGateOpen.value = true;
+      return;
+    }
+    dispatchInput(trimmed);
+  } finally {
+    healthGateInFlight = false;
+  }
+}
+
+/** 「我知道了，继续生成」— remember these findings for the session, then send as usual. */
+function onHealthGateContinue(): void {
+  if (healthGateReport.value) saveHealthGate.store.acknowledge(healthGateReport.value);
+  healthGateOpen.value = false;
+  const text = healthGatePendingText;
+  healthGatePendingText = '';
+  if (text) dispatchInput(text);
+}
+
+/**
+ * 「去存档管理」— keep the typed text (the composer already cleared it on send) and
+ * navigate. The text rides the same pending-input slot a failed round uses, so it is
+ * restored when the main panel mounts again.
+ */
+function onHealthGateGoToSave(): void {
+  healthGateOpen.value = false;
+  const text = healthGatePendingText;
+  healthGatePendingText = '';
+  if (text) {
+    _lastSentInput = text;
+    localStorage.setItem(_PENDING_INPUT_KEY, text);
+    composerRef.value?.restoreInput(text);
+  }
+  void router.push('/game/save');
+}
+
+/** Hand the input to the pipeline (the pre-gate send semantics, unchanged). */
+function dispatchInput(trimmed: string): void {
   // Safety net: mirror the sent input to the system clipboard so the player
   // can recover it even if the round fails. Failure must never block the send.
   void writeClipboard(trimmed).catch((err: unknown) => {
@@ -1472,6 +1549,14 @@ watch(
       </Transition>
     </div>
 
+    <!-- Pre-round save-health gate: stands between the composer and the pipeline when a
+         side store lost data this save still relies on (2026-09-10). -->
+    <SaveHealthGateModal
+      :open="healthGateOpen"
+      :report="healthGateReport"
+      @continue="onHealthGateContinue"
+      @go-to-save="onHealthGateGoToSave"
+    />
     <!-- Story 9: hidden in worldBuilding mode (no turn advancement while building the world). -->
     <GameComposer
       v-if="!isWorldBuilding"

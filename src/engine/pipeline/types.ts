@@ -641,6 +641,19 @@ export interface EnginePathConfig {
    */
   settingCaptureLast: string;
   /**
+   * Storage-health baseline (e.g. "系统.扩展.storageHealth") — the save's own record of the
+   * profile world-book ids last confirmed present in `aga-worldbook`.
+   *
+   * Why (2026-09-09 incident): a browser dropped the image cache and the world-book
+   * library while the save tree survived, and the game kept advancing on the damaged
+   * save. Image references already live in the tree; world books do not, so their ids
+   * are recorded here. The pre-round save-health check (`persistence/save-health.ts`)
+   * compares the live stores against this record, and the cloud upload guard refuses a
+   * bundle that carries zero books while the trees still expect some.
+   * Stripped from `GAME_STATE_JSON` and from game cards (device-side bookkeeping).
+   */
+  storageHealth: string;
+  /**
    * Narrative Contract (R2, 2026-09-05) — the player's sparse "melody" for this save
    * (e.g. "系统.扩展.narrativeContract"): `{ enabled, clauses[] }`, see
    * `prompt/narrative-contract.ts`.
@@ -1030,6 +1043,7 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
   preRoundSnapshot: '元数据.上次对话前快照',
   slotWorldBooks: '系统.扩展.slotWorldBooks',
   settingCaptureLast: '系统.扩展.settingCaptureLast',
+  storageHealth: '系统.扩展.storageHealth',
   narrativeContract: '系统.扩展.narrativeContract',
   characterVectors: '系统.扩展.characterVectors',
   explorationRecord: '系统.探索记录',

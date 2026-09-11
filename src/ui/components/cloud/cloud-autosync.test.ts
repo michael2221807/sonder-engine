@@ -9,6 +9,7 @@ const OK: AutoSyncGuardState = {
   busy: false,
   conflictOpen: false,
   degradedActive: false,
+  saveDamaged: false,
   dirty: true,
 };
 
@@ -39,6 +40,7 @@ describe('shouldAttemptAutoUpload', () => {
 
   it('blocks while soft-suspended after a degraded skip', () => {
     expect(shouldAttemptAutoUpload({ ...OK, degradedActive: true })).toBe(false);
+    expect(shouldAttemptAutoUpload({ ...OK, saveDamaged: true })).toBe(false);
   });
 
   it('blocks when there is nothing new to upload (not dirty)', () => {
@@ -53,6 +55,7 @@ describe('shouldAttemptAutoUpload', () => {
       { busy: true },
       { conflictOpen: true },
       { degradedActive: true },
+      { saveDamaged: true },
       { dirty: false },
     ];
     for (const b of blockers) {

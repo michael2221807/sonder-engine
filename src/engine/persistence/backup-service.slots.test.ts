@@ -273,6 +273,21 @@ describe('backup-service save-slot primitives', () => {
       expect(bundle.saves['p2/s1']).toBeUndefined();
     });
 
+    it('reports worldBookIntegrity: degraded when the tree records books the store no longer holds (2026-09-10)', async () => {
+      await seedTwoProfiles();
+      const { idbAdapter } = await import('./idb-adapter');
+      await idbAdapter.set('save_p1_s1', {
+        ...makeSaveTree('imgA', 'imgB'),
+        系统: { 扩展: { storageHealth: { schemaVersion: 1, worldBookIds: ['wb1'], updatedRound: 3 } } },
+      });
+      const degraded = await service.exportProfileForSync('p1');
+      expect(degraded.worldBookIntegrity).toEqual({ expectedBooks: 1, exportedBooks: 0, degradedProfiles: ['p1'] });
+
+      worldBooks.books.set('p1', [{ id: 'wb1' }]);
+      const healthy = await service.exportProfileForSync('p1');
+      expect(healthy.worldBookIntegrity).toEqual({ expectedBooks: 1, exportedBooks: 1, degradedProfiles: [] });
+    });
+
     it('emits an EXPLICIT empty worldBooks section when the profile has no books (2026-09-09)', async () => {
       // Absent vs empty must stay distinguishable: the importer keeps local books when the
       // section is absent, and only an explicit empty list may clear them.
@@ -464,6 +479,18 @@ describe('backup-service save-slot primitives', () => {
         worldBooks: opts?.worldBooks,
       };
     }
+
+    it('exportForSync reports worldBookIntegrity per profile (2026-09-10)', async () => {
+      await seedTwoProfiles();
+      const { idbAdapter } = await import('./idb-adapter');
+      await idbAdapter.set('save_p2_s1', {
+        ...makeSaveTree('imgA'),
+        系统: { 扩展: { storageHealth: { schemaVersion: 1, worldBookIds: ['x', 'y'], updatedRound: 1 } } },
+      });
+      worldBooks.books.set('p1', [{ id: 'p1book' }]);
+      const { worldBookIntegrity } = await service.exportForSync();
+      expect(worldBookIntegrity).toEqual({ expectedBooks: 2, exportedBooks: 1, degradedProfiles: ['p2'] });
+    });
 
     it('exportAll always carries the worldBooks section, even with zero books', async () => {
       await seedTwoProfiles();
