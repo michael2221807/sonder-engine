@@ -9,12 +9,22 @@
  * 对应 STEP-03 M1.6。
  * 参照 demo: indexedDBManager.ts 中的 save/load 逻辑。
  */
-import { cloneDeep } from 'lodash-es';
+import { cloneDeep, get as _get } from 'lodash-es';
 import { idbAdapter } from './idb-adapter';
 import type { GameStateTree, SaveSlotMeta } from '../types';
 import type { ProfileManager } from './profile-manager';
 import { eventBus } from '../core/event-bus';
 import { migrationRegistry, compareVersions } from './migration-registry';
+import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
+
+/**
+ * 从状态树读取回合序号快照（`DEFAULT_ENGINE_PATHS.roundNumber`）。
+ * 非有限数字（缺字段 / 写卡会话 / 脏数据）一律返回 null，避免把陈旧值留在槽元数据里。
+ */
+export function readRoundNumber(stateTree: GameStateTree): number | null {
+  const raw: unknown = _get(stateTree, DEFAULT_ENGINE_PATHS.roundNumber);
+  return typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
+}
 
 /** 存档在 IndexedDB 中的 key 格式 */
 function saveKey(profileId: string, slotId: string): string {
@@ -72,6 +82,8 @@ export class SaveManager {
       lastSavedAt: new Date().toISOString(),
       saveSize,
       characterStatus,
+      // 云端插槽新鲜度比较的回合依据（docs/design/cloud-slot-freshness.md §3）
+      roundNumber: readRoundNumber(data),
       ...(this.currentPackVersion ? { packVersion: this.currentPackVersion } : {}),
       ...meta,
     });

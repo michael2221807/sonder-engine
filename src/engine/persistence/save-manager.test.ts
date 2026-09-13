@@ -95,6 +95,22 @@ describe('SaveManager', () => {
       expect(emitted.some((e) => e.event === 'engine:save-complete')).toBe(true);
     });
 
+    it('stamps roundNumber from DEFAULT_ENGINE_PATHS.roundNumber (cloud-slot freshness, 2026-09-12)', async () => {
+      const { DEFAULT_ENGINE_PATHS } = await import('../pipeline/types');
+      const [rootKey, leafKey] = DEFAULT_ENGINE_PATHS.roundNumber.split('.');
+      await sm.saveGame('p1', 's1', { [rootKey]: { [leafKey]: 96 } });
+      expect(pm.updateSlotMeta).toHaveBeenCalledWith('p1', 's1', expect.objectContaining({ roundNumber: 96 }));
+    });
+
+    it('writes roundNumber: null when the tree has no finite round (clears a stale stamp)', async () => {
+      const { DEFAULT_ENGINE_PATHS } = await import('../pipeline/types');
+      const [rootKey, leafKey] = DEFAULT_ENGINE_PATHS.roundNumber.split('.');
+      await sm.saveGame('p1', 's1', {});
+      expect(pm.updateSlotMeta).toHaveBeenLastCalledWith('p1', 's1', expect.objectContaining({ roundNumber: null }));
+      await sm.saveGame('p1', 's1', { [rootKey]: { [leafKey]: '96' } });
+      expect(pm.updateSlotMeta).toHaveBeenLastCalledWith('p1', 's1', expect.objectContaining({ roundNumber: null }));
+    });
+
     it('extracts characterStatus from state tree', async () => {
       await sm.saveGame('p1', 's1', {
         角色: { 可变属性: { 地位: { 名称: '侠客' } } },

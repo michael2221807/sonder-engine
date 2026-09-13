@@ -45,6 +45,13 @@ export interface SaveSlotMeta {
   /** 存档类型：手动、回合前快照、时间点、退出前 */
   saveType?: 'manual' | 'pre-round' | 'timepoint' | 'exit' | 'auto';
   /**
+   * 存档时的回合序号快照（展示 / 云端新鲜度比较用，2026-09-12）。
+   * `SaveManager.saveGame` 每次落盘从状态树 `DEFAULT_ENGINE_PATHS.roundNumber` 读取；
+   * 状态树没有该字段（写卡会话等）时写 `null`。旧存档缺省 ⇒ 视为未知。
+   * 见 docs/design/cloud-slot-freshness.md §3。
+   */
+  roundNumber?: number | null;
+  /**
    * 会话模式（Story 9 / D17）：'play' 游玩 | 'worldBuilding' 写卡。
    * UI 层可见性开关，引擎管线不读。缺省 / 旧存档视为 'play'。
    */

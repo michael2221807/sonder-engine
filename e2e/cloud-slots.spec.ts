@@ -154,3 +154,83 @@ test.describe('cloud save slots', () => {
     expect(repo.has('slots/ghost_profile/state.abc.gz')).toBe(false);
   });
 });
+
+/**
+ * 存档新鲜度（docs/design/cloud-slot-freshness.md）：云端 manifest slotMeta 的
+ * lastPlayedAt + lastRound 与本地档案戳比较 → 高亮建议按钮 + 旧盖新对照确认。
+ */
+test.describe('cloud slot freshness (offline: full — cloud is an in-memory mock)', () => {
+  function slotManifest(profileId: string, lastPlayedAt: string, lastRound: number): string {
+    return JSON.stringify({
+      manifestVersion: 2,
+      createdAt: '2026-07-21T00:00:00.000Z',
+      engineVersion: '0.1.0',
+      totalSizeBytes: 2048,
+      bundleChecksum: 'x',
+      chunks: [],
+      slotMeta: { profileId, profileName: '叶尘', packId: 'tianming', slotCount: 1, lastPlayedAt, lastRound },
+    });
+  }
+
+  test('cloud newer: download is the suggested action and uploading first shows the time+round comparison',
+    { tag: ['@regression', '@cloud-slots'] },
+    async ({ page }) => {
+      // 重旅程：两次 reload + 真实上传管线（单 worker ≈17s，4 worker 并发重复会超 30s 默认预算）
+      test.slow();
+      const { profileId } = await seedSave(page); // 本地 lastSavedAt = now
+      const repo = await mockGitHubRepo(page, {
+        [`slots/${profileId}/manifest.json`]: slotManifest(profileId, '2099-01-01T00:00:00.000Z', 42),
+      });
+      await connectGitHub(page);
+
+      const row = page.getByTestId(`cs-row-${profileId}`);
+      await expect(row).toHaveAttribute('data-freshness', 'cloud-newer');
+      await expect(page.getByTestId(`cs-fresh-${profileId}`)).toHaveText('云端较新');
+      await expect(row).toContainText('第 42 回合');
+      await expect(page.getByTestId(`cs-download-${profileId}`)).toHaveClass(/cs-btn--suggested/);
+      await expect(page.getByTestId(`cs-upload-${profileId}`)).not.toHaveClass(/cs-btn--suggested/);
+
+      // 点上传 → 先弹"用旧存档覆盖云端？"对照，取消则云端一字未动
+      await page.getByTestId(`cs-upload-${profileId}`).click();
+      const stamps = page.getByTestId('cs-upload-older-stamps');
+      await expect(stamps).toBeVisible();
+      await expect(stamps).toContainText('第 42 回合');
+      await page.getByRole('button', { name: '取消' }).click();
+      await expect(stamps).toHaveCount(0);
+      expect([...repo.keys()].filter((k) => k.startsWith(`slots/${profileId}/`))).toEqual([`slots/${profileId}/manifest.json`]);
+
+      // 确认覆盖 → 真实走上传管线 → 云端戳变成本地戳 → 行落到"已同步"
+      await page.getByTestId(`cs-upload-${profileId}`).click();
+      await page.getByTestId('cs-upload-older-confirm').click();
+      await expect(row).toHaveAttribute('data-freshness', 'same', { timeout: 20_000 });
+      await expect(page.getByTestId(`cs-fresh-${profileId}`)).toHaveText('已同步');
+      const manifest = JSON.parse(Buffer.from(repo.get(`slots/${profileId}/manifest.json`)!, 'base64').toString('utf8')) as {
+        slotMeta: { lastPlayedAt: string | null; lastRound: number | null };
+      };
+      expect(manifest.slotMeta.lastPlayedAt).not.toBe('2099-01-01T00:00:00.000Z');
+      expect(manifest.slotMeta.lastRound).toBeNull(); // 种子槽位无 roundNumber ⇒ 回合未知
+    });
+
+  test('local newer: upload is the suggested action and the download confirm warns about overwriting newer progress',
+    { tag: ['@regression', '@cloud-slots'] },
+    async ({ page }) => {
+      test.slow(); // 同上：两次 reload 的重旅程
+      const { profileId } = await seedSave(page);
+      await mockGitHubRepo(page, {
+        [`slots/${profileId}/manifest.json`]: slotManifest(profileId, '2020-01-01T00:00:00.000Z', 7),
+      });
+      await connectGitHub(page);
+
+      const row = page.getByTestId(`cs-row-${profileId}`);
+      await expect(row).toHaveAttribute('data-freshness', 'local-newer');
+      await expect(page.getByTestId(`cs-fresh-${profileId}`)).toHaveText('本地较新');
+      await expect(page.getByTestId(`cs-upload-${profileId}`)).toHaveClass(/cs-btn--suggested/);
+      await expect(page.getByTestId(`cs-download-${profileId}`)).not.toHaveClass(/cs-btn--suggested/);
+
+      await page.getByTestId(`cs-download-${profileId}`).click();
+      await expect(page.getByTestId('cs-download-older-warn')).toBeVisible();
+      await expect(page.getByTestId('cs-download-older-warn')).toContainText('比云端玩得更远');
+      await page.getByRole('button', { name: '取消' }).click();
+      await expect(page.getByTestId('cs-download-older-warn')).toHaveCount(0);
+    });
+});

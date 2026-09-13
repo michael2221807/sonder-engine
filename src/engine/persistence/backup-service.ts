@@ -28,6 +28,7 @@ import type { ImageAsset } from '../image/types';
 import type { ProfileMeta } from '../types';
 import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 import { computeWorldBookIntegrity, type WorldBookIntegrity } from './save-health-baseline';
+import { deriveProfileSaveStamp } from '../sync/save-freshness';
 
 // ─── 常量 ───
 
@@ -211,6 +212,11 @@ export interface ProfileDisplayMeta {
   slotCount: number;
   /** 各槽 lastSavedAt 的最大值（ISO），全部未保存过则为 null */
   lastPlayedAt: string | null;
+  /**
+   * `lastPlayedAt` 对应那个槽的回合序号（云端插槽新鲜度比较，2026-09-12）。
+   * 与 UI 本地戳同源：都由 `deriveProfileSaveStamp` 推导。旧 manifest 无此字段。
+   */
+  lastRound?: number | null;
 }
 
 /**
@@ -1526,12 +1532,8 @@ export class BackupService {
   ): Promise<{ blob: Blob; imageIntegrity: ExportImageIntegrity; worldBookIntegrity?: WorldBookIntegrity; displayMeta: ProfileDisplayMeta }> {
     const { blob, imageIntegrity, worldBookIntegrity } = await this.buildProfileBundle(profileId, options);
     const meta = this.profileManager.getRoot().profiles[profileId];
-    const slotIds = Object.keys(meta.slots);
-    let lastPlayedAt: string | null = null;
-    for (const s of slotIds) {
-      const t = meta.slots[s].lastSavedAt;
-      if (t && (!lastPlayedAt || t > lastPlayedAt)) lastPlayedAt = t;
-    }
+    // 与 CloudSlotsSection 的本地戳同一函数推导 —— 上传后云端戳 === 本地戳（'same'）
+    const stamp = deriveProfileSaveStamp(meta);
     return {
       blob,
       imageIntegrity,
@@ -1540,8 +1542,9 @@ export class BackupService {
         profileId,
         profileName: meta.characterName,
         packId: meta.packId,
-        slotCount: slotIds.length,
-        lastPlayedAt,
+        slotCount: Object.keys(meta.slots).length,
+        lastPlayedAt: stamp.savedAt,
+        lastRound: stamp.round,
       },
     };
   }

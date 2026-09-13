@@ -45,7 +45,7 @@ const GLOBAL_JSON = JSON.stringify({
   engineSettings: { aga_theme: 'dark' },
 }, null, 2);
 
-const DISPLAY_META = { profileId: 'p1', profileName: '李明', packId: 'tianming', slotCount: 1, lastPlayedAt: '2026-07-22T00:00:00Z' };
+const DISPLAY_META = { profileId: 'p1', profileName: '李明', packId: 'tianming', slotCount: 1, lastPlayedAt: '2026-07-22T00:00:00Z', lastRound: 42 };
 
 function createMockBackup(opts?: {
   integrity?: { referencedAssets: number; exportedAssets: number };
@@ -611,7 +611,10 @@ describe('listCloudSlots', () => {
     const infos = await sync.listCloudSlots();
 
     expect(infos).toHaveLength(2);
-    expect(infos[0]).toMatchObject({ slotKey: 'p1', profileName: '李明', packId: 'tianming', slotCount: 1, sizeKB: 2 });
+    expect(infos[0]).toMatchObject({
+      slotKey: 'p1', profileName: '李明', packId: 'tianming', slotCount: 1, sizeKB: 2,
+      lastPlayedAt: '2026-07-22T00:00:00Z', lastRound: 42, // 新鲜度比较的云端戳
+    });
     expect(infos[1]).toMatchObject({ slotKey: GLOBAL_SLOT_KEY, sizeKB: 1 });
   });
 

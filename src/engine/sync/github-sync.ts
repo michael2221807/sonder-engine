@@ -199,6 +199,8 @@ export interface CloudSlotInfo {
   packId?: string;
   slotCount?: number;
   lastPlayedAt?: string | null;
+  /** `lastPlayedAt` 那份存档的回合序号（新鲜度比较用；旧 manifest 无此字段 ⇒ undefined）。 */
+  lastRound?: number | null;
   /** 上传该插槽当前版本的设备（manifest `uploadedBy` 审计戳；旧 manifest 无此字段）。 */
   uploadedByLabel?: string;
   uploadedByDeviceId?: string;
@@ -674,6 +676,7 @@ export class GitHubSyncService {
           packId: m.slotMeta?.packId,
           slotCount: m.slotMeta?.slotCount,
           lastPlayedAt: m.slotMeta?.lastPlayedAt ?? null,
+          lastRound: m.slotMeta?.lastRound,
           uploadedByLabel: m.uploadedBy?.deviceLabel,
           uploadedByDeviceId: m.uploadedBy?.deviceId,
         });

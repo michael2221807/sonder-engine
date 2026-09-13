@@ -288,6 +288,17 @@ describe('backup-service save-slot primitives', () => {
       expect(healthy.worldBookIntegrity).toEqual({ expectedBooks: 1, exportedBooks: 1, degradedProfiles: [] });
     });
 
+    it('displayMeta carries lastPlayedAt + lastRound of the most recently saved slot (cloud-slot freshness)', async () => {
+      await seedTwoProfiles();
+      await pm.updateSlotMeta('p1', 's1', { lastSavedAt: '2026-09-10T00:00:00.000Z', roundNumber: 120 });
+      await pm.updateSlotMeta('p1', 's2', { lastSavedAt: '2026-09-12T00:00:00.000Z', roundNumber: 96 });
+      const { displayMeta } = await service.exportProfileForSync('p1');
+      expect(displayMeta).toMatchObject({ profileId: 'p1', slotCount: 2, lastPlayedAt: '2026-09-12T00:00:00.000Z', lastRound: 96 });
+      // 与 UI 本地戳同一函数推导 —— 上传后两边必然 'same'
+      const { deriveProfileSaveStamp } = await import('../sync/save-freshness');
+      expect(deriveProfileSaveStamp(pm.getProfile('p1')!)).toEqual({ savedAt: displayMeta.lastPlayedAt, round: displayMeta.lastRound });
+    });
+
     it('emits an EXPLICIT empty worldBooks section when the profile has no books (2026-09-09)', async () => {
       // Absent vs empty must stay distinguishable: the importer keeps local books when the
       // section is absent, and only an explicit empty list may clear them.

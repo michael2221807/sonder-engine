@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // App doc: docs/user-guide/pages/game-save.md §2.2.1 (存档插槽), docs/user-guide/pages/home.md §1.3.3, docs/user-guide/cloud-sync.md (存档插槽章节)
-// Design doc: docs/design/github-save-slots-design.md §7
+// Design doc: docs/design/archive/github-save-slots-design.md §7; docs/design/cloud-slot-freshness.md (新鲜度高亮 + 旧盖新确认)
 /**
  * CloudSlotsSection — 云端存档插槽区（v3）
  *
@@ -14,8 +14,11 @@
  *   "是否同时恢复设置"提示
  * - 退化上传拦截：显示缺图明细 + 显式二次确认后才 force
  * - v3 模式下检测 v2 复活（另一台设备仍在用旧版）→ 显著警告条
+ * - 存档新鲜度（docs/design/cloud-slot-freshness.md）：按"存档时间 + 回合"比较本地与
+ *   云端，高亮建议的那个按钮；用旧存档盖新存档（上传 / 下载）前多一道对照确认。
+ *   只挂手动按钮，自动上传的基线冲突检测不动。
  */
-import { ref, computed, inject, onMounted } from 'vue';
+import { ref, computed, inject, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Modal from '@/ui/components/common/Modal.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
@@ -25,6 +28,7 @@ import {
   DegradedUploadError, GLOBAL_SLOT_KEY,
   type GitHubSyncService, type CloudFormat, type CloudSlotInfo, type SyncStatus, type DegradedUploadDetail,
 } from '@/engine/sync/github-sync';
+import { deriveProfileSaveStamp, compareSaveStamps, type SaveStamp, type SaveFreshness } from '@/engine/sync/save-freshness';
 import type { ProfileManager } from '@/engine/persistence/profile-manager';
 
 const { t } = useI18n();
@@ -45,12 +49,21 @@ const status = ref<SyncStatus>({ stage: 'idle', message: '' });
 const busyKey = ref<string | null>(null);
 const v2Revived = ref(false);
 
+/**
+ * ProfileManager 不是响应式的：面板开着时完成一回合（engine:save-complete）也要让
+ * 本地戳重算，否则"本地较新"高亮会滞后到下次打开面板。
+ */
+const localTick = ref(0);
+let offSaveComplete: (() => void) | null = null;
+
 const localProfiles = computed(() => {
+  void localTick.value;
   try {
     return (profileManager?.listProfiles() ?? []).map((p) => ({
       profileId: p.profileId,
       name: p.characterName || p.profileId,
       slotCount: Object.keys(p.slots).length,
+      stamp: deriveProfileSaveStamp(p),
     }));
   } catch {
     return [];
@@ -62,6 +75,16 @@ interface SlotRow {
   name: string;
   local: boolean;
   cloud: CloudSlotInfo | null;
+  /** 本地档案的存档戳（云端独有行为 null） */
+  localStamp: SaveStamp | null;
+  /** 本地 vs 云端新鲜度；任一边缺失即 'unknown'（维持既有按钮样式与流程） */
+  freshness: SaveFreshness;
+}
+
+/** 云端 manifest slotMeta → 存档戳（旧 manifest 缺 lastPlayedAt ⇒ savedAt null ⇒ unknown） */
+function cloudStampOf(cloud: CloudSlotInfo | null): SaveStamp | null {
+  if (!cloud) return null;
+  return { savedAt: cloud.lastPlayedAt ?? null, round: typeof cloud.lastRound === 'number' ? cloud.lastRound : null };
 }
 
 /** 本地档案 ∪ 云端插槽（global 行单列，不进这里） */
@@ -69,14 +92,52 @@ const rows = computed<SlotRow[]>(() => {
   const cloudByKey = new Map(cloudSlots.value.filter((s) => s.slotKey !== GLOBAL_SLOT_KEY).map((s) => [s.slotKey, s]));
   const out: SlotRow[] = [];
   for (const p of localProfiles.value) {
-    out.push({ slotKey: p.profileId, name: p.name, local: true, cloud: cloudByKey.get(p.profileId) ?? null });
+    const cloud = cloudByKey.get(p.profileId) ?? null;
+    out.push({
+      slotKey: p.profileId, name: p.name, local: true, cloud,
+      localStamp: p.stamp,
+      freshness: cloud ? compareSaveStamps(p.stamp, cloudStampOf(cloud)) : 'unknown',
+    });
     cloudByKey.delete(p.profileId);
   }
   for (const [, s] of cloudByKey) {
-    out.push({ slotKey: s.slotKey, name: s.profileName || s.slotKey, local: false, cloud: s });
+    out.push({ slotKey: s.slotKey, name: s.profileName || s.slotKey, local: false, cloud: s, localStamp: null, freshness: 'unknown' });
   }
   return out;
 });
+
+// ── 新鲜度展示 / 建议按钮 ──
+
+/** 一份戳的可读形式："时间（第 N 回合）" / "时间（回合未知）" / "无记录" */
+function stampText(stamp: SaveStamp | null): string {
+  if (!stamp?.savedAt) return t('save.cloudSlots.stampMissing');
+  const time = formatTime(stamp.savedAt);
+  return stamp.round === null
+    ? t('save.cloudSlots.stampNoRound', { time })
+    : t('save.cloudSlots.stampWithRound', { time, round: stamp.round });
+}
+
+function freshChipLabel(f: SaveFreshness): string {
+  if (f === 'local-newer') return t('save.cloudSlots.freshLocalNewer');
+  if (f === 'cloud-newer') return t('save.cloudSlots.freshCloudNewer');
+  return t('save.cloudSlots.freshSame');
+}
+
+/** 芯片悬停一句话：本地 vs 云端 戳对照 */
+function freshTip(row: SlotRow): string {
+  return t('save.cloudSlots.freshTip', { local: stampText(row.localStamp), cloud: stampText(cloudStampOf(row.cloud)) });
+}
+
+/**
+ * 建议动作 → 按钮 variant。unknown（老 manifest / 云端无）沿用既有样式：上传 primary、
+ * 下载 secondary。same 两个都退为 secondary（无事可做，界面退场）。
+ */
+function uploadVariant(row: SlotRow): 'primary' | 'secondary' {
+  return row.freshness === 'cloud-newer' || row.freshness === 'same' ? 'secondary' : 'primary';
+}
+function downloadVariant(row: SlotRow): 'primary' | 'secondary' {
+  return row.freshness === 'cloud-newer' ? 'primary' : 'secondary';
+}
 
 const globalSlot = computed(() => cloudSlots.value.find((s) => s.slotKey === GLOBAL_SLOT_KEY) ?? null);
 const isBusy = computed(() => busyKey.value !== null);
@@ -100,13 +161,32 @@ async function refresh(): Promise<void> {
   }
 }
 
-onMounted(() => { void refresh(); });
+onMounted(() => {
+  void refresh();
+  offSaveComplete = eventBus.on('engine:save-complete', () => { localTick.value++; });
+});
+onBeforeUnmount(() => { offSaveComplete?.(); });
 defineExpose({ refresh });
 
-// ── 上传（含退化拦截二次确认）──
+// ── 上传（含旧盖新对照确认 + 退化拦截二次确认）──
 
 const degradedDetail = ref<DegradedUploadDetail | null>(null);
 const degradedSlotKey = ref<string | null>(null);
+/** 云端更新时点了上传 → 先对照确认（docs/design/cloud-slot-freshness.md §5） */
+const uploadOlderKey = ref<string | null>(null);
+const uploadOlderRow = computed(() => rows.value.find((r) => r.slotKey === uploadOlderKey.value) ?? null);
+
+/** 上传按钮入口：只有"用旧盖新"（云端较新）才多一道确认，其余直接走既有流程。 */
+function onUploadClick(row: SlotRow): void {
+  if (row.freshness === 'cloud-newer') uploadOlderKey.value = row.slotKey;
+  else void uploadSlotUi(row.slotKey);
+}
+
+function confirmUploadOlder(): void {
+  const key = uploadOlderKey.value;
+  uploadOlderKey.value = null;
+  if (key) void uploadSlotUi(key); // 退化拦截仍在引擎内照常生效
+}
 
 async function uploadSlotUi(profileId: string, force = false): Promise<void> {
   if (!githubSync || isBusy.value) return;
@@ -159,6 +239,8 @@ async function uploadGlobalUi(): Promise<void> {
 // ── 下载（Q3 切换询问 + 新设备设置提示）──
 
 const downloadConfirmKey = ref<string | null>(null);
+/** 下载确认弹窗对应的行：本地较新时弹窗多一块"用旧盖新"警示 + 戳对照 */
+const downloadConfirmRow = computed(() => rows.value.find((r) => r.slotKey === downloadConfirmKey.value) ?? null);
 const switchAskProfile = ref<{ profileId: string; name: string } | null>(null);
 const askRestoreSettings = ref(false);
 
@@ -346,23 +428,41 @@ function formatTime(iso?: string): string {
       </div>
 
       <ul class="cs-list" data-testid="cs-slot-list">
-        <li v-for="row in rows" :key="row.slotKey" class="cs-row" :data-testid="`cs-row-${row.slotKey}`">
+        <li v-for="row in rows" :key="row.slotKey" class="cs-row" :data-testid="`cs-row-${row.slotKey}`" :data-freshness="row.freshness">
           <div class="cs-row-main">
             <span class="cs-name">{{ row.name }}</span>
             <span v-if="row.cloud" class="cs-meta">
               {{ t('save.cloudSlots.cloudMeta', { time: formatTime(row.cloud.updatedAt), size: row.cloud.sizeKB }) }}
             </span>
             <span v-else class="cs-meta cs-meta--none">{{ t('save.cloudSlots.notInCloud') }}</span>
+            <span v-if="typeof row.cloud?.lastRound === 'number'" class="cs-meta cs-meta--round">
+              {{ t('save.cloudSlots.cloudRound', { round: row.cloud.lastRound }) }}
+            </span>
             <Tooltip v-if="row.cloud?.uploadedByLabel" :text="t('save.cloudSlots.uploadedByTip', { id: row.cloud.uploadedByDeviceId ?? '?' })">
               <span class="cs-meta cs-meta--device">{{ t('save.cloudSlots.uploadedBy', { device: row.cloud.uploadedByLabel }) }}</span>
             </Tooltip>
             <span v-if="!row.local" class="cs-chip">{{ t('save.cloudSlots.cloudOnly') }}</span>
+            <Tooltip v-if="row.freshness !== 'unknown'" :text="freshTip(row)">
+              <span :class="['cs-chip', `cs-chip--${row.freshness}`]" :data-testid="`cs-fresh-${row.slotKey}`">{{ freshChipLabel(row.freshness) }}</span>
+            </Tooltip>
           </div>
           <div class="cs-row-actions">
-            <AgaButton v-if="row.local" variant="primary" size="sm" :disabled="isBusy" :data-testid="`cs-upload-${row.slotKey}`" @click="uploadSlotUi(row.slotKey)">
+            <AgaButton
+              v-if="row.local"
+              :variant="uploadVariant(row)"
+              :class="{ 'cs-btn--suggested': row.freshness === 'local-newer' }"
+              size="sm" :disabled="isBusy" :data-testid="`cs-upload-${row.slotKey}`"
+              @click="onUploadClick(row)"
+            >
               {{ busyKey === row.slotKey && status.stage === 'uploading' ? t('save.cloudSlots.uploading') : t('save.cloudSlots.uploadBtn') }}
             </AgaButton>
-            <AgaButton v-if="row.cloud" variant="secondary" size="sm" :disabled="isBusy" :data-testid="`cs-download-${row.slotKey}`" @click="downloadConfirmKey = row.slotKey">
+            <AgaButton
+              v-if="row.cloud"
+              :variant="downloadVariant(row)"
+              :class="{ 'cs-btn--suggested': row.freshness === 'cloud-newer' }"
+              size="sm" :disabled="isBusy" :data-testid="`cs-download-${row.slotKey}`"
+              @click="downloadConfirmKey = row.slotKey"
+            >
               {{ busyKey === row.slotKey && status.stage === 'downloading' ? t('save.cloudSlots.downloading') : t('save.cloudSlots.downloadBtn') }}
             </AgaButton>
             <Tooltip v-if="row.cloud" :text="t('save.cloudSlots.deleteTip')" interactive>
@@ -400,9 +500,16 @@ function formatTime(iso?: string): string {
     <p v-if="status.stage === 'error'" class="cs-error">{{ status.message }}</p>
     <p v-else-if="status.stage !== 'idle' && status.message" class="cs-status">{{ status.message }}</p>
 
-    <!-- 下载确认（覆盖本地该档案） -->
+    <!-- 下载确认（覆盖本地该档案）；本地较新时追加"用旧盖新"警示 + 戳对照 -->
     <Modal :modelValue="!!downloadConfirmKey" @update:modelValue="downloadConfirmKey = null" :title="t('save.cloudSlots.downloadConfirmTitle')" width="420px">
       <p class="cs-modal-text">{{ t('save.cloudSlots.downloadConfirmText', { name: slotDisplayName(downloadConfirmKey ?? '') }) }}</p>
+      <template v-if="downloadConfirmRow?.freshness === 'local-newer'">
+        <p class="cs-modal-warn" data-testid="cs-download-older-warn">{{ t('save.cloudSlots.downloadOlderWarn', { name: downloadConfirmRow.name }) }}</p>
+        <dl class="cs-stamps">
+          <div class="cs-stamp cs-stamp--newer"><dt>{{ t('save.cloudSlots.localLabel') }}</dt><dd>{{ stampText(downloadConfirmRow.localStamp) }}</dd></div>
+          <div class="cs-stamp"><dt>{{ t('save.cloudSlots.cloudLabel') }}</dt><dd>{{ stampText(cloudStampOf(downloadConfirmRow.cloud)) }}</dd></div>
+        </dl>
+      </template>
       <div class="cs-modal-actions">
         <AgaButton variant="secondary" @click="downloadConfirmKey = null">{{ t('common.actions.cancel') }}</AgaButton>
         <AgaButton variant="danger" data-testid="cs-download-confirm" @click="downloadSlotUi(downloadConfirmKey!)">{{ t('save.cloudSlots.downloadConfirmOk') }}</AgaButton>
@@ -415,6 +522,19 @@ function formatTime(iso?: string): string {
       <div class="cs-modal-actions">
         <AgaButton variant="secondary" @click="deleteConfirmKey = null">{{ t('common.actions.cancel') }}</AgaButton>
         <AgaButton variant="danger" data-testid="cs-delete-confirm" @click="deleteSlotUi(deleteConfirmKey!)">{{ t('save.cloudSlots.deleteConfirmOk') }}</AgaButton>
+      </div>
+    </Modal>
+
+    <!-- 上传对照确认：云端较新时，用旧存档覆盖云端前先看两边的时间 + 回合 -->
+    <Modal :modelValue="!!uploadOlderKey" @update:modelValue="uploadOlderKey = null" :title="t('save.cloudSlots.uploadOlderTitle')" width="420px">
+      <p class="cs-modal-text">{{ t('save.cloudSlots.uploadOlderText', { name: uploadOlderRow?.name ?? '' }) }}</p>
+      <dl v-if="uploadOlderRow" class="cs-stamps" data-testid="cs-upload-older-stamps">
+        <div class="cs-stamp"><dt>{{ t('save.cloudSlots.localLabel') }}</dt><dd>{{ stampText(uploadOlderRow.localStamp) }}</dd></div>
+        <div class="cs-stamp cs-stamp--newer"><dt>{{ t('save.cloudSlots.cloudLabel') }}</dt><dd>{{ stampText(cloudStampOf(uploadOlderRow.cloud)) }}</dd></div>
+      </dl>
+      <div class="cs-modal-actions">
+        <AgaButton variant="secondary" @click="uploadOlderKey = null">{{ t('common.actions.cancel') }}</AgaButton>
+        <AgaButton variant="danger" :disabled="isBusy" data-testid="cs-upload-older-confirm" @click="confirmUploadOlder">{{ t('save.cloudSlots.uploadOlderOk') }}</AgaButton>
       </div>
     </Modal>
 
@@ -520,14 +640,41 @@ function formatTime(iso?: string): string {
   color: var(--accent-fg, #9ec49a); background: rgba(158, 196, 154, 0.12);
   backdrop-filter: blur(6px);
 }
+.cs-meta--round { opacity: 0.85; }
+/* 新鲜度芯片：本地较新 = sage（建议上传）；云端较新 = amber（建议下载）；已同步 = 灰退场 */
+.cs-chip--local-newer { color: var(--color-sage-300); background: color-mix(in oklch, var(--color-sage-400) 14%, transparent); }
+.cs-chip--cloud-newer { color: var(--color-amber-300); background: color-mix(in oklch, var(--color-amber-400) 14%, transparent); }
+.cs-chip--same { color: var(--text-tertiary, #8a8577); background: rgba(255, 255, 255, 0.05); }
 .cs-row-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .cs-icon-btn { padding-inline: 8px; }
+
+/* 建议动作：呼吸光晕（不是文字），reduced-motion 降为静态光晕 */
+.cs-btn--suggested {
+  animation: cs-beacon var(--duration-breath, 1600ms) ease-in-out infinite alternate;
+}
+@keyframes cs-beacon {
+  from { box-shadow: 0 0 0 0 color-mix(in oklch, var(--color-sage-400) 0%, transparent); }
+  to   { box-shadow: 0 0 14px 1px color-mix(in oklch, var(--color-sage-400) 32%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cs-btn--suggested { animation: none; box-shadow: 0 0 12px 1px color-mix(in oklch, var(--color-sage-400) 28%, transparent); }
+}
 
 .cs-error { font-size: 12px; color: var(--danger-fg, #e08585); margin: 0; }
 .cs-status { font-size: 12px; color: var(--text-tertiary, #8a8577); margin: 0; }
 
 .cs-modal-text { font-size: 13px; line-height: 1.6; margin: 0 0 8px; }
 .cs-modal-subtext { font-size: 12px; color: var(--text-tertiary, #8a8577); margin: 0 0 8px; }
+.cs-modal-warn {
+  font-size: 12.5px; line-height: 1.6; margin: 0 0 8px; padding: 8px 10px; border-radius: 8px;
+  color: var(--color-amber-300); background: color-mix(in oklch, var(--color-amber-400) 10%, transparent);
+}
+/* 时间 + 回合对照：更新的那份用 sage 点亮，一眼看出谁在前 */
+.cs-stamps { display: flex; flex-direction: column; gap: 4px; margin: 0 0 4px; padding: 0; }
+.cs-stamp { display: flex; gap: 6px; font-size: 12.5px; color: var(--text-tertiary, #8a8577); }
+.cs-stamp dt { margin: 0; flex-shrink: 0; }
+.cs-stamp dd { margin: 0; }
+.cs-stamp--newer { color: var(--color-sage-300); }
 .cs-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 
 .cs-migrate-progress { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
