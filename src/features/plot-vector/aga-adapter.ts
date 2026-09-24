@@ -11,6 +11,7 @@ import { tasksAfterSave, stable, capabilityKey, type BoundCard, type SavedElemen
 import { buildAgaGenerationMessages, parseAgaGenerationOutput, GENESIS_VALIDATION_REVISION } from './genesis/generation-prompt';
 import { initialVectorState, type VectorState, type PreparedVector, type VectorOperation, type VectorResult } from './runtime';
 import { VectorWorkerClient } from './worker-client';
+import { guardedExecutor } from './result-guard';
 import { RequestJournal } from './request-journal';
 import { projectNativeInput, type NativeRules } from './native-input';
 import type { VectorPromptPolicy } from './prompt-policy';
@@ -28,10 +29,13 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
   private attempt?: Attempt;
   private revision = 0;
   private unsubs: Array<() => void>;
+  /** Every Worker result crosses the shared host boundary (result-guard.ts) before it is used. */
+  private readonly worker: Executor;
   constructor(private state: StateManager, private ai: Pick<AIService, 'generate'>,
     private saves: Pick<SaveManager, 'saveGame' | 'assertCurrent'>, private slot: () => Slot | null,
-    private worker: Executor = new VectorWorkerClient(), private journal = new RequestJournal(), private nativeRules?: NativeRules,
+    worker: Executor = new VectorWorkerClient(), private journal = new RequestJournal(), private nativeRules?: NativeRules,
     private promptPolicy?: Pick<VectorPromptPolicy, 'mode' | 'transform' | 'separateTransform'>) {
+    this.worker = guardedExecutor(worker);
     this.unsubs = [subscribePlotVectorControl(() => this.cancel()),
       eventBus.on<{type: string}>('engine:state-changed', e => {
         if (e.type === 'load' || e.type === 'rollback') {

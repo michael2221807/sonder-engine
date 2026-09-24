@@ -31,14 +31,30 @@ const DENY_TOKENS = [
   'prototype', 'while', 'for', 'do', 'function', 'class', '=>',
   'Math.random', 'Date', 'performance', 'crypto',
 ] as const;
-const SHADOWS = [
-  'globalThis', 'window', 'document', 'self', 'global', 'process', 'require', 'module',
-  'exports', 'fetch', 'XMLHttpRequest', 'localStorage', 'sessionStorage', 'indexedDB',
-  'setTimeout', 'setInterval', 'setImmediate', 'queueMicrotask', 'Promise', 'Function',
-  'Reflect', 'Proxy', 'WebAssembly', 'Worker', 'Atomics', 'SharedArrayBuffer', 'importScripts',
-  'Deno', 'Bun',
-  'Date', 'performance', 'crypto',
+/**
+ * The only free identifiers a hook can resolve (see `compileHook`). Everything else a hook names —
+ * `console`, `self`, `onmessage`, `close`, `crypto`, `structuredClone`, any future host global —
+ * resolves to `undefined`, and assigning to an undeclared name throws in strict mode. The list is an
+ * allowlist of what the generation prompt promises the model (`Math.min/max`, arithmetic, arrays,
+ * objects), not a denylist of attack strings. The objects themselves are frozen inside the product
+ * Worker by `hardenIntrinsics` (runtime.worker.ts), so a hook can neither reach nor rewrite them.
+ */
+export const HOOK_SCOPE_ALLOWLIST = [
+  'Math', 'Object', 'Array', 'Number', 'String', 'Boolean', 'JSON',
+  'isFinite', 'isNaN', 'parseInt', 'parseFloat', 'NaN', 'Infinity', 'undefined',
 ] as const;
+const HOOK_SCOPE_VALUES: ReadonlyMap<string, unknown> = new Map(
+  HOOK_SCOPE_ALLOWLIST.map(name => [name, (globalThis as unknown as Record<string, unknown>)[name]]),
+);
+/** `with (scope)` target: `has` answers true for every name so no lookup falls through to the realm globals. */
+const HOOK_SCOPE: object = new Proxy(Object.freeze(Object.create(null) as object), {
+  has: () => true,
+  get: (_target, key) => (typeof key === 'string' ? HOOK_SCOPE_VALUES.get(key) : undefined),
+  set: () => false,
+  deleteProperty: () => false,
+  defineProperty: () => false,
+  getOwnPropertyDescriptor: () => undefined,
+});
 const STATE_KEY = /^[A-Za-z][A-Za-z0-9_]{0,31}$/;
 
 type Hook = (...args: unknown[]) => unknown;
@@ -138,7 +154,7 @@ export class ScriptProgramRegistry implements ScriptProgramRuntime {
       : candidate;
     const validation = validateScriptCandidate(normalized, this.catalog, this.limits);
     if (!validation.ok) throw new Error(validation.issues.join('; '));
-    const hash = await sha256(canonical(normalized));
+    const hash = await programHash(normalized);
     const ref = { id: `plot-card-${hash.slice(0, 12)}`, hash };
     this.programs.set(hash, {
       candidate: normalized,
@@ -177,8 +193,8 @@ export class ScriptProgramRegistry implements ScriptProgramRuntime {
           persistentState: Object.freeze({ ...input.persistentState }),
           rng: rngFor(stringSeed(input.seed)),
         });
-      const first = callHook(program.visit, makeContext());
-      const second = callHook(program.visit, makeContext());
+      const first = toPlainData(callHook(program.visit, makeContext()));
+      const second = toPlainData(callHook(program.visit, makeContext()));
       if (canonical(first) !== canonical(second)) return { ok: false, reason: 'onVisit is non-deterministic for the same input and seed' };
       const result = validateVisitResult(first, program.candidate, this.catalog, this.limits, issues);
       if (!result) return { ok: false, reason: issues.at(-1) ?? 'invalid visit result' };
@@ -218,8 +234,8 @@ export class ScriptProgramRegistry implements ScriptProgramRuntime {
           persistentState: Object.freeze({ ...input.persistentState }),
           rng: rngFor(stringSeed(input.seed)),
         });
-      const first = callHook(program.accepted, makeContext());
-      const second = callHook(program.accepted, makeContext());
+      const first = toPlainData(callHook(program.accepted, makeContext()));
+      const second = toPlainData(callHook(program.accepted, makeContext()));
       if (canonical(first) !== canonical(second)) return { ok: false, reason: 'onRoundAccepted is non-deterministic for the same input and seed' };
       const result = validateAcceptedResult(first, this.limits, issues);
       if (!result) return { ok: false, reason: issues.at(-1) ?? 'invalid accepted result' };
@@ -366,7 +382,7 @@ export function simulateScriptCandidate(candidate: CardGenesisCandidateV1, confi
           runState: Object.freeze({ ...runState }), persistentState: Object.freeze({ ...persistent }),
           rng: rngFor((config.seed ?? 1) + round * 10_000 + roundVisits),
         });
-        const raw = callHook(visitHook, ctx);
+        const raw = toPlainData(callHook(visitHook, ctx));
         const result = validateVisitResult(raw, candidate, config, limits, issues);
         if (!result) throw new Error(issues.at(-1) ?? 'invalid visit result');
         if (result.runState !== undefined) {
@@ -419,7 +435,7 @@ export function simulateScriptCandidate(candidate: CardGenesisCandidateV1, confi
           minShuttle: Object.freeze({ ...minimum }), persistentState: Object.freeze({ ...persistent }),
           rng: rngFor((config.seed ?? 1) + round),
         });
-        const accepted = validateAcceptedResult(callHook(acceptedHook, acceptedCtx), limits, issues);
+        const accepted = validateAcceptedResult(toPlainData(callHook(acceptedHook, acceptedCtx)), limits, issues);
         if (!accepted) throw new Error(issues.at(-1) ?? 'invalid accepted result');
         if (accepted.persistentState !== undefined) {
           const next = cloneState(accepted.persistentState);
@@ -665,13 +681,58 @@ function validatePinnedState(
   }
 }
 
+/** Content hash that identifies a program; pure (no compilation), so hosts can recompute it without running card code. */
+export async function programHash(candidate: CardGenesisCandidateV1): Promise<string> {
+  return sha256(canonical(candidate));
+}
+
 function compileHook(source: string): Hook {
-  const ctor = Function as unknown as new (...args: string[]) => Hook;
-  return new ctor(...SHADOWS, 'ctx', `"use strict";\n${source}`);
+  const ctor = Function as unknown as new (...args: string[]) => unknown;
+  // 1. Syntax gate: the body must parse as one complete strict function body on its own, so a stray
+  //    brace cannot escape the wrapper below (CreateDynamicFunction parses the body separately).
+  new ctor('ctx', `"use strict";\n${source}`);
+  // 2. Scope gate: the hook is created inside `with (HOOK_SCOPE)`, whose `has` trap answers every
+  //    name, so free identifiers never reach the realm globals; the hook itself stays strict.
+  const factory = new ctor('scope', `with (scope) { return function (ctx) { "use strict";\n${source}\n}; }`) as (scope: object) => unknown;
+  const hook = factory(HOOK_SCOPE);
+  if (typeof hook !== 'function') throw new Error('hook did not compile to a function');
+  return hook as Hook;
 }
 
 function callHook(hook: Hook, ctx: object): unknown {
-  return hook(...SHADOWS.map(() => undefined), ctx);
+  return hook(ctx);
+}
+
+const PLAIN_MAX_DEPTH = 6;
+const PLAIN_MAX_ENTRIES = 64;
+/**
+ * Read a hook's return value exactly once into plain data (records, arrays, primitives).
+ * Getters run once here; the validator and the runner only ever see this copy, so a value
+ * cannot pass validation and then read differently when it is applied. `undefined`-valued
+ * record keys are dropped (same meaning as absent); functions, symbols and bigints are refused.
+ */
+function toPlainData(value: unknown, depth = 0): unknown {
+  if (value === null || value === undefined || typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value !== 'object') throw new Error(`hook result contains a ${typeof value}`);
+  if (depth >= PLAIN_MAX_DEPTH) throw new Error('hook result is nested too deeply');
+  if (Array.isArray(value)) {
+    const length = value.length;
+    if (!Number.isSafeInteger(length) || length > PLAIN_MAX_ENTRIES) throw new Error('hook result array is too long');
+    const out: unknown[] = [];
+    for (let index = 0; index < length; index += 1) out.push(toPlainData(value[index], depth + 1));
+    return out;
+  }
+  const keys = Object.keys(value);
+  if (keys.length > PLAIN_MAX_ENTRIES) throw new Error('hook result object has too many keys');
+  // Null prototype: an own key named `__proto__` or `constructor` stays an ordinary data key. On a
+  // `{}` target, `out['__proto__'] = x` would swap the copy's prototype (hiding data from `Object.keys`
+  // while dot access still finds it), and `out['constructor'] = x` would hit the frozen prototype.
+  const out = Object.create(null) as Record<string, unknown>;
+  for (const key of keys) {
+    const item = toPlainData((value as Record<string, unknown>)[key], depth + 1);
+    if (item !== undefined) out[key] = item;
+  }
+  return out;
 }
 
 function finiteInRange(value: unknown, min: number, max: number, inclusiveMin = true): value is number {

@@ -3,7 +3,7 @@ import { StateManager } from '../../engine/core/state-manager';
 import { DEFAULT_ENGINE_PATHS as P } from '../../engine/pipeline/types';
 import { writePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { VectorBoardAccess } from './board-access';
-import { executeVectorOperation, initialVectorState, type VectorOperation, type VectorResult, type VectorState } from './runtime';
+import { executeVectorOperation, initialVectorState, type PreparedVector, type VectorOperation, type VectorResult, type VectorState } from './runtime';
 
 let access: VectorBoardAccess;
 beforeEach(() => {
@@ -71,4 +71,24 @@ it('a load after disk commit cannot receive the old layout in memory', async () 
   });
   await expect(view.save(view.prepared.layout)).rejects.toThrow('stale');
   expect(h.state.toSnapshot()).toEqual({ otherSlot: true });
+});
+it('gate 1: a malformed preview is never shown or saved, and the next preview works', async () => {
+  const h = setup();
+  const honest = h.worker.execute.getMockImplementation()!;
+  h.worker.execute.mockImplementationOnce((async (op: VectorOperation) => {
+    const result = await executeVectorOperation(op) as PreparedVector;
+    return { ...result, layout: { ...result.layout, placements: { ...result.layout.placements, '01': 'ghost-card' } } };
+  }) as never);
+  await expect(access.open()).rejects.toThrow(/剧情动能计算结果无效（prepare）/);
+  expect(h.saveGame).not.toHaveBeenCalled();
+  h.worker.execute.mockImplementation(honest);
+  const view = await access.open();
+  h.worker.execute.mockImplementationOnce((async (op: VectorOperation) => {
+    const result = await executeVectorOperation(op) as PreparedVector;
+    return { ...result, result: { ...result.result, visits: result.board.budget.maxVisits + 1 } };
+  }) as never);
+  await expect(view.save(view.prepared.layout)).rejects.toThrow(/剧情动能计算结果无效（prepare）/);
+  expect(h.saveGame).not.toHaveBeenCalled();
+  await view.save(view.prepared.layout);
+  expect(h.saveGame).toHaveBeenCalledTimes(1);
 });

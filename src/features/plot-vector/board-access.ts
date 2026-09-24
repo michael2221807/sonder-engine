@@ -9,6 +9,7 @@ import type { Layout } from '../../engine/plot-vector/core/types';
 import { stable } from './genesis/post-save';
 import { initialVectorState, type PreparedVector, type VectorState, type VectorOperation, type VectorResult } from './runtime';
 import { VectorWorkerClient } from './worker-client';
+import { guardedExecutor } from './result-guard';
 import { projectNativeInput, type NativeRules } from './native-input';
 
 export interface BoardView {
@@ -25,10 +26,13 @@ export class VectorBoardAccess {
   private writing = false;
   get isSaving(): boolean { return this.writing; }
   private unsubs: Array<() => void>;
+  /** Same host boundary as the main round: a preview never shows or saves an unchecked Worker result. */
+  private readonly worker: Executor;
   constructor(private state: StateManager, private saves: Pick<SaveManager, 'assertCurrent' | 'saveGame'>,
     private slot: () => { profileId: string; slotId: string } | null, private busy: () => boolean,
-    private worker: Executor = new VectorWorkerClient(), private nativeRules?: NativeRules,
+    worker: Executor = new VectorWorkerClient(), private nativeRules?: NativeRules,
     private onSaveSettled: () => void = () => {}) {
+    this.worker = guardedExecutor(worker);
     this.unsubs = [subscribePlotVectorControl(() => this.invalidate()),
       eventBus.on<{ type: string }>('engine:state-changed', e => {
         if (e.type === 'load' || e.type === 'rollback') this.invalidate();

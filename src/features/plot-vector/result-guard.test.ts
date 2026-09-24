@@ -1,0 +1,97 @@
+import { describe, expect, it } from 'vitest';
+import { executeVectorOperation, initialVectorState, type PreparedVector, type VectorOperation, type VectorState } from './runtime';
+import { assertVectorResult, VectorResultError } from './result-guard';
+import { POSITIVE_EXAMPLES } from './genesis/test-fixtures';
+import { tasksAfterSave, type BoundCard } from './genesis/post-save';
+
+const clone = <T,>(value: T): T => structuredClone(value);
+const sample = POSITIVE_EXAMPLES[2]; // growth card: persistent pages + onRoundAccepted
+const task = tasksAfterSave({ id: 'seed', success: true, before: [], after: [sample.entry] })[0];
+const validateOp: VectorOperation = { kind: 'validate', task, output: sample.output, attempts: 1 };
+
+async function honest() {
+  const bound = await executeVectorOperation(validateOp) as BoundCard;
+  const state: VectorState = { ...initialVectorState(), cards: [bound],
+    layout: { placements: { '01': sample.entry.id, '02': null, '03': null, '04': null, '05': null, '06': null }, tray: [] } };
+  const prepareOp: VectorOperation = { kind: 'prepare', state, entries: [sample.entry], id: 'p/s/1' };
+  const prepared = await executeVectorOperation(prepareOp) as PreparedVector;
+  const acceptOp: VectorOperation = { kind: 'accept', state, prepared };
+  const accepted = await executeVectorOperation(acceptOp) as VectorState;
+  return { bound, state, prepareOp, prepared, acceptOp, accepted };
+}
+const rejects = async (op: VectorOperation, result: unknown, reason: RegExp) => {
+  const error = await assertVectorResult(op, result).then(() => null, (e: unknown) => e);
+  expect(error).toBeInstanceOf(VectorResultError);
+  expect((error as Error).message).toMatch(reason);
+};
+
+describe('host boundary for Worker results', () => {
+  it('accepts honest validate / prepare / accept results, including signed readouts and strong aggregates', async () => {
+    const h = await honest();
+    await expect(assertVectorResult(validateOp, h.bound)).resolves.toBe(h.bound);
+    await expect(assertVectorResult(h.prepareOp, h.prepared)).resolves.toBe(h.prepared);
+    await expect(assertVectorResult(h.acceptOp, h.accepted)).resolves.toBe(h.accepted);
+    // A repeated commit returns the state unchanged and is accepted.
+    await expect(assertVectorResult({ kind: 'accept', state: h.accepted, prepared: h.prepared }, h.accepted)).resolves.toBe(h.accepted);
+    const signed = clone(h.prepared);
+    signed.result.vectorPacket.dimensions.S = -0.9; // bipolar readouts are signed by design
+    signed.result.finalState.shuttle.J = 9_000_000; // aggregate above one effect's bound
+    await expect(assertVectorResult(h.prepareOp, signed)).resolves.toBeDefined();
+  });
+
+  it('validate: rejects a changed candidate, a forged hash and a mismatched id', async () => {
+    const h = await honest();
+    const candidate = clone(h.bound); candidate.candidate.card.hooks.onVisit = 'return { effects: [] };';
+    await rejects(validateOp, candidate, /candidate differs/);
+    const forged = clone(h.bound); forged.ref = { hash: 'a'.repeat(64), id: `plot-card-${'a'.repeat(12)}` };
+    await rejects(validateOp, forged, /hash does not match/);
+    const id = clone(h.bound); id.ref = { ...id.ref, id: 'plot-card-000000000000' };
+    await rejects(validateOp, id, /id does not match/);
+    const task2 = clone(h.bound); task2.task = { ...task2.task, key: 'other' };
+    await rejects(validateOp, task2, /task identity/);
+  });
+
+  const PREPARE_MUTATIONS: Array<[string, (p: PreparedVector) => void, RegExp]> = [
+    ['request identity', p => { p.id = 'p/s/2'; }, /request identity/],
+    ['settlement identity', p => { p.result.settlementId = 'other'; }, /settlement identity/],
+    ['negative shuttle balance', p => { p.result.finalState.shuttle.Y = -1; }, /shuttle balance/],
+    ['non-finite dimension', p => { p.result.vectorPacket.dimensions.S = Number.NaN; }, /dimension not finite/],
+    ['negative carried account', p => { p.result.pendingAccounts['buffer:03'] = [{ round: 1, amounts: { Y: -2 } }]; }, /account amount/],
+    ['off-catalog channel', p => { p.result.pendingAccounts['buffer:03'] = [{ round: 1, amounts: { Z: 1 } }]; }, /off-catalog/],
+    ['unknown account', p => { p.result.pendingAccounts['script-store:ghost:000000000000'] = []; }, /unknown account/],
+    ['unknown card on the board', p => { p.board.cards.push({ ...p.board.cards[0], id: 'ghost' }); }, /unknown card/],
+    ['layout places an unknown card', p => { p.layout.placements['02'] = 'ghost'; }, /unknown or duplicated card/],
+    ['layout duplicates a card', p => { p.layout.tray.push(sample.entry.id); }, /tray holds/],
+    ['trace above the event budget', p => { p.result.trace = Array.from({ length: p.board.budget.maxEvents + 1 }, () => p.result.trace[0]); }, /event budget/],
+    ['visits above the budget', p => { p.result.visits = p.board.budget.maxVisits + 1; }, /visit count/],
+    ['oversized prompt', p => { p.prompt = 'x'.repeat(20_000); }, /prompt malformed/],
+    ['script state outside its bound', p => { p.result.pendingScriptAcceptances![0].runState = { x: 1e300 }; }, /outside its bound/],
+    ['acceptance for another program', p => { p.result.pendingScriptAcceptances![0].ref = { hash: 'b'.repeat(64), id: `plot-card-${'b'.repeat(12)}` }; }, /does not belong/],
+    ['progress row not finite', p => { p.progress = [{ cardId: sample.entry.id, name: 'x', rows: [{ key: 'k', label: 'l', value: Number.POSITIVE_INFINITY }] }]; }, /progress row/],
+  ];
+  for (const [name, mutate, reason] of PREPARE_MUTATIONS) {
+    it(`prepare: rejects ${name}`, async () => {
+      const h = await honest();
+      const bad = clone(h.prepared); mutate(bad);
+      await rejects(h.prepareOp, bad, reason);
+    });
+  }
+
+  const ACCEPT_MUTATIONS: Array<[string, (s: VectorState) => void, RegExp]> = [
+    ['round advanced by two', s => { s.session.round += 1; }, /advance by one/],
+    ['committed ids rewritten', s => { s.session.committed = []; }, /committed ids/],
+    ['bound cards changed', s => { s.cards = []; }, /bound cards/],
+    ['generation tasks changed', s => { s.tasks.push({ task, status: 'pending' }); }, /generation tasks/],
+    ['layout changed', s => { s.layout = { placements: { '01': null, '02': null, '03': null, '04': null, '05': null, '06': null }, tray: [] }; }, /changed the layout/],
+    ['negative carried account', s => { s.session.carriedAccounts['buffer:03'] = [{ round: 2, amounts: { J: -1 } }]; }, /account amount/],
+    ['script state not finite', s => { s.session.scriptStates = { x: { pages: Number.NaN } }; }, /outside its bound/],
+    ['last run swapped', s => { s.last!.result = { ...s.last!.result, visits: 0 }; }, /prepared run/],
+  ];
+  for (const [name, mutate, reason] of ACCEPT_MUTATIONS) {
+    it(`accept: rejects ${name}`, async () => {
+      const h = await honest();
+      const bad = clone(h.accepted); mutate(bad);
+      await rejects(h.acceptOp, bad, reason);
+    });
+  }
+});

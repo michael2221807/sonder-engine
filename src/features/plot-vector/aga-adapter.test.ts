@@ -14,6 +14,8 @@ import { projectSavedElements } from './saved-elements';
 import rulesJSON from '../../../public/packs/tianming/rules/plot-vector.json';
 import { parseNativeRules } from './native-input';
 import { parseVectorPromptPolicy } from './prompt-policy';
+import { RequestJournal, type RequestStore } from './request-journal';
+import type { APIConfig } from '../../engine/ai/types';
 import promptRules from '../../../public/packs/tianming/rules/plot-vector-prompts.json';
 
 let adapters: AgaPlotVectorAdapter[];
@@ -24,7 +26,7 @@ beforeEach(() => {
   vi.stubGlobal('window', new EventTarget());
 });
 afterEach(() => { adapters.forEach(a => a.dispose()); vi.unstubAllGlobals(); });
-function setup() {
+function setup(journal?: RequestJournal) {
   const state = new StateManager(); state.loadTree({});
   let slot = { profileId: 'p', slotId: 's' };
   let disk: unknown;
@@ -37,7 +39,7 @@ function setup() {
   const assertCurrent = vi.fn(async () => {});
   const adapter = new AgaPlotVectorAdapter(state, ai, { saveGame, assertCurrent }, () => slot, {
     execute: <T extends VectorResult>(op: VectorOperation) => worker.execute(op) as Promise<T>, cancelAll: worker.cancelAll,
-  }, undefined, parseNativeRules(rulesJSON), parseVectorPromptPolicy(promptRules, 'mode contract', 'state update contract')); adapters.push(adapter);
+  }, journal, parseNativeRules(rulesJSON), parseVectorPromptPolicy(promptRules, 'mode contract', 'state update contract')); adapters.push(adapter);
   const sync = new RoundStateUpdates(() => ({ contract: promptRules.stateUpdates, prompt: 'state update contract' }));
   const ctx = (): PipelineContext => ({ generationId: crypto.randomUUID(), roundNumber: 1, stateSnapshot: state.toSnapshot(),
     userInput: '继续', actionQueuePrompt: '', chatHistory: [], worldEventTriggered: false, messages: [{ role: 'user', content: '继续' }], meta: { plotVectorLifecycle: {} } });
@@ -463,5 +465,115 @@ describe('AGA opt-in integration (zero network)', () => {
     expect(() => ctx.meta.plotVectorGuard!()).not.toThrow();
     h.changeSlot(); expect(() => ctx.meta.plotVectorGuard!()).toThrow();
     expect(ctx.meta.plotVectorLifecycle?.saved).toBe(true);
+  });
+});
+
+class MemoryRequests implements RequestStore {
+  rows = new Map<string, { fingerprint: string; owner: string; raw?: string }>();
+  async claim(key: string, fingerprint: string, owner: string, guard: () => void) {
+    guard(); const old = this.rows.get(key);
+    if (!old) this.rows.set(key, { fingerprint, owner });
+    return old;
+  }
+  async complete(key: string, owner: string, raw: string, guard: () => void) {
+    guard(); const old = this.rows.get(key)!;
+    if (old.owner !== owner) throw new Error('owner');
+    this.rows.set(key, { ...old, raw });
+  }
+}
+const apiConfig: APIConfig = { id: 'test', name: 'test', apiCategory: 'llm', provider: 'openai',
+  url: 'https://test.invalid', apiKey: 'secret', model: 'test', temperature: 0.7, maxTokens: 100, enabled: true };
+const modelRequest = { config: apiConfig, messages: [{ role: 'user' as const, content: 'story request' }], stream: false };
+/** Wraps the real runtime; `bad` rewrites the result of one operation kind (the Worker is not trusted). */
+function tamper<K extends VectorOperation['kind']>(h: ReturnType<typeof setup>, kind: K, bad: (result: never) => unknown, times = 1) {
+  let left = times;
+  h.worker.execute.mockImplementation((async (op: VectorOperation) => {
+    const result = await executeVectorOperation(op);
+    if (op.kind !== kind || left <= 0) return result;
+    left -= 1;
+    return bad(structuredClone(result) as never);
+  }) as never);
+}
+
+describe('gate 1 · the host never uses an unchecked Worker result', () => {
+  it('a malformed prepare result never arms the round or reaches the prompt; the next round continues', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    const before = stable(h.state.get(P.plotVector) ?? null);
+    tamper(h, 'prepare', (p: PreparedVector) => ({ ...p, result: { ...p.result, finalState: { ...p.result.finalState, shuttle: { ...p.result.finalState.shuttle, Y: -5 } } } }));
+    const ctx = h.ctx();
+    await expect(h.adapter.prepare(ctx)).rejects.toThrow(/剧情动能计算结果无效（prepare）/);
+    expect(ctx.meta.plotVectorCheckpoint).toBeUndefined();
+    expect(stable(h.state.get(P.plotVector) ?? null)).toBe(before);
+    const next = await h.adapter.prepare(h.ctx());
+    expect(next.meta.plotVectorCheckpoint).toBeTypeOf('function');
+  });
+  it('a malformed accept result is never written to the state or saved', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    const ctx = await h.adapter.prepare(h.ctx());
+    const before = stable(h.state.get(P.plotVector) ?? null);
+    tamper(h, 'accept', (s: VectorState) => ({ ...s, session: { ...s.session, round: s.session.round + 5 } }));
+    await expect(h.adapter.beforeSave(ctx)).rejects.toThrow(/剧情动能计算结果无效（accept）/);
+    expect(stable(h.state.get(P.plotVector) ?? null)).toBe(before);
+    expect(h.saveGame).not.toHaveBeenCalled();
+  });
+  it('a malformed validate result never binds a card; the paid reply is kept and not resent', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    const ctx = await h.adapter.prepare(h.ctx());
+    h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 1 } });
+    await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!();
+    tamper(h, 'validate', (b: BoundCard) => ({ ...b, ref: { hash: 'f'.repeat(64), id: `plot-card-${'f'.repeat(12)}` } }));
+    await h.adapter.afterSave(ctx);
+    const saved = h.state.get<VectorState>(P.plotVector)!;
+    expect(saved.cards).toEqual([]);
+    expect(saved.tasks[0]).toMatchObject({ status: 'failed', raw: JSON.stringify(POSITIVE_EXAMPLES[0].output) });
+    expect(saved.tasks[0].error).toMatch(/剧情动能计算结果无效（validate）/);
+    expect(h.state.get(`${P.inventoryItems}.tea.数量`)).toBe(1);
+    expect(h.ai.generate).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('gate 1 · R3 one-off accept failure recovers without another paid request', () => {
+  const failAccepts = (h: ReturnType<typeof setup>, times: number) => {
+    let left = times;
+    h.worker.execute.mockImplementation((async (op: VectorOperation) => {
+      if (op.kind === 'accept' && left > 0) { left -= 1; throw new Error('能力计算超时；保留上一步'); }
+      return executeVectorOperation(op);
+    }) as never);
+  };
+  const attempt = async (h: ReturnType<typeof setup>, send: () => Promise<string>) => {
+    const ctx = await h.adapter.prepare(h.ctx());
+    const raw = await ctx.meta.plotVectorCheckpoint!('single').run(modelRequest, send);
+    return { ctx, raw, save: () => h.adapter.beforeSave(ctx) };
+  };
+  it('the retry with the same input reuses the journaled reply and commits exactly once', async () => {
+    const h = setup(new RequestJournal(new MemoryRequests())); writePlotVectorControl(true);
+    const send = vi.fn(async () => 'model reply');
+    failAccepts(h, 1);
+    const first = await attempt(h, send);
+    await expect(first.save()).rejects.toThrow('超时');
+    expect(h.state.get<VectorState>(P.plotVector)).toBeUndefined();
+    const second = await attempt(h, send);
+    expect(second.raw).toBe('model reply');
+    expect(second.ctx.meta.plotVectorRecovered).toEqual(['single']);
+    await second.save();
+    await second.save(); // a repeated save of the same attempt is a no-op
+    const saved = h.state.get<VectorState>(P.plotVector)!;
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(saved.session.round).toBe(2);
+    expect(saved.session.committed).toEqual(['p/s/1']);
+    expect(h.worker.execute.mock.calls.filter(([op]) => op.kind === 'accept')).toHaveLength(2);
+  });
+  it('a persistent accept failure never commits, never resends and never advances the round', async () => {
+    const h = setup(new RequestJournal(new MemoryRequests())); writePlotVectorControl(true);
+    const send = vi.fn(async () => 'model reply');
+    failAccepts(h, 99);
+    for (let i = 0; i < 3; i++) {
+      const next = await attempt(h, send);
+      expect(next.raw).toBe('model reply');
+      await expect(next.save()).rejects.toThrow('超时');
+    }
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(h.state.get<VectorState>(P.plotVector)).toBeUndefined();
+    expect(h.worker.execute.mock.calls.filter(([op]) => op.kind === 'accept')).toHaveLength(3);
   });
 });
