@@ -43,3 +43,28 @@ describe('local AGA board assembly', () => {
     expect(result.board.cards).toEqual([]); expect(result.prompt).toBe('');
   });
 });
+
+describe('step-buying cards stop at the trip limit instead of failing the round', () => {
+  // Each card validates alone (the 10-visit probe plus 30 steps stays under the 60-visit limit);
+  // together on one board they would buy past it. Before the fix every round and every board
+  // preview failed with an unrelated message, so the player could neither continue nor fix it.
+  const stepCard = (id: string): { entry: SavedElement; output: typeof POSITIVE_EXAMPLES[number]['output'] } => ({
+    entry: { id, kind: 'item', capability: { name: id, description: id } },
+    output: { version: 2, card: { name: id, description: id, behaviorSummary: id,
+      hooks: { onVisit: "return { effects: ctx.runState.used ? [] : [{ kind: 'addVisits', amount: 30 }], runState: { used: true } };", onRoundAccepted: null } } },
+  });
+  it('two valid +30-step cards on one board settle at the 60-visit limit and the round commits', async () => {
+    const cards = [stepCard('item:boots'), stepCard('item:map')];
+    const bound = await Promise.all(cards.map(c => executeVectorOperation({ kind: 'validate', attempts: 1, output: c.output,
+      task: tasksAfterSave({ id: 'saved', success: true, before: [], after: [c.entry] })[0] }) as Promise<BoundCard>));
+    const state = { ...initialVectorState(), cards: bound,
+      layout: { placements: { '01': 'item:boots', '02': 'item:map', '03': null, '04': null, '05': null, '06': null }, tray: [] } };
+    const native = { ruleId: 'test', payload: { 'S+': 1, 'S-': 0, Y: 0, J: 0 }, visitBudget: 8, contributions: [] };
+    const prepared = await executeVectorOperation({ kind: 'prepare', state, entries: cards.map(c => c.entry), id: 'r1', native }) as PreparedVector;
+    expect(prepared.result.visits).toBe(prepared.board.budget.maxVisits);
+    const capped = prepared.result.trace.filter(e => e.reasonCode === 'capReached' && e.deltas.some(d => d.channelOrField === 'visitBudget'));
+    expect(capped).toHaveLength(1);
+    const accepted = await executeVectorOperation({ kind: 'accept', state, prepared });
+    expect(accepted).toHaveProperty('session.round', 2);
+  });
+});

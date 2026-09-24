@@ -509,6 +509,16 @@ class RunContext {
       });
       return;
     }
+    // Same use gate as ordinary card effects (`eligibility`): a card with no uses left does not run.
+    const def = this.board.cards.find((c) => c.id === cardId);
+    if (def?.usage && availableUses(def, stateOf(def, this.settlement.cardStates)) <= 0) {
+      this.push({
+        eventType: 'effect', visitId: visit.id, cellId: visit.cell.id, owner,
+        effectId: `script:${ref.id}`, status: 'notTriggered', reason: 'no uses left', reasonCode: 'noUses', reasonArgs: {},
+        programId: ref.id, programHash: ref.hash,
+      });
+      return;
+    }
     const key = scriptStateKey(cardId, ref);
     const persistentState = this.settlement.scriptStates?.[key]
       ?? this.settlement.scriptStates?.[ref.hash]
@@ -641,10 +651,18 @@ class RunContext {
         const before = this.tripLength;
         const remaining = Math.max(0, before - this.visits);
         const delta = op.op === 'addVisits' ? op.amount : remaining * (op.factor - 1);
-        const after = before + Math.floor(delta * mod.multiplier * deltaFactor);
-        if (!Number.isSafeInteger(after) || after < this.visits || after > this.board.budget.maxVisits) throw new HardBudgetExceeded(`step effect exceeds execution guard (${this.board.budget.maxVisits}); no costs committed`);
+        const requested = before + Math.floor(delta * mod.multiplier * deltaFactor);
+        if (!Number.isSafeInteger(requested) || requested < this.visits) throw new HardBudgetExceeded(`step effect is not a valid trip length; no costs committed`);
+        // A card that buys steps can never lift the safety limit: the trip stops at it. Failing the whole
+        // run instead would block every round (and every board preview) once cards together, or a growing
+        // card, buy past the limit.
+        const after = Math.min(requested, this.board.budget.maxVisits);
         this.tripLength = after;
-        return { deltas: [{ account: 'runner', channelOrField: 'visitBudget', before, after }], modifiers: mod.records, status: 'applied' };
+        const capped = requested - after;
+        return {
+          deltas: [{ account: 'runner', channelOrField: 'visitBudget', before, after }], modifiers: mod.records, status: 'applied',
+          ...(capped > 0 ? { reason: `trip capped at ${after} visits, ${capped} dropped`, reasonCode: 'capReached' as const, reasonArgs: { amount: capped } } : {}),
+        };
       }
       case 'add': {
         const before = this.accounts.amount(op.target, op.channel);
