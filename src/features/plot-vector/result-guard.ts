@@ -1,10 +1,12 @@
-import type { AccountSnapshot, Layout } from '../../engine/plot-vector/core/types';
+import type { AccountSnapshot, Layout, ScriptAcceptanceInput, VectorPacket } from '../../engine/plot-vector/core/types';
 import { scriptStoreAccountId } from '../../engine/plot-vector/core/runner';
+import { DIMENSION_SCHEMA_VERSION, REPRESENTATION_VERSION } from '../../engine/plot-vector/core/readout';
 import { C_BUFFER_ACCOUNT } from './default-board';
 import { GENESIS_CATALOG } from './genesis/catalog';
 import { DEFAULT_SCRIPT_LIMITS, programHash } from './genesis/script-runtime';
 import { stable, toRuntimeCandidate, type BoundCard } from './genesis/post-save';
-import type { PreparedVector, VectorOperation, VectorResult, VectorState } from './runtime';
+import { narrativePromptFor, VECTOR_RUN_OPTIONS, vectorBaseBoard, type PreparedVector, type VectorOperation, type VectorResult, type VectorState } from './runtime';
+import { projectNativeInput, type NativeInput } from './native-input';
 
 /**
  * Host-side boundary for everything the sandboxed Worker sends back. The Worker runs card
@@ -13,9 +15,13 @@ import type { PreparedVector, VectorOperation, VectorResult, VectorState } from 
  * injected, `accept` before the state is saved, `validate` before a card is bound.
  *
  * Checks are semantic per operation and field: request identity, layout and card ownership,
- * structural budgets, legal channels, finite numbers, non-negative account balances. Signed
- * readouts (vector dimensions, deltas, script state values) stay signed; per-script
- * `maxAbsNumber` is not applied to aggregates.
+ * structural budgets, legal channels, finite numbers, non-negative account balances. Every
+ * rule comes from the host's own request and the shared run configuration in runtime.ts
+ * (board, budget, readout, narrative strength), never from values the Worker reports about
+ * itself; the injected prompt must equal the one the host derives from the checked packet.
+ * Signed readouts (vector dimensions, deltas, script state values) stay signed; per-script
+ * `maxAbsNumber` is not applied to aggregates. Accumulated logs are checked as "previous
+ * prefix unchanged + exactly this settlement's entries", so long saves are never refused.
  */
 export class VectorResultError extends Error {
   constructor(public readonly kind: VectorOperation['kind'], detail: string) {
@@ -47,12 +53,23 @@ export async function assertVectorResult(op: VectorOperation, result: unknown): 
   }
 }
 
-const CELLS = ['01', '02', '03', '04', '05', '06'] as const;
 const HASH = /^[0-9a-f]{64}$/;
 const STATE_KEY = /^[A-Za-z][A-Za-z0-9_]{0,31}$/;
-const MAX_PROMPT_CHARS = 16_000;
 const MAX_PROGRESS_ROWS = 32;
-const MAX_COMMIT_LOG = 4_096;
+const MAX_REASON_CHARS = 2_000;
+const MAX_SOURCE_SUMMARY = 3;
+
+/** Trusted rules for one prepared round, derived from the shared configuration, not the result. */
+function trustedRules() {
+  const base = vectorBaseBoard();
+  const readout = VECTOR_RUN_OPTIONS.readout;
+  return {
+    cells: base.cells.map(cell => cell.id),
+    budget: base.budget,
+    dimensions: base.dimensions,
+    readoutVersion: `${readout.kind}-kappa${readout.kappa}`,
+  };
+}
 
 async function checkBound(op: Extract<VectorOperation, { kind: 'validate' }>, r: Record<string, unknown>, fail: (d: string) => never): Promise<BoundCard> {
   if (stable(r.task) !== stable(op.task)) fail('task identity changed');
@@ -70,22 +87,26 @@ async function checkBound(op: Extract<VectorOperation, { kind: 'validate' }>, r:
 function checkPrepared(op: Extract<VectorOperation, { kind: 'prepare' }>, r: Record<string, unknown>, fail: (d: string) => never): PreparedVector {
   if (r.id !== op.id) fail('request identity changed');
   const known = knownCards(op.state.cards);
+  const rules = trustedRules();
   const board = r.board;
   if (!isRecord(board) || !Array.isArray(board.cells) || !Array.isArray(board.cards)) fail('board malformed');
-  if (board.cells.length !== CELLS.length) fail('board cell count');
-  const budget = board.budget;
-  if (!isRecord(budget) || !safeInt(budget.maxVisits, 1) || !safeInt(budget.maxEvents, 1)) fail('board budget malformed');
+  if (stable(board.cells.map(cell => (isRecord(cell) ? cell.id : null))) !== stable(rules.cells)) fail('board cells differ from the shared board');
+  if (stable(board.budget) !== stable(rules.budget)) fail('board budget differs from the shared board');
+  const budget = rules.budget;
   for (const card of board.cards) {
     if (!isRecord(card) || typeof card.id !== 'string' || !known.ids.has(card.id)) fail('board carries an unknown card');
   }
-  checkLayout(r.layout, known.ids, fail);
+  checkLayout(r.layout, known.ids, rules.cells, fail);
+  // The starting payload and trip are the host's own request (or its documented default).
+  const starting: NativeInput = op.native ?? projectNativeInput(undefined);
+  if (stable(r.starting) !== stable(starting)) fail('starting input differs from the request');
   const result = r.result;
   if (!isRecord(result) || result.status !== 'done') fail('run did not finish');
   if (result.settlementId !== op.id) fail('settlement identity changed');
   if (!Array.isArray(result.trace) || result.trace.length > budget.maxEvents) fail('trace exceeds the event budget');
   if (!safeInt(result.visits, 0) || result.visits > budget.maxVisits) fail('visit count outside the budget');
   if (!safeInt(result.visitBudget, 0) || result.visitBudget > budget.maxVisits) fail('visit budget outside the guard');
-  checkPacket(result.vectorPacket, op.id, fail);
+  checkPacket(result.vectorPacket, op.id, rules, fail);
   checkFinalState(result.finalState, fail);
   checkAccounts(result.pendingAccounts, known, fail);
   if (result.pendingScriptAcceptances !== undefined) {
@@ -96,12 +117,9 @@ function checkPrepared(op: Extract<VectorOperation, { kind: 'prepare' }>, r: Rec
       checkScriptState(input.runState, fail); checkScriptState(input.persistentState, fail);
     }
   }
-  if (typeof r.prompt !== 'string' || r.prompt.length > MAX_PROMPT_CHARS) fail('prompt malformed');
-  if (r.starting !== undefined) {
-    if (!isRecord(r.starting) || !isRecord(r.starting.payload) || !safeInt(r.starting.visitBudget, 0)) fail('starting input malformed');
-    for (const [channel, value] of Object.entries(r.starting.payload)) {
-      if (!GENESIS_CATALOG.channels.includes(channel) || !nonNegative(value)) fail('starting payload malformed');
-    }
+  // The injected text is derived on the host from the checked packet; a Worker cannot choose it.
+  if (r.prompt !== narrativePromptFor(starting, r.layout, result.vectorPacket as unknown as VectorPacket)) {
+    fail('prompt does not match the checked vector packet');
   }
   checkProgress(r.progress, known.ids, fail);
   return r as unknown as PreparedVector;
@@ -131,7 +149,8 @@ function checkAccepted(op: Extract<VectorOperation, { kind: 'accept' }>, r: Reco
     if (!isRecord(session.scriptStates)) fail('script states malformed');
     for (const state of Object.values(session.scriptStates)) checkScriptState(state, fail);
   }
-  if (session.scriptCommitLog !== undefined && (!Array.isArray(session.scriptCommitLog) || session.scriptCommitLog.length > MAX_COMMIT_LOG)) fail('commit log malformed');
+  checkCommitLog(op.state.session.scriptCommitLog ?? [], session.scriptCommitLog, settlementId,
+    op.prepared.result.pendingScriptAcceptances ?? [], fail);
   const last = r.last;
   if (!isRecord(last) || last.id !== op.prepared.id) fail('last settlement identity changed');
   if (stable(last.board) !== stable(op.prepared.board) || stable(last.result) !== stable(op.prepared.result) || stable(last.layout) !== stable(op.prepared.layout)) fail('accept changed the prepared run');
@@ -148,10 +167,10 @@ function knownCards(cards: BoundCard[]): { ids: Set<string>; hashes: Map<string,
   return { ids, hashes, accounts };
 }
 
-function checkLayout(layout: unknown, ids: Set<string>, fail: (d: string) => never): asserts layout is Layout {
+function checkLayout(layout: unknown, ids: Set<string>, cells: readonly string[], fail: (d: string) => never): asserts layout is Layout {
   if (!isRecord(layout) || !isRecord(layout.placements) || !Array.isArray(layout.tray)) fail('layout malformed');
   const keys = Object.keys(layout.placements);
-  if (keys.length !== CELLS.length || CELLS.some(cell => !keys.includes(cell))) fail('layout cells');
+  if (keys.length !== cells.length || cells.some(cell => !keys.includes(cell))) fail('layout cells');
   const used = new Set<string>();
   for (const value of Object.values(layout.placements)) {
     if (value === null) continue;
@@ -164,12 +183,50 @@ function checkLayout(layout: unknown, ids: Set<string>, fail: (d: string) => nev
   }
 }
 
-function checkPacket(packet: unknown, id: string, fail: (d: string) => never): void {
+/** Readout contract (core/readout.ts): exactly the shared board's axes, each normalized to [-1, 1];
+ * unipolar axes are never negative; composition shares and intensity lie in [0, 1]. */
+function checkPacket(packet: unknown, id: string, rules: ReturnType<typeof trustedRules>, fail: (d: string) => never): void {
   if (!isRecord(packet) || packet.settlementId !== id || !isRecord(packet.dimensions)) fail('vector packet malformed');
-  if (!Object.values(packet.dimensions).every(finite)) fail('vector dimension not finite');
-  if (packet.optionalComposition !== undefined && (!isRecord(packet.optionalComposition) || !Object.values(packet.optionalComposition).every(finite))) fail('composition not finite');
-  if (packet.optionalIntensity !== undefined && !finite(packet.optionalIntensity)) fail('intensity not finite');
-  if (!Array.isArray(packet.sourceSummary) || !packet.sourceSummary.every(s => isRecord(s) && finite(s.magnitude))) fail('source summary malformed');
+  if (packet.dimensionSchemaVersion !== DIMENSION_SCHEMA_VERSION || packet.representationVersion !== REPRESENTATION_VERSION
+    || packet.readoutVersion !== rules.readoutVersion) fail('vector packet version differs from the shared readout');
+  const dims = packet.dimensions;
+  if (stable(Object.keys(dims).sort()) !== stable(rules.dimensions.map(d => d.id).sort())) fail('vector packet axes differ from the shared board');
+  for (const d of rules.dimensions) {
+    const value = dims[d.id];
+    if (!finite(value) || Math.abs(value) > 1) fail(`vector dimension ${d.id} is not finite or outside [-1, 1]`);
+    if (d.polarity === 'unipolar' && (value as number) < 0) fail(`vector dimension ${d.id} is unipolar but negative`);
+  }
+  if (packet.optionalComposition !== undefined && (!isRecord(packet.optionalComposition)
+    || !Object.values(packet.optionalComposition).every(v => finite(v) && v >= 0 && v <= 1))) fail('composition outside [0, 1]');
+  if (packet.optionalIntensity !== undefined
+    && !(finite(packet.optionalIntensity) && packet.optionalIntensity >= 0 && packet.optionalIntensity <= 1)) fail('intensity outside [0, 1]');
+  if (packet.optionalConflict !== undefined) {
+    if (!isRecord(packet.optionalConflict)) fail('conflict readout malformed');
+    for (const [axis, readout] of Object.entries(packet.optionalConflict)) {
+      if (!rules.dimensions.some(d => d.id === axis && d.polarity === 'bipolar')) fail('conflict readout for a non-bipolar axis');
+      if (!isRecord(readout) || !Object.values(readout).every(finite)) fail('conflict readout not finite');
+    }
+  }
+  if (!Array.isArray(packet.sourceSummary) || packet.sourceSummary.length > MAX_SOURCE_SUMMARY
+    || !packet.sourceSummary.every(s => isRecord(s) && nonNegative(s.magnitude))) fail('source summary malformed');
+}
+
+/** Previous entries unchanged, then exactly one entry per acceptance of this settlement, in order. */
+function checkCommitLog(before: readonly unknown[], after: unknown, settlementId: string,
+  pending: readonly ScriptAcceptanceInput[], fail: (d: string) => never): void {
+  if (after === undefined && before.length === 0 && pending.length === 0) return;
+  if (!Array.isArray(after)) fail('commit log malformed');
+  const log = after as unknown[];
+  if (log.length !== before.length + pending.length) fail('commit log must grow by exactly this settlement');
+  if (stable(log.slice(0, before.length)) !== stable(before)) fail('commit log history changed');
+  pending.forEach((input, index) => {
+    const entry = log[before.length + index];
+    if (!isRecord(entry) || entry.settlementId !== settlementId || entry.cardId !== input.cardId || entry.programHash !== input.ref.hash
+      || (entry.status !== 'applied' && entry.status !== 'failed')
+      || (entry.reason !== undefined && (typeof entry.reason !== 'string' || entry.reason.length > MAX_REASON_CHARS))) {
+      fail('commit log entry does not match this settlement');
+    }
+  });
 }
 
 function checkFinalState(state: unknown, fail: (d: string) => never): void {

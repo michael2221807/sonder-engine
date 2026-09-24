@@ -173,6 +173,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     a.postSaved = true;
     try {
       a.guard();
+      await this.recoverReceipts(a);
       const current = projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries;
       // One new ability per round. Removed/replaced entries never cause paid generation.
       const row = a.state.tasks.find(t => (t.status === 'pending' || (t.status === 'sending' && t.raw !== undefined)
@@ -187,7 +188,8 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
         let raw: string;
         try {
           raw = await this.ai.generate({ messages: buildAgaGenerationMessages(row.task.entry),
-            usageType: 'main', stream: false, singleAttempt: true, generationId: `${ctx.generationId}:card`, signal: a.controller.signal });
+            usageType: 'main', stream: false, singleAttempt: true, generationId: `${ctx.generationId}:card`, signal: a.controller.signal,
+            checkpoint: this.journal.genesis(a.slot, row.task.key).checkpoint(a.guard) });
         } catch (error) {
           a.guard();
           row.status = 'failed'; row.error = String(error);
@@ -212,6 +214,25 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       }
       await this.persist(a);
     } finally { a.release(); }
+  }
+  /**
+   * Free recovery of ability replies that were received but never reached this save (page closed,
+   * slot switched, save write failed). Rows without a reply are looked up read-only in the local
+   * ledger: a recorded reply is adopted and validated later in this round like any other; anything
+   * else (`unknown`, `none`, `expired`) is left exactly as it is. Nothing is sent from here, and no
+   * row is marked failed, because another tab may still be waiting for that request.
+   */
+  private async recoverReceipts(a: Attempt): Promise<void> {
+    let adopted = false;
+    for (const row of a.state.tasks) {
+      if ((row.status !== 'sending' && row.status !== 'failed') || row.raw !== undefined) continue;
+      const receipt = await this.journal.genesis(a.slot, row.task.key).lookup();
+      a.guard();
+      if (receipt.kind !== 'raw') continue;
+      row.raw = receipt.raw; row.status = 'sending'; delete row.error; delete row.validationRevision;
+      adopted = true;
+    }
+    if (adopted) await this.persist(a);
   }
   private async persist(a: Attempt): Promise<void> {
     a.guard();

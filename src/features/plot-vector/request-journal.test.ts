@@ -9,6 +9,7 @@ class MemoryRequests implements RequestStore {
     if (!old) this.rows.set(key, { fingerprint, owner });
     return old;
   }
+  async peek(key: string) { return this.rows.get(key); }
   async complete(key: string, owner: string, raw: string, guard: () => void) {
     guard(); const old = this.rows.get(key)!;
     if (old.owner !== owner) throw new Error('owner');
@@ -78,5 +79,45 @@ describe('paid request recovery', () => {
     await expect(cp.run(request, send)).rejects.toThrow('disk');
     await expect(cp.run(request, send)).rejects.toThrow('尚不明确');
     expect(send).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ability-generation receipts (R4)', () => {
+  const slot = { profileId: 'p', slotId: 's' };
+  it('identity is slot + task only: config, epoch and round do not create a second paid request', async () => {
+    const store = new MemoryRequests(), send = vi.fn(async () => 'card');
+    const journal = () => new RequestJournal(store);
+    expect(await journal().genesis(slot, 'tea').checkpoint(() => {}).run(request, send)).toBe('card');
+    const other = { ...request, config: { ...config, model: 'other-model', apiKey: 'another' } };
+    expect(await journal().genesis(slot, 'tea').checkpoint(() => {}).run(other, send)).toBe('card');
+    expect(send).toHaveBeenCalledTimes(1);
+    await journal().genesis({ ...slot, slotId: 'other' }, 'tea').checkpoint(() => {}).run(request, send);
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify([...store.rows])).not.toMatch(/secret|another|private prompt/);
+  });
+  it('lookup is read-only and distinguishes none, unknown and a received reply', async () => {
+    const store = new MemoryRequests();
+    const receipt = new RequestJournal(store).genesis(slot, 'tea');
+    expect(await receipt.lookup()).toEqual({ kind: 'none' });
+    expect(store.rows.size).toBe(0);
+    await expect(receipt.checkpoint(() => {}).run(request, async () => { throw new Error('transport'); })).rejects.toThrow('transport');
+    expect(await receipt.lookup()).toEqual({ kind: 'unknown' });
+    const send = vi.fn(async () => 'never');
+    await expect(receipt.checkpoint(() => {}).run(request, send)).rejects.toThrow('尚不明确');
+    expect(send).not.toHaveBeenCalled();
+  });
+  it('a reply that arrives after the guard closes is still recorded; the caller still gets the guard error', async () => {
+    const store = new MemoryRequests();
+    let open = true;
+    const receipt = new RequestJournal(store).genesis(slot, 'tea');
+    await expect(receipt.checkpoint(() => { if (!open) throw new Error('slot switched'); })
+      .run(request, async () => { open = false; return 'late card'; })).rejects.toThrow('slot switched');
+    expect(await receipt.lookup()).toEqual({ kind: 'raw', raw: 'late card' });
+  });
+  it('a cleared record still refuses a late reply (ownership is kept)', async () => {
+    const store = new MemoryRequests();
+    const receipt = new RequestJournal(store).genesis(slot, 'tea');
+    await expect(receipt.checkpoint(() => {}).run(request, async () => { store.rows.clear(); return 'late'; })).rejects.toThrow();
+    expect(await receipt.lookup()).toEqual({ kind: 'none' });
   });
 });

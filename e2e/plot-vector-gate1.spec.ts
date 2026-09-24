@@ -4,7 +4,10 @@ import { test, expect, seedSave } from './fixtures/base';
  * Gate 1 in a real browser: the default VectorWorkerClient runs the REAL product Worker source
  * (sandboxed iframe + supervisor + child Worker). Nothing here replaces `workerSource`.
  * Resource cases are bounded on purpose: an exception, a CPU hang cut by the supervisor deadline,
- * cancellation, and one 64 MB allocation. No GB-scale OOM is attempted (not a default test).
+ * cancellation, and one bounded 64 MB string operation. That last case only shows the operation
+ * completes inside the Worker, the page's own heap metric does not grow by that amount and the
+ * frame is removed; it does not measure whether the string was materialized in the Worker heap or
+ * released there. No GB-scale OOM is attempted, so OOM isolation is not claimed.
  */
 type Outcome = { ok: true } | { ok: false; message: string };
 
@@ -81,7 +84,7 @@ test('card exceptions and CPU hangs end inside the Worker; frames are removed an
     expect(await validateCards(page, [HONEST])).toEqual([{ ok: true }]);
   });
 
-test('a bounded 64 MB allocation stays in the Worker heap and is released with the frame',
+test('a bounded 64 MB string operation completes inside the Worker, the page heap metric stays flat, and the frame is removed',
   { tag: ['@plot-vector', '@gate-1'] }, async ({ page }) => {
     await seedSave(page);
     const heap = () => page.evaluate(() => (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize ?? -1);

@@ -2,10 +2,12 @@ import { openDB } from 'idb';
 import type { GenerationCheckpoint } from '../../engine/ai/types';
 import { stable } from './genesis/post-save';
 
-interface Receipt { fingerprint: string; owner: string; raw?: string; createdAt?: number; slotKey?: string; expired?: boolean }
+export interface Receipt { fingerprint: string; owner: string; raw?: string; createdAt?: number; slotKey?: string; expired?: boolean }
 export interface RequestStore {
   claim(key: string, fingerprint: string, owner: string, guard: () => void, slotKey?: string): Promise<Receipt | undefined>;
   complete(key: string, owner: string, raw: string, guard: () => void): Promise<void>;
+  /** Read-only lookup. Never creates, claims or changes a record. */
+  peek(key: string): Promise<Receipt | undefined>;
   maintain?(): Promise<void>;
 }
 /** Separate local recovery ledger: never part of a story prompt or a portable save. */
@@ -37,6 +39,10 @@ export class BrowserRequestStore implements RequestStore {
         guard(); await tx.done;
       } catch (error) { try { tx.abort(); } catch {} await tx.done.catch(() => {}); throw error; }
     } finally { db.close(); }
+  }
+  async peek(key: string): Promise<Receipt | undefined> {
+    const db = await this.open();
+    try { return await db.get('requests', key) as Receipt | undefined; } finally { db.close(); }
   }
   /** Expire only reply bodies. Tombstones continue preventing an accidental repeat request. */
   async maintain(): Promise<void> {
@@ -82,8 +88,64 @@ async function digest(value: unknown): Promise<string> {
   return Array.from(new Uint8Array(hash), n => n.toString(16).padStart(2, '0')).join('');
 }
 
+/**
+ * What the local recovery ledger knows about one ability generation request:
+ * `none` = no record (never claimed here, or records were cleared); `unknown` = claimed, no reply
+ * recorded (in flight elsewhere, cancelled or lost); `raw` = a reply was received; `expired` = the
+ * reply body passed its retention window. Only `raw` allows anything to happen, and it is free.
+ */
+export type GenesisReceipt = { kind: 'none' } | { kind: 'unknown' } | { kind: 'expired' } | { kind: 'raw'; raw: string };
+export class GenesisReceiptUnknownError extends Error {
+  constructor(message: string) { super(message); this.name = 'GenesisReceiptUnknownError'; }
+}
+
 export class RequestJournal {
   constructor(private store: RequestStore = new BrowserRequestStore()) {}
+  /**
+   * One saved ability's generation request. Identity is the save slot plus the capability task key,
+   * nothing else: no feature epoch, no story round, no model or prompt configuration. The same
+   * request therefore keeps one record across refreshes, toggles, later rounds and config changes,
+   * and a request whose outcome is unknown can never be re-sent under a new identity.
+   */
+  genesis(slot: { profileId: string; slotId: string }, taskKey: string) {
+    const scope = { slot: { profileId: slot.profileId, slotId: slot.slotId }, step: 'genesis', task: taskKey };
+    return {
+      /** Read-only: never sends, never claims. A missing record is reported as `none`, not as permission. */
+      lookup: async (): Promise<GenesisReceipt> => {
+        const row = await this.store.peek(await digest(scope));
+        if (!row) return { kind: 'none' };
+        if (row.raw !== undefined) return { kind: 'raw', raw: row.raw };
+        return row.expired ? { kind: 'expired' } : { kind: 'unknown' };
+      },
+      /**
+       * `guard` protects claiming and the caller's later write to the ACTIVE save. A reply that does
+       * arrive is first recorded under the original request's owner without that guard (switching
+       * slots or toggling the feature must not throw a paid reply away); only then is `guard` checked.
+       * Ownership is still enforced: a cleared or deleted record refuses the late reply.
+       */
+      checkpoint: (guard: () => void): GenerationCheckpoint => ({
+        run: async (_request, send) => {
+          guard();
+          await this.store.maintain?.();
+          const key = await digest(scope), fingerprint = await digest({ step: 'genesis', task: taskKey });
+          guard();
+          const owner = crypto.randomUUID();
+          const old = await this.store.claim(key, fingerprint, owner, guard, await digest(scope.slot));
+          guard();
+          if (old) {
+            if (old.fingerprint === fingerprint && old.raw !== undefined) return old.raw;
+            throw new GenesisReceiptUnknownError(old.expired
+              ? '能力生成的旧回复已超过本机保留期限，未自动重新生成。'
+              : '上次能力生成的结果尚不明确，未自动重复调用模型。');
+          }
+          const raw = await send();
+          await this.store.complete(key, owner, raw, () => {});
+          guard();
+          return raw;
+        },
+      }),
+    };
+  }
   checkpoint(scope: unknown, baseline: unknown, guard: () => void, reused: () => void): GenerationCheckpoint {
     return {
       run: async (request, send) => {

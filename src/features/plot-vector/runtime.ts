@@ -8,7 +8,7 @@ import { probeGenerated } from './genesis/probe-generated';
 import { activeSavedCards } from './saved-elements';
 import { toRuntimeCandidate, type BoundCard, type GenesisTask, type GenesisOutput, type SavedElement } from './genesis/post-save';
 import { buildNarrativeInputV2 } from './decoder/narrative-input-v2';
-import type { CompiledBoard, Layout, RunDone } from '../../engine/plot-vector/core/types';
+import type { BoardDef, CompiledBoard, Layout, RunDone, RunOptions, VectorPacket } from '../../engine/plot-vector/core/types';
 import { projectNativeInput, type NativeInput } from './native-input';
 import { readCardProgress, type CardProgress } from './card-progress';
 
@@ -27,6 +27,17 @@ export type VectorOperation =
   | { kind: 'validate'; task: GenesisTask; output: GenesisOutput; attempts: number };
 export type VectorResult = PreparedVector | VectorState | BoundCard;
 export function initialVectorState(): VectorState { return { version: 1, session: createSession(), cards: [], tasks: [] }; }
+
+/** The single board, run options and narrative strength every AGA vector round uses. The host
+ * result guard reads these same values, so a Worker result cannot bring its own rules. */
+export const VECTOR_RUN_OPTIONS: RunOptions = { capacityEnabled: false, capacityScope: 'total', pickup: 'none', readout: { kind: 'N1', kappa: 10 } };
+export const VECTOR_NARRATIVE_STRENGTH = 0.25;
+export function vectorBaseBoard(): BoardDef { return buildSixCellBoard({ topology: 'line' }); }
+/** Pure: the narrative prompt a prepared round injects, derived only from its checked inputs and packet. */
+export function narrativePromptFor(starting: NativeInput, layout: Layout, packet: VectorPacket): string {
+  const hasInput = Object.values(starting.payload).some(n => n > 0) || Object.values(layout.placements).some(Boolean);
+  return hasInput ? buildNarrativeInputV2(packet, undefined, VECTOR_NARRATIVE_STRENGTH).prompt : '';
+}
 
 async function registryFor(cards: BoundCard[]): Promise<ScriptProgramRegistry> {
   const registry = new ScriptProgramRegistry(GENESIS_CATALOG);
@@ -78,7 +89,7 @@ export async function executeVectorOperation(op: VectorOperation): Promise<Vecto
   }
   placements['06'] = effect?.task.entry.id ?? null;
   const layout: Layout = { placements, tray: items.filter(c => !used.has(c.task.entry.id)).map(c => c.task.entry.id) };
-  const base = buildSixCellBoard({ topology: 'line' });
+  const base = vectorBaseBoard();
   const starting = op.native ?? projectNativeInput(undefined);
   const board = compileBoard({ ...base, startPayload: starting.payload, talents: [], items: [], cards: bound.map(c => {
     const card = createScriptCardDef(c.candidate, c.ref,
@@ -90,9 +101,8 @@ export async function executeVectorOperation(op: VectorOperation): Promise<Vecto
       ? { zh: description, en: description } : undefined };
   }) }, { triggerDefault: 'a' });
   const result = run(board, { ...op.state.session, id: op.id, seed: op.id, layout, actionLog: [], visitBudget: starting.visitBudget,
-    options: { capacityEnabled: false, capacityScope: 'total', pickup: 'none', readout: { kind: 'N1', kappa: 10 } } }, { scripts: registry });
+    options: VECTOR_RUN_OPTIONS }, { scripts: registry });
   if (result.status !== 'done') throw new Error('请先完成棋盘选择');
-  const hasInput = Object.values(starting.payload).some(n => n > 0) || Object.values(placements).some(Boolean);
   return { id: op.id, board, result, layout, starting, progress: readCardProgress(bound, op.state.session),
-    prompt: hasInput ? buildNarrativeInputV2(result.vectorPacket, undefined, 0.25).prompt : '' };
+    prompt: narrativePromptFor(starting, layout, result.vectorPacket) };
 }
