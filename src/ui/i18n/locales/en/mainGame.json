@@ -284,6 +284,8 @@
   "mainGame.vectorBoard.progressHelp": "Only saved progress appears here. A preview cannot change it. The engine tracks stored energy; cards label other growth.",
   "mainGame.vectorBoard.storedBalance": "Actually stored {channel}",
   "mainGame.vectorBoard.generationIncomplete": "{count} ability generation records are incomplete. You can continue the story; records are retained and requests are not automatically repeated.",
+  "mainGame.vectorBoard.usesLeft": "Uses left",
+  "mainGame.vectorBoard.basicSupply": "Basic supply",
   "mainGame.vectorBoard.receiptPreview": "This preview",
   "mainGame.vectorBoard.receiptAccepted": "Last turn",
   "mainGame.vectorBoard.receiptNotTriggered": "did not trigger",

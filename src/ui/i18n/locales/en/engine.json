@@ -17,6 +17,7 @@
       "imageTasksRecovered": "{count} image generation task(s) interrupted by page refresh",
       "missingMidTermMemory": "AI did not output mid-term memory for round {round}, placeholder inserted",
       "fieldRepairFailed": "Field repair / memory maintenance failed (does not affect this round)",
+      "extraRepairIncomplete": "Some automatic repairs did not finish; this round is kept as is",
       "missingFieldsDetected": "Detected {count} missing extended field(s), will auto-populate",
       "storageNotPersisted": "Browser did not grant persistent storage; saves may be cleared automatically when space runs low — please back up to the cloud soon",
       "storagePressure": "Local storage is at {usedMB}MB / {quotaMB}MB (>85%). When space runs low the browser may auto-clear saves and images — please back up to the cloud soon",

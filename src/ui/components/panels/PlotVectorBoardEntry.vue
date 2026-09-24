@@ -11,6 +11,7 @@ import type { CardProgress } from '@/features/plot-vector/card-progress';
 import type { Layout, LocalizedLabel } from '@/engine/plot-vector/core/types';
 import { cardTripReceipt } from '@/features/plot-vector/card-trip-receipt';
 import { readPlotVectorControl, subscribePlotVectorControl } from '@/engine/plot-vector/feature-control';
+import { availableUses, stateOf } from '@/engine/plot-vector/core/card-state';
 
 const props = defineProps<{ generating: boolean }>();
 const { t, locale } = useI18n();
@@ -29,7 +30,9 @@ watch(open, value => { if (!value) { request++; busy.value = false; } });
 watch(() => props.generating, value => { if (value) open.value = false; });
 const label = (value?: LocalizedLabel) => value ? (locale.value === 'en' ? value.en : value.zh) : '';
 const board = computed(() => shown.value?.board ?? view.value?.prepared.board);
-const editableCards = computed(() => view.value?.prepared.board.cards.filter(c => c.origin !== 'effect' && c.origin !== 'environment') ?? []);
+// The hand: automatic status/environment cards are never chosen by hand; a basic card with no uses left waits for its top-up.
+const editableCards = computed(() => view.value?.prepared.board.cards.filter(c => c.origin !== 'effect' && c.origin !== 'environment'
+  && (!c.usage || availableUses(c, stateOf(c, view.value?.state.session.cardStates)) > 0)) ?? []);
 const incomplete = computed(() => view.value?.state.tasks.filter(row => row.status === 'failed' || row.status === 'sending').length ?? 0);
 const starting = computed(() => last.value ? shown.value?.starting : view.value?.prepared.starting);
 const progress = computed(() => last.value ? shown.value?.progress : view.value?.prepared.progress);
@@ -38,8 +41,8 @@ const channelLabel = (target: string) => {
   const key = ({ 'S+': 'push', 'S-': 'resistance', Y: 'relations', J: 'chances', visits: 'steps' } as Record<string, string>)[target];
   return key ? t(`mainGame.vectorBoard.${key}`) : target;
 };
-const progressLabel = (row: CardProgress['rows'][number]) => row.channel
-  ? t('mainGame.vectorBoard.storedBalance', { channel: channelLabel(row.channel) }) : row.label;
+const progressLabel = (row: CardProgress['rows'][number]) => row.key === 'uses' ? t('mainGame.vectorBoard.usesLeft')
+  : row.channel ? t('mainGame.vectorBoard.storedBalance', { channel: channelLabel(row.channel) }) : row.label;
 const visits = computed(() => shown.value?.result.trace.filter(e => e.eventType === 'visitComplete') ?? []);
 const current = computed(() => visits.value[Math.max(0, cursor.value - 1)]);
 const triggered = computed(() => cursor.value ? shown.value?.result.trace.filter(e =>
@@ -146,7 +149,7 @@ function showDraft() { last.value = false; shown.value = dirty.value ? undefined
               <span class="sr-only">{{ t('mainGame.vectorBoard.choose', { cell: cell.id }) }}</span>
               <select :value="layout.placements[cell.id] ?? ''" :disabled="disabled" @change="choose(cell.id, $event)">
                 <option value="">{{ t('mainGame.vectorBoard.leaveEmpty') }}</option>
-                <option v-for="card in editableCards" :key="card.id" :value="card.id">{{ label(card.label) }}</option>
+                <option v-for="card in editableCards" :key="card.id" :value="card.id">{{ label(card.label) }}{{ card.origin === 'supply' ? ` · ${t('mainGame.vectorBoard.basicSupply')}` : '' }}</option>
               </select>
             </label>
             <p v-else>{{ label(cardAt(cell.id)?.label) || t('mainGame.vectorBoard.leaveEmpty') }}</p>

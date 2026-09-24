@@ -11,7 +11,7 @@
     },
     {
       "promptId": "core",
-      "to": "### 环境与节日\n\n记录当前真实存在的条件及影响，不为了凑分数编造环境标签。保留上面的三条必发 set 命令。能力生成由实际入档条目在下游触发，不由本次正文直接生卡。\n\n---\n\n",
+      "to": "### 环境与节日\n\n记录当前真实存在的条件及影响，不为了凑分数编造环境标签。保留上面的三条必发 set 命令。环境标签的「能力」按本回合单独给出的环境能力接口一并写入；物品、天赋、状态的能力由实际入档后下游生成，不由本次正文直接生卡。\n\n---\n\n",
       "from": "### 与判定系统联动\n\n§四 的 `〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗` 中 `环境:E` 的数值必须**能与当前 `世界.环境[*].效果` 字段对应**。\n\n- 正例：当前环境里有 `{名称:\"雾气弥漫\", 效果:\"-3感知\"}` → 本回合感知判定写 `环境:-3`\n- 反例：环境为空却写 `环境:+7` → 无出处，属不合规\n\n如果 `环境:E` 非零但 `世界.环境` 为空，说明叙事层面需要即时增加相应标签 —— 在本回合 commands 中一并 set 进 `世界.环境`。\n\n### 节日字段独立使用\n\n`世界.节日.效果` 对判定的贡献也并入 `环境:E`（不额外开新字段）。节日的氛围影响通常与环境标签互斥或叠加 —— 由你裁定。\n\n---\n\n"
     },
     {
@@ -96,7 +96,7 @@
     },
     {
       "promptId": "core",
-      "to": "### Environment and Festival\n\nRecord the actual current conditions and their effects. Never invent an environment tag to justify a score. Keep the three mandatory set commands above. Saved entries, not this response, are the downstream ability-generation boundary.\n\n---\n\n",
+      "to": "### Environment and Festival\n\nRecord the actual current conditions and their effects. Never invent an environment tag to justify a score. Keep the three mandatory set commands above. Environment tags carry their 「能力」 per the separate environment-ability interface of this round; item, talent and status abilities are still generated downstream from saved entries.\n\n---\n\n",
       "from": "### Integration with the Judgement System\n\nIn §IV's `〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗`, the `环境:E` value must be **traceable to the current `世界.环境[*].效果` field**.\n\n- Correct: The current environment includes `{名称:\"Dense Fog\", 效果:\"-3 Perception\"}` → this round's perception roll writes `环境:-3`\n- Incorrect: Environment is empty but the roll writes `环境:+7` → no source, non-compliant\n\nIf `环境:E` is non-zero but `世界.环境` is empty, it means the narrative layer needs to immediately add the corresponding tag — include it in this round's commands via set to `世界.环境`.\n\n### Festival Field Independent Usage\n\n`世界.节日.效果`'s contribution to judgement rolls is also folded into `环境:E` (no new field). A festival's atmospheric effect typically either conflicts with or stacks onto environment tags — adjudicated at your discretion.\n\n---\n\n"
     },
     {
@@ -376,5 +376,10 @@
         "decimals": 2
       }
     }
+  },
+  "environmentAbility": {
+    "field": "能力",
+    "instruction": "## 环境能力（剧情动能）\n\n写 `set 世界.环境` 时，给**新出现**或**实际影响已变化**的环境标签加一个「能力」字段：{\"hooks\":{\"onVisit\":\"JS函数体源码\",\"onRoundAccepted\":null},\"initialPersistentState\":{}}，把这个环境对梭的直观影响写成可执行能力。影响没变的标签可以不写「能力」，引擎沿用它原来的能力；标签移除，能力随之失效。引擎每轮从人物状态与环境中至多自动选一张放入固定格。只写能力本身，不写说明、证据、使用次数或数值判定。",
+    "repair": "<环境能力修复>\n下列环境标签（name）本回合缺少可用的「能力」，或原能力（ability）没有通过引擎校验（见 problem）。只修这些标签：输出 commands，其中一条为 {\"action\":\"set\",\"key\":\"{{PATH}}\",\"value\":[...]}，value 是当前完整环境数组，每个标签的名称、描述、效果保持原样，只为下列标签写好「能力」；其余标签原样保留、可不带「能力」。\n{{ITEMS}}\n</环境能力修复>"
   }
 }

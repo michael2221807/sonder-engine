@@ -326,7 +326,8 @@
             "properties": {
               "名称": { "type": "string", "$comment": "4 CJK 优选，描述条件性质（如 '妖雾弥漫'）" },
               "描述": { "type": "string", "$comment": "1 句具象观察，12-25 字" },
-              "效果": { "type": "string", "$comment": "机械化措辞的影响；可为空字符串" }
+              "效果": { "type": "string", "$comment": "机械化措辞的影响；可为空字符串" },
+              "能力": { "type": "object", "$comment": "可选；剧情动能开启时 Step2 随标签写入的环境能力 snippet，引擎验证绑定后即从标签移除，不长期留在存档" }
             }
           }
         },

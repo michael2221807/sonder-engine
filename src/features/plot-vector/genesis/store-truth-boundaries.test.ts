@@ -24,6 +24,7 @@ import { parseAgaGenerationOutput } from './generation-prompt';
 import { tasksAfterSave, type BoundCard } from './post-save';
 import { executeVectorOperation, initialVectorState, type PreparedVector, type VectorState } from '../runtime';
 import { readCardProgress } from '../card-progress';
+import { BASIC_SUPPLY_IDS } from '../basic-supply';
 
 const OPTIONS: RunOptions = { capacityEnabled: false, capacityScope: 'total', pickup: 'none', readout: { kind: 'N1', kappa: 10 } };
 
@@ -154,7 +155,7 @@ describe('D194 · the private store seen by scripts is the engine account, not a
     const round2 = await executeVectorOperation({ kind: 'accept', state: round1, prepared: second }) as VectorState;
     expect(round2.last?.progress?.[0].rows[0]).toMatchObject({ value: 0, delta: -3 });
     expect(balance(round2.session, accountId, 'S+')).toBe(0);
-    expect(Object.values(round2.session.scriptStates ?? {})).toEqual([{}]);
+    expect(Object.entries(round2.session.scriptStates ?? {}).filter(([key]) => !BASIC_SUPPLY_IDS.some(id => key.startsWith(`${id}:`))).map(([, value]) => value)).toEqual([{}]);
     expect(readCardProgress([bound], round2.session)[0].rows[0]).toMatchObject({ key: 'store:S+', value: 0, max: 3 });
   });
 
@@ -171,7 +172,7 @@ describe('D194 · the private store seen by scripts is the engine account, not a
     const native = { ruleId: 'test', payload: { 'S+': 1, 'S-': 0, Y: 0, J: 0 }, visitBudget: 6, contributions: [] };
     const prepared = await executeVectorOperation({ kind: 'prepare', state, entries: [entry], id: 'v2', native }) as PreparedVector;
     expect(prepared.result.finalState.shuttle.J).toBe(1);
-    expect(prepared.progress).toEqual([]);
+    expect(prepared.progress?.filter(p => !BASIC_SUPPLY_IDS.includes(p.cardId))).toEqual([]);
   });
 
   it('a store request with nothing at the source is rejected by the shared probe, and a requested-amount mirror diverges from the real account', async () => {

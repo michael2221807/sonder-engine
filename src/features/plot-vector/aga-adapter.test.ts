@@ -15,6 +15,10 @@ import rulesJSON from '../../../public/packs/tianming/rules/plot-vector.json';
 import { parseNativeRules } from './native-input';
 import { parseVectorPromptPolicy } from './prompt-policy';
 import { RequestJournal, type RequestStore } from './request-journal';
+import { FieldRepairPipeline } from '../../engine/pipeline/sub-pipelines/field-repair';
+import type { AIService } from '../../engine/ai/ai-service';
+import type { PromptAssembler } from '../../engine/prompt/prompt-assembler';
+import type { GamePack } from '../../engine/types';
 import type { AIMessage, APIConfig, GenerationCheckpoint } from '../../engine/ai/types';
 import promptRules from '../../../public/packs/tianming/rules/plot-vector-prompts.json';
 
@@ -148,26 +152,29 @@ describe('AGA opt-in integration (zero network)', () => {
     const originals = structuredClone(c.messages), sources = [...c.messageSources];
     h.adapter.promptTransform(c);
     const out = await h.adapter.prepare(c);
-    const added = out.messageSources!.flatMap((s, i) => s.startsWith('plot-vector') ? [i] : []);
-    expect(added).toHaveLength(2);
+    const added = out.messageSources!.flatMap((s, i) => s.startsWith('plot-vector') || s === 'environment-ability' ? [i] : []);
+    expect(added).toHaveLength(3); // mode, impulse, and (single call writes environment) the environment-ability interface
+    expect(String(out.messages[out.messageSources!.indexOf('environment-ability')].content)).toContain('onVisit');
     const user = out.messages.map(m => m.role).lastIndexOf('user');
     if (user >= 0) expect(added.every(i => i < user)).toBe(true);
-    else expect(added).toEqual([0, 1]);
+    else expect(added).toEqual([0, 1, 2]);
     expect(out.messages.filter((_, i) => !added.includes(i))).toEqual(originals);
     expect(out.messageSources!.filter((_, i) => !added.includes(i))).toEqual(sources);
     expect(c.messages).toEqual(originals);
     expect(out.messages).toHaveLength(out.messageSources!.length);
   });
-  it('keeps mode even with no impulse and gives Step2 the contract, not the vector', async () => {
+  it('keeps mode even with no impulse and gives Step2 the contracts (state updates, environment abilities), not the vector', async () => {
     const h = setup(); writePlotVectorControl(true);
     const c = h.ctx(); c.meta.splitStep2Messages = [{ role: 'system', content: 'commands' }];
     expect(h.adapter.promptTransform(c)).toBeTypeOf('function');
     const result = await h.adapter.prepare(h.sync.prepare(c));
     expect(result.messageSources).toContain('plot-vector-mode');
     expect(result.messages.find(m => m.content === 'mode contract')).toBeDefined();
-    expect(result.meta.splitStep2Messages).toEqual([{ role: 'system', content: 'state update contract' }, { role: 'system', content: 'commands' }]);
-    expect(result.meta.splitStep2Sources).toEqual(['state-update-protocol', 'unknown']);
-    expect(result.meta.splitStep2Messages!.some(m => typeof m.content === 'string' && m.content.includes('S+'))).toBe(false);
+    expect(result.meta.splitStep2Messages!.slice(1)).toEqual([{ role: 'system', content: 'state update contract' }, { role: 'system', content: 'commands' }]);
+    expect(result.meta.splitStep2Sources).toEqual(['environment-ability', 'state-update-protocol', 'unknown']);
+    expect(String(result.meta.splitStep2Messages![0].content)).toContain('onVisit');
+    // The vector itself (axes and values) stays out of Step2.
+    expect(result.meta.splitStep2Messages!.some(m => typeof m.content === 'string' && m.content.includes('维度说明与数值'))).toBe(false);
     expect(result.messageSources).not.toContain('plot-vector');
   });
   it('rejects mode changes during context assembly in either direction', async () => {
@@ -196,7 +203,7 @@ describe('AGA opt-in integration (zero network)', () => {
     expect(h.state.toSnapshot()).toEqual(before);
     expect(h.worker.execute).not.toHaveBeenCalled();
   });
-  it('injects saved attributes with no cards and queues environment only after entry changes', async () => {
+  it('injects saved attributes with no cards; a new environment tag never queues a post-save generation', async () => {
     const h = setup(); writePlotVectorControl(true);
     h.state.set(P.characterAttributes, { 体质: 10, 心性: 10, 悟性: 15 });
     const ctx = await h.adapter.prepare(h.ctx());
@@ -204,14 +211,11 @@ describe('AGA opt-in integration (zero network)', () => {
     expect(h.worker.execute.mock.calls[0][0]).toMatchObject({ native: { visitBudget: 11, payload: { 'S+': 2 } } });
     h.state.set(P.environmentTags, [{ 名称: '微风', 描述: '街道上的风', 效果: '舒适' }]);
     await h.adapter.beforeSave(ctx);
-    expect(h.ai.generate).not.toHaveBeenCalled();
-    expect(h.state.get<VectorState>(P.plotVector)?.tasks[0].task.entry.kind).toBe('environment');
+    expect(h.state.get<VectorState>(P.plotVector)?.tasks).toEqual([]);
     ctx.meta.plotVectorCommitted!(); await h.adapter.afterSave(ctx);
-    expect(h.ai.generate).toHaveBeenCalledTimes(1);
-    const next = await h.adapter.prepare({ ...h.ctx(), roundNumber: 2 });
-    await h.adapter.beforeSave(next); next.meta.plotVectorCommitted!(); await h.adapter.afterSave(next);
-    expect(h.ai.generate).toHaveBeenCalledTimes(1);
-    expect(h.state.get<VectorState>(P.plotVector)?.last?.layout.placements['06']).toBe('environment:name:微风');
+    expect(h.ai.generate).not.toHaveBeenCalled();
+    // Written without its ability: this round's Step3 gets one repair task for it.
+    expect((await h.adapter.environmentRepairTask())?.block).toContain('微风');
   });
   it('rejects a stale loaded slot before executing cards or calling a model', async () => {
     const h = setup(); writePlotVectorControl(true);
@@ -701,5 +705,96 @@ describe('gate 1 · R4 ability-generation receipts: free recovery, never a secon
     await round(h, 2);
     expect(sends).toHaveBeenCalledTimes(1);
     expect(rows(h)[0]).toMatchObject({ status: 'bound', raw: reply });
+  });
+});
+
+describe('sources and environment abilities (PO correction)', () => {
+  const ability = (channel: string) => ({ hooks: { onVisit: `return { effects: [{ kind: 'add', channel: '${channel}', amount: 1 }] };`, onRoundAccepted: null } });
+  async function round(h: ReturnType<typeof setup>, roundNumber: number, during?: () => void) {
+    const ctx = await h.adapter.prepare({ ...h.ctx(), roundNumber });
+    during?.();
+    await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!(); await h.adapter.afterSave(ctx);
+  }
+  const vector = (h: ReturnType<typeof setup>) => h.state.get<VectorState>(P.plotVector)!;
+  const environmentCards = (h: ReturnType<typeof setup>) => vector(h).cards.filter(c => c.task.entry.kind === 'environment');
+
+  it('a saved item card on the board is not consumed: the item stays in the inventory round after round', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    await round(h, 1, () => h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 2 } }));
+    expect(vector(h).cards.map(c => c.task.entry.id)).toEqual(['item:tea']);
+    h.state.set(P.plotVector, { ...vector(h), layout: { placements: { '01': 'item:tea', '02': null, '03': null, '04': null, '05': null, '06': null }, tray: [] } });
+    for (const n of [2, 3]) {
+      await round(h, n);
+      expect(vector(h).last!.result.trace.some(e => e.owner?.id === 'item:tea' && e.status === 'applied')).toBe(true);
+      expect(h.state.get(`${P.inventoryItems}.tea.数量`)).toBe(2);
+    }
+    expect(h.ai.generate).toHaveBeenCalledTimes(1);
+  });
+
+  it('Step2 environment abilities: bound after the save, used next round, kept when not rewritten, replaced, then removed', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    await round(h, 1, () => h.state.set(P.environmentTags, [{ 名称: '细雨', 描述: '雨丝细密', 效果: '路滑', 能力: ability('Y') }]));
+    expect(environmentCards(h).map(c => c.task.entry.id)).toEqual(['environment:name:细雨']);
+    // The snippet travelled once, through Step2's own command; it does not stay in the story state or later prompts.
+    expect(h.state.get(P.environmentTags)).toEqual([{ 名称: '细雨', 描述: '雨丝细密', 效果: '路滑' }]);
+    const bound = environmentCards(h)[0].ref.hash;
+    // Next round: the card takes part automatically; Step2 re-emits the tag reworded, without an ability → kept.
+    await round(h, 2, () => h.state.set(P.environmentTags, [{ 名称: '细雨', 描述: '雨势渐小', 效果: '路滑' }]));
+    expect(vector(h).last!.layout.placements['06']).toBe('environment:name:细雨');
+    expect(vector(h).last!.result.trace.some(e => e.owner?.id === 'environment:name:细雨' && e.status === 'applied')).toBe(true);
+    expect(environmentCards(h).map(c => c.ref.hash)).toEqual([bound]);
+    // The environment changes: the new tag's ability replaces the old card.
+    await round(h, 3, () => h.state.set(P.environmentTags, [{ 名称: '放晴', 描述: '云开日出', 效果: '', 能力: ability('J') }]));
+    expect(environmentCards(h).map(c => c.task.entry.id)).toEqual(['environment:name:放晴']);
+    // The environment clears: its card goes with it.
+    await round(h, 4, () => h.state.set(P.environmentTags, []));
+    expect(environmentCards(h)).toEqual([]);
+    expect(h.ai.generate).not.toHaveBeenCalled(); // no post-save generation for environment
+  });
+
+  it('an invalid environment ability rides the existing Step3 repair and loads once fixed', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    await round(h, 1, () => h.state.set(P.environmentTags, [{ 名称: '浓雾', 描述: '看不清路', 效果: '', 能力: { hooks: { onVisit: 'return {', onRoundAccepted: null } } }]));
+    expect(environmentCards(h)).toEqual([]);
+    const repaired = [{ 名称: '浓雾', 描述: '看不清路', 效果: '', 能力: ability('S-') }];
+    const generate = vi.fn(async () => JSON.stringify({ commands: [{ action: 'set', key: P.environmentTags, value: repaired }] }));
+    const step3 = new FieldRepairPipeline(h.state, new CommandExecutor(h.state), { generate } as unknown as AIService, new ResponseParser(),
+      {} as PromptAssembler, null, { rules: {}, promptFlows: {}, prompts: {} } as unknown as GamePack, P, () => h.adapter.environmentRepairTask());
+    await step3.execute();
+    expect(generate).toHaveBeenCalledTimes(1);
+    const request = String((generate.mock.calls[0] as unknown as [{ messages: Array<{ content: string }> }])[0].messages.at(-1)!.content);
+    expect(request).toContain('<环境能力修复>');
+    expect(request).toContain('浓雾');
+    expect(request).toContain('does not compile'); // the concrete diagnostic, not a request to judge
+    expect(request).toContain('onVisit');           // the same interface Step2 uses
+    expect(environmentCards(h).map(c => c.task.entry.id)).toEqual(['environment:name:浓雾']);
+    expect(h.state.get(P.environmentTags)).toEqual([{ 名称: '浓雾', 描述: '看不清路', 效果: '' }]);
+    expect(await h.adapter.environmentRepairTask()).toBeNull(); // nothing left to repair; Step3 is not a per-card pass
+  });
+
+  it('a repair that never validates stays bounded, keeps the round, and is reported as unresolved (not as field success)', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    await round(h, 1, () => h.state.set(P.environmentTags, [{ 名称: '浓雾', 描述: '看不清路', 效果: '', 能力: { hooks: { onVisit: 'return {', onRoundAccepted: null } } }]));
+    const still = [{ 名称: '浓雾', 描述: '看不清路', 效果: '', 能力: { hooks: { onVisit: 'return {', onRoundAccepted: null } } }];
+    const generate = vi.fn(async () => JSON.stringify({ commands: [{ action: 'set', key: P.environmentTags, value: still }] }));
+    const step3 = new FieldRepairPipeline(h.state, new CommandExecutor(h.state), { generate } as unknown as AIService, new ResponseParser(),
+      {} as PromptAssembler, null, { rules: {}, promptFlows: {}, prompts: {} } as unknown as GamePack, P, () => h.adapter.environmentRepairTask());
+    const result = await step3.execute();
+    expect(result.extra).toEqual({ resolved: false });
+    expect(result.fieldsNeeded).toBe(false);
+    expect(generate.mock.calls.length).toBeGreaterThanOrEqual(1);
+    expect(generate.mock.calls.length).toBeLessThanOrEqual(result.attempts);
+    expect(environmentCards(h)).toEqual([]);
+    expect(vector(h).session.round).toBe(2); // the round itself stays committed
+  });
+
+  it('a duplicated environment tag name does not silently drop the card of a tag that is still there', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    await round(h, 1, () => h.state.set(P.environmentTags, [{ 名称: '细雨', 描述: '雨丝细密', 效果: '', 能力: ability('Y') }]));
+    const bound = environmentCards(h).map(c => c.ref.hash);
+    await round(h, 2, () => h.state.set(P.environmentTags, [{ 名称: '细雨', 描述: '雨丝细密', 效果: '' }, { 名称: '细雨', 描述: '又下起来', 效果: '' }]));
+    expect(environmentCards(h).map(c => c.ref.hash)).toEqual(bound);
+    await round(h, 3, () => h.state.set(P.environmentTags, []));
+    expect(environmentCards(h)).toEqual([]);
   });
 });

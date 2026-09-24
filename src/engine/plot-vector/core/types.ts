@@ -358,7 +358,8 @@ export interface RunServices {
   scripts?: ScriptProgramRuntime;
 }
 
-export type CardOrigin = 'talent' | 'item' | 'environment' | 'effect' | 'demo';
+/** `supply`: a basic small card the player owns independently of the story (host-issued, consumable). */
+export type CardOrigin = 'talent' | 'item' | 'environment' | 'effect' | 'demo' | 'supply';
 
 /** Evaluated at completed visits; awarded once on accepted round, never during replay. */
 export interface CardProgressRule {

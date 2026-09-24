@@ -282,13 +282,16 @@ describe('real pack judgment transition, zero network', () => {
         }
         expect(has(0, h.policy.mode)).toBe(1);
         expect(has(0, h.policy.stateUpdatePrompt!)).toBe(split ? 0 : 1);
+        // The environment-ability interface goes only where environment tags are written.
+        expect(has(0, h.policy.environmentAbility!.prompt)).toBe(split ? 0 : 1);
         expect(requests[0].messages.some(m => String(m.content).includes(input))).toBe(true);
         if (split) {
           expect(has(1, h.policy.mode)).toBe(0);
           expect(has(1, h.policy.stateUpdatePrompt!)).toBe(1);
-          expect(prepared.meta.splitStep2Sources?.[0]).toBe('state-update-protocol');
+          expect(has(1, h.policy.environmentAbility!.prompt)).toBe(1);
+          expect(prepared.meta.splitStep2Sources?.slice(0, 2)).toEqual(['environment-ability', 'state-update-protocol']);
           // Everything supplied by the host remains unchanged, including state and history.
-          expect(prepared.meta.splitStep2Messages?.slice(1)).toEqual(baseStep2);
+          expect(prepared.meta.splitStep2Messages?.slice(2)).toEqual(baseStep2);
           expect(requests[1].messages.at(-2)).toEqual({ role: 'assistant', content: JSON.stringify({ text: reply.text }) });
           expect(requests[1].messages.at(-1)?.role).toBe('user');
           expect(requests[1].messages.at(-1)?.content).toBe(h.pack.prompts.splitGenStep2Followup.trim());

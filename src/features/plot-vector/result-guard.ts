@@ -7,6 +7,7 @@ import { DEFAULT_SCRIPT_LIMITS, programHash } from './genesis/script-runtime';
 import { stable, toRuntimeCandidate, type BoundCard } from './genesis/post-save';
 import { narrativePromptFor, VECTOR_RUN_OPTIONS, vectorBaseBoard, type PreparedVector, type VectorOperation, type VectorResult, type VectorState } from './runtime';
 import { projectNativeInput, type NativeInput } from './native-input';
+import { BASIC_SUPPLY_IDS, BASIC_SUPPLY_USAGE, basicSupplyHashes } from './basic-supply';
 
 /**
  * Host-side boundary for everything the sandboxed Worker sends back. The Worker runs card
@@ -48,8 +49,8 @@ export async function assertVectorResult(op: VectorOperation, result: unknown): 
   if (!isRecord(result)) throw new VectorResultError(op.kind, 'not an object');
   switch (op.kind) {
     case 'validate': return checkBound(op, result, fail);
-    case 'prepare': return checkPrepared(op, result, fail);
-    case 'accept': return checkAccepted(op, result, fail);
+    case 'prepare': return checkPrepared(op, result, knownCards(op.state.cards, await basicSupplyHashes()), fail);
+    case 'accept': return checkAccepted(op, result, knownCards(op.state.cards, await basicSupplyHashes()), fail);
   }
 }
 
@@ -82,9 +83,8 @@ async function checkBound(op: Extract<VectorOperation, { kind: 'validate' }>, r:
   return r as unknown as BoundCard;
 }
 
-function checkPrepared(op: Extract<VectorOperation, { kind: 'prepare' }>, r: Record<string, unknown>, fail: (d: string) => never): PreparedVector {
+function checkPrepared(op: Extract<VectorOperation, { kind: 'prepare' }>, r: Record<string, unknown>, known: KnownCards, fail: (d: string) => never): PreparedVector {
   if (r.id !== op.id) fail('request identity changed');
-  const known = knownCards(op.state.cards);
   const rules = trustedRules();
   const board = r.board;
   if (!isRecord(board) || !Array.isArray(board.cells) || !Array.isArray(board.cards)) fail('board malformed');
@@ -123,7 +123,7 @@ function checkPrepared(op: Extract<VectorOperation, { kind: 'prepare' }>, r: Rec
   return r as unknown as PreparedVector;
 }
 
-function checkAccepted(op: Extract<VectorOperation, { kind: 'accept' }>, r: Record<string, unknown>, fail: (d: string) => never): VectorState {
+function checkAccepted(op: Extract<VectorOperation, { kind: 'accept' }>, r: Record<string, unknown>, known: KnownCards, fail: (d: string) => never): VectorState {
   const settlementId = op.prepared.result.settlementId;
   if (op.state.session.committed.includes(settlementId)) {
     if (stable(r) !== stable(op.state)) fail('a repeated commit must return the state unchanged');
@@ -133,7 +133,6 @@ function checkAccepted(op: Extract<VectorOperation, { kind: 'accept' }>, r: Reco
   if (stable(r.cards) !== stable(op.state.cards)) fail('accept changed the bound cards');
   if (stable(r.tasks) !== stable(op.state.tasks)) fail('accept changed the generation tasks');
   if (stable(r.layout) !== stable(op.prepared.layout)) fail('accept changed the layout');
-  const known = knownCards(op.state.cards);
   const session = r.session;
   if (!isRecord(session)) fail('session malformed');
   if (session.round !== op.state.session.round + 1) fail('round did not advance by one');
@@ -149,6 +148,7 @@ function checkAccepted(op: Extract<VectorOperation, { kind: 'accept' }>, r: Reco
   }
   checkCommitLog(op.state.session.scriptCommitLog ?? [], session.scriptCommitLog, settlementId,
     op.prepared.result.pendingScriptAcceptances ?? [], fail);
+  checkCardStates(op.state.session.cardStates ?? {}, session.cardStates, known, fail);
   const last = r.last;
   if (!isRecord(last) || last.id !== op.prepared.id) fail('last settlement identity changed');
   if (stable(last.board) !== stable(op.prepared.board) || stable(last.result) !== stable(op.prepared.result) || stable(last.layout) !== stable(op.prepared.layout)) fail('accept changed the prepared run');
@@ -156,8 +156,10 @@ function checkAccepted(op: Extract<VectorOperation, { kind: 'accept' }>, r: Reco
   return r as unknown as VectorState;
 }
 
-function knownCards(cards: BoundCard[]): { ids: Set<string>; hashes: Map<string, string>; accounts: Set<string> } {
-  const ids = new Set<string>(), hashes = new Map<string, string>(), accounts = new Set<string>([C_BUFFER_ACCOUNT]);
+interface KnownCards { ids: Set<string>; hashes: Map<string, string>; accounts: Set<string> }
+/** The player's bound cards plus the host's basic supply cards (no private accounts). */
+function knownCards(cards: BoundCard[], basic: ReadonlyMap<string, string>): KnownCards {
+  const ids = new Set<string>(basic.keys()), hashes = new Map<string, string>(basic), accounts = new Set<string>([C_BUFFER_ACCOUNT]);
   for (const card of cards) {
     ids.add(card.task.entry.id); hashes.set(card.task.entry.id, card.ref.hash);
     accounts.add(scriptStoreAccountId(card.task.entry.id, card.ref));
@@ -209,6 +211,25 @@ function checkPacket(packet: unknown, id: string, rules: ReturnType<typeof trust
     || !packet.sourceSummary.every(s => isRecord(s) && nonNegative(s.magnitude))) fail('source summary malformed');
 }
 
+/**
+ * Card use counts after a round (the basic supply stock lives here). Every count is a non-negative
+ * integer on a known card; a basic card never exceeds its maximum and gains at most one top-up per
+ * round. The accept that produced them ran in the same Worker realm as card code, so they are checked.
+ */
+function checkCardStates(before: Record<string, unknown>, after: unknown, known: KnownCards, fail: (d: string) => never): void {
+  if (after === undefined) return;
+  if (!isRecord(after)) fail('card states malformed');
+  const usage = BASIC_SUPPLY_USAGE.kind === 'consumable' ? BASIC_SUPPLY_USAGE : undefined;
+  for (const [id, state] of Object.entries(after as Record<string, unknown>)) {
+    if (!known.ids.has(id)) fail(`card state for an unknown card ${id}`);
+    if (!isRecord(state) || !safeInt(state.stacks, 0) || !safeInt(state.stock, 0) || !safeInt(state.charges, 0)) fail(`card state for ${id} is not a set of non-negative integers`);
+    if (usage && BASIC_SUPPLY_IDS.includes(id)) {
+      const previous = isRecord(before[id]) && safeInt(before[id].stock, 0) ? before[id].stock : usage.initialStock;
+      if (state.stock > usage.maxStock || state.stock > previous + (usage.supply?.amount ?? 0)) fail(`basic card ${id} gained more than one top-up`);
+    }
+  }
+}
+
 /** Previous entries unchanged, then exactly one entry per acceptance of this settlement, in order. */
 function checkCommitLog(before: readonly unknown[], after: unknown, settlementId: string,
   pending: readonly ScriptAcceptanceInput[], fail: (d: string) => never): void {
@@ -237,7 +258,7 @@ function checkFinalState(state: unknown, fail: (d: string) => never): void {
   }
 }
 
-function checkAccounts(snapshot: unknown, known: ReturnType<typeof knownCards>, fail: (d: string) => never): asserts snapshot is AccountSnapshot {
+function checkAccounts(snapshot: unknown, known: KnownCards, fail: (d: string) => never): asserts snapshot is AccountSnapshot {
   if (!isRecord(snapshot)) fail('account snapshot malformed');
   for (const [account, entries] of Object.entries(snapshot)) {
     if (!known.accounts.has(account)) fail(`unknown account ${account}`);

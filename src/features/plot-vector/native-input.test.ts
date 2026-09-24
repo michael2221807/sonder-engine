@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BASIC_SUPPLY_IDS } from './basic-supply';
 import { set } from 'lodash-es';
 import rulesJSON from '../../../public/packs/tianming/rules/plot-vector.json';
 import { DEFAULT_ENGINE_PATHS as P } from '../../engine/pipeline/types';
@@ -41,10 +42,12 @@ describe('native saved inputs', () => {
     const state = { ...initialVectorState(), cards: [bound], layout: { placements: { '01': bound.task.entry.id }, tray: [] } };
     const prepared = await executeVectorOperation({ kind: 'prepare', state, entries: before, id: 'r2' }) as PreparedVector;
     expect(prepared.layout.placements['01']).toBeNull();
-    expect(prepared.layout.placements['06']).toBe(bound.task.entry.id); expect(prepared.layout.tray).toEqual([]);
+    expect(prepared.layout.placements['06']).toBe(bound.task.entry.id);
+    // The hand holds only the basic supply cards: a status/environment card is never placeable.
+    expect(prepared.layout.tray).toEqual([...BASIC_SUPPLY_IDS]);
     expect(prepared.board.cards[0].origin).toBe('environment');
     const removed = await executeVectorOperation({ kind: 'prepare', state, entries: [], id: 'r3' }) as PreparedVector;
-    expect(removed.board.cards).toEqual([]);
+    expect(removed.board.cards.filter(c => c.origin !== 'supply')).toEqual([]);
   });
   it('shows persistent growth and charge without accepting previews; preserves accepted deltas on retry', async () => {
     const sample = POSITIVE_EXAMPLES[2];
@@ -90,7 +93,7 @@ describe('native saved inputs', () => {
     expect(state.session.carriedAccounts).toEqual({});
     const accepted = await executeVectorOperation({ kind: 'accept', state, prepared: first }) as VectorState;
     expect(accepted.last?.progress?.[0].rows[0]).toMatchObject({ value: 2, delta: 2 });
-    expect(Object.values(accepted.session.scriptStates ?? {})).toEqual([{}]);
+    expect(Object.entries(accepted.session.scriptStates ?? {}).filter(([key]) => !BASIC_SUPPLY_IDS.some(id => key.startsWith(`${id}:`))).map(([, value]) => value)).toEqual([{}]);
     expect(await executeVectorOperation({ kind: 'accept', state: accepted, prepared: first })).toEqual(accepted);
     const second = await executeVectorOperation({ kind: 'prepare', state: accepted, entries: [entry], id: 'store-2', native }) as PreparedVector;
     expect(second.progress?.[0].rows[0].value).toBe(2);

@@ -94,12 +94,29 @@ export interface EntityEnrichResult {
 }
 
 export interface FieldRepairResult {
+  /** Required fields are complete (unchanged meaning; says nothing about the extra task). */
   success: boolean;
   attempts: number;
   remaining: FieldRepairReport;
+  /** Whether required fields were missing when step 3 started. */
+  fieldsNeeded?: boolean;
+  /** Outcome of the feature-owned extra task, when there was one. */
+  extra?: { resolved: boolean };
   entityEnrichResult?: EntityEnrichResult;
   edgeReviewResult?: EdgeReviewResult;
 }
+
+/**
+ * A feature-owned repair need that rides the same step-3 request (e.g. a missing ability snippet).
+ * `block` is the task text, with current values and concrete diagnostics; the fix arrives as ordinary
+ * `commands`. After those are applied, `settle` re-checks and reports whether the need is resolved.
+ */
+export interface ExtraRepairTask {
+  block: string;
+  settle(): Promise<boolean>;
+}
+/** Asked once per attempt; returns null when there is nothing to repair. */
+export type ExtraRepairSource = () => Promise<ExtraRepairTask | null>;
 
 /** Detected pending entity enrichment data. */
 interface PendingEnrichmentData {
@@ -132,7 +149,20 @@ export class FieldRepairPipeline {
     private memoryRetriever: MemoryRetriever | null,
     private gamePack: GamePack,
     private paths: EnginePathConfig,
+    private extraRepair?: ExtraRepairSource,
   ) {}
+
+  /** Collect the extra task, if any; a failing source never blocks the rest of step 3. */
+  private async collectExtra(): Promise<ExtraRepairTask | null> {
+    try { return (await this.extraRepair?.()) ?? null; }
+    catch (err) { console.warn('[FieldRepair] extra repair source failed:', err); return null; }
+  }
+
+  /** Re-check an extra task after its commands were applied; errors count as unresolved. */
+  private async settleExtra(task: ExtraRepairTask): Promise<boolean> {
+    try { return await task.settle(); }
+    catch (err) { console.warn('[FieldRepair] extra repair task did not settle:', err); return false; }
+  }
 
   async execute(): Promise<FieldRepairResult> {
     const config = readRequiredFieldsConfig(this.gamePack.rules);
@@ -152,9 +182,12 @@ export class FieldRepairPipeline {
     let success = !needsFieldRepair;
     let entityEnrichResult: EntityEnrichResult | undefined;
     let edgeReviewResult: EdgeReviewResult | undefined;
+    let extra = await this.collectExtra();
+    const hadExtra = extra !== null;
+    let extraResolved = !extra;
 
     // ── Combined step: all active tasks in ONE AI request ──
-    if (needsFieldRepair || enrichData || reviewData) {
+    if (needsFieldRepair || enrichData || reviewData || extra) {
       attempts = 1;
       try {
         const combined = await this.runCombinedStep(
@@ -162,6 +195,7 @@ export class FieldRepairPipeline {
           enrichData,
           reviewData,
           1,
+          extra,
         );
 
         // Apply field repair results
@@ -199,6 +233,8 @@ export class FieldRepairPipeline {
           }
         }
 
+        if (extra) extraResolved = await this.settleExtra(extra);
+
         // Re-check field repair status
         report = findIncompleteFields(this.stateManager, this.paths, config, { nsfwMode });
         success = report.total === 0;
@@ -225,6 +261,23 @@ export class FieldRepairPipeline {
       report = findIncompleteFields(this.stateManager, this.paths, config, { nsfwMode });
     }
 
+    // ── Retry loop for the extra task: its own budget from the same retry setting, after field repair ──
+    let extraAttempts = extra ? 1 : 0;
+    while (!extraResolved && extraAttempts < maxAttempts) {
+      extra = await this.collectExtra();
+      if (!extra) break;
+      extraAttempts++;
+      attempts++;
+      try {
+        const combined = await this.runCombinedStep(null, null, null, attempts, extra);
+        if (combined.commands && combined.commands.length > 0) this.commandExecutor.executeBatch(combined.commands);
+        extraResolved = await this.settleExtra(extra);
+      } catch (err) {
+        console.error(`[FieldRepair] Extra repair attempt ${extraAttempts} failed:`, err);
+        break;
+      }
+    }
+
     success = report.total === 0;
     if (success && attempts > 0) {
       console.log(`[FieldRepair] All tasks completed in ${attempts} attempt(s)`);
@@ -234,7 +287,8 @@ export class FieldRepairPipeline {
       );
     }
 
-    return { success, attempts, remaining: report, entityEnrichResult, edgeReviewResult };
+    return { success, attempts, remaining: report, entityEnrichResult, edgeReviewResult,
+      fieldsNeeded: needsFieldRepair, ...(hadExtra ? { extra: { resolved: extraResolved } } : {}) };
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -253,6 +307,7 @@ export class FieldRepairPipeline {
     enrichData: PendingEnrichmentData | null,
     reviewData: PendingReviewData | null,
     attempt: number,
+    extra: ExtraRepairTask | null = null,
   ): Promise<CombinedStepResult> {
     const chatHistory = this.loadChatHistory();
     const hasChatHistory = chatHistory.length > 0;
@@ -337,6 +392,11 @@ export class FieldRepairPipeline {
       if (entityContext) block += '\n\n' + entityContext;
       parts.push(block);
       formatParts.push('"edge_updates": [{"edge_id": "...", "action": "keep|invalidate", "reason": "..."}, ...]');
+    }
+
+    if (extra) {
+      parts.push(extra.block);
+      if (!fieldReport) formatParts.push('"commands": [{...}, ...]');
     }
 
     parts.push(

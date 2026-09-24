@@ -284,6 +284,8 @@
   "mainGame.vectorBoard.progressHelp": "这里只显示已保存的进度，试走不会改变它。储存由引擎记录，其他成长由卡片说明。",
   "mainGame.vectorBoard.storedBalance": "实际已存{channel}",
   "mainGame.vectorBoard.generationIncomplete": "有 {count} 条能力生成记录尚未完成。你可以继续剧情；记录已保留，不会自动重复请求。",
+  "mainGame.vectorBoard.usesLeft": "剩余",
+  "mainGame.vectorBoard.basicSupply": "基础补给",
   "mainGame.vectorBoard.receiptPreview": "这次试走",
   "mainGame.vectorBoard.receiptAccepted": "上回合实算",
   "mainGame.vectorBoard.receiptNotTriggered": "没有触发",

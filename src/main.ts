@@ -550,6 +550,8 @@ async function bootstrap(): Promise<void> {
   let npcGenerationPipeline: NpcGenerationPipeline | undefined;
   let privacyRepairPipeline: PrivacyProfileRepairPipeline | undefined;
   let fieldRepairPipeline: FieldRepairPipeline | undefined;
+  // Assigned when the orchestrator is built; step-3 field repair asks it for environment-ability repairs.
+  let plotVectorAdapter: AgaPlotVectorAdapter | undefined;
   let npcMemSummarizer: NpcMemorySummarizer | undefined;
 
   if (pack) {
@@ -636,6 +638,8 @@ async function bootstrap(): Promise<void> {
       memoryRetriever,
       pack,
       DEFAULT_ENGINE_PATHS,
+      // Step 3 also repairs this round's environment abilities (plot vector, when enabled).
+      () => plotVectorAdapter?.environmentRepairTask() ?? Promise.resolve(null),
     );
   }
 
@@ -811,7 +815,7 @@ async function bootstrap(): Promise<void> {
               if (readPlotVectorControl().epoch !== control.epoch) throw new Error('状态更新模式已改变，请重新开始本回合');
             } };
         }),
-        plotVector: new AgaPlotVectorAdapter(stateManager, aiService, saveManager, getActiveSlot, undefined, undefined, vectorNativeRules,
+        plotVector: plotVectorAdapter = new AgaPlotVectorAdapter(stateManager, aiService, saveManager, getActiveSlot, undefined, undefined, vectorNativeRules,
           vectorPromptPolicy),
         stateEditInProgress: () => plotVectorBoard.isSaving,
       },

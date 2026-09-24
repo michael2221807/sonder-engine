@@ -5,6 +5,13 @@ export interface ProjectionIssue { path: string; reason: string }
 const bookkeeping = new Set(['数量', '剩余', '剩余次数', '持续', '持续回合', '剩余回合', 'count', 'quantity', 'remaining']);
 const names = ['状态名称', '名称', 'name'];
 const descriptions = ['状态描述', '描述', 'description'];
+/** The display name a saved entry is identified by (same rule the projection uses). */
+export function savedEntryName(value: unknown): string | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return typeof value === 'string' && value.trim() ? value : undefined;
+  const data = value as Record<string, unknown>;
+  const name = names.map(k => data[k]).find(v => typeof v === 'string' && v.trim());
+  return typeof name === 'string' ? name : undefined;
+}
 export function readPath(state: unknown, path: string): unknown {
   return path.split('.').reduce<unknown>((v, k) => v && typeof v === 'object' ? (v as Record<string, unknown>)[k] : undefined, state);
 }

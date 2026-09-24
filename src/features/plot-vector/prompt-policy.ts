@@ -1,5 +1,6 @@
 import type { RawPromptTransform } from '../../engine/prompt/raw-prompt-transform';
 import { compileStateUpdates, type StateUpdateContract } from './state-update-compiler';
+import { SNIPPET_API } from './genesis/generation-prompt';
 
 export interface VectorPromptPolicy {
   transform: RawPromptTransform;
@@ -7,6 +8,16 @@ export interface VectorPromptPolicy {
   mode: string;
   stateUpdates?: StateUpdateContract;
   stateUpdatePrompt?: string;
+  environmentAbility?: EnvironmentAbilityPolicy;
+}
+/** Environment abilities written by Step2 with the environment tags (pack-owned wording, one interface). */
+export interface EnvironmentAbilityPolicy {
+  /** Field on each environment tag that carries the snippet object. */
+  field: string;
+  /** Step2 interface: pack instruction + the shared snippet contract. Step3 repair reuses the same text. */
+  prompt: string;
+  /** Step3 repair block template with `{{PATH}}` and `{{ITEMS}}`. */
+  repair: string;
 }
 interface Replacement { promptId: string; from: string; to: string; scope: 'all' | 'inline' | 'separate' }
 
@@ -45,6 +56,13 @@ export function parseVectorPromptPolicy(raw: unknown, mode: unknown, stateUpdate
     for (const edit of edits) result = result.split(edit.from).join(edit.to);
     return result;
   };
-  return { mode, stateUpdates, stateUpdatePrompt: stateUpdates ? stateUpdatePrompt as string : undefined,
+  let environmentAbility: EnvironmentAbilityPolicy | undefined;
+  if (r.environmentAbility !== undefined) {
+    const e = r.environmentAbility as Record<string, unknown> | null;
+    if (!e || typeof e.field !== 'string' || !e.field.trim() || typeof e.instruction !== 'string' || !e.instruction.trim()
+      || typeof e.repair !== 'string' || !e.repair.includes('{{ITEMS}}') || !e.repair.includes('{{PATH}}')) return;
+    environmentAbility = { field: e.field, prompt: `${e.instruction.trim()}\n\n${SNIPPET_API}`, repair: e.repair };
+  }
+  return { mode, stateUpdates, stateUpdatePrompt: stateUpdates ? stateUpdatePrompt as string : undefined, environmentAbility,
     transform: transformFor('inline'), separateTransform: transformFor('separate') };
 }

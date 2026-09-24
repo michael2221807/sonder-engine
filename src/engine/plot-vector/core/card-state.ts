@@ -10,7 +10,7 @@ export interface SupplyGrant {
   max: number;
 }
 
-export function stateOf(card: CardDef, states: CardStates = {}): CardState {
+export function stateOf(card: Pick<CardDef, 'id' | 'usage'>, states: CardStates = {}): CardState {
   return states[card.id] ?? {
     stacks: 0,
     stock: card.usage?.kind === 'consumable' ? card.usage.initialStock : 0,
@@ -25,14 +25,14 @@ export function availableUses(card: CardDef, state: CardState): number {
 }
 
 /** Pure host-side grant: usable for round supply now and other explicit sources later. */
-export function grantConsumable(card: CardDef, before: CardState, amount: number): { state: CardState; granted: number } {
+export function grantConsumable(card: Pick<CardDef, 'usage'>, before: CardState, amount: number): { state: CardState; granted: number } {
   if (card.usage?.kind !== 'consumable') return { state: before, granted: 0 };
   const stock = Math.min(card.usage.maxStock, before.stock + amount);
   return { state: { ...before, stock }, granted: stock - before.stock };
 }
 
 /** Apply only the supply rules declared by the owned card definitions. */
-export function grantRoundSupplies(cards: CardDef[], initial: CardStates): { states: CardStates; grants: SupplyGrant[] } {
+export function grantRoundSupplies(cards: ReadonlyArray<Pick<CardDef, 'id' | 'usage'>>, initial: CardStates): { states: CardStates; grants: SupplyGrant[] } {
   const states: CardStates = { ...initial };
   const grants: SupplyGrant[] = [];
   for (const card of cards) {

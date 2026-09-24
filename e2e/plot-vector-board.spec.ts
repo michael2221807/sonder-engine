@@ -66,7 +66,9 @@ test('optional board keeps explicit choices across reload; preview and layout sa
     await plotVector.nativeInput.locator('summary').click();
     await expect(plotVector.nativeInput).toContainText('悟性 · 15 → 行程 +3');
     await expect(plotVector.fixedStatusCell).toContainText('微风');
-    await expect(plotVector.cellChoice('01').locator('option')).toHaveCount(2);
+    // Leave empty + the saved notebook + the three basic supply cards (marked as such).
+    await expect(plotVector.cellChoice('01').locator('option')).toHaveCount(5);
+    await expect(plotVector.cellChoice('01').locator('option', { hasText: '基础补给' })).toHaveCount(3);
     await plotVector.progress.locator('summary').click();
     await expect(plotVector.progress).toContainText('已记页数 0');
     await expect(plotVector.cellChoice('01')).toHaveValue('');
@@ -95,7 +97,7 @@ test('optional board keeps explicit choices across reload; preview and layout sa
       const { idbAdapter } = await import(/* @vite-ignore */ path);
       return (await idbAdapter.get(`save_${profileId}_${slotId}`)).系统.扩展.plotVector;
     }, ids);
-    expect(persisted.layout.placements['01']).toBeNull(); expect(persisted.layout.tray).toEqual(['item:notebook']);
+    expect(persisted.layout.placements['01']).toBeNull(); expect(persisted.layout.tray).toEqual(['item:notebook', 'basic:push', 'basic:talk', 'basic:notice']);
     expect(persisted.session.round).toBe(1); expect(persisted.session.scriptStates).toEqual({}); expect(persisted.last).toBeUndefined();
 
   });

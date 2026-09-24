@@ -879,7 +879,17 @@ export class GameOrchestrator {
     if (this.subPipelines.fieldRepair) {
       try {
         const result = await this.subPipelines.fieldRepair.execute();
-        if (result.attempts > 0) {
+        // When the extra (feature-owned) task was the only work, the basic-fields messages do not apply.
+        const onlyExtra = !!result.extra && !result.fieldsNeeded && !result.entityEnrichResult && !result.edgeReviewResult;
+        if (result.extra && !result.extra.resolved) {
+          eventBus.emit('ui:toast', {
+            type: 'warning',
+            i18nKey: 'engine.toast.extraRepairIncomplete',
+            message: '部分自动修复未完成，本回合照常保留',
+            duration: 3000,
+          });
+        }
+        if (result.attempts > 0 && !onlyExtra) {
           if (result.success) {
             console.log(`[Orchestrator] FieldRepairPipeline completed in ${result.attempts} attempt(s)`);
             eventBus.emit('ui:toast', {

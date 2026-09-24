@@ -2,6 +2,8 @@ import type { BoundCard } from './genesis/post-save';
 import type { VectorSession } from '../../engine/plot-vector/core/session';
 import { scriptStateKey } from '../../engine/plot-vector/core/runner';
 import { scriptStoreAccountId } from './genesis/script-runtime';
+import type { CardDef, CardStates } from '../../engine/plot-vector/core/types';
+import { stateOf } from '../../engine/plot-vector/core/card-state';
 
 export interface CardProgress { cardId: string; name: string; rows: Array<{ key: string; label: string; value: number; max?: number; delta?: number; channel?: string }> }
 /** Display hints never execute code or infer an economy from variable names. */
@@ -45,4 +47,14 @@ export function readCardProgress(cards: BoundCard[], session: VectorSession, pre
     }
     return { cardId: card.task.entry.id, name: card.candidate.card.name, rows };
   }).filter(card => card.rows.length);
+}
+
+/** Remaining uses of consumable cards (basic supply). Row key `uses`; the UI supplies the label. */
+export function readSupplyProgress(cards: CardDef[], states: CardStates | undefined, previous?: CardStates): CardProgress[] {
+  return cards.filter(card => card.usage?.kind === 'consumable').map(card => {
+    const usage = card.usage as Extract<NonNullable<CardDef['usage']>, { kind: 'consumable' }>;
+    const value = stateOf(card, states).stock;
+    return { cardId: card.id, name: card.label.zh, rows: [{ key: 'uses', label: 'uses', value, max: usage.maxStock,
+      ...(previous ? { delta: value - stateOf(card, previous).stock } : {}) }] };
+  });
 }

@@ -108,6 +108,9 @@ describe('host boundary for Worker results', () => {
     ['last run swapped', s => { s.last!.result = { ...s.last!.result, visits: 0 }; }, /prepared run/],
     ['an extra log entry', s => { s.session.scriptCommitLog!.push({ ...s.session.scriptCommitLog!.at(-1)! }); }, /grow by exactly/],
     ['a log entry for another settlement', s => { s.session.scriptCommitLog!.at(-1)!.settlementId = 'other'; }, /does not match this settlement/],
+    ['a basic card topped up past its maximum', s => { s.session.cardStates = { ...s.session.cardStates, 'basic:push': { stacks: 0, stock: 9, charges: 0 } }; }, /more than one top-up/],
+    ['a negative use count', s => { s.session.cardStates = { ...s.session.cardStates, 'basic:talk': { stacks: 0, stock: -1, charges: 0 } }; }, /non-negative integers/],
+    ['a use count for an unknown card', s => { s.session.cardStates = { ...s.session.cardStates, ghost: { stacks: 0, stock: 1, charges: 0 } }; }, /unknown card/],
   ];
   it('long saves: a commit log past the old 4096 cap is accepted when history is unchanged and grows by this settlement', async () => {
     for (const size of [4095, 4096, 4097, 20_000]) {
@@ -134,7 +137,7 @@ describe('host boundary for Worker results', () => {
     await expect(assertVectorResult(prepareOp, prepared)).resolves.toBe(prepared);
     const acceptOp: VectorOperation = { kind: 'accept', state, prepared };
     const accepted = await executeVectorOperation(acceptOp) as VectorState;
-    const logged = accepted.session.scriptCommitLog!.at(-1)!;
+    const logged = accepted.session.scriptCommitLog!.find(e => e.cardId === entry.id)!;
     expect(logged).toMatchObject({ cardId: entry.id, status: 'failed' });
     expect(logged.reason!.length).toBeGreaterThanOrEqual(5000);
     await expect(assertVectorResult(acceptOp, accepted)).resolves.toBe(accepted);
