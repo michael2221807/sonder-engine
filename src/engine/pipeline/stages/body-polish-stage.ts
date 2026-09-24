@@ -141,6 +141,9 @@ export class BodyPolishStage implements PipelineStage {
         messages,
         stream: useStreaming,
         usageType: 'bodyPolish',
+        ...(ctx.meta.stateUpdateSource === 'settlement' && ctx.meta.plotVectorCheckpoint
+          ? { checkpoint: ctx.meta.plotVectorCheckpoint('polish'), singleAttempt: true }
+          : {}),
         generationId: polishGenId,
         signal: ctx.abortSignal,
         onStreamChunk: useStreaming

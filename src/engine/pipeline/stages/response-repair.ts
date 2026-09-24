@@ -126,6 +126,10 @@ export class ResponseRepairStage implements PipelineStage {
     const metaStep2Raw = ctx.meta.rawResponseStep2;
     const usingStep2Raw = typeof metaStep2Raw === 'string' && metaStep2Raw.trim().length > 0;
     const structureRaw = usingStep2Raw ? (metaStep2Raw as string) : ctx.rawResponse;
+    const requireStateUpdates = ctx.meta.stateUpdatesRequired === true && ctx.meta.stateUpdateSource !== 'settlement';
+    const hasStateUpdates = /["']state_updates["']\s*:/.test(structureRaw);
+    // Do not spend a repair call inventing a state update section absent from the source.
+    if (requireStateUpdates && !hasStateUpdates) return ctx;
 
     // Step 1: 正文抢救 —— 零成本（narrative always lives in ctx.rawResponse）
     let recoveredText: string | null = extractNarrativeFromWrapper(ctx.rawResponse);
@@ -136,18 +140,20 @@ export class ResponseRepairStage implements PipelineStage {
     let recoveredOptions = parsed.actionOptions;
     let recoveredKnowledgeFacts = parsed.knowledgeFacts;
     let recoveredSettingUpdates = parsed.settingUpdates;
+    let recoveredCustomFields = parsed.customFields;
     let structureRescued = false;
 
     try {
       // Only ask for `setting_updates` when the malformed output actually had it —
       // asking for a field that was never there invites the model to invent one.
       const wantSettingUpdates = hasSettingUpdatesTrace(structureRaw);
-      const systemPrompt = wantSettingUpdates
+      let systemPrompt = wantSettingUpdates
         ? REPAIR_SYSTEM_PROMPT.replace(
             '\n\n**硬规则**：',
             `\n${SETTING_UPDATES_REPAIR_FIELD}\n\n**硬规则**：`,
           )
         : REPAIR_SYSTEM_PROMPT;
+      if (requireStateUpdates) systemPrompt += '\n保留原文 state_updates 对象（version、actions），只修复 JSON 结构；不得添加、推测或删除动作。不能恢复时不要伪造空 actions。';
 
       const messages: AIMessage[] = [
         { role: 'system', content: systemPrompt },
@@ -174,6 +180,7 @@ export class ResponseRepairStage implements PipelineStage {
         usageType: 'field_repair',
         generationId: repairGenId,
         signal: ctx.abortSignal,
+        ...(ctx.meta.plotVectorCheckpoint ? { checkpoint: ctx.meta.plotVectorCheckpoint('repair'), singleAttempt: true } : {}),
       });
 
       emitPromptResponseDebug({
@@ -185,7 +192,10 @@ export class ResponseRepairStage implements PipelineStage {
 
       const repaired = this.responseParser.parse(raw);
       if (repaired.parseOk) {
-        structureRescued = true;
+        structureRescued = !requireStateUpdates || repaired.customFields?.state_updates !== undefined;
+        if (requireStateUpdates && repaired.customFields?.state_updates !== undefined) {
+          recoveredCustomFields = { ...parsed.customFields, state_updates: repaired.customFields.state_updates };
+        }
         if (repaired.commands && repaired.commands.length > 0) {
           recoveredCommands = repaired.commands;
         } else if (!recoveredCommands) {
@@ -213,6 +223,7 @@ export class ResponseRepairStage implements PipelineStage {
         console.debug('[ResponseRepair] repair AI call returned non-JSON; structure still broken');
       }
     } catch (err) {
+      if (ctx.meta.plotVectorCheckpoint) ctx.meta.plotVectorRepairError = err instanceof Error ? err.message : String(err);
       console.debug('[ResponseRepair] AI repair call failed:', err);
       // 不 throw —— 管线继续走，至少保留正文抢救的成果。
     }
@@ -230,6 +241,7 @@ export class ResponseRepairStage implements PipelineStage {
         actionOptions: recoveredOptions,
         knowledgeFacts: recoveredKnowledgeFacts,
         settingUpdates: recoveredSettingUpdates,
+        customFields: recoveredCustomFields,
         parseOk: structureRescued,
       },
       meta: {

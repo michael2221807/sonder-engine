@@ -61,3 +61,11 @@ CLAUDE.md
 
 # Unrelated side projects living in this worktree
 comfyui-llm-prompt-enhancer/
+
+/dist-lab/
+
+# Local plot-vector research workbench. Runtime code used by AGA lives under
+# src/engine/plot-vector and src/features/plot-vector instead.
+/src/lab/
+/vite.lab.config.ts
+/scripts/plot-vector-*.mjs

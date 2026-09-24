@@ -90,11 +90,15 @@ export class PostProcessStage implements PipelineStage {
      * 避免在引擎类中调用 useEngineStateStore()（Pinia 上下文违反）。
      */
     private getActiveSlot: () => { profileId: string; slotId: string } | null,
+    private plotVector?: import('../../plot-vector/round-port').PlotVectorRoundPort,
+    private stateUpdates?: import('../../state-updates/round-state-updates').RoundStateUpdates,
   ) {}
 
   async execute(ctx: PipelineContext): Promise<PipelineContext> {
     // 无 AI 响应时跳过（理论上不应发生，但 defensive coding）
     if (!ctx.parsedResponse) return ctx;
+    const guard = () => { ctx.meta.roundOwnership?.guard(); ctx.meta.plotVectorGuard?.(); };
+    guard();
 
     // ── 1 + 2. 同步追加短期 + 隐式中期（1:1 配对不变量，CR C-01） ──
     //
@@ -149,10 +153,11 @@ export class PostProcessStage implements PipelineStage {
       const engramWriteSnapshot = await this.engramManager.processResponse(
         ctx.parsedResponse,
         this.stateManager,
-        ctx.meta?.isEnhancedOpening
-          ? { defaultEdgeCore: true, defaultEdgeSource: 'opening', canonMutations }
-          : (canonMutations.length > 0 ? { canonMutations } : undefined),
+        { guard, ...(ctx.meta?.isEnhancedOpening
+          ? { defaultEdgeCore: true, defaultEdgeSource: 'opening' as const, canonMutations }
+          : (canonMutations.length > 0 ? { canonMutations } : {})) },
       );
+      guard();
       if (engramWriteSnapshot) {
         ctx.meta['engramWrite'] = engramWriteSnapshot;
       }
@@ -215,7 +220,8 @@ export class PostProcessStage implements PipelineStage {
         // Write every per-thread verdict (array) if the AI provided any; otherwise the pipeline reads an empty list
         try {
           if (ctx.parsedResponse?.customFields) {
-            const plotEvals = extractPlotEvaluations(ctx.parsedResponse.customFields);
+            const activeThreadCount = plotState.arcs?.filter(a => a?.status === 'active').length ?? 0;
+            const plotEvals = extractPlotEvaluations(ctx.parsedResponse.customFields, activeThreadCount);
             if (plotEvals.length > 0) {
               this.stateManager.set(
                 this.paths.plotDirection + '._lastEvaluation',
@@ -317,24 +323,33 @@ export class PostProcessStage implements PipelineStage {
     // on real saves and had never been recorded). `breakdown` says which context piece cost
     // what — the raw material for Context-Compiler budgeting.
     const pm = ctx.promptMetrics;
-    const step1Input = pm?.step1.inputTokens ?? estimateMessagesTokens(ctx.messages);
-    const step1Output = pm?.step1.outputTokens ?? estimateTextTokens(ctx.rawResponse ?? '');
+    const recovered = ctx.meta.plotVectorRecovered ?? [];
+    const reusedNarrative = recovered.includes('single') || recovered.includes('step1');
+    // These are estimates for this attempt; replayed text is not another paid request.
+    const step1Input = reusedNarrative ? 0 : (pm?.step1.inputTokens ?? estimateMessagesTokens(ctx.messages));
+    const step1Output = reusedNarrative ? 0 : (pm?.step1.outputTokens ?? estimateTextTokens(ctx.rawResponse ?? ''));
+    const step2Input = recovered.includes('step2') ? 0 : (pm?.step2?.inputTokens ?? 0);
+    const step2Output = recovered.includes('step2') ? 0 : (pm?.step2?.outputTokens ?? 0);
+    const settlementInput = recovered.includes('settlement') ? 0 : (pm?.settlement?.inputTokens ?? 0);
+    const settlementOutput = recovered.includes('settlement') ? 0 : (pm?.settlement?.outputTokens ?? 0);
     assistantEntry._metrics = {
       roundNumber: ctx.roundNumber,
       durationMs: ctx.aiCallDurationMs ?? 0,
       inputTokens: step1Input,
       outputTokens: step1Output,
       startedAt: ctx.aiCallStartedAt ?? 0,
-      ...(pm?.step2
+      ...(pm?.step2 || pm?.settlement
         ? {
-            step2InputTokens: pm.step2.inputTokens,
-            step2OutputTokens: pm.step2.outputTokens,
-            totalInputTokens: step1Input + pm.step2.inputTokens,
-            totalOutputTokens: step1Output + pm.step2.outputTokens,
+            step2InputTokens: step2Input,
+            step2OutputTokens: step2Output,
+            ...(pm?.settlement ? { settlementInputTokens: settlementInput, settlementOutputTokens: settlementOutput } : {}),
+            totalInputTokens: step1Input + step2Input + settlementInput,
+            totalOutputTokens: step1Output + step2Output + settlementOutput,
           }
         : {}),
       ...(pm
-        ? { breakdown: { step1: pm.step1.breakdown, ...(pm.step2 ? { step2: pm.step2.breakdown } : {}) } }
+        ? { breakdown: { step1: pm.step1.breakdown, ...(pm.step2 ? { step2: pm.step2.breakdown } : {}),
+          ...(pm.settlement ? { settlement: pm.settlement.breakdown } : {}) } }
         : {}),
     };
     if (ctx.parsedResponse.thinking) {
@@ -343,9 +358,17 @@ export class PostProcessStage implements PipelineStage {
     if (ctx.rawResponse) {
       assistantEntry._rawResponse = ctx.rawResponse;
     }
+    if (ctx.meta.plotVectorRecovered?.length) assistantEntry._recoveredSteps = [...ctx.meta.plotVectorRecovered];
+    if (ctx.rejectedCommands?.length) assistantEntry._rejectedCommands = ctx.rejectedCommands.map(r => ({
+      action: r.command.action, key: r.command.key, error: r.error,
+    }));
     const step2Raw = ctx.meta['rawResponseStep2'];
     if (typeof step2Raw === 'string' && step2Raw.length > 0) {
       assistantEntry._rawResponseStep2 = step2Raw;
+    }
+    if (typeof ctx.meta.stateSettlementRaw === 'string') {
+      assistantEntry._rawResponseSettlement = ctx.meta.stateSettlementRaw;
+      assistantEntry._settlementStrict = ctx.meta.stateSettlementStrict === true;
     }
     if (ctx.parsedResponse.commands && ctx.parsedResponse.commands.length > 0) {
       assistantEntry._commands = ctx.parsedResponse.commands;
@@ -404,7 +427,20 @@ export class PostProcessStage implements PipelineStage {
     // ── 11. 自动存档 ──
     // 在所有状态变更完成后保存，确保存档包含完整的回合结果
     // 只在有活跃的档案和槽位时存档（创角流程中可能还未创建）
-    await this.autoSave();
+    this.stateUpdates?.beforeSave(ctx);
+    ctx.meta.roundOwnership?.guard();
+    await this.plotVector?.beforeSave(ctx);
+    guard();
+    ctx.meta.plotVectorGuard?.();
+    try { await this.autoSave(ctx); }
+    catch (error) {
+      if (!ctx.meta.roundOwnership?.saved && !ctx.meta.plotVectorLifecycle?.saved) throw error;
+      console.warn('[PlotVector] Round saved; slot metadata update failed:', error);
+    }
+    // The accepted round remains accepted if optional post-save ability generation fails.
+    guard();
+    await this.plotVector?.afterSave(ctx).catch(error => console.warn('[PlotVector] Post-save task deferred:', error));
+    guard();
 
     return ctx;
   }
@@ -509,7 +545,7 @@ export class PostProcessStage implements PipelineStage {
    * 存档元数据包含游戏内时间、角色名、当前位置等摘要信息，
    * 用于存档列表的快速展示（无需加载完整状态树）。
    */
-  private async autoSave(): Promise<void> {
+  private async autoSave(ctx: PipelineContext): Promise<void> {
     const slot = this.getActiveSlot();
     if (!slot) return;
 
@@ -525,6 +561,17 @@ export class PostProcessStage implements PipelineStage {
         characterName: this.stateManager.get<string>(this.paths.playerName),
         currentLocation: this.stateManager.get<string>(this.paths.playerLocation),
       },
+      ctx.meta.roundOwnership || ctx.meta.plotVectorCommitted ? {
+        guard: () => {
+          ctx.meta.roundOwnership?.guard();
+          this.stateUpdates?.beforeSave(ctx);
+          ctx.meta.plotVectorGuard?.();
+        },
+        committed: () => {
+          if (ctx.meta.roundOwnership) ctx.meta.roundOwnership.saved = true;
+          ctx.meta.plotVectorCommitted?.();
+        },
+      } : undefined,
     );
   }
 }

@@ -31,6 +31,16 @@ export class AICallStage implements PipelineStage {
 
   async execute(ctx: PipelineContext): Promise<PipelineContext> {
     const splitStep2Messages = ctx.meta.splitStep2Messages; // typed via PipelineMeta (L-1)
+    // ContextAssembly precedes the optional component. Publish the actual request,
+    // including its mode contract and numerical impulse, at the send boundary.
+    if (ctx.meta.plotVectorPromptMode) {
+      ctx.meta.plotVectorGuard?.();
+      const split = Array.isArray(splitStep2Messages);
+      emitPromptAssemblyDebug({ flow: split ? 'splitGenMainRoundStep1' : 'mainRound',
+        variables: ctx.meta.debugVariables ?? {}, messages: ctx.messages, messageSources: ctx.messageSources,
+        generationId: split ? `${ctx.generationId ?? ''}_step1` : ctx.generationId,
+        roundNumber: ctx.meta.debugRoundNumber, compileTrace: ctx.meta.compileTrace });
+    }
 
     if (Array.isArray(splitStep2Messages)) {
       return this.executeSplitGen(ctx, splitStep2Messages);
@@ -51,7 +61,10 @@ export class AICallStage implements PipelineStage {
       ? createJsonTextStreamUnwrapper(ctx.onStreamChunk)
       : null;
 
+    ctx.meta.plotVectorGuard?.();
+    ctx.meta.roundOwnership?.guard();
     const rawResponse = await this.aiService.generate({
+      checkpoint: ctx.meta.plotVectorCheckpoint?.('single'),
       messages: ctx.messages,
       stream: !!streamFilter,
       usageType: 'main',
@@ -94,7 +107,10 @@ export class AICallStage implements PipelineStage {
       ? createJsonTextStreamUnwrapper(ctx.onStreamChunk)
       : null;
 
+    ctx.meta.plotVectorGuard?.();
+    ctx.meta.roundOwnership?.guard();
     const rawStep1 = await this.aiService.generate({
+      checkpoint: ctx.meta.plotVectorCheckpoint?.('step1'),
       messages: ctx.messages,
       stream: !!streamFilter,
       usageType: 'main',
@@ -132,13 +148,18 @@ export class AICallStage implements PipelineStage {
     // list MUST include setting_updates; on untagged rounds the text stays byte-identical
     // to the pre-capture version (D6: no prompt delta when the feature is unused).
     const captureActive = ctx.meta.settingCaptureActive === true;
+    const actionUpdates = ctx.meta.stateUpdatesRequired === true && ctx.meta.stateUpdateSource !== 'settlement';
     const STEP2_FOLLOWUP_USER =
       '请基于上面的叙事正文，输出 step2 的结构化数据。要求：\n\n' +
-      (captureActive
+      (actionUpdates
+        ? `1. **完整输出**：state_updates / commands / action_options / mid_term_memory / knowledge_facts${captureActive ? ' / setting_updates' : ''} 必须全部给出。先输出 state_updates（version:1、actions），没有变化也明确给空 actions；不得省略或截断字段。\n`
+        : captureActive
         ? '1. **完整输出**：commands / action_options / mid_term_memory / knowledge_facts / setting_updates 五个字段必须全部给出，不得用 "(略)" / "(省略)" / "(略 N 条类似)" 之类敷衍，不得中途截断。\n'
         : '1. **完整输出**：commands / action_options / mid_term_memory / knowledge_facts 四个字段必须全部给出，不得用 "(略)" / "(省略)" / "(略 N 条类似)" 之类敷衍，不得中途截断。\n') +
       '2. **action_options 必须 3-5 个**（按 `actionOptions` 或 `actionOptionsStory` 模块要求的长度），绝不可空数组或只给 1-2 个。\n' +
-      '3. **commands 必须完整**：若本回合正文描述了多个状态变化（位置/时间/NPC/物品/体力/技能等），每条都要对应一条 command；不得合并省略。\n' +
+      (actionUpdates
+        ? '3. **同步分工**：物品和金额仅写 state_updates，其他状态写 commands。\n'
+        : '3. **commands 必须完整**：若本回合正文描述了多个状态变化（位置/时间/NPC/物品/体力/技能等），每条都要对应一条 command；不得合并省略。\n') +
       '4. **格式铁律**：直接输出一个合法 JSON 对象 —— 无 ``` 代码围栏、无前后缀文字、无 `<thinking>` 标签。不重复或扩写正文（正文已由 step1 生成）。\n' +
       (captureActive
         ? '5. **setting_updates 绝不可省略**：本回合玩家输入包含设定标记，必须按系统提示词中「设定提取协议」的工作方法，把标记内容吃透并拆解为一条或多条独立设定，输出到 setting_updates 数组（每条含 kind / statement / evidence / anchors / entities）。漏掉该字段等于丢弃玩家明确要求记录的设定。\n'
@@ -148,7 +169,10 @@ export class AICallStage implements PipelineStage {
     // Step2 OUTPUT still forbids <thinking> (STEP2_FOLLOWUP_USER rule unchanged).
     // This is INPUT context only — CoT reasoning informs better action-option generation.
     const step2ThinkingContext: AIMessage[] = [];
-    if (ctx.meta.cotInjectStep2 === true && parsedStep1.thinking) {
+    // In impulse mode Step 2 derives state from the accepted narrative, not
+    // Step 1's tentative variable plan. Keep thinking in the raw/debug/save path.
+    const narrativeOnly = ctx.meta.plotVectorPromptMode === true;
+    if (!narrativeOnly && ctx.meta.cotInjectStep2 === true && parsedStep1.thinking) {
       step2ThinkingContext.push({
         role: 'system',
         content: `## Step 1 Reasoning Context (for reference only — do NOT include thinking tags in your output)\n\n${parsedStep1.thinking}`,
@@ -157,7 +181,9 @@ export class AICallStage implements PipelineStage {
 
     // When thinking was injected as a separate system message, strip it from
     // rawStep1 to avoid sending COT content twice in the step2 request.
-    const step1ContentForStep2 = step2ThinkingContext.length > 0
+    const step1ContentForStep2 = narrativeOnly
+      ? JSON.stringify({ text: parsedStep1.text })
+      : step2ThinkingContext.length > 0
       ? this.responseParser.extractAndSanitize(rawStep1).sanitized
       : rawStep1;
 
@@ -165,7 +191,7 @@ export class AICallStage implements PipelineStage {
       ...step2BaseMessages,
       ...step2ThinkingContext,
       { role: 'assistant', content: step1ContentForStep2 },
-      { role: 'user', content: STEP2_FOLLOWUP_USER },
+      { role: 'user', content: ctx.meta.splitStep2Followup ?? STEP2_FOLLOWUP_USER },
     ];
 
     // Emit step2 snapshot HERE (not in context-assembly) — only at this point
@@ -190,7 +216,10 @@ export class AICallStage implements PipelineStage {
       compileTrace: ctx.meta.compileTrace,
     });
 
+    ctx.meta.plotVectorGuard?.();
+    ctx.meta.roundOwnership?.guard();
     const rawStep2 = await this.aiService.generate({
+      checkpoint: ctx.meta.plotVectorCheckpoint?.('step2'),
       messages: step2Messages,
       stream: false,
       usageType: 'main',
@@ -208,6 +237,8 @@ export class AICallStage implements PipelineStage {
     const aiCallDurationMs = performance.now() - aiCallStartedAt;
 
     // ── 合并：叙事正文来自第1步，结构化数据来自第2步 ──
+    const step2CustomFields = { ...parsedStep2.customFields };
+    if (ctx.meta.stateUpdateSource === 'settlement') delete step2CustomFields.state_updates;
     const parsedResponse: AIResponse = {
       text: parsedStep1.text,
       commands: parsedStep2.commands ?? [],
@@ -219,7 +250,7 @@ export class AICallStage implements PipelineStage {
       // omitting the field here would silently drop the player's marked settings in
       // split-gen mode only, which is exactly the class of bug this merge causes.
       settingUpdates: parsedStep2.settingUpdates,
-      customFields: parsedStep2.customFields,
+      customFields: step2CustomFields,
       thinking: parsedStep1.thinking,
       raw: rawStep1,
       // The structured fields all come from step2, so step2's parse verdict is the

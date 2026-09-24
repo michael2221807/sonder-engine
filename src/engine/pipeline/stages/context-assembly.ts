@@ -120,9 +120,12 @@ export class ContextAssemblyStage implements PipelineStage {
      * cache trigger. Absent/false = legacy output.
      */
     private getGproxyCacheEnabled?: () => boolean,
+    private getPromptTransform?: (ctx: PipelineContext) => import('../../prompt/raw-prompt-transform').RawPromptTransform | undefined,
   ) {}
 
   async execute(ctx: PipelineContext): Promise<PipelineContext> {
+    const transformPrompt = this.getPromptTransform?.(ctx);
+    const assembler = this.promptAssembler.withTransform(transformPrompt);
     // ── 1. 冻结状态树快照 ──
     const stateSnapshot = this.stateManager.toSnapshot();
 
@@ -462,8 +465,9 @@ export class ContextAssemblyStage implements PipelineStage {
     //   assistant: <叙事正文>...</叙事正文>
     //
     // 这样模型看到的 few-shot 模式是"user 发 <玩家输入> tag，assistant 回
-    // <叙事正文> tag"—— 显而易见的结构。再配合 historyFraming 明确声明
-    // "你本回合仍须输出完整 JSON 而非单独的叙事 tag"，最终 AI 的输出：
+    // <叙事正文> tag"—— 显而易见的结构。旧模式仍配合 historyFraming
+    // 说明完整 JSON；新动能模式的 Step2 会跳过那段与分步格式冲突的说明。
+    // 单步路径最终 AI 的输出：
     //   {
     //     "text": "<content matches previous 叙事正文 style>",
     //     "commands": [...], "action_options": [...], "mid_term_memory": ...
@@ -540,6 +544,11 @@ export class ContextAssemblyStage implements PipelineStage {
       }));
 
       const buildResult = buildSystemPrompt({
+        transformPrompt,
+        // Reuse the pack's narrative phase instead of asking Step 1 for data
+        // that the split merge discards. Legacy/off and opening stay unchanged.
+        formatPromptId: ctx.meta.plotVectorPromptMode && splitGen
+          && !ctx.meta.isEnhancedOpening && !ctx.meta.step1FlowOverride ? 'splitGenStep1' : undefined,
         stateManager: this.stateManager,
         paths: this.paths,
         packPrompts: this.pack.prompts,
@@ -632,6 +641,7 @@ export class ContextAssemblyStage implements PipelineStage {
         let step2Vars: Record<string, string> = {
           ...variables,
           ...PlotInjector.buildStep2Variables(this.stateManager, this.paths, this.pack.engineFragments),
+          HISTORY_FRAMING_STEP2: ctx.meta.plotVectorPromptMode ? '' : '1',
         };
         let step2History = chatHistory;
 
@@ -714,7 +724,7 @@ export class ContextAssemblyStage implements PipelineStage {
           console.warn(`[ContextAssembly] step2FlowOverride '${step2OverrideId}' not found, falling back to default`);
         }
         if (step2Flow) {
-          const s2 = this.promptAssembler.assemble(step2Flow, step2Vars, step2History);
+          const s2 = assembler.assemble(step2Flow, step2Vars, step2History);
           splitStep2Messages = s2.messages;
           splitStep2Sources = s2.messageSources;
           // The current round's player input, verbatim. The legacy path always gave
@@ -759,12 +769,13 @@ export class ContextAssemblyStage implements PipelineStage {
       }
 
       if (splitGen && step1Flow && step2Flow) {
-        const s1 = this.promptAssembler.assemble(step1Flow, variables, chatHistory);
+        const s1 = assembler.assemble(step1Flow, variables, chatHistory);
         const step2Vars = {
           ...variables,
           ...PlotInjector.buildStep2Variables(this.stateManager, this.paths, this.pack.engineFragments),
+          HISTORY_FRAMING_STEP2: ctx.meta.plotVectorPromptMode ? '' : '1',
         };
-        const s2 = this.promptAssembler.assemble(step2Flow, step2Vars, chatHistory);
+        const s2 = assembler.assemble(step2Flow, step2Vars, chatHistory);
         messages = s1.messages;
         messageSources = s1.messageSources;
         splitStep2Messages = s2.messages;
@@ -774,7 +785,7 @@ export class ContextAssemblyStage implements PipelineStage {
         if (!flow) {
           throw new Error('Missing required prompt flow "mainRound" in Game Pack.');
         }
-        const r = this.promptAssembler.assemble(flow, variables, chatHistory);
+        const r = assembler.assemble(flow, variables, chatHistory);
         messages = r.messages;
         messageSources = r.messageSources;
       }
@@ -790,7 +801,7 @@ export class ContextAssemblyStage implements PipelineStage {
       }
 
       // Legacy: enforcement + user input
-      const enforcement = this.promptAssembler.renderSingle('narratorEnforcement', variables);
+      const enforcement = assembler.renderSingle('narratorEnforcement', variables);
       const userTurnContent = enforcement
         ? `${enforcement}\n\n<玩家输入>\n${ctx.userInput}\n</玩家输入>`
         : ctx.userInput;
@@ -834,7 +845,7 @@ export class ContextAssemblyStage implements PipelineStage {
     // 只是 flow-assembled 部分。如果现在就 emit step2 snapshot，面板看到的
     // 永远是**不完整**的 prompt —— 缺最后 2-3 条关键消息，调试价值大减。
     // 改为只 emit step1；step2 由 ai-call 在拼完整后自己 emit。
-    if (splitGen && splitStep2Messages) {
+    if (!ctx.meta.plotVectorPromptMode && splitGen && splitStep2Messages) {
       eventBus.emit('ui:debug-prompt', {
         flow: 'splitGenMainRoundStep1',
         variables,
@@ -844,7 +855,7 @@ export class ContextAssemblyStage implements PipelineStage {
         roundNumber: ctx.roundNumber,
       });
       // step2 emit 延后到 ai-call.ts，见 `executeSplitGen`
-    } else {
+    } else if (!ctx.meta.plotVectorPromptMode) {
       eventBus.emit('ui:debug-prompt', {
         flow: 'mainRound',
         variables,
@@ -855,6 +866,11 @@ export class ContextAssemblyStage implements PipelineStage {
       });
     }
 
+    let splitStep2Followup: string | undefined;
+    if (ctx.meta.plotVectorPromptMode && splitStep2Messages && !ctx.meta.isEnhancedOpening) {
+      splitStep2Followup = assembler.renderSingle('splitGenStep2Followup', variables)?.trim();
+      if (!splitStep2Followup) throw new Error('Missing splitGenStep2Followup prompt');
+    }
     return {
       ...ctx,
       stateSnapshot,
@@ -864,6 +880,8 @@ export class ContextAssemblyStage implements PipelineStage {
       worldEventTriggered,
       meta: {
         ...ctx.meta,
+        splitStep2Followup,
+        ...(ctx.meta.plotVectorPromptMode ? { debugVariables: variables, debugRoundNumber: ctx.roundNumber } : {}),
         ...(splitStep2Messages
           ? {
               splitStep2Messages,

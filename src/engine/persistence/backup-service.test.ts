@@ -14,6 +14,7 @@ import { createMockLocalStorage } from '@/engine/__test-utils__/local-storage.mo
 const {
   isValidBundleShape,
   collectLocalStorageSettings,
+  restoreLocalStorageSettings,
   wipeLocalStorageSettings,
   compositeSlotKey,
   parseCompositeKey,
@@ -167,6 +168,13 @@ describe('collectLocalStorageSettings', () => {
   it('returns empty object when no aga keys exist', () => {
     localStorage.setItem('foo', 'bar');
     expect(collectLocalStorageSettings()).toEqual({});
+  });
+
+  it('does not export or restore another device\'s experimental execution opt-in', () => {
+    localStorage.setItem('aga_plot_vector_control', '{"enabled":false,"epoch":"local"}');
+    expect(collectLocalStorageSettings()).not.toHaveProperty('aga_plot_vector_control');
+    restoreLocalStorageSettings({ aga_plot_vector_control: '{"enabled":true,"epoch":"foreign"}' });
+    expect(localStorage.getItem('aga_plot_vector_control')).toBe('{"enabled":false,"epoch":"local"}');
   });
 
   it('collects aga_tts_settings (配音偏好 travels with the backup)', () => {

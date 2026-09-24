@@ -1,0 +1,12 @@
+{
+  "id": "tianming-native-v1",
+  "baseVisits": 8,
+  "attributes": [
+    { "key": "体质", "label": { "zh": "体质", "en": "Constitution" }, "target": "S+", "divisor": 10, "max": 20 },
+    { "key": "心性", "label": { "zh": "心性", "en": "Resolve" }, "target": "S+", "divisor": 10, "max": 20 },
+    { "key": "魅力", "label": { "zh": "魅力", "en": "Charisma" }, "target": "Y", "divisor": 5, "max": 20 },
+    { "key": "直觉", "label": { "zh": "直觉", "en": "Intuition" }, "target": "J", "divisor": 10, "max": 20 },
+    { "key": "气运", "label": { "zh": "气运", "en": "Luck" }, "target": "J", "divisor": 10, "max": 20 },
+    { "key": "悟性", "label": { "zh": "悟性", "en": "Insight" }, "target": "visits", "divisor": 5, "max": 20 }
+  ]
+}

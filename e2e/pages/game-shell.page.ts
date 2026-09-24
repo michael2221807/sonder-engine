@@ -15,6 +15,7 @@ export class GameShellPage {
 
   /** Play-mode message composer (hidden in write mode). */
   get composer(): Locator { return this.page.locator('textarea.message-input'); }
+  async send(text: string): Promise<void> { await this.composer.fill(text); await this.page.locator('button.send-btn').click(); }
 
   /** Write-mode in-panel notice that replaces the composer. */
   get wbNotice(): Locator { return this.page.locator('.wb-composer-notice'); }

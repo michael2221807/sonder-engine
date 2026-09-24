@@ -12,6 +12,13 @@
 import { describe, it, expect } from 'vitest';
 import { stringifySnapshotForPrompt } from '@/engine/memory/snapshot-sanitizer';
 
+it('keeps executable cards and paid output checkpoints out of story prompts', () => {
+  const input = { 系统: { 扩展: { plotVector: { cards: ['secret-program'], tasks: [{ raw: 'paid-output' }] } } } };
+  const output = stringifySnapshotForPrompt(input, true);
+  expect(output).not.toContain('secret-program'); expect(output).not.toContain('paid-output');
+  expect(input.系统.扩展.plotVector.cards).toEqual(['secret-program']);
+});
+
 /**
  * Normalize `JSON.stringify` output by collapsing whitespace between tokens.
  * Lets assertions match the key-value pairs without depending on pretty-print

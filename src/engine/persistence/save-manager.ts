@@ -9,7 +9,7 @@
  * 对应 STEP-03 M1.6。
  * 参照 demo: indexedDBManager.ts 中的 save/load 逻辑。
  */
-import { cloneDeep, get as _get } from 'lodash-es';
+import { cloneDeep, isEqual, get as _get } from 'lodash-es';
 import { idbAdapter } from './idb-adapter';
 import type { GameStateTree, SaveSlotMeta } from '../types';
 import type { ProfileManager } from './profile-manager';
@@ -39,7 +39,25 @@ export class SaveManager {
    */
   private currentPackVersion: string | null = null;
 
-  constructor(private profileManager: ProfileManager) {}
+  private baselines = new Map<string, unknown>();
+  private readBaselines = new WeakMap<object, unknown>();
+  constructor(private profileManager: ProfileManager, private protection: {
+    enabled: () => boolean;
+    deleted?: (profileId: string, slotId: string) => Promise<void>;
+  } = { enabled: () => false }) {}
+
+  /** Called only when a returned tree becomes the active game, never on export reads. */
+  adoptLoadedGame(profileId: string, slotId: string, tree: GameStateTree): void {
+    const key = saveKey(profileId, slotId);
+    if (this.readBaselines.has(tree)) this.baselines.set(key, cloneDeep(this.readBaselines.get(tree)));
+    else this.baselines.set(key, cloneDeep(tree));
+  }
+
+  async assertCurrent(profileId: string, slotId: string): Promise<void> {
+    const key = saveKey(profileId, slotId);
+    if (!isEqual(await idbAdapter.get(key), this.baselines.get(key)))
+      throw new Error('存档已被其他窗口更新或删除，请重新读档后继续；本轮主生成尚未发送。');
+  }
 
   /**
    * §5.2 Gap fix：设置当前 Game Pack 的版本号
@@ -60,9 +78,19 @@ export class SaveManager {
     slotId: string,
     stateTree: GameStateTree,
     meta?: Partial<SaveSlotMeta>,
+    commit?: { guard: () => void; committed: () => void },
   ): Promise<void> {
     const data = cloneDeep(stateTree);
-    await idbAdapter.set(saveKey(profileId, slotId), data);
+    const key = saveKey(profileId, slotId);
+    const protect = !!commit || this.protection.enabled();
+    if (protect) {
+      await idbAdapter.setGuarded(key, data, commit?.guard ?? (() => {}), { value: this.baselines.get(key) });
+      this.baselines.set(key, cloneDeep(data));
+      commit?.committed();
+    } else {
+      await idbAdapter.set(key, data);
+      this.baselines.set(key, cloneDeep(data));
+    }
 
     // 5.3: 自动从状态树提取展示字段
     const jsonStr = JSON.stringify(data);
@@ -106,6 +134,7 @@ export class SaveManager {
   async loadGame(profileId: string, slotId: string): Promise<GameStateTree | undefined> {
     const raw = await idbAdapter.get<GameStateTree>(saveKey(profileId, slotId));
     if (!raw) return undefined;
+    this.readBaselines.set(raw, cloneDeep(raw));
 
     // Fast-path: 未设置 currentPackVersion（例如 pack 加载失败）→ 跳过迁移
     if (!this.currentPackVersion) return raw;
@@ -168,6 +197,7 @@ export class SaveManager {
         const backupKey = saveKey(profileId, slotId) + ':pre-migration';
         await idbAdapter.set(backupKey, raw);
         await idbAdapter.set(saveKey(profileId, slotId), result.data);
+        this.readBaselines.set(result.data, cloneDeep(result.data));
         await this.profileManager.updateSlotMeta(profileId, slotId, {
           packVersion: result.finalVersion,
         });
@@ -176,12 +206,16 @@ export class SaveManager {
       }
     }
 
+    if (!this.readBaselines.has(result.data)) this.readBaselines.set(result.data, cloneDeep(raw));
     return result.data as unknown as GameStateTree;
   }
 
   /** 删除存档 */
   async deleteGame(profileId: string, slotId: string): Promise<void> {
     await idbAdapter.delete(saveKey(profileId, slotId));
+    // Keep the old baseline: a late completion must not recreate the deleted save.
+    try { await this.protection.deleted?.(profileId, slotId); }
+    catch (error) { console.warn('[SaveManager] Recovery cleanup failed after deletion:', error); }
   }
 
   /** 检查存档是否存在 */

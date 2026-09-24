@@ -38,6 +38,18 @@ describe('extractPlotEvaluations', () => {
     expect(single[0].gauge_updates).toEqual([{ gauge_id: 'g', delta: 5, reason: '' }]);
   });
 
+  it('accepts a top-level gauge update only when one array verdict and one active thread identify its owner', () => {
+    const fields = {
+      plot_evaluation: [{ thread: 'A', node_reached: false, confidence: 0.1, evidence: '' }],
+      gauge_updates: [{ gauge_id: 'g', delta: 5, reason: 'prior round' }],
+    };
+    expect(extractPlotEvaluations(fields, 1)[0].gauge_updates).toEqual(fields.gauge_updates);
+    expect(extractPlotEvaluations(fields, 2)[0].gauge_updates).toBeUndefined();
+    expect(extractPlotEvaluations({ ...fields, plot_evaluation: [...fields.plot_evaluation, {
+      thread: 'B', node_reached: false, confidence: 0.1, evidence: '',
+    }] }, 1)[0].gauge_updates).toBeUndefined();
+  });
+
   it('returns [] for missing / malformed input and the legacy accessor returns the first verdict', () => {
     expect(extractPlotEvaluations(undefined)).toEqual([]);
     expect(extractPlotEvaluations({})).toEqual([]);

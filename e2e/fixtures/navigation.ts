@@ -13,12 +13,23 @@ export async function enterSeededGame(page: Page): Promise<void> {
   await page.getByTestId('mode-toggle').waitFor({ state: 'visible', timeout: 15_000 });
 }
 
-/**
- * Click a left-sidebar tab link and wait for its URL.
- * Pass '' for the main panel (/game), or a tab name like 'save' (/game/save).
- */
+/** Click the visible game navigation for the current viewport. */
 export async function goToGameTab(page: Page, tab: string): Promise<void> {
   const href = tab ? `/game/${tab}` : '/game';
-  await page.locator(`.sidebar a[href="${href}"]`).first().click();
+  const mobileNav = page.locator('.mobile-nav');
+  if (await mobileNav.isVisible()) {
+    const shortcut = mobileNav.locator(`a[href="${href}"]`);
+    if (await shortcut.count()) {
+      await shortcut.click();
+    } else {
+      const morePanels = mobileNav.locator('button').last();
+      if (!(await morePanels.evaluate(element => element.classList.contains('mobile-nav__item--active')))) {
+        await morePanels.click();
+      }
+      await page.locator(`.sidebar.drawer-open a[href="${href}"]`).click();
+    }
+  } else {
+    await page.locator(`.sidebar a[href="${href}"]`).first().click();
+  }
   await page.waitForURL(tab ? new RegExp(`/game/${tab}$`) : /\/game$/);
 }

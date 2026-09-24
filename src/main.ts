@@ -115,6 +115,13 @@ import { MemoryRetriever } from './engine/memory/memory-retriever';
 import { EngramManager } from './engine/memory/engram/engram-manager';
 import { EngramEditor } from './engine/memory/engram/engram-editor';
 import { useEngineStateStore } from './engine/stores/engine-state';
+import { AgaPlotVectorAdapter } from './features/plot-vector/aga-adapter';
+import { VectorBoardAccess } from './features/plot-vector/board-access';
+import { parseNativeRules } from './features/plot-vector/native-input';
+import { parseVectorPromptPolicy } from './features/plot-vector/prompt-policy';
+import { RoundStateUpdates } from './engine/state-updates/round-state-updates';
+import { readPlotVectorControl, writePlotVectorControl } from './engine/plot-vector/feature-control';
+import { BrowserRequestStore } from './features/plot-vector/request-journal';
 import type { ComputedFieldConfig, ThresholdTriggerConfig, IntegrityRule, EffectLifecycleConfig, NpcBehaviorConfig, ContentFilterConfig } from './engine/types';
 
 import { ProfileManager } from './engine/persistence/profile-manager';
@@ -192,9 +199,19 @@ async function bootstrap(): Promise<void> {
     aiService.setAssignments([...assignments]);
   }, { deep: true });
 
-  const profileManager = new ProfileManager();
+  const profileManager = new ProfileManager(async () => {
+    writePlotVectorControl(false);
+    const epoch = readPlotVectorControl().epoch;
+    await new BrowserRequestStore().clear(() => {
+      const live = readPlotVectorControl();
+      if (live.enabled || live.epoch !== epoch) throw new Error('Recovery control changed during reset');
+    });
+  });
   await profileManager.initialize();
-  const saveManager = new SaveManager(profileManager);
+  const saveManager = new SaveManager(profileManager, {
+    enabled: () => readPlotVectorControl().enabled,
+    deleted: (profileId, slotId) => new BrowserRequestStore().removeSlot({ profileId, slotId }),
+  });
 
   const configRegistry = new ConfigRegistry();
   const configStore = new ConfigStore();
@@ -358,6 +375,7 @@ async function bootstrap(): Promise<void> {
   // 绑定后 StateManager 的所有写操作自动反映到 Vue 响应式系统。
   const engineStateStore = useEngineStateStore();
   engineStateStore.linkStateManager(stateManager);
+  engineStateStore.linkSaveObserver((profileId, slotId, data) => saveManager.adoptLoadedGame(profileId, slotId, data));
   // 读档时分发 onGameLoad 行为钩子（npc-dedup 融合 / effect-lifecycle 清理 /
   // validation-repair 修复）——2026-07-05 前这些钩子只在创角后触发，真实读档从不执行
   engineStateStore.linkBehaviorRunner(behaviorRunner);
@@ -745,6 +763,11 @@ async function bootstrap(): Promise<void> {
 
   // ── #1: 创建 Orchestrator，接通 pipeline:user-input → PipelineRunner ──
   let orchestrator: GameOrchestrator | null = null;
+  const vectorNativeRules = parseNativeRules(pack?.rules.plotVector);
+  const vectorPromptPolicy = parseVectorPromptPolicy(pack?.rules.plotVectorPrompts, pack?.prompts.plotVectorMode, pack?.prompts.stateUpdateProtocol);
+  const plotVectorBoard = new VectorBoardAccess(stateManager, saveManager, getActiveSlot,
+    () => !orchestrator || orchestrator.isBusy, undefined, vectorNativeRules,
+    () => orchestrator?.onStateEditSettled());
   if (pack) {
     orchestrator = new GameOrchestrator(
       stateManager,
@@ -775,6 +798,22 @@ async function bootstrap(): Promise<void> {
         memoryManager,
         paths: DEFAULT_ENGINE_PATHS,
         plotEvaluation: plotEvaluationPipeline,
+        // Preserve the existing rollout gate; synchronization itself has no board dependency.
+        stateUpdates: new RoundStateUpdates(ctx => {
+          const control = readPlotVectorControl();
+          if (!control.enabled || !getActiveSlot() || !vectorPromptPolicy?.stateUpdates || !vectorPromptPolicy.stateUpdatePrompt) return;
+          const source = control.settlement === 'separate' && ctx.meta.splitGen === true ? 'settlement' : 'inline';
+          if (ctx.meta.stateUpdateSource && ctx.meta.stateUpdateSource !== source)
+            throw new Error('剧情动能结算模式在组装期间改变，请重新开始本回合');
+          return { contract: vectorPromptPolicy.stateUpdates, prompt: vectorPromptPolicy.stateUpdatePrompt,
+            source, settlementTemplate: source === 'settlement' ? pack.prompts.stateSettlement : undefined,
+            guard: () => {
+              if (readPlotVectorControl().epoch !== control.epoch) throw new Error('状态更新模式已改变，请重新开始本回合');
+            } };
+        }),
+        plotVector: new AgaPlotVectorAdapter(stateManager, aiService, saveManager, getActiveSlot, undefined, undefined, vectorNativeRules,
+          vectorPromptPolicy),
+        stateEditInProgress: () => plotVectorBoard.isSaving,
       },
     );
   }
@@ -849,6 +888,7 @@ async function bootstrap(): Promise<void> {
 
   app.provide('profileManager', profileManager);
   app.provide('saveManager', saveManager);
+  app.provide('plotVectorBoard', plotVectorBoard);
   app.provide('promptStorage', promptStorage);
   if (plotDecomposer) app.provide('plotDecomposer', plotDecomposer);
   if (characterVectorProposePipeline) app.provide('characterVectorPropose', characterVectorProposePipeline);

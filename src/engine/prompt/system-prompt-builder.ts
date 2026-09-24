@@ -77,6 +77,10 @@ const GPROXY_CACHE_TAIL_PIECE_IDS: ReadonlySet<string> = new Set([
 
 /** Parameters for building the system prompt */
 export interface SystemPromptBuildParams {
+  /** Round-local module adaptation, before variable interpolation and cache grouping. */
+  transformPrompt?: import('./raw-prompt-transform').RawPromptTransform;
+  /** Round-selected pack default for the format slot; explicit user edits still win. */
+  formatPromptId?: string;
   stateManager: StateManager;
   paths: EnginePathConfig;
   /** Pack prompt content by ID (loaded from manifest.prompts) */
@@ -153,6 +157,7 @@ function resolveSlotContent(
   slotId: string,
   builtinOverrides: BuiltinPromptEntry[],
   packPrompts: Record<string, string>,
+  defaultPromptId = BUILTIN_SLOTS[slotId]?.defaultPromptId,
 ): string {
   // 1. Check user override
   const override = builtinOverrides.find((e) => e.slotId === slotId && e.enabled !== false);
@@ -161,9 +166,8 @@ function resolveSlotContent(
   }
 
   // 2. Check pack default
-  const slotDef = BUILTIN_SLOTS[slotId];
-  if (slotDef?.defaultPromptId && packPrompts[slotDef.defaultPromptId]) {
-    return packPrompts[slotDef.defaultPromptId];
+  if (defaultPromptId && packPrompts[defaultPromptId]) {
+    return packPrompts[defaultPromptId];
   }
 
   // 3. Check override content (non-user-edited)
@@ -306,14 +310,22 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
 
   // Helper to resolve + render a slot through the full 5-step pipeline
   const slot = (slotId: string): string => {
-    const raw = resolveSlotContent(slotId, builtinOverrides, packPrompts);
-    return renderPromptPipeline(slotId, raw, templateVars, settings);
+    const selectedId = slotId === 'format_prompt' && params.formatPromptId
+      ? params.formatPromptId : BUILTIN_SLOTS[slotId]?.defaultPromptId;
+    if (slotId === 'format_prompt' && params.formatPromptId && !packPrompts[params.formatPromptId]?.trim()) {
+      throw new Error(`Missing format prompt: ${params.formatPromptId}`);
+    }
+    const raw = resolveSlotContent(slotId, builtinOverrides, packPrompts, selectedId);
+    const edited = builtinOverrides.find(e => e.slotId === slotId && e.enabled !== false)?.userContent?.trim();
+    const transformId = edited ? BUILTIN_SLOTS[slotId]?.defaultPromptId : selectedId;
+    const adapted = params.transformPrompt?.(transformId ?? slotId, raw) ?? raw;
+    return renderPromptPipeline(slotId, adapted, templateVars, settings);
   };
 
   // Helper to render a raw pack prompt through the pipeline (for prompts not tied to a slot)
   const renderPackPrompt = (promptId: string): string => {
     const raw = packPrompts[promptId] ?? '';
-    return renderPromptPipeline(promptId, raw, templateVars, settings);
+    return renderPromptPipeline(promptId, params.transformPrompt?.(promptId, raw) ?? raw, templateVars, settings);
   };
 
   // ── Build context pieces ──────────────────────────────────

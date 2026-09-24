@@ -296,6 +296,13 @@ describe('gzip compress/decompress', () => {
 // ─── sha256 ───
 
 describe('sha256', () => {
+  it('opaque-origin fallback matches Web Crypto across block boundaries and Unicode', async () => {
+    const inputs = ['', '你好世界', 'x'.repeat(55), 'x'.repeat(56), 'x'.repeat(64), '卡'.repeat(500)];
+    const expected = await Promise.all(inputs.map(sha256String));
+    vi.stubGlobal('crypto', {});
+    try { expect(await Promise.all(inputs.map(sha256String))).toEqual(expected); }
+    finally { vi.unstubAllGlobals(); }
+  });
   it('produces consistent 64-char hex for same input', async () => {
     const h1 = await sha256String('hello world 你好');
     const h2 = await sha256String('hello world 你好');

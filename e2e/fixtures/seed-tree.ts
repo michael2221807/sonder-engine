@@ -18,6 +18,8 @@ export const SLOT_ID = 'auto';
 export const LOCATION_NAME = '青云城';
 export const NPC_NAME = '林婉儿';
 export const PROTAGONIST = '叶尘';
+/** Optional inventory revision fixture; absent in legacy/default seeds. */
+export const VECTOR_NOTEBOOK_ITEM = { 名称: '随身日记', 描述: '记录日常', 数量: 1, 能力版本: 1 };
 
 // NOTE: GameStateTree is `Record<string, unknown>` by design (the tree's shape is
 // defined by the Game Pack schema at runtime, not statically). Binding the seed to it
@@ -89,6 +91,11 @@ function baseSeedTree(): GameStateTree {
     记忆: { 短期: [], 中期: [], 长期: [], 隐式中期: [] },
     系统: {
       扩展: {
+          // Persisted component data must survive save/export even with the feature off.
+          // D148 optional last.starting/progress and card.stateDisplay are produced
+          // by the real Worker in plot-vector-board.spec.ts, not invented here.
+        plotVector: { version: 1, cards: [], tasks: [], session: { round: 1, carriedAccounts: {},
+          talentCharges: {}, itemUses: {}, resources: {}, committed: [], scriptStates: {}, scriptCommitLog: [] } },
         engramMemory: {
           events: [],
           entities: [

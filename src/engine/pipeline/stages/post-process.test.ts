@@ -12,6 +12,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostProcessStage, collectCanonMutations } from './post-process';
+import { RoundStateUpdates } from '../../state-updates/round-state-updates';
+import { RoundOwnership } from '../../core/round-ownership';
 import type {
   PipelineContext,
   EnginePathConfig,
@@ -164,6 +166,70 @@ describe('PostProcessStage — Phase 1 per-turn metadata', () => {
     return assistant?.value;
   }
 
+  it.each([false, true])('host synchronization gates actual autosave without a board (compiled=%s)', async compiled => {
+    const sync = new RoundStateUpdates(() => ({
+      contract: { inventoryPath: '角色.背包.物品', quantityField: '数量', accounts: {} },
+      prompt: 'existing protocol',
+    }));
+    const save = makeSaveManager();
+    const hostStage = new PostProcessStage(sm as never, makeMemoryManager(), makeEngramManager(),
+      makeBehaviorRunner(), save as never, paths, () => ({ profileId: 'p', slotId: 's' }), undefined, sync);
+    let ctx = sync.prepare(makeCtx({ parsedResponse: { text: 'round', commands: [], parseOk: true,
+      customFields: { state_updates: { version: 1, actions: [] } } } }));
+    if (compiled) ctx = sync.beforeCommands(ctx);
+    if (compiled) {
+      await expect(hostStage.execute(ctx)).resolves.toBeDefined();
+      expect(save.saveGame).toHaveBeenCalledTimes(1);
+    } else {
+      await expect(hostStage.execute(ctx)).rejects.toThrow('尚未处理');
+      expect(save.saveGame).not.toHaveBeenCalled();
+    }
+  });
+
+  it('marks the durable host commit without a board even when later slot metadata fails', async () => {
+    const slot = { profileId: 'p', slotId: 's' };
+    const owner = new RoundOwnership(() => slot, () => 0, new AbortController().signal);
+    const saveGame = vi.fn(async (_p: string, _s: string, _tree: unknown, _meta: unknown,
+      commit: { guard: () => void; committed: () => void }) => {
+      commit.guard(); commit.committed(); throw new Error('metadata failed after durable commit');
+    });
+    const hostStage = new PostProcessStage(sm as never, makeMemoryManager(), makeEngramManager(),
+      makeBehaviorRunner(), { saveGame } as never, paths, () => slot);
+    await expect(hostStage.execute(makeCtx({ meta: { roundOwnership: owner } }))).resolves.toBeDefined();
+    expect(owner.saved).toBe(true);
+  });
+
+  it('does not append old narrative after a load during Engram processing', async () => {
+    let revision = 0;
+    const owner = new RoundOwnership(() => ({ profileId: 'p', slotId: 's' }), () => revision, new AbortController().signal);
+    const engram = makeEngramManager();
+    engram.isEnabled = () => true;
+    engram.processResponse = async () => { revision++; return null; };
+    const save = makeSaveManager();
+    const hostStage = new PostProcessStage(sm as never, makeMemoryManager(), engram,
+      makeBehaviorRunner(), save as never, paths, () => ({ profileId: 'p', slotId: 's' }));
+    await expect(hostStage.execute(makeCtx({ meta: { roundOwnership: owner } }))).rejects.toThrow('存档已切换');
+    expect(sm.push).not.toHaveBeenCalled();
+    expect(save.saveGame).not.toHaveBeenCalled();
+  });
+
+  it('keeps a sole active plot thread\'s top-level gauge update for delayed evaluation', async () => {
+    const plotPaths = { ...paths, plotDirection: '系统.剧情' } as EnginePathConfig;
+    const plotStage = new PostProcessStage(sm as never, makeMemoryManager(), makeEngramManager(),
+      makeBehaviorRunner(), makeSaveManager() as never, plotPaths, () => null);
+    sm._tree[plotPaths.plotDirection] = { arcs: [{ status: 'active' }] };
+    const update = { gauge_id: '进展', delta: 3, reason: '上一轮情节' };
+    await plotStage.execute(makeCtx({ parsedResponse: {
+      text: '本轮正文', customFields: {
+        plot_evaluation: [{ thread: '唯一剧情线', node_reached: false, confidence: 0.2, evidence: '上一轮' }],
+        gauge_updates: [update],
+      },
+    } as AIResponse }));
+    expect(sm._tree[plotPaths.plotDirection + '._lastEvaluation']).toMatchObject([
+      { thread: '唯一剧情线', gauge_updates: [update] },
+    ]);
+  });
+
   it('attaches _metrics with all five fields', async () => {
     const ctx = makeCtx({
       aiCallStartedAt: 1000.5,
@@ -181,6 +247,29 @@ describe('PostProcessStage — Phase 1 per-turn metadata', () => {
     const metrics = entry?._metrics as { inputTokens: number; outputTokens: number };
     expect(metrics.inputTokens).toBeGreaterThan(0);
     expect(metrics.outputTokens).toBeGreaterThan(0);
+  });
+
+  it('preserves preflight failure diagnostics without storing duplicated item payloads', async () => {
+    await stage.execute(makeCtx({ rejectedCommands: [{ success: false,
+      command: { action: 'set', key: '角色.背包.物品.unknown', value: { 名称: 'duplicate' } },
+      error: 'Unknown item reference',
+    }] }));
+    expect(getAssistantEntry()?._rejectedCommands).toEqual([
+      { action: 'set', key: '角色.背包.物品.unknown', error: 'Unknown item reference' },
+    ]);
+  });
+  it('post-save failure cannot undo an accepted vector round, including copied pipeline meta', async () => {
+    const lifecycle: { saved?: boolean } = {};
+    const afterSave = vi.fn(async () => { throw new Error('optional card unavailable'); });
+    const ctx = makeCtx({ meta: { plotVectorLifecycle: lifecycle,
+      plotVectorCommitted: () => { lifecycle.saved = true; } } });
+    const saveGame = vi.fn(async (_p: string, _s: string, _data: unknown, _meta: unknown,
+      commit?: { committed: () => void }) => { commit?.committed(); throw new Error('metadata'); });
+    const guardedStage = new PostProcessStage(sm as never, makeMemoryManager(), makeEngramManager(), makeBehaviorRunner(),
+      { saveGame } as never, paths, () => ({ profileId: 'p', slotId: 's' }),
+      { prepare: async c => c, beforeSave: async () => {}, afterSave, dispose: () => {} });
+    await expect(guardedStage.execute({ ...ctx, meta: { ...ctx.meta } })).resolves.toBeDefined();
+    expect(lifecycle.saved).toBe(true); expect(afterSave).toHaveBeenCalledTimes(1);
   });
 
   it('persists step2 + total token fields and the per-source breakdown when promptMetrics is present (R1 P0)', async () => {
@@ -213,6 +302,30 @@ describe('PostProcessStage — Phase 1 per-turn metadata', () => {
     expect(m.step2InputTokens).toBeUndefined();
     expect(m.totalInputTokens).toBeUndefined();
     expect((m.breakdown as { step2?: unknown }).step2).toBeUndefined();
+  });
+  it('meters and archives the dedicated settlement without counting a replayed reply twice', async () => {
+    await stage.execute(makeCtx({ meta: { stateSettlementRaw: '{"state_updates":{"version":1,"actions":[]}}',
+      stateSettlementStrict: true, plotVectorRecovered: ['step1'] },
+      promptMetrics: { step1: { inputTokens: 100, outputTokens: 10, breakdown: [] },
+        step2: { inputTokens: 300, outputTokens: 30, breakdown: [] },
+        settlement: { inputTokens: 40, outputTokens: 5, breakdown: [{ source: 'state-settlement-input', tokens: 40 }] } } }));
+    expect(getAssistantEntry()?._metrics).toMatchObject({ inputTokens: 0, step2InputTokens: 300,
+      settlementInputTokens: 40, settlementOutputTokens: 5, totalInputTokens: 340, totalOutputTokens: 35 });
+    expect(getAssistantEntry()?._rawResponseSettlement).toContain('state_updates');
+    expect(getAssistantEntry()?._settlementStrict).toBe(true);
+  });
+
+  it('does not count a recovered narrative as a new paid request', async () => {
+    await stage.execute(makeCtx({
+      meta: { plotVectorRecovered: ['step1'] },
+      promptMetrics: {
+        step1: { inputTokens: 100, outputTokens: 10, breakdown: [] },
+        step2: { inputTokens: 300, outputTokens: 30, breakdown: [] },
+      },
+    }));
+    expect(getAssistantEntry()?._metrics).toMatchObject({inputTokens: 0, outputTokens: 0,
+      step2InputTokens: 300, totalInputTokens: 300, totalOutputTokens: 30});
+    expect(getAssistantEntry()?._recoveredSteps).toEqual(['step1']);
   });
 
   it('sets _metrics even when AICall did not populate timing (defensive defaults)', async () => {

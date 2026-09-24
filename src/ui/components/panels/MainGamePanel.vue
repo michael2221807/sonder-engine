@@ -77,6 +77,7 @@ import EnvironmentChips from '@/ui/components/panels/EnvironmentChips.vue';
 import FestivalChip from '@/ui/components/panels/FestivalChip.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import VoiceQuickSwitch from '@/ui/components/panels/VoiceQuickSwitch.vue';
+import PlotVectorBoardEntry from '@/ui/components/panels/PlotVectorBoardEntry.vue';
 import type { TtsService } from '@/engine/tts/tts-service';
 import type { TtsStateEvent, TtsCacheEvent } from '@/engine/tts/types';
 import {
@@ -114,6 +115,7 @@ interface ChatMessage {
   _thinking?: string;
   _rawResponse?: string;
   _rawResponseStep2?: string;
+  _rawResponseSettlement?: string;
   _commands?: unknown[];
   _shortTermPreview?: string;
   // Engram per-round visualization snapshots
@@ -293,7 +295,7 @@ const showCommandsViewer = ref(false);
 const activeThinking = ref<{ text: string; roundNumber: number } | null>(null);
 const showThinkingViewer = ref(false);
 
-const activeRaw = ref<{ step1: string; step2: string; roundNumber: number } | null>(null);
+const activeRaw = ref<{ step1: string; step2: string; settlement: string; roundNumber: number } | null>(null);
 const showRawViewer = ref(false);
 
 function openThinkingViewer(msg: ChatMessage): void {
@@ -318,6 +320,7 @@ function openRawViewer(msg: ChatMessage): void {
   activeRaw.value = {
     step1: msg._rawResponse ?? '',
     step2: msg._rawResponseStep2 ?? '',
+    settlement: msg._rawResponseSettlement ?? '',
     roundNumber: round,
   };
   showRawViewer.value = true;
@@ -353,7 +356,7 @@ const isUserScrolledUp = ref(false);
 // ─── Template refs ────────────────────────────────────────────
 
 const messagesContainer = ref<HTMLDivElement | null>(null);
-const composerRef = ref<{ restoreInput: (text: string) => void } | null>(null);
+const composerRef = ref<{ restoreInput: (text: string) => void; clearInputIfMatches: (text: string) => void } | null>(null);
 
 // ── Pre-round save-health gate (2026-09-10) ──
 // Runs before `pipeline:user-input` is emitted, so a damaged save neither advances a
@@ -901,8 +904,23 @@ function onHealthGateGoToSave(): void {
   void router.push('/game/save');
 }
 
+const failedRound = ref<{ token: string; input: string; error: string } | null>(null);
+const regenerationClickLocked = ref(false);
+let regeneratedInput: string | null = null;
+function regenerateFailedRound(): void {
+  const failed = failedRound.value;
+  if (!failed || isGenerating.value || isWorldBuilding.value || regenerationClickLocked.value) return;
+  regenerationClickLocked.value = true;
+  setTimeout(() => { regenerationClickLocked.value = false; }, 1000);
+  regeneratedInput = failed.input;
+  _lastSentInput = failed.input;
+  localStorage.setItem(_PENDING_INPUT_KEY, failed.input);
+  eventBus?.emit('pipeline:user-input', { text: failed.input, regenerateToken: failed.token });
+}
+
 /** Hand the input to the pipeline (the pre-gate send semantics, unchanged). */
 function dispatchInput(trimmed: string): void {
+  regeneratedInput = null;
   // Safety net: mirror the sent input to the system clipboard so the player
   // can recover it even if the round fails. Failure must never block the send.
   void writeClipboard(trimmed).catch((err: unknown) => {
@@ -1051,6 +1069,8 @@ onMounted(() => {
    */
   unsubscribers.push(
     eventBus.on('engine:round-start', () => {
+      if (regeneratedInput === null && _lastSentInput) composerRef.value?.clearInputIfMatches(_lastSentInput);
+      failedRound.value = null;
       if (windowMode.value === 'pinned') jumpToLatest();
       isGenerating.value = true;
       streamingText.value = '';
@@ -1088,6 +1108,9 @@ onMounted(() => {
       stopTimer();
       isGenerating.value = false;
       streamingText.value = '';
+      if (regeneratedInput !== null) composerRef.value?.clearInputIfMatches(regeneratedInput);
+      regeneratedInput = null;
+      failedRound.value = null;
       _lastSentInput = '';
       localStorage.removeItem(_PENDING_INPUT_KEY);
 
@@ -1106,6 +1129,7 @@ onMounted(() => {
 
   unsubscribers.push(
     eventBus.on('ai:error', (payload) => {
+      regeneratedInput = null;
       stopTimer();
       isGenerating.value = false;
       streamingText.value = '';
@@ -1115,9 +1139,12 @@ onMounted(() => {
         _lastSentInput = '';
       }
       const errMsg = (payload as { error?: Error })?.error?.message ?? t('mainGame.toast.aiErrorUnknown');
+      const recovery = payload as { regenerateToken?: string; retryInput?: string; roundFailure?: boolean };
+      failedRound.value = recovery.regenerateToken && recovery.retryInput
+        ? { token: recovery.regenerateToken, input: recovery.retryInput, error: errMsg } : null;
       eventBus.emit('ui:toast', {
         type: 'error',
-        message: t('mainGame.toast.aiError', { error: errMsg }),
+        message: t(recovery.roundFailure ? 'mainGame.recovery.failed' : 'mainGame.toast.aiError', { error: errMsg }),
         duration: 5000,
       });
     }),
@@ -1132,6 +1159,15 @@ onMounted(() => {
         message: t('mainGame.toast.retrying', { attempt, maxRetries }),
         duration: 3000,
       });
+    }),
+  );
+
+  unsubscribers.push(
+    eventBus.on('pipeline:input-rejected', () => {
+      // No round was accepted: keep the draft and any existing recovery ticket.
+      regeneratedInput = null;
+      regenerationClickLocked.value = false;
+      _lastSentInput = '';
     }),
   );
 
@@ -1233,6 +1269,7 @@ watch(
         <!-- 配音快速切换 (2026-07-20) — chip → popover: 切音色/方言 + 自动配音开关 -->
         <VoiceQuickSwitch v-if="ttsReady" :speaking="ttsState.status !== 'idle'" />
         <FestivalChip :festival="festival" />
+        <PlotVectorBoardEntry v-if="!isWorldBuilding" :generating="isGenerating" />
         <span v-if="isGenerating" class="status-generating">
           {{ $t('mainGame.status.aiThinking') }}
         </span>
@@ -1558,6 +1595,13 @@ watch(
       @go-to-save="onHealthGateGoToSave"
     />
     <!-- Story 9: hidden in worldBuilding mode (no turn advancement while building the world). -->
+    <div v-if="failedRound && !isGenerating && !isWorldBuilding" class="round-recovery" role="alert" data-testid="round-recovery">
+      <p>{{ $t('mainGame.recovery.failed', { error: failedRound.error }) }}</p>
+      <p>{{ $t('mainGame.recovery.explain') }}</p>
+      <button type="button" class="modal-btn modal-btn--confirm" data-testid="regenerate-round" :disabled="regenerationClickLocked" @click="regenerateFailedRound">
+        {{ $t('mainGame.recovery.regenerate') }}
+      </button>
+    </div>
     <GameComposer
       v-if="!isWorldBuilding"
       ref="composerRef"
@@ -1603,6 +1647,7 @@ watch(
       v-model="showRawViewer"
       :step1="activeRaw?.step1 ?? ''"
       :step2="activeRaw?.step2 ?? ''"
+      :settlement="activeRaw?.settlement ?? ''"
       :round-number="activeRaw?.roundNumber ?? 0"
     />
     <EngramRoundViewer
@@ -1616,6 +1661,17 @@ watch(
 </template>
 
 <style scoped>
+.round-recovery {
+  flex: 0 0 auto;
+  padding: 12px max(16px, var(--sidebar-right-reserve, 40px)) 12px max(16px, var(--sidebar-left-reserve, 40px));
+  border-top: 1px solid var(--border-color, #45453f);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  max-height: 30vh;
+  overflow-y: auto;
+}
+.round-recovery p { margin: 0 0 8px; }
 /*
  * MainGamePanel — sanctuary migration (2026-04-21)
  *

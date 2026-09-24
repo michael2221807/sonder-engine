@@ -3,7 +3,29 @@ import { estimateTokens, buildSystemPrompt, GPROXY_CACHE_STATIC_PIECE_IDS } from
 import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 import { createMockStateManager } from '../__test-utils__';
 import type { StateManager } from '../core/state-manager';
-import type { WorldBook, WorldBookEntry } from './world-book';
+import type { WorldBook, WorldBookEntry, BuiltinPromptEntry } from './world-book';
+
+describe('phase-selected default format', () => {
+  function build(formatPromptId?: string, builtinOverrides: BuiltinPromptEntry[] = []) {
+    const { sm } = createMockStateManager({});
+    return buildSystemPrompt({ stateManager: sm as unknown as StateManager,
+      paths: DEFAULT_ENGINE_PATHS, packPrompts: { mainRound: 'single', splitGenStep1: 'narrative' },
+      builtinOverrides, worldBooks: [], userInput: 'hello', playerName: 'player',
+      cotEnabled: false, cotJudgeEnabled: false, splitGen: true, cotPseudoEnabled: false,
+      formatPromptId, transformPrompt: (id, raw) => `${id}:${raw}` });
+  }
+  it('routes the default through its own module transform, leaving the legacy default intact', () => {
+    expect(build().contextPieces.format_prompt).toBe('mainRound:single');
+    expect(build('splitGenStep1').contextPieces.format_prompt).toBe('splitGenStep1:narrative');
+  });
+  it('preserves an explicit user edit and its original transform identity', () => {
+    expect(build('splitGenStep1', [{ id: 'format', slotId: 'format_prompt', title: '', category: '主剧情',
+      content: 'single', userContent: 'custom' }]).contextPieces.format_prompt).toBe('mainRound:custom');
+  });
+  it('does not silently drop the format when the selected module is missing', () => {
+    expect(() => build('missing')).toThrow('Missing format prompt: missing');
+  });
+});
 
 describe('estimateTokens', () => {
   it('returns 0 for empty string', () => {

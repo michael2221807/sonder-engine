@@ -96,8 +96,7 @@ function sendMessage(): void {
     }
   } catch { /* advisory only — a scanner hiccup must never block sending */ }
 
-  userInput.value = '';
-  resetTextareaHeight();
+  // The host clears an accepted draft on round-start. Busy or gated sends keep it.
   emit('send', text);
 }
 
@@ -122,12 +121,18 @@ function restoreInput(text: string): void {
   nextTick(() => autoResizeTextarea());
 }
 
+/** Clear only the submitted draft; preserve text typed for the following round. */
+function clearInputIfMatches(text: string): void {
+  if (userInput.value.trim() === text.trim()) restoreInput('');
+}
+
 onBeforeUnmount(() => {
   resetTextareaHeight();
 });
 
 defineExpose({
   restoreInput,
+  clearInputIfMatches,
 });
 </script>
 

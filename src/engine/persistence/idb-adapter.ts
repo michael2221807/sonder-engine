@@ -18,6 +18,7 @@
 // App doc: docs/user-guide/pages/game-save.md §3.2 (数据持久化与浏览器驱逐) · docs/user-guide/cloud-sync.md
 import { openDB, type IDBPDatabase } from 'idb';
 import { eventBus } from '../core/event-bus';
+import { isEqual } from 'lodash-es';
 
 const DB_NAME = 'aga-saves';
 const DB_VERSION = 1;
@@ -110,6 +111,27 @@ let _lastQuotaCheck = 0;
 const QUOTA_CHECK_INTERVAL = 60_000;
 
 export const idbAdapter = {
+  /** Guard after opening the connection and await transaction completion, not just put. */
+  async setGuarded(key: string, value: unknown, guard: () => void, expected?: { value: unknown }): Promise<void> {
+    const cloned = structuredClone(value);
+    await withDB(async db => {
+      guard();
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      try {
+        if (expected && !isEqual(await tx.store.get(key), expected.value)) {
+          throw new Error('存档已被其他窗口更新或删除，请重新读档后继续；未覆盖新存档。');
+        }
+        guard();
+        await tx.store.put(cloned, key);
+        guard();
+        await tx.done;
+      } catch (error) {
+        try { tx.abort(); } catch { /* Already completed. */ }
+        await tx.done.catch(() => {});
+        throw error;
+      }
+    });
+  },
   /** 按 key 读取 */
   async get<T>(key: string): Promise<T | undefined> {
     return withDB((db) => db.get(STORE_NAME, key) as Promise<T | undefined>);

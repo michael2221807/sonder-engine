@@ -45,6 +45,28 @@ import type {
  */
 export interface PipelineMeta {
   [key: string]: unknown;
+  /** Host round identity and durable commit boundary; never persisted. */
+  roundOwnership?: import('../core/round-ownership').RoundOwnership;
+  /** Present only for an opted-in vector attempt. Rechecked at send/apply/save boundaries. */
+  plotVectorGuard?: () => void;
+  plotVectorCommitted?: () => void;
+  plotVectorCheckpoint?: (step: 'single' | 'step1' | 'step2' | 'repair' | 'polish' | 'settlement') => import('../ai/types').GenerationCheckpoint;
+  stateUpdateCommandGuard?: (resolved: import('../types').Command) => string | undefined;
+  stateUpdatesRequired?: boolean;
+  stateUpdateSource?: 'inline' | 'settlement';
+  /** Model reply from the optional dedicated item/money stage. Not mixed into Step2. */
+  stateSettlementUpdates?: unknown;
+  stateSettlementRaw?: string;
+  stateSettlementStrict?: boolean;
+  stateSettlementDurationMs?: number;
+  /** Opaque host-owned, per-attempt synchronization token; never persisted. */
+  stateUpdateSession?: object;
+  plotVectorRequestAttempt?: string;
+  plotVectorRecovered?: string[];
+  plotVectorLifecycle?: { saved?: boolean; invalidated?: boolean };
+  /** Frozen before asynchronous context assembly to avoid mixing feature modes. */
+  plotVectorAssemblyEpoch?: string;
+  plotVectorPromptMode?: boolean;
 
   // ── 子管线分派标志（GameOrchestrator 读取） ──
   /** 短期记忆已满 → 触发 MemorySummaryPipeline */
@@ -76,6 +98,8 @@ export interface PipelineMeta {
   splitStep2Messages?: AIMessage[];
   /** 第 2 步消息来源标签 */
   splitStep2Sources?: string[];
+  /** Optional pack-owned execution request; field contracts remain in phase modules. */
+  splitStep2Followup?: string;
   /**
    * Context Compiler 开关（`aga_ai_settings.contextCompiler`，缺省 = 开）。
    * 只影响分步生成的第 2 步输入；关 = 旧行为。GameOrchestrator 写、ContextAssembly 读。
@@ -138,6 +162,8 @@ export interface PromptMetrics {
   step1: PromptStepMetrics;
   /** Present only in split-gen mode. */
   step2?: PromptStepMetrics;
+  /** Present only for the experimental dedicated item/money call. */
+  settlement?: PromptStepMetrics;
 }
 
 /**
@@ -195,6 +221,8 @@ export interface PipelineContext {
   parsedResponse?: AIResponse;
   /** 指令执行结果（包含每条指令的成功/失败和变更日志） */
   commandResults?: BatchCommandResult;
+  /** Component preflight failures, reported with executed commands without applying them. */
+  rejectedCommands?: import('../types').CommandResult[];
   /** 最终叙事文本（渲染用） */
   narrativeText?: string;
   /** 行动选项列表（渲染用） */
@@ -673,6 +701,8 @@ export interface EnginePathConfig {
    * Design: docs/design/character-vector-v1-implementation-plan.md §1.
    */
   characterVectors: string;
+  /** Opaque vector component state; saved/rolled back with story, never sent as story facts. */
+  plotVector: string;
   /**
    * 玩家已探索地点名称数组（如 "系统.探索记录"）
    * 由引擎 PostProcessStage 在每回合自动维护，无需 AI 命令写入。
@@ -1046,6 +1076,7 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
   storageHealth: '系统.扩展.storageHealth',
   narrativeContract: '系统.扩展.narrativeContract',
   characterVectors: '系统.扩展.characterVectors',
+  plotVector: '系统.扩展.plotVector',
   explorationRecord: '系统.探索记录',
   reasoningHistory: '元数据.推理历史',
   storyPlan: '元数据.剧情规划',

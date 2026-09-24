@@ -115,6 +115,7 @@ const NSFW_STRIP_PATHS: readonly string[] = [
  * 加入此数组的路径**无条件**从发给 AI 的快照中剥离（与 NSFW 开关无关）。
  */
 const PROMPT_ALWAYS_STRIP_PATHS: readonly string[] = [
+  '系统.扩展.plotVector',
   '元数据.叙事历史',
   '元数据.上次对话前快照',
   '元数据.当前行动选项',

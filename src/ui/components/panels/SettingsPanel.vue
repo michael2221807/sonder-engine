@@ -14,6 +14,7 @@ import Modal from '@/ui/components/common/Modal.vue';
 import EngramSettingsSection from '../settings/EngramSettingsSection.vue';
 import TtsSettingsSection from '../settings/TtsSettingsSection.vue';
 import SttSettingsSection from '../settings/SttSettingsSection.vue';
+import PlotVectorSettingsSection from '../settings/PlotVectorSettingsSection.vue';
 import { useGameState } from '@/ui/composables/useGameState';
 import type { ProfileManager } from '@/engine/persistence/profile-manager';
 import type { SaveManager } from '@/engine/persistence/save-manager';
@@ -1314,6 +1315,8 @@ onBeforeUnmount(() => {
         </div>
         <AgaToggle :model-value="featureToggles.text_optimization" @update:model-value="toggleFeature('text_optimization')" />
       </div>
+
+      <PlotVectorSettingsSection />
 
       <div class="setting-row">
         <div class="setting-info">

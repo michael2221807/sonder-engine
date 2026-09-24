@@ -44,6 +44,8 @@ import type { CanonMutationInput } from './canon-projection';
  * different provenance — so those travel per-fact instead (`FactProvenance`).
  */
 export interface ProcessResponseOptions {
+  /** Validate the caller's loaded state after asynchronous work; never sent to a model. */
+  guard?: () => void;
   defaultEdgeCore?: boolean;
   defaultEdgeSource?: EngramEdge['source'];
   includeAllNpcTypes?: boolean;
@@ -383,6 +385,7 @@ export class EngramManager {
     options?: ProcessResponseOptions,
   ): Promise<EngramWriteSnapshot | null> {
 
+    options?.guard?.();
     const startTime = performance.now();
     const currentRound = stateManager.get<number>(this.roundNumberPath) ?? 0;
 
@@ -548,12 +551,14 @@ export class EngramManager {
       if (slot?.profileId && slot?.slotId && hasExistingEdges) {
         try {
           const vectorData = await this.vectorStore.load(slot.profileId, slot.slotId);
+          options?.guard?.();
           edgeVectors = vectorData.edgeVectors ?? {};
           // Only embed for dedup when there are existing edges to compare against
           if (Object.keys(edgeVectors).length > 0) {
             const factsToEmbed = kfacts.map((kf) => kf.fact);
             if (factsToEmbed.length > 0) {
               const vectors = await this.embedder.embed(factsToEmbed);
+              options?.guard?.();
               for (let i = 0; i < kfacts.length; i++) {
                 if (vectors[i]?.length > 0) newFactVectors.set(kfacts[i].fact, vectors[i]);
               }
@@ -564,6 +569,8 @@ export class EngramManager {
         }
       }
 
+      // Do not swallow a stale-round error as an optional embedding failure.
+      options?.guard?.();
       const result = buildFacts(
         { knowledgeFacts: kfacts, entities, currentEventId: newEvents[0]?.id ?? null, currentRound },
         engram.v2Edges ?? [],
@@ -660,6 +667,7 @@ export class EngramManager {
         v2PendingReview: engram.meta.v2PendingReview ?? null,
       },
     };
+    options?.guard?.();
     stateManager.set(this.engramPath, updatedEngram, 'system');
 
     // ── Step 6: 向量 trim 同步 ──
@@ -677,7 +685,7 @@ export class EngramManager {
     const unembeddedEdges = engram.v2Edges.filter((e) => !e.is_embedded);
     const vectorizeQueued = newEvents.length + unembeddedEntities.length + unembeddedEdges.length;
     if (newEvents.length > 0 || unembeddedEntities.length > 0 || unembeddedEdges.length > 0) {
-      this.vectorizeAsync(newEvents, unembeddedEntities, stateManager, unembeddedEdges).catch((err) =>
+      this.vectorizeAsync(newEvents, unembeddedEntities, stateManager, unembeddedEdges, options?.guard).catch((err) =>
         console.warn('[Engram] Vectorization failed (non-blocking):', err),
       );
     }
@@ -870,6 +878,7 @@ export class EngramManager {
     unembeddedEntities: EngramEntity[],
     stateManager: StateManager,
     unembeddedEdges: EngramEdge[] = [],
+    guard?: () => void,
   ): Promise<void> {
     const slot = this.getActiveSlot();
     if (!slot?.profileId || !slot?.slotId) return;
@@ -899,6 +908,7 @@ export class EngramManager {
     }
     const vectors = await this.embedder.embed(allInputs);
     if (ac.signal.aborted) return;
+    guard?.();
 
     const model = loadEngramConfig().embeddingModel ?? 'unknown';
     const eventVectors = vectors.slice(0, eventInputs.length);
@@ -932,6 +942,7 @@ export class EngramManager {
     }
 
     if (ac.signal.aborted) return;
+    guard?.();
 
     // ── 回写 is_embedded 标记到状态树 ──
     // 只标记有非空向量的条目

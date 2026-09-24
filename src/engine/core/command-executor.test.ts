@@ -232,6 +232,18 @@ describe('CommandExecutor · unknown path root → relocate or reject', () => {
     expect(sm.get('用户角色数据')).toBeUndefined();
   });
 
+  it('does not relocate a missing item path by matching only its generic leaf field', () => {
+    const mock = createMockStateManager({
+      角色: { 背包: { 物品: {} } },
+      世界: { 节日: { 名称: '平日', 描述: '', 效果: '' } },
+    });
+    const ex = new CommandExecutor(mock.sm as never, ['角色', '世界']);
+    const result = ex.execute({ action: 'push', key: '背包.物品.item_missing.名称', value: '纸巾' });
+    expect(result.success).toBe(false);
+    expect(mock.sm.get('世界.节日.名称')).toBe('平日');
+    expect(mock.sm.get('角色.背包.物品')).toEqual({});
+  });
+
   it('keeps filter segments intact when relocating', async () => {
     // The mock's filter regex needs an ASCII-leading field name; the real StateManager
     // resolves `[名称=颈]`, so this case runs against the real one.

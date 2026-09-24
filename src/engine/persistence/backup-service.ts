@@ -78,6 +78,7 @@ const REFERENCE_LIBRARY_WARN_BYTES = 200 * 1024 * 1024;
  *   (survives across sessions so a failed tail-flush is retried next session)
  */
 const LS_DEVICE_LOCAL_KEYS: ReadonlySet<string> = new Set([
+  'aga_plot_vector_control', // Experimental execution opt-in must not travel with a save/import.
   'aga_github_sync_baseline',
   'aga_github_sync_pending',
   // 存档插槽 epic（2026-07-23）：插槽化后基线/待传标志变为 per-slot JSON map，
@@ -2139,6 +2140,7 @@ export function bundleImagesLookDropped(bundle: BackupBundle): boolean {
 export const _testExports = {
   isValidBundleShape,
   collectLocalStorageSettings,
+  restoreLocalStorageSettings,
   wipeLocalStorageSettings,
   compositeSlotKey,
   parseCompositeKey,

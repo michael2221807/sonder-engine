@@ -15,6 +15,7 @@ import { CardExportPage } from '../pages/card-export.page';
 import { CardImportPage } from '../pages/card-import.page';
 import { SaveToCardPage } from '../pages/save-to-card.page';
 import { CreationPage } from '../pages/creation.page';
+import { PlotVectorPage } from '../pages/plot-vector.page';
 
 interface Fixtures {
   /** The egress guard state (auto-installed; asserted empty in teardown). */
@@ -26,6 +27,7 @@ interface Fixtures {
   cardImport: CardImportPage;
   saveToCard: SaveToCardPage;
   creation: CreationPage;
+  plotVector: PlotVectorPage;
 }
 
 export const test = base.extend<Fixtures>({
@@ -45,6 +47,7 @@ export const test = base.extend<Fixtures>({
   cardImport: async ({ page }, use) => { await use(new CardImportPage(page)); },
   saveToCard: async ({ page }, use) => { await use(new SaveToCardPage(page)); },
   creation: async ({ page }, use) => { await use(new CreationPage(page)); },
+  plotVector: async ({ page }, use) => { await use(new PlotVectorPage(page)); },
 });
 
 // Re-export ONLY the symbols specs consume through this barrel. Everything else

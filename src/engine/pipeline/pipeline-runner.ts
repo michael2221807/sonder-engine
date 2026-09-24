@@ -48,9 +48,11 @@ export class PipelineRunner {
     eventBus.emit('engine:round-start', { roundNumber: ctx.roundNumber });
 
     for (const stage of this.stages) {
+      ctx.meta.roundOwnership?.guard();
+      ctx.meta.plotVectorGuard?.();
       // 在启动每个阶段前检查取消信号，
       // 避免在用户已取消后继续执行耗时操作（特别是 AICallStage）
-      if (ctx.abortSignal?.aborted) {
+      if (ctx.abortSignal?.aborted && !ctx.meta.roundOwnership?.saved && !ctx.meta.plotVectorLifecycle?.saved) {
         throw new Error('Pipeline aborted');
       }
 

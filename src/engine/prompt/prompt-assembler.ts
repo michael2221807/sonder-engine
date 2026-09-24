@@ -21,6 +21,7 @@ import type { PromptFlowConfig } from '../types';
 import type { AIMessage } from '../ai/types';
 import type { PromptRegistry } from './prompt-registry';
 import type { TemplateEngine } from './template-engine';
+import type { RawPromptTransform } from './raw-prompt-transform';
 
 /**
  * 消息来源标签 —— 2026-04-14 新增
@@ -57,7 +58,18 @@ export class PromptAssembler {
   constructor(
     private registry: PromptRegistry,
     private templateEngine: TemplateEngine,
+    private transform?: RawPromptTransform,
   ) {}
+
+  /** A round-local view; the shared registry and other pipelines remain unchanged. */
+  withTransform(transform?: RawPromptTransform): PromptAssembler {
+    return transform ? new PromptAssembler(this.registry, this.templateEngine, transform) : this;
+  }
+
+  private content(promptId: string): string | null {
+    const raw = this.registry.getEffectiveContent(promptId);
+    return raw ? (this.transform?.(promptId, raw) ?? raw) : null;
+  }
 
   /**
    * 按 flow 配置组装 prompt → AIMessage[]
@@ -90,7 +102,7 @@ export class PromptAssembler {
       }
 
       // 获取模块内容（优先用户覆盖 → 默认内容）
-      const content = this.registry.getEffectiveContent(mod.promptId);
+      const content = this.content(mod.promptId);
       if (!content) {
         console.debug(`[PromptAssembler] Skipped "${mod.promptId}" — empty content (not registered or disabled)`);
         continue;
@@ -162,7 +174,7 @@ export class PromptAssembler {
    * @returns 渲染后的字符串；promptId 不存在或内容为空时返回 null
    */
   renderSingle(promptId: string, variables: Record<string, string>): string | null {
-    const content = this.registry.getEffectiveContent(promptId);
+    const content = this.content(promptId);
     if (!content) return null;
     return this.templateEngine.render(content, variables);
   }

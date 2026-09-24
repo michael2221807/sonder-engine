@@ -16,6 +16,7 @@ import type { ProfileMeta, SaveSlotMeta, StorageRoot } from '../types';
 const ROOT_KEY = 'storage_root';
 
 export class ProfileManager {
+  constructor(private clearRelatedData?: () => Promise<void>) {}
   /** 运行时缓存的存储根 — 初始化后始终与 IndexedDB 保持同步 */
   private root: StorageRoot | null = null;
 
@@ -153,6 +154,7 @@ export class ProfileManager {
    * 调用后应用应导航到首页，避免 UI 继续依赖已清空的状态。
    */
   async clearAll(): Promise<void> {
+    await this.clearRelatedData?.();
     await idbAdapter.clear();
     // 重置内存缓存，防止持久化残留数据
     this.root = { activeProfile: null, profiles: {} };

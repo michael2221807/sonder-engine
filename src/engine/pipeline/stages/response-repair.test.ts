@@ -15,10 +15,51 @@ import { ResponseRepairStage, extractNarrativeFromWrapper } from './response-rep
 import { ResponseParser } from '../../ai/response-parser';
 import type { PipelineContext } from '../types';
 import type { AIResponse } from '../../ai/types';
+import type { GenerateOptions } from '../../ai/types';
+
+describe('action protocol repair boundary', () => {
+  it('preserves sourced state_updates and uses the repair checkpoint', async () => {
+    const updates = { version: 1, actions: [{ id: 'a', op: 'pay', account: null, amount: 3.5 }] };
+    const ai = makeAIService(JSON.stringify({ commands: [], state_updates: updates }));
+    const checkpoint = { run: vi.fn() }, factory = vi.fn(() => checkpoint);
+    const ctx = makeCtx({ rawResponse: 'good story', parsedResponse: { text: 'good story', parseOk: false },
+      meta: { stateUpdatesRequired: true, rawResponseStep2: '{"state_updates": broken', plotVectorCheckpoint: factory } });
+    const result = await new ResponseRepairStage(ai as never, new ResponseParser()).execute(ctx);
+    expect(result.parsedResponse?.customFields?.state_updates).toEqual(updates);
+    expect(result.parsedResponse?.parseOk).toBe(true);
+    expect(result.parsedResponse?.text).toBe('good story');
+    expect(factory).toHaveBeenCalledWith('repair');
+    expect(ai.generate).toHaveBeenCalledWith(expect.objectContaining({ checkpoint, singleAttempt: true }));
+  });
+  it('does not request invented actions when the source lacks the field', async () => {
+    const ai = makeAIService();
+    const ctx = makeCtx({ rawResponse: '{broken', parsedResponse: { text: '', parseOk: false }, meta: { stateUpdatesRequired: true } });
+    expect(await new ResponseRepairStage(ai as never, new ResponseParser()).execute(ctx)).toBe(ctx);
+    expect(ai.generate).not.toHaveBeenCalled();
+  });
+  it('repairs malformed Step2 without inventing settlement actions in separate mode', async () => {
+    const ai = makeAIService('{"commands":[],"action_options":["继续"]}');
+    const ctx = makeCtx({ rawResponse: '{"text":"已接受正文"}',
+      parsedResponse: { text: '已接受正文', parseOk: false },
+      meta: { stateUpdatesRequired: true, stateUpdateSource: 'settlement', rawResponseStep2: '{"commands": broken' } });
+    const result = await new ResponseRepairStage(ai as never, new ResponseParser()).execute(ctx);
+    expect(ai.generate).toHaveBeenCalledTimes(1);
+    expect(result.parsedResponse?.parseOk).toBe(true);
+    expect(result.parsedResponse?.text).toBe('已接受正文');
+    expect(result.parsedResponse?.customFields?.state_updates).toBeUndefined();
+    expect(String(ai.generate.mock.calls[0][0].messages[0].content)).not.toContain('保留原文 state_updates');
+  });
+  it('keeps structure failed when repair drops the required actions', async () => {
+    const ai = makeAIService();
+    const ctx = makeCtx({ rawResponse: '{"state_updates": broken', parsedResponse: { text: '', parseOk: false }, meta: { stateUpdatesRequired: true } });
+    const result = await new ResponseRepairStage(ai as never, new ResponseParser()).execute(ctx);
+    expect(result.parsedResponse?.parseOk).toBe(false);
+  });
+});
 
 function makeAIService(rawResponse = '{"text":"","commands":[],"action_options":[]}') {
   return {
-    generate: vi.fn(async () => rawResponse),
+    generate: vi.fn(async (_options: GenerateOptions) => rawResponse),
     getConfigForUsage: vi.fn(() => ({ model: 'test-repair-model' })),
   };
 }

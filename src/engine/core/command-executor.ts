@@ -99,7 +99,7 @@ export class CommandExecutor {
   ) {}
 
   /** 执行单条指令 — 返回执行结果 */
-  execute(command: Command): CommandResult {
+  execute(command: Command, guard?: (resolved: Command) => string | undefined): CommandResult {
     // ── 步骤 1：结构验证 ──
     if (!command.action || !command.key) {
       return { success: false, command, error: 'Missing action or key' };
@@ -114,6 +114,8 @@ export class CommandExecutor {
     const relocatedFrom = resolution.kind === 'relocated' ? command.key : undefined;
 
     try {
+      const rejection = guard?.(cmd);
+      if (rejection) return { success: false, command: cmd, error: rejection, relocatedFrom };
       let change;
 
       switch (cmd.action) {
@@ -192,12 +194,12 @@ export class CommandExecutor {
    * 当前实现为"尽力执行"：单条失败不影响后续指令。
    * 失败的指令会记录到 results 中并在 console 输出警告。
    */
-  executeBatch(commands: Command[]): BatchCommandResult {
+  executeBatch(commands: Command[], guard?: (resolved: Command) => string | undefined): BatchCommandResult {
     const results: CommandResult[] = [];
     const changes: ChangeLog['changes'] = [];
 
     for (const cmd of commands) {
-      const result = this.execute(cmd);
+      const result = this.execute(cmd, guard);
       results.push(result);
       // 只收集成功执行的变更
       if (result.change) {
@@ -228,7 +230,8 @@ export class CommandExecutor {
    *
    * 根段定义：第一个 `.` 或 `[` 之前的字串（`社交.关系[名称=李明阳].好感度` → `社交`）。
    * 归位规则（内容无关，只看当前状态树的形状）：
-   *   - 把路径按段拆开（方括号内不拆），依次尝试丢掉前 k 段（k = 0…n-1），
+   *   - 把路径按段拆开（方括号内不拆），只尝试原路径或丢掉一个多余前缀；
+   *     多段路径至少保留两个相连字段，不凭最后一个通用字段猜测归位目标；
    *     在每个白名单根下、深度 ≤ MAX_RELOCATION_DEPTH 的对象节点里找"拥有剩余路径第一段键"的节点；
    *   - 候选 = 节点路径 + 剩余路径；只取最浅的一层候选；若恰好一个能解析到父级 → 归位；
    *   - 多个同样浅的候选 → 歧义，拒绝；一个都没有 → 拒绝。
@@ -241,7 +244,10 @@ export class CommandExecutor {
     if (this.pathRootWhitelist.includes(root)) return { kind: 'ok' };
 
     const segments = splitPathSegments(path);
-    for (let drop = 0; drop < segments.length; drop++) {
+    // A missing root or one fabricated prefix is recoverable; a bare leaf from a
+    // longer path is not enough evidence to choose an unrelated field by name.
+    const maxDrop = segments.length === 1 ? 0 : Math.min(1, segments.length - 2);
+    for (let drop = 0; drop <= maxDrop; drop++) {
       const remaining = segments.slice(drop);
       const firstKey = segmentKey(remaining[0]);
       if (!firstKey) continue;

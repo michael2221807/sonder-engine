@@ -19,12 +19,14 @@ interface Props {
   modelValue: boolean;
   step1?: string | null;
   step2?: string | null;
+  settlement?: string | null;
   roundNumber?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   step1: '',
   step2: '',
+  settlement: '',
   roundNumber: 0,
 });
 
@@ -35,7 +37,8 @@ defineEmits<{
 const { t } = useI18n();
 
 const isSplitGen = computed(() => !!props.step2 && props.step2.length > 0);
-type Tab = 'step1' | 'step2';
+const hasTabs = computed(() => isSplitGen.value || !!props.settlement);
+type Tab = 'step1' | 'step2' | 'settlement';
 const activeTab = ref<Tab>('step1');
 
 // Reset tab when reopened — users may open different rounds with different
@@ -49,6 +52,7 @@ watch(
 
 const displayText = computed(() => {
   if (activeTab.value === 'step2') return props.step2 ?? '';
+  if (activeTab.value === 'settlement') return props.settlement ?? '';
   return props.step1 ?? '';
 });
 
@@ -67,8 +71,8 @@ function title(): string {
     backdrop-close
     @update:model-value="(v) => $emit('update:modelValue', v)"
   >
-    <!-- Tab switcher — only when split-gen has two payloads -->
-    <div v-if="isSplitGen" class="raw-viewer__tabs" role="tablist">
+    <!-- Show each raw model reply only when that call exists. -->
+    <div v-if="hasTabs" class="raw-viewer__tabs" role="tablist">
       <button
         class="raw-viewer__tab"
         :class="{ 'raw-viewer__tab--active': activeTab === 'step1' }"
@@ -78,7 +82,7 @@ function title(): string {
       >
         {{ $t('mainGame.rawViewer.tabStep1') }}
       </button>
-      <button
+      <button v-if="isSplitGen"
         class="raw-viewer__tab"
         :class="{ 'raw-viewer__tab--active': activeTab === 'step2' }"
         role="tab"
@@ -86,6 +90,11 @@ function title(): string {
         @click="activeTab = 'step2'"
       >
         {{ $t('mainGame.rawViewer.tabStep2') }}
+      </button>
+      <button v-if="props.settlement" class="raw-viewer__tab"
+        :class="{ 'raw-viewer__tab--active': activeTab === 'settlement' }"
+        role="tab" :aria-selected="activeTab === 'settlement'" @click="activeTab = 'settlement'">
+        {{ $t('mainGame.rawViewer.tabSettlement') }}
       </button>
     </div>
 

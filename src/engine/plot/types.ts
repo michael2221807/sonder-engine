@@ -377,17 +377,21 @@ function parseEvaluationItem(
  * Accepts the multi-thread array contract (`plot_evaluation: [{thread, …}]`)
  * AND the legacy single object (`plot_evaluation: {…}`, no `thread`), which is
  * returned as a one-element array. Invalid items are dropped, never coerced.
- * Top-level `gauge_updates` is only honoured for the legacy single shape —
- * in the array shape it is ambiguous which thread it belongs to.
+ * Top-level `gauge_updates` is honoured for the legacy single shape and for
+ * a one-item array when the caller knows exactly one thread is active.
+ * Otherwise an array-level update has no unambiguous owner.
  */
 export function extractPlotEvaluations(
   customFields: Record<string, unknown> | undefined,
+  activeThreadCount?: number,
 ): PlotEvaluation[] {
   if (!customFields) return [];
   const raw = customFields['plot_evaluation'];
   if (Array.isArray(raw)) {
+    const soleThreadGaugeUpdates = raw.length === 1 && activeThreadCount === 1
+      ? customFields['gauge_updates'] : undefined;
     return raw
-      .map(item => parseEvaluationItem(item, undefined))
+      .map(item => parseEvaluationItem(item, soleThreadGaugeUpdates))
       .filter((e): e is PlotEvaluation => e !== null);
   }
   const single = parseEvaluationItem(raw, customFields['gauge_updates']);

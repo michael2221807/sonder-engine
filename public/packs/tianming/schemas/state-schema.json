@@ -210,6 +210,7 @@
                   "类型":   { "type": "string", "$comment": "装备|消耗品|材料|其他" },
                   "品质":   { "type": "object" },
                   "数量":   { "type": "number" },
+                  "能力版本": { "type": "integer", "minimum": 1, "$comment": "可选；仅实际功能或使用权限变化时递增，普通改名、记事、数量变化不修改。省略为初版。" },
                   "描述":   { "type": "string" }
                 }
               }
@@ -629,6 +630,10 @@
           "type": "object",
           "properties": {
             "engramMemory": { "type": "object", "default": {} },
+            "plotVector": {
+              "type": "object",
+              "$comment": "Opt-in plot-vector component state v1. Engine-owned abilities, session and post-save task checkpoints; never sent in story prompts. No default: disabled saves remain unchanged."
+            },
             "settingCaptureLast": {
               "type": "object",
               "$comment": "Canon Capture：本存档最近一次设定捕获的结果摘要（回合/接受数/拒绝原因/标记原文预览）。仅在带 <设定> 标记的回合写入；支撑世界书面板的常驻结果横幅。已加入 PROMPT_ALWAYS_STRIP_PATHS。",

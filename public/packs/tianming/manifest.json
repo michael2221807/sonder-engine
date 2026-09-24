@@ -31,7 +31,7 @@
     "openingEnhancedStep2": "prompt-flows/opening-enhanced-step2.json"
   },
   "prompts": [
-    "narratorFrame", "narratorEnforcement", "jailbreak", "creationGenJailbreak", "assistantJailbreak",
+      "narratorFrame", "narratorEnforcement", "plotVectorMode", "stateUpdateProtocol", "stateSettlement", "splitGenStep2Followup", "jailbreak", "creationGenJailbreak", "assistantJailbreak",
     "assistantInjectionContract", "historyFraming", "core", "worldGen", "opening", "mainRound",
     "memorySummary", "memorySummaryInput", "midTermRefine", "midTermRefineInput",
     "longTermCompact", "longTermCompactInput", "splitGenStep1", "splitGenStep2",
@@ -81,6 +81,8 @@
     "crossRefSync": "rules/cross-ref-sync.json",
     "npcChat": "rules/npc-chat.json",
     "npcMemory": "rules/npc-memory.json",
-    "requiredFields": "rules/required-fields.json"
+    "requiredFields": "rules/required-fields.json",
+    "plotVector": "rules/plot-vector.json",
+    "plotVectorPrompts": "rules/plot-vector-prompts.json"
   }
 }
