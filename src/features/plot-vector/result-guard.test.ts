@@ -118,6 +118,28 @@ describe('host boundary for Worker results', () => {
       await expect(assertVectorResult(h.acceptOp, h.accepted)).resolves.toBe(h.accepted);
     }
   });
+  it('one card whose acceptance hook fails with a very long error is logged as failed and the round still commits', async () => {
+    // The hook only fails on trips longer than the fixed 10-visit validation probe, so it validates and binds.
+    const entry = { id: 'item:loud', kind: 'item' as const, capability: { name: 'loud', description: 'loud' } };
+    const loudTask = tasksAfterSave({ id: 'seed', success: true, before: [], after: [entry] })[0];
+    const bound = await executeVectorOperation({ kind: 'validate', task: loudTask, attempts: 1, output: { version: 2, card: {
+      name: 'loud', description: 'loud', behaviorSummary: 'loud', initialPersistentState: {},
+      hooks: { onVisit: "return { effects: [{ kind: 'add', channel: 'J', amount: 1 }] };",
+        onRoundAccepted: "if (ctx.visitCount > 12) throw 'x'.repeat(5000); return {};" } } } }) as BoundCard;
+    const state: VectorState = { ...initialVectorState(), cards: [bound],
+      layout: { placements: { '01': entry.id, '02': null, '03': null, '04': null, '05': null, '06': null }, tray: [] } };
+    const native = { ruleId: 'test', payload: { 'S+': 1, 'S-': 0, Y: 0, J: 0 }, visitBudget: 20, contributions: [] };
+    const prepareOp: VectorOperation = { kind: 'prepare', state, entries: [entry], id: 'p/s/1', native };
+    const prepared = await executeVectorOperation(prepareOp) as PreparedVector;
+    await expect(assertVectorResult(prepareOp, prepared)).resolves.toBe(prepared);
+    const acceptOp: VectorOperation = { kind: 'accept', state, prepared };
+    const accepted = await executeVectorOperation(acceptOp) as VectorState;
+    const logged = accepted.session.scriptCommitLog!.at(-1)!;
+    expect(logged).toMatchObject({ cardId: entry.id, status: 'failed' });
+    expect(logged.reason!.length).toBeGreaterThanOrEqual(5000);
+    await expect(assertVectorResult(acceptOp, accepted)).resolves.toBe(accepted);
+    expect(accepted.session.round).toBe(2);
+  });
   it('long saves: rewriting or dropping old history is still refused', async () => {
     const h = await honest(history(5_000));
     const rewritten = clone(h.accepted); rewritten.session.scriptCommitLog![10].status = 'applied';

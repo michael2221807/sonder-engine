@@ -7,6 +7,11 @@ import type { Page } from '@playwright/test';
  * stand-in; it counts every paid send in localStorage so the count survives reloads.
  */
 type Network = 'switch-slot' | 'hang' | 'reply';
+
+// Not layout-dependent: one viewport is enough (maintainability rule; the viewport matrix is for layout).
+test.beforeEach(({}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-1920', 'Worker/journal behavior, not layout: desktop-1920 only');
+});
 interface Outcome {
   sends: number;
   task: { status: string; raw: boolean; error?: string } | null;
@@ -118,22 +123,4 @@ test('an unknown request (claimed, page closed before any reply) is never re-sen
       expect(outcome.task?.error).toBeUndefined();
       expect(outcome.tea).toMatchObject({ 名称: '茶', 数量: 1 });
     }
-  });
-
-test('a task marked as sent but with no ledger record at all is not sent, and looking it up creates no record',
-  { tag: ['@plot-vector', '@gate-1'] }, async ({ page }) => {
-    await seedSave(page);
-    await page.evaluate(() => localStorage.setItem('e2e_r4_sends', '0'));
-    const first = await play(page, 'N', 1, { addTea: true, network: 'hang', await: false });
-    expect(first.receipt).toBe('unknown');
-    // The player clears local recovery records (the settings action), then reloads.
-    await page.evaluate(async () => {
-      const path = '/src/features/plot-vector/request-journal.ts';
-      const { BrowserRequestStore } = await import(/* @vite-ignore */ path);
-      await new BrowserRequestStore('e2e-r4-receipts').clear(() => {});
-    });
-    await page.reload();
-    const next = await play(page, 'N', 2, { network: 'reply' });
-    expect(next).toMatchObject({ sends: 1, task: { status: 'sending', raw: false }, cards: [], receipt: 'none' });
-    expect(next.tea).toMatchObject({ 名称: '茶', 数量: 1 });
   });

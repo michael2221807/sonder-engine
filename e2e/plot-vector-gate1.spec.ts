@@ -11,6 +11,11 @@ import { test, expect, seedSave } from './fixtures/base';
  */
 type Outcome = { ok: true } | { ok: false; message: string };
 
+// Not layout-dependent: one viewport is enough (maintainability rule; the viewport matrix is for layout).
+test.beforeEach(({}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-1920', 'Worker/journal behavior, not layout: desktop-1920 only');
+});
+
 async function validateCards(page: import('@playwright/test').Page, cards: Array<{ id: string; onVisit: string }>, timeoutMs?: number): Promise<Outcome[]> {
   return page.evaluate(async ({ cards, timeoutMs }) => {
     const load = (path: string) => import(/* @vite-ignore */ path);

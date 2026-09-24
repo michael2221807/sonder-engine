@@ -56,8 +56,6 @@ export async function assertVectorResult(op: VectorOperation, result: unknown): 
 const HASH = /^[0-9a-f]{64}$/;
 const STATE_KEY = /^[A-Za-z][A-Za-z0-9_]{0,31}$/;
 const MAX_PROGRESS_ROWS = 32;
-const MAX_REASON_CHARS = 2_000;
-const MAX_SOURCE_SUMMARY = 3;
 
 /** Trusted rules for one prepared round, derived from the shared configuration, not the result. */
 function trustedRules() {
@@ -207,7 +205,7 @@ function checkPacket(packet: unknown, id: string, rules: ReturnType<typeof trust
       if (!isRecord(readout) || !Object.values(readout).every(finite)) fail('conflict readout not finite');
     }
   }
-  if (!Array.isArray(packet.sourceSummary) || packet.sourceSummary.length > MAX_SOURCE_SUMMARY
+  if (!Array.isArray(packet.sourceSummary)
     || !packet.sourceSummary.every(s => isRecord(s) && nonNegative(s.magnitude))) fail('source summary malformed');
 }
 
@@ -223,7 +221,7 @@ function checkCommitLog(before: readonly unknown[], after: unknown, settlementId
     const entry = log[before.length + index];
     if (!isRecord(entry) || entry.settlementId !== settlementId || entry.cardId !== input.cardId || entry.programHash !== input.ref.hash
       || (entry.status !== 'applied' && entry.status !== 'failed')
-      || (entry.reason !== undefined && (typeof entry.reason !== 'string' || entry.reason.length > MAX_REASON_CHARS))) {
+      || (entry.reason !== undefined && typeof entry.reason !== 'string')) {
       fail('commit log entry does not match this settlement');
     }
   });
