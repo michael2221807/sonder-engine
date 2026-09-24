@@ -254,8 +254,12 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
   private async syncEnvironment(a: Attempt): Promise<void> {
     const policy = this.promptPolicy?.environmentAbility;
     if (!policy) return;
-    const beforeIds = new Set(a.before.filter(e => e.kind === 'environment').map(e => e.id));
-    const synced = await this.environmentCards(a.state, policy.field, id => !beforeIds.has(id), a.guard);
+    // What each tag looked like when the round started (ability field excluded: it is only transport).
+    const before = new Map(a.before.filter(e => e.kind === 'environment').map(e => {
+      const { [policy.field]: _ability, ...capability } = e.capability;
+      return [e.id, capabilityKey({ ...e, capability })] as const;
+    }));
+    const synced = await this.environmentCards(a.state, policy.field, (id, key) => before.get(id) !== key, a.guard);
     this.environmentIssues = synced.issues.length
       ? { slot: stable(a.slot), revision: this.revision, epoch: readPlotVectorControl().epoch, issues: synced.issues } : undefined;
     if (!synced.changed && !synced.tags) return;
@@ -265,11 +269,12 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
   }
   /**
    * One pass over the saved environment tags. A tag carrying a new ability gets a validated card that
-   * replaces its old one; a tag without one keeps its card; a vanished tag loses its card. The ability
+   * replaces its old one; an unchanged tag without one keeps its card; a vanished tag loses its card. The ability
    * field is then taken out of the tags so no snippet stays in the story state or later prompts.
-   * `needsAbility(id)` decides whether a tag without any card should be repaired.
+   * `needsAbility(id, key)` says whether a tag without a new ability is new or changed (saved content key,
+   * ability excluded): such a tag loses any old card and is repaired; otherwise its card carries over.
    */
-  private async environmentCards(state: VectorState, field: string, needsAbility: (id: string) => boolean, guard: () => void):
+  private async environmentCards(state: VectorState, field: string, needsAbility: (id: string, key: string) => boolean, guard: () => void):
     Promise<{ state: VectorState; changed: boolean; issues: EnvironmentIssue[]; tags?: unknown[] }> {
     const snapshot = this.state.toSnapshot();
     const rawTags = readPath(snapshot, P.environmentTags);
@@ -283,8 +288,10 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       const task: GenesisTask = { key: capabilityKey(bare), actionId: 'environment', entry: bare };
       const existing = previous.get(entry.id);
       if (ability === undefined) {
-        if (existing) cards.push({ ...existing, task });
-        else if (needsAbility(entry.id)) issues.push({ entry: bare, reason: '缺少能力' });
+        // A new or updated tag without its new ability must not keep running the old one: Step3 fills it.
+        // Only a tag whose saved content is unchanged keeps its card.
+        if (needsAbility(entry.id, task.key)) issues.push({ entry: bare, reason: existing ? '内容已更新但缺少新能力' : '缺少能力' });
+        else if (existing) cards.push({ ...existing, task });
         continue;
       }
       let output: GenesisOutput;

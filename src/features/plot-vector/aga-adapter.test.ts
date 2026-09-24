@@ -738,8 +738,8 @@ describe('sources and environment abilities (PO correction)', () => {
     // The snippet travelled once, through Step2's own command; it does not stay in the story state or later prompts.
     expect(h.state.get(P.environmentTags)).toEqual([{ 名称: '细雨', 描述: '雨丝细密', 效果: '路滑' }]);
     const bound = environmentCards(h)[0].ref.hash;
-    // Next round: the card takes part automatically; Step2 re-emits the tag reworded, without an ability → kept.
-    await round(h, 2, () => h.state.set(P.environmentTags, [{ 名称: '细雨', 描述: '雨势渐小', 效果: '路滑' }]));
+    // Next round: the card takes part automatically; Step2 re-emits the same tag unchanged, without an ability → kept.
+    await round(h, 2, () => h.state.set(P.environmentTags, [{ 名称: '细雨', 描述: '雨丝细密', 效果: '路滑' }]));
     expect(vector(h).last!.layout.placements['06']).toBe('environment:name:细雨');
     expect(vector(h).last!.result.trace.some(e => e.owner?.id === 'environment:name:细雨' && e.status === 'applied')).toBe(true);
     expect(environmentCards(h).map(c => c.ref.hash)).toEqual([bound]);
@@ -750,6 +750,30 @@ describe('sources and environment abilities (PO correction)', () => {
     await round(h, 4, () => h.state.set(P.environmentTags, []));
     expect(environmentCards(h)).toEqual([]);
     expect(h.ai.generate).not.toHaveBeenCalled(); // no post-save generation for environment
+  });
+
+  it('a same-name environment updated without a new ability stops using the old one; Step3 fills it and later rounds use the new ability', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    await round(h, 1, () => h.state.set(P.environmentTags, [{ 名称: '路面', 描述: '石板路', 效果: '湿滑', 能力: ability('S-') }]));
+    const wet = environmentCards(h)[0].ref.hash;
+    // Same name, effect updated from 湿滑 to 干燥, but Step2 left out the ability.
+    await round(h, 2, () => h.state.set(P.environmentTags, [{ 名称: '路面', 描述: '石板路', 效果: '干燥' }]));
+    expect(environmentCards(h)).toEqual([]); // the old wet-road ability no longer takes part
+    const repair = await h.adapter.environmentRepairTask();
+    expect(repair?.block).toContain('路面');
+    expect(repair?.block).toContain('内容已更新但缺少新能力');
+    const generate = vi.fn(async () => JSON.stringify({ commands: [{ action: 'set', key: P.environmentTags,
+      value: [{ 名称: '路面', 描述: '石板路', 效果: '干燥', 能力: ability('S+') }] }] }));
+    await new FieldRepairPipeline(h.state, new CommandExecutor(h.state), { generate } as unknown as AIService, new ResponseParser(),
+      {} as PromptAssembler, null, { rules: {}, promptFlows: {}, prompts: {} } as unknown as GamePack, P, () => h.adapter.environmentRepairTask()).execute();
+    const dry = environmentCards(h).map(c => c.ref.hash);
+    expect(dry).toHaveLength(1); expect(dry[0]).not.toBe(wet);
+    // Next round, unchanged: the repaired ability is the one that runs.
+    await round(h, 3, () => h.state.set(P.environmentTags, [{ 名称: '路面', 描述: '石板路', 效果: '干燥' }]));
+    const ran = vector(h).last!.result.trace.filter(e => e.owner?.id === 'environment:name:路面' && e.status === 'applied');
+    expect(ran.length).toBeGreaterThan(0);
+    expect(ran.every(e => e.programHash === dry[0])).toBe(true);
+    expect(environmentCards(h).map(c => c.ref.hash)).toEqual(dry);
   });
 
   it('an invalid environment ability rides the existing Step3 repair and loads once fixed', async () => {
