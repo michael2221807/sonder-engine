@@ -15,8 +15,10 @@ export interface VectorPromptPolicy {
 export interface EnvironmentAbilityPolicy {
   /** Field on each environment tag that carries the snippet object. */
   field: string;
-  /** Step2 interface: pack instruction + the shared snippet contract. Step3 repair reuses the same text. */
+  /** Step2 interface: pack instruction + the shared snippet contract. */
   prompt: string;
+  /** The pack instruction alone (Step3 adds the shared snippet contract once for all its tasks). */
+  instruction: string;
   /** Step3 repair block template with `{{PATH}}` and `{{ITEMS}}`. */
   repair: string;
 }
@@ -29,8 +31,8 @@ export interface AbilityRepairPolicy {
   field: string;
   /** Task template with `{{ITEMS}}`. */
   template: string;
-  /** The same guidance, card rules and snippet contract post-save genesis uses. */
-  prompt: string;
+  /** The same guidance and card rules post-save genesis uses (Step3 adds the shared snippet contract once). */
+  guidance: string;
 }
 interface Replacement { promptId: string; from: string; to: string; scope: 'all' | 'inline' | 'separate' }
 
@@ -74,13 +76,13 @@ export function parseVectorPromptPolicy(raw: unknown, mode: unknown, stateUpdate
     const e = r.environmentAbility as Record<string, unknown> | null;
     if (!e || typeof e.field !== 'string' || !e.field.trim() || typeof e.instruction !== 'string' || !e.instruction.trim()
       || typeof e.repair !== 'string' || !e.repair.includes('{{ITEMS}}') || !e.repair.includes('{{PATH}}')) return;
-    environmentAbility = { field: e.field, prompt: `${e.instruction.trim()}\n\n${SNIPPET_API}`, repair: e.repair };
+    environmentAbility = { field: e.field, prompt: `${e.instruction.trim()}\n\n${SNIPPET_API}`, instruction: e.instruction.trim(), repair: e.repair };
   }
   let abilityRepair: AbilityRepairPolicy | undefined;
   if (r.abilityRepair !== undefined) {
     const a = r.abilityRepair as Record<string, unknown> | null;
     if (!a || typeof a.field !== 'string' || !a.field.trim() || typeof a.template !== 'string' || !a.template.includes('{{ITEMS}}')) return;
-    abilityRepair = { field: a.field, template: a.template, prompt: [GENESIS_GUIDANCE, GENESIS_CARD_RULES, SNIPPET_API].join('\n\n') };
+    abilityRepair = { field: a.field, template: a.template, guidance: [GENESIS_GUIDANCE, GENESIS_CARD_RULES].join('\n\n') };
   }
   return { mode, stateUpdates, stateUpdatePrompt: stateUpdates ? stateUpdatePrompt as string : undefined, environmentAbility, abilityRepair,
     transform: transformFor('inline'), separateTransform: transformFor('separate') };

@@ -8,7 +8,7 @@ import type { PlotVectorRoundPort } from '../../engine/plot-vector/round-port';
 import { readPlotVectorControl, subscribePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { projectSavedElements, readPath, savedEntryName } from './saved-elements';
 import { tasksAfterSave, stable, capabilityKey, toRuntimeCandidate, type BoundCard, type GenesisOutput, type GenesisTask, type SavedElement } from './genesis/post-save';
-import { buildAgaGenerationMessages, buildAbilityRetryMessages, parseAgaGenerationOutput, GENESIS_VALIDATION_REVISION } from './genesis/generation-prompt';
+import { buildAgaGenerationMessages, buildAbilityRetryMessages, parseAgaGenerationOutput, GENESIS_VALIDATION_REVISION, SNIPPET_API } from './genesis/generation-prompt';
 import { initialVectorState, type AbilityRetry, type VectorState, type VectorTaskRow, type PreparedVector, type VectorOperation, type VectorResult } from './runtime';
 import { abilityBacklog, type BacklogEntry } from './ability-backlog';
 import { VectorWorkerClient } from './worker-client';
@@ -371,9 +371,8 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       const ability = issue.ability === undefined ? undefined : JSON.stringify({ version: 3, card: issue.ability });
       let retry = prior?.retry;
       if (attempt?.ids.has(issue.entry.id)) {
-        const base: AbilityRetry = retry ?? { attempts: 0, autoRounds: 0 };
-        retry = { ...base, attempts: base.attempts + 1, source: 'step3', error: issue.reason,
-          ...(base.lastAutoRound === attempt.round ? {} : { autoRounds: base.autoRounds + 1, lastAutoRound: attempt.round }) };
+        // The attempt was counted when its Step3 request left; here only its reply is recorded.
+        retry = { ...(retry ?? { attempts: 1, autoRounds: 1, lastAutoRound: attempt.round }), source: 'step3', error: issue.reason };
         // `raw` always describes this attempt: a reply without a new ability leaves none.
         delete retry.raw; delete retry.validationRevision;
         if (ability) { retry.raw = ability; retry.validationRevision = GENESIS_VALIDATION_REVISION; }
@@ -431,19 +430,40 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       .sort((x, y) => (x.row.retry?.autoRounds ?? 0) - (y.row.retry?.autoRounds ?? 0))[0] : undefined;
     if (!tags.length && !item) return null;
     const guard = this.repairGuard('能力补生');
+    // Each task keeps its own instructions and output contract; the shared snippet contract is sent once.
     const blocks: string[] = [];
     if (environment && tags.length) {
       const list = tags.map(b => ({ name: b.name, ability: previousAbility(b.row), problem: b.problem ?? '缺少能力' }));
-      blocks.push(`${environment.repair.split('{{PATH}}').join(P.environmentTags).split('{{ITEMS}}').join(JSON.stringify(list, null, 2))}\n\n${environment.prompt}`);
+      blocks.push(`${environment.repair.split('{{PATH}}').join(P.environmentTags).split('{{ITEMS}}').join(JSON.stringify(list, null, 2))}\n\n${environment.instruction}`);
     }
     if (items && item) {
       const description = item.row.task.entry.capability.description;
       const list = [{ id: item.id, kind: item.kind, name: item.name, description: typeof description === 'string' ? description : '',
         problem: item.problem ?? '', ability: previousAbility(item.row) }];
-      blocks.push(`${items.template.split('{{ITEMS}}').join(JSON.stringify(list, null, 2))}\n\n${items.prompt}`);
+      blocks.push(`${items.template.split('{{ITEMS}}').join(JSON.stringify(list, null, 2))}\n\n${items.guidance}`);
     }
+    blocks.push(SNIPPET_API);
+    const listed = [...tags, ...(item ? [item] : [])].map(b => capabilityKey(b.row.task.entry));
     return {
       block: blocks.join('\n\n'),
+      // The request carrying this task is leaving: it is an attempt for every listed entry. Counted now, so a
+      // request that fails without a reply still uses up the automatic rounds (`settle` records a reply).
+      sent: () => {
+        guard();
+        const started = cloneDeep(this.state.get<VectorState>(P.plotVector) ?? initialVectorState());
+        let changed = false;
+        for (const key of listed) {
+          const row = started.tasks.find(t => capabilityKey(t.task.entry) === key && t.status !== 'bound');
+          if (!row) continue;
+          changed = true;
+          const base: AbilityRetry = row.retry ?? { attempts: 0, autoRounds: 0 };
+          const retry: AbilityRetry = { ...base, attempts: base.attempts + 1, source: 'step3', sending: false, error: '补生请求没有得到回复',
+            ...(base.lastAutoRound === round ? {} : { autoRounds: base.autoRounds + 1, lastAutoRound: round }) };
+          delete retry.raw; delete retry.validationRevision;
+          row.retry = retry;
+        }
+        if (changed) this.state.set(P.plotVector, started);
+      },
       ...(items && item ? { field: items.field } : {}),
       // Environment tags are fixed as commands on the tag array; item abilities never are.
       ...(tags.length ? {} : { commands: false }),
@@ -464,7 +484,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
         if (item) {
           const key = capabilityKey(item.row.task.entry);
           const row = next.tasks.find(t => capabilityKey(t.task.entry) === key && t.status !== 'bound');
-          if (!row || !(await this.applyRetryReply(next, row, replyCardFor(output, item.id), 'step3', round, guard))) resolved = false;
+          if (!row || !(await this.recordRetryReply(next, row, replyCardFor(output, item.id), guard))) resolved = false;
         }
         this.state.set(P.plotVector, next);
         return resolved;
@@ -493,8 +513,9 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       if (!entry) throw new Error('这一条目前没有需要补生的能力');
       const key = capabilityKey(entry.row.task.entry);
       const row = state.tasks.find(t => capabilityKey(t.task.entry) === key && t.status !== 'bound')!;
-      // 1. Free: a reply recorded in the local ledger that never reached this save.
-      if (row.status === 'sending' && row.raw === undefined) {
+      // 1. Free: a reply recorded in the local ledger that never reached this save (first attempt without a reply,
+      // whether it was left as sending or recorded as a failed request).
+      if (!row.retry && row.raw === undefined && row.task.entry.kind !== 'environment') {
         const receipt = await this.journal.genesis(slot, row.task.key).lookup();
         guard();
         if (receipt.kind === 'raw') { row.raw = receipt.raw; delete row.validationRevision; }
@@ -538,12 +559,12 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       return { bound, requested: true };
     } finally { this.manualInFlight.delete(entryId); }
   }
-  /** Record one retry's reply for a row and bind it if it validates. `card` undefined: the reply had none. */
-  private async applyRetryReply(state: VectorState, row: VectorTaskRow, card: unknown, source: 'step3' | 'manual', round: number,
-    guard: () => void): Promise<boolean> {
-    const base: AbilityRetry = row.retry ?? { attempts: 0, autoRounds: 0 };
-    const retry: AbilityRetry = { ...base, attempts: base.attempts + 1, source, sending: false };
-    if (source === 'step3' && base.lastAutoRound !== round) { retry.autoRounds = base.autoRounds + 1; retry.lastAutoRound = round; }
+  /**
+   * Record the reply of a Step3 attempt (already counted when its request left) and bind the ability if it
+   * validates. `card` undefined: the reply had no ability for this entry.
+   */
+  private async recordRetryReply(state: VectorState, row: VectorTaskRow, card: unknown, guard: () => void): Promise<boolean> {
+    const retry: AbilityRetry = { ...(row.retry ?? { attempts: 1, autoRounds: 1 }), source: 'step3', sending: false };
     delete retry.raw; delete retry.validationRevision;
     row.retry = retry;
     if (card === undefined) { retry.error = '补生回复没有给出这一条的能力'; return false; }

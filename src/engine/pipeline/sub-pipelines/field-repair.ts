@@ -121,6 +121,11 @@ export interface ExtraRepairTask {
    * for this task, and when no field repair runs either, reply commands are not applied at all.
    */
   commands?: boolean;
+  /**
+   * Called right before the request carrying this task is sent (not when the task is only built or read).
+   * Throwing withdraws the task: a request carrying nothing else is not sent.
+   */
+  sent?(): void;
   settle(output?: unknown): Promise<boolean>;
 }
 /** Asked once per attempt; returns null when there is nothing to repair. */
@@ -433,6 +438,12 @@ export class FieldRepairPipeline {
       generationId,
     });
 
+    if (extra?.sent) {
+      try { extra.sent(); } catch (err) {
+        console.warn('[FieldRepair] extra repair task withdrawn before sending:', err);
+        if (!fieldReport && !enrichData && !reviewData) return { commands: null, entityDescriptions: null, edgeUpdates: null };
+      }
+    }
     const rawResponse = await this.aiService.generate({
       messages: finalMessages,
       usageType: 'field_repair',

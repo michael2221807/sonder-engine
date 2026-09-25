@@ -3,8 +3,11 @@ import type { GenesisEntryKind } from './genesis/types';
 import type { VectorState, VectorTaskRow } from './runtime';
 
 /**
- * - `failed`: generation, parsing or validation did not give a usable ability.
- * - `unknown`: a request was sent and no reply was ever recorded (never re-sent automatically).
+ * Judged by the latest attempt:
+ * - `failed`: a reply was received (or, for an environment tag, Step2 wrote it) but gave no usable ability;
+ *   Step3 may try again.
+ * - `unknown`: a request was sent and no reply was ever recorded, whatever the error said. Never re-sent
+ *   automatically; only a free recovery from the local ledger or the player's explicit retry.
  * - `retrying`: a player retry was sent and its reply has not been recorded yet.
  */
 export type BacklogState = 'failed' | 'unknown' | 'retrying';
@@ -16,6 +19,17 @@ export interface BacklogEntry {
   /** Why the latest attempt did not give a usable ability (diagnostic text). */
   problem?: string;
   row: VectorTaskRow;
+}
+
+/**
+ * Whether the latest attempt got a reply. A Step3 try is recorded as the request leaves and its outcome is
+ * the field-repair round's (bounded by the automatic round limit); a player retry counts only with its own
+ * reply, never with an older one; the first attempt of an environment tag is Step2's own reply.
+ */
+function latestReceived(row: VectorTaskRow): boolean {
+  const retry = row.retry;
+  if (retry) return retry.source === 'step3' || retry.raw !== undefined;
+  return row.task.entry.kind === 'environment' || row.raw !== undefined;
 }
 
 /** The saved entry as ability identity sees it: the transport-only ability field of an environment tag is not content. */
@@ -39,9 +53,11 @@ export function abilityBacklog(state: VectorState, entries: readonly SavedElemen
     const key = capabilityKey(row.task.entry);
     const entry = current.get(key);
     if (!entry || withCard.has(key) || listed.has(key)) continue;
+    // A received first reply still waiting for its free check is not backlog; the next round binds it.
+    const waitingCheck = row.status === 'sending' && row.raw !== undefined && !row.retry;
     const status: BacklogState | undefined = row.retry?.sending ? 'retrying'
-      : row.status === 'failed' ? 'failed'
-        : row.status === 'sending' && row.raw === undefined ? 'unknown' : undefined;
+      : waitingCheck || (row.status !== 'failed' && row.status !== 'sending') ? undefined
+        : latestReceived(row) ? 'failed' : 'unknown';
     if (!status) continue;
     listed.add(key);
     const name = typeof entry.capability.name === 'string' && entry.capability.name.trim() ? entry.capability.name.trim() : entry.id;

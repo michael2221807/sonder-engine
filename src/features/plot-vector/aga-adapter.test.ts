@@ -10,7 +10,7 @@ import { executeVectorOperation, initialVectorState, type PreparedVector, type V
 import { writePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { POSITIVE_EXAMPLES } from './genesis/test-fixtures';
 import { tasksAfterSave, stable, type BoundCard } from './genesis/post-save';
-import { GENESIS_VALIDATION_REVISION } from './genesis/generation-prompt';
+import { GENESIS_VALIDATION_REVISION, SNIPPET_API } from './genesis/generation-prompt';
 import { projectSavedElements } from './saved-elements';
 import rulesJSON from '../../../public/packs/tianming/rules/plot-vector.json';
 import { parseNativeRules } from './native-input';
@@ -955,6 +955,89 @@ describe('ability failure lifecycle: the obtained entry stays, only the snippet 
     const key = row(h, 'item:ointment').task.key;
     expect(await new RequestJournal(store).genesis({ profileId: 'p', slotId: 's' }, `${key}#retry-1`).lookup()).toMatchObject({ kind: 'raw' });
     expect(h.state.get(`${P.inventoryItems}.ointment`)).toEqual(ointment);
+  });
+
+  it('a request that failed without a reply stays "no result": Step3 never sends for it, only the player does, and a failed retry never borrows the old reply', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    h.ai.generate.mockImplementation(async () => { throw new Error('network down'); });
+    await round(h, 1, () => h.state.set(P.inventoryItems, { ointment }));
+    expect(row(h, 'item:ointment')).toMatchObject({ status: 'failed', error: 'Error: network down' });
+    expect(row(h, 'item:ointment').raw).toBeUndefined();
+    expect(h.adapter.abilityBacklog().map(b => b.state)).toEqual(['unknown']);
+    expect(await h.adapter.abilityRepairTask()).toBeNull();
+    // The player's retry fails the same way: still no reply, still not Step3's.
+    const failing = network(h, async () => { throw new Error('still down'); });
+    expect(await h.adapter.regenerateAbility('item:ointment')).toEqual({ bound: false, requested: true });
+    expect(failing).toHaveBeenCalledTimes(1);
+    expect(row(h, 'item:ointment').retry).toMatchObject({ attempts: 1, source: 'manual', sending: false, error: 'still down' });
+    expect(h.adapter.abilityBacklog().map(b => b.state)).toEqual(['unknown']);
+    expect(await h.adapter.abilityRepairTask()).toBeNull();
+    // An entry whose first reply was received and rejected, then a retry got no reply: still "no result".
+    const h2 = setup(); writePlotVectorControl(true);
+    h2.ai.generate.mockImplementation(async () => broken);
+    await round(h2, 1, () => h2.state.set(P.inventoryItems, { ointment }));
+    expect(h2.adapter.abilityBacklog().map(b => b.state)).toEqual(['failed']);
+    network(h2, async () => { throw new Error('down'); });
+    await h2.adapter.regenerateAbility('item:ointment');
+    expect(h2.adapter.abilityBacklog().map(b => b.state)).toEqual(['unknown']);
+    expect(await h2.adapter.abilityRepairTask()).toBeNull();
+    // A later explicit retry that gets a reply binds it.
+    network(h, async () => JSON.stringify({ version: 3, card: ability('J') }));
+    expect(await h.adapter.regenerateAbility('item:ointment')).toEqual({ bound: true, requested: true });
+    expect(row(h, 'item:ointment').retry).toMatchObject({ attempts: 2, source: 'manual' });
+  });
+
+  it('Step3 requests that fail without a reply still use up the automatic rounds; the entry stays and the player can retry', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    h.ai.generate.mockImplementation(async () => broken);
+    await round(h, 1, () => h.state.set(P.inventoryItems, { ointment }));
+    const down = () => new FieldRepairPipeline(h.state, new CommandExecutor(h.state), { generate: vi.fn(async () => { throw new Error('502'); }) } as unknown as AIService,
+      new ResponseParser(), {} as PromptAssembler, null, { rules: {}, promptFlows: {}, prompts: {} } as unknown as GamePack, P, () => h.adapter.abilityRepairTask());
+    await down().execute();
+    expect(row(h, 'item:ointment').retry).toMatchObject({ autoRounds: 1, lastAutoRound: 1, source: 'step3' });
+    await round(h, 2);
+    await down().execute();
+    expect(row(h, 'item:ointment').retry?.autoRounds).toBe(2);
+    await round(h, 3);
+    expect(await h.adapter.abilityRepairTask()).toBeNull();
+    expect(h.adapter.abilityBacklog().map(b => b.id)).toEqual(['item:ointment']);
+    expect(h.state.get(`${P.inventoryItems}.ointment`)).toEqual(ointment);
+    network(h, async () => JSON.stringify({ version: 3, card: ability('J') }));
+    expect(await h.adapter.regenerateAbility('item:ointment')).toEqual({ bound: true, requested: true });
+  });
+
+  it('a Step3 task whose game changed right before sending is withdrawn: nothing is sent for it alone and nothing is counted', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    h.ai.generate.mockImplementation(async () => broken);
+    await round(h, 1, () => h.state.set(P.inventoryItems, { ointment }));
+    const tasksBefore = JSON.stringify(vector(h).tasks);
+    const generate = vi.fn(async () => '{}');
+    // Built while the feature is on, then the feature is switched off before the request leaves.
+    const stale = async () => { const task = await h.adapter.abilityRepairTask(); writePlotVectorControl(false); return task; };
+    const result = await new FieldRepairPipeline(h.state, new CommandExecutor(h.state), { generate } as unknown as AIService, new ResponseParser(),
+      {} as PromptAssembler, null, { rules: {}, promptFlows: {}, prompts: {} } as unknown as GamePack, P, stale).execute();
+    expect(generate).not.toHaveBeenCalled();
+    expect(result.extra).toEqual({ resolved: false });
+    expect(JSON.stringify(vector(h).tasks)).toBe(tasksBefore);
+  });
+
+  it('a Step3 request carrying both an environment and an item task sends the shared snippet contract once', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    h.ai.generate.mockImplementation(async () => broken);
+    await round(h, 1, () => {
+      h.state.set(P.inventoryItems, { ointment });
+      h.state.set(P.environmentTags, [{ 名称: '微风', 描述: '街道上的风', 效果: '舒适' }]);
+    });
+    const { generate, run } = step3(h, () => ({
+      commands: [{ action: 'set', key: P.environmentTags, value: [{ 名称: '微风', 描述: '街道上的风', 效果: '舒适', 能力: ability('Y') }] }],
+      abilities: [{ id: 'item:ointment', card: ability('J') }],
+    }));
+    expect((await run()).extra).toEqual({ resolved: true });
+    const request = lastRequest(generate);
+    expect(request).toContain('<环境能力修复>');
+    expect(request).toContain('<能力补生>');
+    expect(request.split(SNIPPET_API).length - 1).toBe(1);
+    expect(vector(h).cards.map(c => c.task.entry.id).sort()).toEqual(['environment:name:微风', 'item:ointment']);
   });
 
   it('an unknown outcome is never retried by Step3, but the player can retry it explicitly', async () => {

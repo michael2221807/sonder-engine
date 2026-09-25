@@ -236,7 +236,9 @@ describe('real pack judgment transition, zero network', () => {
     const repair = parseVectorPromptPolicy(rules, 'mode', 'contract')!.abilityRepair!;
     expect(repair.field).toBe('abilities');
     expect(repair.template).toContain('{{ITEMS}}');
-    expect(repair.prompt).toBe([GENESIS_GUIDANCE, GENESIS_CARD_RULES, SNIPPET_API].join('\n\n'));
+    expect(repair.guidance).toBe([GENESIS_GUIDANCE, GENESIS_CARD_RULES].join('\n\n'));
+    const environment = parseVectorPromptPolicy(rules, 'mode', 'contract')!.environmentAbility!;
+    expect(environment.prompt).toBe(`${environment.instruction}\n\n${SNIPPET_API}`);
     // Splitting the genesis prompt into reusable parts left it byte-identical.
     expect(createHash('sha256').update(AGA_GENESIS_SYSTEM, 'utf8').digest('hex').slice(0, 16)).toBe('74a043987cff4462');
   });

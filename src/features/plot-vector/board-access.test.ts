@@ -5,6 +5,7 @@ import { writePlotVectorControl } from '../../engine/plot-vector/feature-control
 import { VectorBoardAccess } from './board-access';
 import { executeVectorOperation, initialVectorState, type PreparedVector, type VectorOperation, type VectorResult, type VectorState } from './runtime';
 import { tasksAfterSave } from './genesis/post-save';
+import { GENESIS_VALIDATION_REVISION } from './genesis/generation-prompt';
 import { projectSavedElements } from './saved-elements';
 
 let access: VectorBoardAccess;
@@ -98,7 +99,8 @@ it('lists obtained entries whose ability is not ready; the player retry holds th
   const h = setup();
   h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 1 } });
   const task = tasksAfterSave({ id: 'x', success: true, before: [], after: projectSavedElements(h.state.toSnapshot()).entries })[0];
-  h.state.set(P.plotVector, { ...initialVectorState(), tasks: [{ task, status: 'failed', error: 'boom' }] });
+  // A received reply that did not validate (checked under the current rules).
+  h.state.set(P.plotVector, { ...initialVectorState(), tasks: [{ task, status: 'failed', error: 'boom', raw: 'not an ability', validationRevision: GENESIS_VALIDATION_REVISION }] });
   let busy = false, heldDuringRetry: boolean | undefined;
   const regenerate = vi.fn(async () => { heldDuringRetry = retryAccess.isSaving; return { bound: true, requested: true }; });
   const retryAccess: VectorBoardAccess = new VectorBoardAccess(h.state, { assertCurrent: vi.fn(async () => {}), saveGame: h.saveGame },
