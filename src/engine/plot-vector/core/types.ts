@@ -631,6 +631,11 @@ export interface TraceEvent {
   programId?: string;
   programHash?: string;
   scriptEffects?: string[];
+  /**
+   * Script cards only: every operation of this visit that did not apply, in order. The event-level
+   * `reason` keeps the last one for display; validators read all of them so one outcome cannot hide another.
+   */
+  scriptIssues?: Array<{ reason: string; reasonCode?: ReasonCode }>;
   /** Net vector after this event (for sparse payload display). */
   netAfter: Record<DimensionId, number>;
 }

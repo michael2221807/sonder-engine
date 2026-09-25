@@ -33,7 +33,10 @@ const board = computed(() => shown.value?.board ?? view.value?.prepared.board);
 // The hand: automatic status/environment cards are never chosen by hand; a basic card with no uses left waits for its top-up.
 const editableCards = computed(() => view.value?.prepared.board.cards.filter(c => c.origin !== 'effect' && c.origin !== 'environment'
   && (!c.usage || availableUses(c, stateOf(c, view.value?.state.session.cardStates)) > 0)) ?? []);
-const incomplete = computed(() => view.value?.state.tasks.filter(row => row.status === 'failed' || row.status === 'sending').length ?? 0);
+// Obtained entries whose ability is not usable yet: shown as text with a retry, never as a playable card.
+const backlog = computed(() => view.value?.backlog ?? []);
+const retrying = ref<string | null>(null);
+const retryNote = ref<'bound' | 'failed' | 'error' | null>(null);
 const starting = computed(() => last.value ? shown.value?.starting : view.value?.prepared.starting);
 const progress = computed(() => last.value ? shown.value?.progress : view.value?.prepared.progress);
 const number = (value: number) => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 2 }).format(value);
@@ -119,6 +122,14 @@ function showLast() {
   last.value = true; shown.value = { ...accepted, prompt: '' }; cursor.value = 0;
 }
 function showDraft() { last.value = false; shown.value = dirty.value ? undefined : view.value?.prepared; cursor.value = 0; }
+async function retryAbility(entryId: string) {
+  if (!access || disabled.value || retrying.value) return;
+  retrying.value = entryId; retryNote.value = null;
+  try { retryNote.value = (await access.regenerate(entryId)).bound ? 'bound' : 'failed'; }
+  catch { retryNote.value = 'error'; }
+  finally { retrying.value = null; }
+  await load();
+}
 </script>
 
 <template>
@@ -130,7 +141,17 @@ function showDraft() { last.value = false; shown.value = dirty.value ? undefined
       <p v-if="error" role="alert">{{ t('mainGame.vectorBoard.error') }} <AgaButton size="sm" :disabled="busy" @click="load">{{ t('mainGame.vectorBoard.reload') }}</AgaButton></p>
       <p v-if="saved" role="status">{{ t('mainGame.vectorBoard.saved') }}</p>
       <template v-if="view && board">
-        <p v-if="incomplete" role="status" data-testid="vector-generation-incomplete">{{ t('mainGame.vectorBoard.generationIncomplete', { count: incomplete }) }}</p>
+        <section v-if="backlog.length || retryNote" class="backlog" data-testid="vector-ability-backlog">
+          <p v-if="backlog.length" class="intro">{{ t('mainGame.vectorBoard.backlogHelp') }}</p>
+          <div v-for="entry in backlog" :key="entry.id" class="backlog-row">
+            <strong>{{ entry.name }}</strong>
+            <span class="backlog-state">{{ t(`mainGame.vectorBoard.backlogState.${entry.state}`) }}</span>
+            <AgaButton size="sm" variant="secondary" :disabled="disabled || retrying !== null" data-testid="vector-ability-retry" @click="retryAbility(entry.id)">
+              {{ retrying === entry.id ? t('mainGame.vectorBoard.retryingAbility') : t('mainGame.vectorBoard.retryAbility') }}
+            </AgaButton>
+          </div>
+          <p v-if="retryNote" role="status" data-testid="vector-ability-retry-result">{{ t(`mainGame.vectorBoard.retryResult.${retryNote}`) }}</p>
+        </section>
         <details><summary>{{ t('mainGame.vectorBoard.boardRule') }}</summary><p>{{ t('mainGame.vectorBoard.demoRule') }}</p></details>
         <div class="actions">
           <AgaButton size="sm" :variant="!last ? 'primary' : 'ghost'" :disabled="disabled" @click="showDraft">{{ t('mainGame.vectorBoard.next') }}</AgaButton>
@@ -209,6 +230,9 @@ details p { margin-top: .5rem; font-size: .8rem; }
 .path { font-family: var(--font-mono); font-size: .8rem; }
 .progress { color: var(--color-primary); font-size: .85rem; }
 .progress-row { display: flex; flex-wrap: wrap; gap: .5rem 1rem; padding-top: .6rem; font-size: .85rem; }
+.backlog { display: grid; gap: .5rem; }
+.backlog-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; font-size: .85rem; }
+.backlog-state { color: var(--color-text-secondary); }
 .dimensions { display: flex; flex-wrap: wrap; gap: 1.5rem; margin: 0; }
 .dimensions dd { margin: .2rem 0 0; font-family: var(--font-mono); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }

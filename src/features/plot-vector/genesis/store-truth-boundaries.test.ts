@@ -6,20 +6,21 @@
  * the balance seen by onVisit is the one BEFORE the visit and reflects the amount actually transferred
  * (not requested); a full cap keeps the overflow at the source; a zero source never inflates; a linear
  * endpoint fold runs the card once; expiry after commit falls back through the product progress reader;
- * a v2 card without a store sees an empty object; and a store request with nothing at the source is
- * rejected by the shared probe while a requested-amount mirror diverges from the real account.
+ * a v2 card without a store sees an empty object; and a store request with nothing at the source is a
+ * normal no-op for the shared probe (validation revision 2), while a requested-amount mirror in the card's
+ * own runState still diverges from the real account (a card-quality matter, not an execution error).
  * (The archived D193 replay stays a local research diagnostic; it is not part of the product suite.)
  */
 import { describe, expect, it } from 'vitest';
 import { compileBoard } from '../../../engine/plot-vector/core/policies';
 import { run, scriptStateKey, scriptStoreAccountId } from '../../../engine/plot-vector/core/runner';
 import { commitRun, createSession, type VectorSession } from '../../../engine/plot-vector/core/session';
-import type { BoardDef, Layout, RunDone, RunOptions, Settlement } from '../../../engine/plot-vector/core/types';
+import type { BoardDef, Layout, RunDone, RunOptions, Settlement, TraceEvent } from '../../../engine/plot-vector/core/types';
 import { buildSixCellBoard } from '../default-board';
 import type { CardGenesisCandidateV1 } from './types';
 import { createScriptCardDef, ScriptProgramRegistry } from './script-runtime';
 import { GENESIS_CATALOG } from './catalog';
-import { probeGenerated } from './probe-generated';
+import { probeGenerated, probeErrorsOf } from './probe-generated';
 import { parseAgaGenerationOutput } from './generation-prompt';
 import { tasksAfterSave, type BoundCard } from './post-save';
 import { executeVectorOperation, initialVectorState, type PreparedVector, type VectorState } from '../runtime';
@@ -175,18 +176,56 @@ describe('D194 · the private store seen by scripts is the engine account, not a
     expect(prepared.progress?.filter(p => !BASIC_SUPPLY_IDS.includes(p.cardId))).toEqual([]);
   });
 
-  it('a store request with nothing at the source is rejected by the shared probe, and a requested-amount mirror diverges from the real account', async () => {
+  it('a store request with nothing at the source passes the shared probe, and a requested-amount mirror still diverges from the real account', async () => {
     // Self-contained stand-in for the archived D193 diagnostic: the general rule, not the historical sample.
     const onVisit = "const stored = ctx.runState.stored || 0; return { effects: [{ kind: 'store', store: 'self', channel: 'S+', amount: 6 }], runState: { stored: stored + 6 } };";
     const generated = candidate(onVisit, null, {});
     generated.card.selfStore = { cap: 40, lifetimeRounds: 2, allowedIn: ['S+'], allowedOut: ['S+'] };
     const registry = new ScriptProgramRegistry(GENESIS_CATALOG);
     const ref = await registry.register(generated);
-    expect(probeGenerated(registry, generated, ref).join('; ')).toMatch(/nothing to transfer/);
+    expect(probeGenerated(registry, generated, ref)).toEqual([]);
     const card = createScriptCardDef(generated, ref, { id: 'MIRROR', tags: [], source: 'Model' });
     const board = compileBoard(blankBoard([card], { 'S+': 4, 'S-': 0, Y: 0, J: 0 }, 'ring'), { triggerDefault: 'a' });
     const result = done(run(board, settlement({ placements: { '02': 'MIRROR' }, tray: [] }, createSession(), 10), { scripts: registry }));
     expect(result.finalState.accounts[scriptStoreAccountId('MIRROR', ref)].byChannel['S+']).toBe(4);
     expect(result.pendingScriptAcceptances?.find(a => a.ref.hash === ref.hash)?.runState).toEqual({ stored: 12 });
+  });
+});
+
+describe('probe · a normal no-op is not an error; real execution errors still reject the card', () => {
+  const stored = { cap: 40, lifetimeRounds: 2, allowedIn: ['S-'], allowedOut: ['S-'] };
+  async function probe(onVisit: string) {
+    const generated = candidate(onVisit);
+    generated.card.selfStore = stored;
+    const registry = new ScriptProgramRegistry(GENESIS_CATALOG);
+    const ref = await registry.register(generated);
+    return { issues: probeGenerated(registry, generated, ref), registry, generated, ref };
+  }
+  it('storing and releasing with nothing at the source are normal no-ops, and the trace still names them', async () => {
+    // The shape of the rejected r88 sample: store on the first pass, release later; the fixture has no resistance.
+    const { issues, registry, generated, ref } = await probe(`
+      if (ctx.directionVisitOrdinal === 1) return { effects: [{ kind: 'store', store: 'self', channel: 'S-', amount: 8 }] };
+      const held = ctx.selfStore['S-'] || 0;
+      return { effects: held > 0 ? [{ kind: 'release', store: 'self', channel: 'S-', amount: held, gainAsExtra: 0 }] : [{ kind: 'add', channel: 'J', amount: 2 }] };`);
+    expect(issues).toEqual([]);
+    const card = createScriptCardDef(generated, ref, { id: 'NOOP', tags: [], source: 'Model' });
+    const board = compileBoard(blankBoard([card], { 'S+': 0, 'S-': 0, Y: 0, J: 0 }), { triggerDefault: 'a' });
+    const result = done(run(board, settlement({ placements: { '02': 'NOOP' }, tray: [] }, createSession(), 6), { scripts: registry }));
+    expect(result.trace.find(e => e.owner?.id === 'NOOP' && e.scriptIssues)?.scriptIssues).toEqual([{ reason: 'nothing to transfer', reasonCode: 'nothingToTransfer' }]);
+  });
+  it('a script that throws is still rejected', async () => {
+    expect((await probe("if (ctx.visitOrdinal > 1) { const x = null; return x.y; } return { effects: [] };")).issues.length).toBeGreaterThan(0);
+  });
+  it('a channel outside the declared store is still rejected', async () => {
+    expect((await probe("return { effects: [{ kind: 'store', store: 'self', channel: 'J', amount: 1 }] };")).issues.length).toBeGreaterThan(0);
+  });
+  it('one normal outcome in a visit never hides an error from another operation of the same visit', () => {
+    const event = (fields: Partial<TraceEvent>): TraceEvent => ({ eventId: 1, eventType: 'effect', visitId: 'v', status: 'notTriggered', deltas: [], modifiers: [], netAfter: {}, ...fields });
+    const notAuthorised = { reason: 'account a may not release into J', reasonCode: 'notAuthorised' as const };
+    const nothing = { reason: 'nothing to transfer', reasonCode: 'nothingToTransfer' as const };
+    expect(probeErrorsOf(event({ ...nothing, scriptIssues: [notAuthorised, nothing] }))).toEqual([notAuthorised.reason]);
+    expect(probeErrorsOf(event({ ...nothing, scriptIssues: [nothing] }))).toEqual([]);
+    expect(probeErrorsOf(event({ reason: 'onVisit threw: boom' }))).toEqual(['onVisit threw: boom']);
+    expect(probeErrorsOf(event({ status: 'applied', reason: 'destination full, 1 dissipated', reasonCode: 'destinationFull' }))).toEqual([]);
   });
 });

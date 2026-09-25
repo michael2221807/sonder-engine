@@ -108,12 +108,20 @@ export interface FieldRepairResult {
 
 /**
  * A feature-owned repair need that rides the same step-3 request (e.g. a missing ability snippet).
- * `block` is the task text, with current values and concrete diagnostics; the fix arrives as ordinary
- * `commands`. After those are applied, `settle` re-checks and reports whether the need is resolved.
+ * `block` is the task text, with current values and concrete diagnostics. The fix arrives as ordinary
+ * `commands`, or, when the task names a `field`, as that top-level field of the reply (for results that
+ * must not be written into the story state). After the commands are applied, `settle` receives that
+ * field's raw value (undefined if absent), re-checks, and reports whether the need is resolved.
  */
 export interface ExtraRepairTask {
   block: string;
-  settle(): Promise<boolean>;
+  field?: string;
+  /**
+   * False when the fix never arrives as commands (only through `field`). Commands are then not requested
+   * for this task, and when no field repair runs either, reply commands are not applied at all.
+   */
+  commands?: boolean;
+  settle(output?: unknown): Promise<boolean>;
 }
 /** Asked once per attempt; returns null when there is nothing to repair. */
 export type ExtraRepairSource = () => Promise<ExtraRepairTask | null>;
@@ -137,6 +145,8 @@ interface CombinedStepResult {
   commands: Command[] | null;
   entityDescriptions: Array<{ name: string; summary: string }> | null;
   edgeUpdates: Array<{ edge_id: string; action: string; reason: string }> | null;
+  /** Raw value of the extra task's own reply field, when it names one. */
+  extraOutput?: unknown;
 }
 
 export class FieldRepairPipeline {
@@ -159,8 +169,8 @@ export class FieldRepairPipeline {
   }
 
   /** Re-check an extra task after its commands were applied; errors count as unresolved. */
-  private async settleExtra(task: ExtraRepairTask): Promise<boolean> {
-    try { return await task.settle(); }
+  private async settleExtra(task: ExtraRepairTask, output?: unknown): Promise<boolean> {
+    try { return await task.settle(output); }
     catch (err) { console.warn('[FieldRepair] extra repair task did not settle:', err); return false; }
   }
 
@@ -198,8 +208,12 @@ export class FieldRepairPipeline {
           extra,
         );
 
-        // Apply field repair results
-        if (combined.commands && combined.commands.length > 0) {
+        // Apply field repair results. A reply to a task that asked for no commands cannot write state.
+        const commandsWanted = needsFieldRepair || !extra || extra.commands !== false;
+        if (!commandsWanted && combined.commands?.length) {
+          console.warn(`[FieldRepair] Combined step: ignored ${combined.commands.length} unrequested commands`);
+        }
+        if (commandsWanted && combined.commands && combined.commands.length > 0) {
           const result = this.commandExecutor.executeBatch(combined.commands);
           console.log(
             `[FieldRepair] Combined step: applied ${combined.commands.length} commands ` +
@@ -233,7 +247,7 @@ export class FieldRepairPipeline {
           }
         }
 
-        if (extra) extraResolved = await this.settleExtra(extra);
+        if (extra) extraResolved = await this.settleExtra(extra, combined.extraOutput);
 
         // Re-check field repair status
         report = findIncompleteFields(this.stateManager, this.paths, config, { nsfwMode });
@@ -270,8 +284,8 @@ export class FieldRepairPipeline {
       attempts++;
       try {
         const combined = await this.runCombinedStep(null, null, null, attempts, extra);
-        if (combined.commands && combined.commands.length > 0) this.commandExecutor.executeBatch(combined.commands);
-        extraResolved = await this.settleExtra(extra);
+        if (extra.commands !== false && combined.commands && combined.commands.length > 0) this.commandExecutor.executeBatch(combined.commands);
+        extraResolved = await this.settleExtra(extra, combined.extraOutput);
       } catch (err) {
         console.error(`[FieldRepair] Extra repair attempt ${extraAttempts} failed:`, err);
         break;
@@ -396,7 +410,8 @@ export class FieldRepairPipeline {
 
     if (extra) {
       parts.push(extra.block);
-      if (!fieldReport) formatParts.push('"commands": [{...}, ...]');
+      if (!fieldReport && extra.commands !== false) formatParts.push('"commands": [{...}, ...]');
+      if (extra.field) formatParts.push(`${JSON.stringify(extra.field)}: [...]`);
     }
 
     parts.push(
@@ -430,7 +445,7 @@ export class FieldRepairPipeline {
       rawResponse,
     });
 
-    return this.parseCombinedResponse(rawResponse);
+    return this.parseCombinedResponse(rawResponse, extra?.field);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -668,7 +683,7 @@ export class FieldRepairPipeline {
   //  Response parsing
   // ═══════════════════════════════════════════════════════════════
 
-  private parseCombinedResponse(raw: string): CombinedStepResult {
+  private parseCombinedResponse(raw: string, extraField?: string): CombinedStepResult {
     const cleaned = raw
       .replace(/<(?:think|thinking|reasoning|thought)>[\s\S]*?<\/(?:think|thinking|reasoning|thought)>/gi, '')
       .trim();
@@ -712,7 +727,8 @@ export class FieldRepairPipeline {
           }));
       }
 
-      return { commands, entityDescriptions, edgeUpdates };
+      return { commands, entityDescriptions, edgeUpdates,
+        ...(extraField && Object.hasOwn(json, extraField) ? { extraOutput: json[extraField] } : {}) };
     } catch {
       return { commands: null, entityDescriptions: null, edgeUpdates: null };
     }

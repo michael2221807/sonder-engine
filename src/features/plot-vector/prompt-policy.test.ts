@@ -5,6 +5,8 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import manifest from '../../../public/packs/tianming/manifest.json';
 import rules from '../../../public/packs/tianming/rules/plot-vector-prompts.json';
 import { parseVectorPromptPolicy } from './prompt-policy';
+import { AGA_GENESIS_SYSTEM, GENESIS_CARD_RULES, GENESIS_GUIDANCE, SNIPPET_API } from './genesis/generation-prompt';
+import { createHash } from 'node:crypto';
 import { PromptRegistry } from '../../engine/prompt/prompt-registry';
 import { PromptAssembler } from '../../engine/prompt/prompt-assembler';
 import { TemplateEngine } from '../../engine/prompt/template-engine';
@@ -227,6 +229,16 @@ describe('real pack judgment transition, zero network', () => {
     expect(parseVectorPromptPolicy(narrativeOnly, 'mode')).toMatchObject({ mode: 'mode', stateUpdatePrompt: undefined });
     expect(parseVectorPromptPolicy({ ...rules, replacements: [{ from: '' }] }, 'mode')).toBeUndefined();
     expect(parseVectorPromptPolicy(null, 'mode')).toBeUndefined();
+    expect(parseVectorPromptPolicy({ ...rules, abilityRepair: { field: 'abilities', template: 'no placeholder' } }, 'mode', 'contract')).toBeUndefined();
+  });
+
+  it('ability regeneration uses the pack task text plus the same guidance, card rules and snippet contract as post-save genesis', () => {
+    const repair = parseVectorPromptPolicy(rules, 'mode', 'contract')!.abilityRepair!;
+    expect(repair.field).toBe('abilities');
+    expect(repair.template).toContain('{{ITEMS}}');
+    expect(repair.prompt).toBe([GENESIS_GUIDANCE, GENESIS_CARD_RULES, SNIPPET_API].join('\n\n'));
+    // Splitting the genesis prompt into reusable parts left it byte-identical.
+    expect(createHash('sha256').update(AGA_GENESIS_SYSTEM, 'utf8').digest('hex').slice(0, 16)).toBe('74a043987cff4462');
   });
 
   for (const en of [false, true]) it(`leaves opening and explicit phase overrides on their existing builder format, en=${en}`, async () => {

@@ -4,6 +4,8 @@ import { DEFAULT_ENGINE_PATHS as P } from '../../engine/pipeline/types';
 import { writePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { VectorBoardAccess } from './board-access';
 import { executeVectorOperation, initialVectorState, type PreparedVector, type VectorOperation, type VectorResult, type VectorState } from './runtime';
+import { tasksAfterSave } from './genesis/post-save';
+import { projectSavedElements } from './saved-elements';
 
 let access: VectorBoardAccess;
 beforeEach(() => {
@@ -91,4 +93,27 @@ it('gate 1: a malformed preview is never shown or saved, and the next preview wo
   expect(h.saveGame).not.toHaveBeenCalled();
   await view.save(view.prepared.layout);
   expect(h.saveGame).toHaveBeenCalledTimes(1);
+});
+it('lists obtained entries whose ability is not ready; the player retry holds the board like a save and is refused during a round', async () => {
+  const h = setup();
+  h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 1 } });
+  const task = tasksAfterSave({ id: 'x', success: true, before: [], after: projectSavedElements(h.state.toSnapshot()).entries })[0];
+  h.state.set(P.plotVector, { ...initialVectorState(), tasks: [{ task, status: 'failed', error: 'boom' }] });
+  let busy = false, heldDuringRetry: boolean | undefined;
+  const regenerate = vi.fn(async () => { heldDuringRetry = retryAccess.isSaving; return { bound: true, requested: true }; });
+  const retryAccess: VectorBoardAccess = new VectorBoardAccess(h.state, { assertCurrent: vi.fn(async () => {}), saveGame: h.saveGame },
+    () => ({ profileId: 'p', slotId: 's' }), () => busy, {
+      execute: <T extends VectorResult>(op: VectorOperation) => h.worker.execute(op) as Promise<T>, cancelAll: h.worker.cancelAll,
+    }, undefined, () => {}, regenerate);
+  try {
+    const view = await retryAccess.open();
+    expect(view.backlog.map(b => [b.id, b.name, b.state])).toEqual([['item:tea', '茶', 'failed']]);
+    expect(view.prepared.board.cards.some(c => c.id === 'item:tea')).toBe(false); // never shown as a playable card
+    expect(await retryAccess.regenerate('item:tea')).toEqual({ bound: true, requested: true });
+    expect(heldDuringRetry).toBe(true);   // no round can start while it runs
+    expect(retryAccess.isSaving).toBe(false);
+    busy = true;
+    await expect(retryAccess.regenerate('item:tea')).rejects.toThrow('busy');
+    expect(regenerate).toHaveBeenCalledTimes(1);
+  } finally { retryAccess.dispose(); }
 });

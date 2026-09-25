@@ -638,8 +638,8 @@ async function bootstrap(): Promise<void> {
       memoryRetriever,
       pack,
       DEFAULT_ENGINE_PATHS,
-      // Step 3 also repairs this round's environment abilities (plot vector, when enabled).
-      () => plotVectorAdapter?.environmentRepairTask() ?? Promise.resolve(null),
+      // Step 3 also regenerates abilities that failed: environment tags and one item/talent/status per round (plot vector, when enabled).
+      () => plotVectorAdapter?.abilityRepairTask() ?? Promise.resolve(null),
     );
   }
 
@@ -771,7 +771,10 @@ async function bootstrap(): Promise<void> {
   const vectorPromptPolicy = parseVectorPromptPolicy(pack?.rules.plotVectorPrompts, pack?.prompts.plotVectorMode, pack?.prompts.stateUpdateProtocol);
   const plotVectorBoard = new VectorBoardAccess(stateManager, saveManager, getActiveSlot,
     () => !orchestrator || orchestrator.isBusy, undefined, vectorNativeRules,
-    () => orchestrator?.onStateEditSettled());
+    () => orchestrator?.onStateEditSettled(),
+    // The player's ability retry runs through the round adapter (same repair and binding as Step 3).
+    (entryId) => plotVectorAdapter ? plotVectorAdapter.regenerateAbility(entryId) : Promise.reject(new Error('ability-retry-unavailable')),
+    vectorPromptPolicy?.environmentAbility?.field);
   if (pack) {
     orchestrator = new GameOrchestrator(
       stateManager,

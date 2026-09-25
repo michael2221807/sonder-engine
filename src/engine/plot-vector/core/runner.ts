@@ -558,11 +558,13 @@ class RunContext {
     let reason: string | undefined;
     let reasonCode: ReasonCode | undefined;
     let reasonArgs: ReasonArgs | undefined;
+    const issues: NonNullable<TraceEvent['scriptIssues']> = [];
     for (const operation of output.operations) {
       const out = this.applyOperation(operation, owner, 1, active, view);
       deltas.push(...out.deltas);
       modifiers.push(...out.modifiers);
       if (out.status !== 'applied') status = out.status;
+      if (out.status !== 'applied' && out.reason) issues.push({ reason: out.reason, ...(out.reasonCode ? { reasonCode: out.reasonCode } : {}) });
       if (out.reason) {
         reason = out.reason;
         reasonCode = out.reasonCode;
@@ -579,6 +581,7 @@ class RunContext {
       eventType: 'effect', visitId: visit.id, cellId: visit.cell.id, owner,
       effectId: `script:${ref.id}`, status, deltas, modifiers, reason, reasonCode, reasonArgs,
       programId: ref.id, programHash: ref.hash, scriptEffects: [...output.effectSummary],
+      ...(issues.length ? { scriptIssues: issues } : {}),
     });
   }
 

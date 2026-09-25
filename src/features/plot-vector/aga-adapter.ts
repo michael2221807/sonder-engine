@@ -8,8 +8,9 @@ import type { PlotVectorRoundPort } from '../../engine/plot-vector/round-port';
 import { readPlotVectorControl, subscribePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { projectSavedElements, readPath, savedEntryName } from './saved-elements';
 import { tasksAfterSave, stable, capabilityKey, toRuntimeCandidate, type BoundCard, type GenesisOutput, type GenesisTask, type SavedElement } from './genesis/post-save';
-import { buildAgaGenerationMessages, parseAgaGenerationOutput, GENESIS_VALIDATION_REVISION } from './genesis/generation-prompt';
-import { initialVectorState, type VectorState, type PreparedVector, type VectorOperation, type VectorResult } from './runtime';
+import { buildAgaGenerationMessages, buildAbilityRetryMessages, parseAgaGenerationOutput, GENESIS_VALIDATION_REVISION } from './genesis/generation-prompt';
+import { initialVectorState, type AbilityRetry, type VectorState, type VectorTaskRow, type PreparedVector, type VectorOperation, type VectorResult } from './runtime';
+import { abilityBacklog, type BacklogEntry } from './ability-backlog';
 import { VectorWorkerClient } from './worker-client';
 import { guardedExecutor } from './result-guard';
 import { RequestJournal } from './request-journal';
@@ -21,8 +22,30 @@ import { compiledCommandGuard } from './command-guard';
 
 type Slot = { profileId: string; slotId: string };
 interface Executor { execute<T extends VectorResult>(op: VectorOperation): Promise<T>; cancelAll(): void }
-/** An environment tag whose ability is missing or failed validation this round (Step3 repair input). */
+/** An environment tag whose ability is missing or failed validation (kept as a task row for later repair). */
 interface EnvironmentIssue { entry: SavedElement; ability?: unknown; reason: string }
+/**
+ * Step3 retries an entry's ability in at most this many rounds (several tries inside one round count
+ * once); after that only the player's explicit retry sends another request. One item/talent/status
+ * entry is retried per round, the same pace as post-save generation.
+ */
+const AUTO_REPAIR_ROUNDS = 2;
+const autoRoundsLeft = (row: VectorTaskRow, round: number) =>
+  (row.retry?.autoRounds ?? 0) < AUTO_REPAIR_ROUNDS || row.retry?.lastAutoRound === round;
+/** The previous ability card of a row (latest retry first), for the repair request's context. */
+function previousAbility(row: VectorTaskRow): unknown {
+  for (const raw of [row.retry?.raw, row.raw]) {
+    if (raw === undefined) continue;
+    try { return (JSON.parse(raw) as { card?: unknown }).card ?? null; } catch { return raw.slice(0, 2000); }
+  }
+  return null;
+}
+/** The card a Step3 reply gives for one entry: `[{ id, card }]` in the task's own reply field. */
+function replyCardFor(output: unknown, id: string): unknown {
+  if (!Array.isArray(output)) return undefined;
+  const hit = output.find(e => e && typeof e === 'object' && (e as Record<string, unknown>).id === id) as Record<string, unknown> | undefined;
+  return hit?.card;
+}
 interface Attempt { ctx: PipelineContext; guard: () => void; controller: AbortController; before: SavedElement[];
   state: VectorState; prepared: PreparedVector; slot: Slot; release: () => void; postSaved?: boolean;
 }
@@ -31,15 +54,15 @@ interface Attempt { ctx: PipelineContext; guard: () => void; controller: AbortCo
 export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
   private attempt?: Attempt;
   private revision = 0;
-  /** This round's environment tags that still need an ability; consumed by the Step3 repair task. */
-  private environmentIssues?: { slot: string; revision: number; epoch: string; issues: EnvironmentIssue[] };
+  /** Entries with a player retry in flight in this page; Step3 and a second click never overlap it. */
+  private readonly manualInFlight = new Set<string>();
   private unsubs: Array<() => void>;
   /** Every Worker result crosses the shared host boundary (result-guard.ts) before it is used. */
   private readonly worker: Executor;
   constructor(private state: StateManager, private ai: Pick<AIService, 'generate'>,
     private saves: Pick<SaveManager, 'saveGame' | 'assertCurrent'>, private slot: () => Slot | null,
     worker: Executor = new VectorWorkerClient(), private journal = new RequestJournal(), private nativeRules?: NativeRules,
-    private promptPolicy?: Pick<VectorPromptPolicy, 'mode' | 'transform' | 'separateTransform' | 'environmentAbility'>) {
+    private promptPolicy?: Pick<VectorPromptPolicy, 'mode' | 'transform' | 'separateTransform' | 'environmentAbility' | 'abilityRepair'>) {
     this.worker = guardedExecutor(worker);
     this.unsubs = [subscribePlotVectorControl(() => this.cancel()),
       eventBus.on<{type: string}>('engine:state-changed', e => {
@@ -190,6 +213,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       a.guard();
       await this.recoverReceipts(a);
       await this.syncEnvironment(a);
+      await this.recoverRetries(a);
       const current = projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries;
       // One new ability per round. Removed/replaced entries never cause paid generation.
       const row = a.state.tasks.find(t => t.task.entry.kind !== 'environment' && (t.status === 'pending' || (t.status === 'sending' && t.raw !== undefined)
@@ -250,6 +274,28 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     }
     if (adopted) await this.persist(a);
   }
+  /**
+   * Free, after the round is saved: a player retry whose reply was recorded but never reached the save
+   * (page closed) is adopted from the local ledger, and any recorded retry reply not yet checked under the
+   * current validation is checked. Nothing is sent from here.
+   */
+  private async recoverRetries(a: Attempt): Promise<void> {
+    let changed = false;
+    for (const row of a.state.tasks) {
+      const retry = row.retry;
+      if (!retry) continue;
+      if (retry.sending && retry.raw === undefined) {
+        const receipt = await this.journal.genesis(a.slot, `${row.task.key}#retry-${retry.attempts}`).lookup();
+        a.guard();
+        if (receipt.kind === 'raw') { retry.raw = receipt.raw; retry.sending = false; delete retry.validationRevision; changed = true; }
+      }
+      if (retry.raw !== undefined && (retry.validationRevision ?? 0) < GENESIS_VALIDATION_REVISION && row.status !== 'bound') {
+        await this.validateReceived(a.state, row, a.guard);
+        changed = true;
+      }
+    }
+    if (changed) await this.persist(a);
+  }
   /** Bind this round's environment abilities after the round is saved; they take part from the next round. */
   private async syncEnvironment(a: Attempt): Promise<void> {
     const policy = this.promptPolicy?.environmentAbility;
@@ -259,9 +305,9 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       const { [policy.field]: _ability, ...capability } = e.capability;
       return [e.id, capabilityKey({ ...e, capability })] as const;
     }));
-    const synced = await this.environmentCards(a.state, policy.field, (id, key) => before.get(id) !== key, a.guard);
-    this.environmentIssues = synced.issues.length
-      ? { slot: stable(a.slot), revision: this.revision, epoch: readPlotVectorControl().epoch, issues: synced.issues } : undefined;
+    // A tag still waiting for its ability from an earlier round stays on record even though it did not change.
+    const waiting = new Set(a.state.tasks.filter(t => t.task.entry.kind === 'environment' && t.status === 'failed').map(t => t.task.key));
+    const synced = await this.environmentCards(a.state, policy.field, (id, key) => before.get(id) !== key || waiting.has(key), a.guard);
     if (!synced.changed && !synced.tags) return;
     a.state = synced.state;
     if (synced.tags) this.state.set(P.environmentTags, synced.tags);
@@ -271,10 +317,13 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
    * One pass over the saved environment tags. A tag carrying a new ability gets a validated card that
    * replaces its old one; an unchanged tag without one keeps its card; a vanished tag loses its card. The ability
    * field is then taken out of the tags so no snippet stays in the story state or later prompts.
-   * `needsAbility(id, key)` says whether a tag without a new ability is new or changed (saved content key,
-   * ability excluded): such a tag loses any old card and is repaired; otherwise its card carries over.
+   * `needsAbility(id, key)` says whether a tag without a new ability is new, changed or still waiting (saved
+   * content key, ability excluded): such a tag loses any old card and is repaired; otherwise its card carries over.
+   * Tags that still need an ability are kept as failed task rows (with their retry history) so a later Step3
+   * or the player can fill them after a reload; `attempt` marks the rows a Step3 request just tried.
    */
-  private async environmentCards(state: VectorState, field: string, needsAbility: (id: string, key: string) => boolean, guard: () => void):
+  private async environmentCards(state: VectorState, field: string, needsAbility: (id: string, key: string) => boolean, guard: () => void,
+    attempt?: { round: number; ids: ReadonlySet<string> }):
     Promise<{ state: VectorState; changed: boolean; issues: EnvironmentIssue[]; tags?: unknown[] }> {
     const snapshot = this.state.toSnapshot();
     const rawTags = readPath(snapshot, P.environmentTags);
@@ -313,8 +362,29 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     for (const [id, card] of previous) {
       if (!projected.has(id) && present.has(String(card.task.entry.capability.name))) cards.push(card);
     }
-    // Old post-save environment tasks are inert now; drop them so they never read as unfinished work.
-    const tasks = state.tasks.filter(t => t.task.entry.kind !== 'environment');
+    // Environment rows are exactly the tags that still need an ability. Old post-save environment tasks and
+    // rows of tags that are gone, changed or now have a card are dropped.
+    const previousRows = new Map(state.tasks.filter(t => t.task.entry.kind === 'environment').map(t => [t.task.key, t]));
+    const environmentRows = issues.map((issue): VectorTaskRow => {
+      const task: GenesisTask = { key: capabilityKey(issue.entry), actionId: 'environment', entry: issue.entry };
+      const prior = previousRows.get(task.key);
+      const ability = issue.ability === undefined ? undefined : JSON.stringify({ version: 3, card: issue.ability });
+      let retry = prior?.retry;
+      if (attempt?.ids.has(issue.entry.id)) {
+        const base: AbilityRetry = retry ?? { attempts: 0, autoRounds: 0 };
+        retry = { ...base, attempts: base.attempts + 1, source: 'step3', error: issue.reason,
+          ...(base.lastAutoRound === attempt.round ? {} : { autoRounds: base.autoRounds + 1, lastAutoRound: attempt.round }) };
+        // `raw` always describes this attempt: a reply without a new ability leaves none.
+        delete retry.raw; delete retry.validationRevision;
+        if (ability) { retry.raw = ability; retry.validationRevision = GENESIS_VALIDATION_REVISION; }
+      }
+      // The first failure keeps its own reason and ability; later attempts are recorded under `retry`.
+      const raw = prior ? prior.raw : ability;
+      return { task, status: 'failed', error: prior?.error ?? issue.reason,
+        ...(raw !== undefined ? { raw, validationRevision: prior?.validationRevision ?? GENESIS_VALIDATION_REVISION } : {}),
+        ...(retry ? { retry } : {}) };
+    });
+    const tasks = [...state.tasks.filter(t => t.task.entry.kind !== 'environment'), ...environmentRows];
     const next = { ...state, cards, tasks };
     const hasField = Array.isArray(rawTags) && rawTags.some(t => t && typeof t === 'object' && Object.hasOwn(t, field));
     const tags = hasField ? (rawTags as unknown[]).map(t => {
@@ -324,38 +394,210 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     }) : undefined;
     return { state: next, changed: stable(next) !== stable(state), issues, tags };
   }
-  /**
-   * Step3 hook: this round's environment tags whose ability is missing or invalid, as one repair task
-   * inside the existing field-repair request. The fix arrives as ordinary commands on the environment
-   * array; `settle` binds what now validates and reports whether every listed tag has an ability.
-   */
-  async environmentRepairTask(): Promise<ExtraRepairTask | null> {
-    const pending = this.environmentIssues, policy = this.promptPolicy?.environmentAbility, slot = this.slot();
-    const control = readPlotVectorControl();
-    if (!pending || !policy || !slot || !control.enabled || pending.slot !== stable(slot) || pending.revision !== this.revision
-      || pending.epoch !== control.epoch) return null;
-    const guard = () => {
+  /** Obtained entries whose ability is not usable yet (the saved entries themselves are never touched). */
+  abilityBacklog(): BacklogEntry[] {
+    const state = this.state.get<VectorState>(P.plotVector);
+    if (!state) return [];
+    return abilityBacklog(state, projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries,
+      this.promptPolicy?.environmentAbility?.field);
+  }
+  /** Stops a repair whose save, feature epoch or loaded state changed underneath it. */
+  private repairGuard(label: string): () => void {
+    const slot = stable(this.slot()), revision = this.revision, epoch = readPlotVectorControl().epoch;
+    return () => {
       const live = readPlotVectorControl();
-      if (stable(this.slot()) !== pending.slot || this.revision !== pending.revision || !live.enabled || live.epoch !== pending.epoch)
-        throw new Error('存档或剧情动能开关已改变，环境能力修复已取消');
+      if (stable(this.slot()) !== slot || this.revision !== revision || !live.enabled || live.epoch !== epoch)
+        throw new Error(`存档或剧情动能开关已改变，${label}已取消`);
     };
-    const items = pending.issues.map(issue => ({ name: issue.entry.capability.name, ability: issue.ability ?? null, problem: issue.reason }));
-    const block = `${policy.repair.split('{{PATH}}').join(P.environmentTags).split('{{ITEMS}}').join(JSON.stringify(items, null, 2))}\n\n${policy.prompt}`;
-    const ids = new Set(pending.issues.map(i => i.entry.id));
+  }
+  /**
+   * Step3 hook: saved entries whose ability is missing or failed, as one task inside the existing
+   * field-repair request. Environment tags are fixed as ordinary commands on the environment array (as
+   * before); one item/talent/status entry per round comes back in the task's own reply field, never as a
+   * write to the saved entry. `settle` binds what now validates and reports whether every listed entry has
+   * an ability. Entries with an unknown outcome or a player retry in flight are never included; each entry
+   * is tried automatically in at most AUTO_REPAIR_ROUNDS rounds.
+   */
+  async abilityRepairTask(): Promise<ExtraRepairTask | null> {
+    const environment = this.promptPolicy?.environmentAbility, items = this.promptPolicy?.abilityRepair;
+    if (!this.slot() || !readPlotVectorControl().enabled || (!environment && !items)) return null;
+    const state = this.state.get<VectorState>(P.plotVector);
+    if (!state) return null;
+    const round = this.state.get<number>(P.roundNumber) ?? 0;
+    const due = this.abilityBacklog().filter(b => b.state === 'failed' && !this.manualInFlight.has(b.id) && autoRoundsLeft(b.row, round));
+    const tags = environment ? due.filter(b => b.kind === 'environment') : [];
+    // Fresh failures first: an entry that has not been retried yet goes ahead of one already tried.
+    const item = items ? due.filter(b => b.kind !== 'environment')
+      .sort((x, y) => (x.row.retry?.autoRounds ?? 0) - (y.row.retry?.autoRounds ?? 0))[0] : undefined;
+    if (!tags.length && !item) return null;
+    const guard = this.repairGuard('能力补生');
+    const blocks: string[] = [];
+    if (environment && tags.length) {
+      const list = tags.map(b => ({ name: b.name, ability: previousAbility(b.row), problem: b.problem ?? '缺少能力' }));
+      blocks.push(`${environment.repair.split('{{PATH}}').join(P.environmentTags).split('{{ITEMS}}').join(JSON.stringify(list, null, 2))}\n\n${environment.prompt}`);
+    }
+    if (items && item) {
+      const description = item.row.task.entry.capability.description;
+      const list = [{ id: item.id, kind: item.kind, name: item.name, description: typeof description === 'string' ? description : '',
+        problem: item.problem ?? '', ability: previousAbility(item.row) }];
+      blocks.push(`${items.template.split('{{ITEMS}}').join(JSON.stringify(list, null, 2))}\n\n${items.prompt}`);
+    }
     return {
-      block,
-      settle: async () => {
+      block: blocks.join('\n\n'),
+      ...(items && item ? { field: items.field } : {}),
+      // Environment tags are fixed as commands on the tag array; item abilities never are.
+      ...(tags.length ? {} : { commands: false }),
+      settle: async (output?: unknown) => {
         guard();
-        const state = cloneDeep(this.state.get<VectorState>(P.plotVector) ?? initialVectorState());
-        const synced = await this.environmentCards(state, policy.field, id => ids.has(id), guard);
-        guard();
-        if (synced.changed) this.state.set(P.plotVector, synced.state);
-        if (synced.tags) this.state.set(P.environmentTags, synced.tags);
-        const remaining = synced.issues.filter(i => ids.has(i.entry.id));
-        this.environmentIssues = remaining.length ? { ...pending, issues: remaining } : undefined;
-        return remaining.length === 0;
+        let next = cloneDeep(this.state.get<VectorState>(P.plotVector) ?? initialVectorState());
+        let resolved = true;
+        if (environment && tags.length) {
+          const ids = new Set(tags.map(b => b.id));
+          // Tags waiting outside this batch (automatic rounds used up, player retry in flight) keep their rows.
+          const waiting = new Set(next.tasks.filter(t => t.task.entry.kind === 'environment' && t.status === 'failed').map(t => t.task.key));
+          const synced = await this.environmentCards(next, environment.field, (id, key) => ids.has(id) || waiting.has(key), guard, { round, ids });
+          guard();
+          next = synced.state;
+          if (synced.tags) this.state.set(P.environmentTags, synced.tags);
+          if (synced.issues.some(i => ids.has(i.entry.id))) resolved = false;
+        }
+        if (item) {
+          const key = capabilityKey(item.row.task.entry);
+          const row = next.tasks.find(t => capabilityKey(t.task.entry) === key && t.status !== 'bound');
+          if (!row || !(await this.applyRetryReply(next, row, replyCardFor(output, item.id), 'step3', round, guard))) resolved = false;
+        }
+        this.state.set(P.plotVector, next);
+        return resolved;
       },
     };
+  }
+  /**
+   * The player's "regenerate ability" for one obtained entry. A reply that was already received is checked
+   * first, for free (under the current validation, or adopted from the local ledger if it never reached the
+   * save). Only then is a new request sent, as a new recorded attempt with its own receipt: earlier failures
+   * and unknown receipts stay as they were. Returns whether the entry now has a usable ability and whether a
+   * model request was made. The saved entry itself is never changed.
+   */
+  async regenerateAbility(entryId: string): Promise<{ bound: boolean; requested: boolean }> {
+    const slot = this.slot();
+    if (!slot || !readPlotVectorControl().enabled) throw new Error('剧情动能未开启');
+    if (this.manualInFlight.has(entryId)) throw new Error('这一条的能力正在补生');
+    const guard = this.repairGuard('能力补生');
+    this.manualInFlight.add(entryId);
+    try {
+      await this.saves.assertCurrent(slot.profileId, slot.slotId);
+      guard();
+      const state = cloneDeep(this.state.get<VectorState>(P.plotVector) ?? initialVectorState());
+      const entry = abilityBacklog(state, projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries,
+        this.promptPolicy?.environmentAbility?.field).find(b => b.id === entryId);
+      if (!entry) throw new Error('这一条目前没有需要补生的能力');
+      const key = capabilityKey(entry.row.task.entry);
+      const row = state.tasks.find(t => capabilityKey(t.task.entry) === key && t.status !== 'bound')!;
+      // 1. Free: a reply recorded in the local ledger that never reached this save.
+      if (row.status === 'sending' && row.raw === undefined) {
+        const receipt = await this.journal.genesis(slot, row.task.key).lookup();
+        guard();
+        if (receipt.kind === 'raw') { row.raw = receipt.raw; delete row.validationRevision; }
+      }
+      if (row.retry?.sending && row.retry.raw === undefined) {
+        const receipt = await this.journal.genesis(slot, `${row.task.key}#retry-${row.retry.attempts}`).lookup();
+        guard();
+        if (receipt.kind === 'raw') { row.retry.raw = receipt.raw; delete row.retry.validationRevision; }
+        // Not in flight in this page (manualInFlight is empty for it), so its reply can no longer reach this save.
+        // Its receipt stays as it is; this explicit click becomes a new attempt below instead of a permanent block
+        // (charter D8). Nothing retries it automatically: Step3 never touches `retrying` entries.
+        row.retry.sending = false;
+      }
+      // 2. Free: any received reply not yet checked under the current validation.
+      if (await this.validateReceived(state, row, guard)) {
+        await this.persistState(slot, state, guard);
+        return { bound: true, requested: false };
+      }
+      // 3. A new request, recorded before it is sent.
+      const problem = row.retry?.error ?? row.error;
+      const base: AbilityRetry = row.retry ?? { attempts: 0, autoRounds: 0 };
+      const retry: AbilityRetry = { ...base, attempts: base.attempts + 1, source: 'manual', sending: true };
+      delete retry.raw; delete retry.validationRevision;
+      row.retry = retry;
+      await this.persistState(slot, state, guard);
+      let raw: string;
+      try {
+        raw = await this.ai.generate({ messages: buildAbilityRetryMessages(row.task.entry, problem),
+          usageType: 'main', stream: false, singleAttempt: true, generationId: `ability-retry:${retry.attempts}`,
+          checkpoint: this.journal.genesis(slot, `${row.task.key}#retry-${retry.attempts}`).checkpoint(guard) });
+      } catch (error) {
+        guard();
+        retry.sending = false; retry.error = error instanceof Error ? error.message : String(error);
+        await this.persistState(slot, state, guard);
+        return { bound: false, requested: true };
+      }
+      guard();
+      retry.sending = false; retry.raw = raw;
+      const bound = await this.validateReceived(state, row, guard);
+      await this.persistState(slot, state, guard);
+      return { bound, requested: true };
+    } finally { this.manualInFlight.delete(entryId); }
+  }
+  /** Record one retry's reply for a row and bind it if it validates. `card` undefined: the reply had none. */
+  private async applyRetryReply(state: VectorState, row: VectorTaskRow, card: unknown, source: 'step3' | 'manual', round: number,
+    guard: () => void): Promise<boolean> {
+    const base: AbilityRetry = row.retry ?? { attempts: 0, autoRounds: 0 };
+    const retry: AbilityRetry = { ...base, attempts: base.attempts + 1, source, sending: false };
+    if (source === 'step3' && base.lastAutoRound !== round) { retry.autoRounds = base.autoRounds + 1; retry.lastAutoRound = round; }
+    delete retry.raw; delete retry.validationRevision;
+    row.retry = retry;
+    if (card === undefined) { retry.error = '补生回复没有给出这一条的能力'; return false; }
+    retry.raw = JSON.stringify({ version: 3, card });
+    return this.validateReceived(state, row, guard);
+  }
+  /**
+   * Check the received replies of a row that have not been checked under the current validation (the latest
+   * retry first, then the first attempt) and bind the first that validates. A failure is recorded on the
+   * reply it belongs to; nothing is sent.
+   */
+  private async validateReceived(state: VectorState, row: VectorTaskRow, guard: () => void): Promise<boolean> {
+    // `clear` runs on success: a retry's success leaves the first attempt's failure on record.
+    const replies: Array<{ raw: string; mark(): void; fail(reason: string): void; clear(): void }> = [];
+    const retry = row.retry;
+    if (retry?.raw !== undefined && (retry.validationRevision ?? 0) < GENESIS_VALIDATION_REVISION) {
+      const raw = retry.raw;
+      replies.push({ raw, mark: () => { retry.validationRevision = GENESIS_VALIDATION_REVISION; },
+        fail: reason => { retry.error = reason; }, clear: () => { delete retry.error; } });
+    }
+    if (row.raw !== undefined && (row.validationRevision ?? 0) < GENESIS_VALIDATION_REVISION) {
+      const raw = row.raw;
+      replies.push({ raw, mark: () => { row.validationRevision = GENESIS_VALIDATION_REVISION; },
+        fail: reason => { row.error = reason; }, clear: () => { delete row.error; } });
+    }
+    for (const reply of replies) {
+      reply.mark();
+      try {
+        const bound = await this.worker.execute<BoundCard>({ kind: 'validate', task: row.task, output: parseAgaGenerationOutput(reply.raw), attempts: 1 });
+        guard();
+        state.cards = [...state.cards.filter(c => c.task.entry.id !== row.task.entry.id), bound];
+        row.status = 'bound';
+        reply.clear();
+        return true;
+      } catch (error) {
+        guard();
+        row.status = row.status === 'pending' ? row.status : 'failed';
+        reply.fail(error instanceof Error ? error.message : String(error));
+      }
+    }
+    return false;
+  }
+  /** Save the vector state outside a round (player retry). A failed write never leaves the new state in memory. */
+  private async persistState(slot: Slot, state: VectorState, guard: () => void): Promise<void> {
+    guard();
+    const previous = cloneDeep(this.state.get<VectorState>(P.plotVector));
+    this.state.set(P.plotVector, cloneDeep(state));
+    let committed = false;
+    try {
+      await this.saves.saveGame(slot.profileId, slot.slotId, this.state.toSnapshot(), undefined, { guard, committed: () => { committed = true; } });
+    } catch (error) {
+      if (!committed) this.state.set(P.plotVector, previous);
+      throw error;
+    }
   }
   private async persist(a: Attempt): Promise<void> {
     a.guard();

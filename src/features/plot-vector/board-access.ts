@@ -11,16 +11,22 @@ import { initialVectorState, type PreparedVector, type VectorState, type VectorO
 import { VectorWorkerClient } from './worker-client';
 import { guardedExecutor } from './result-guard';
 import { projectNativeInput, type NativeRules } from './native-input';
+import { abilityBacklog, type BacklogEntry } from './ability-backlog';
 
 export interface BoardView {
   state: VectorState;
   prepared: PreparedVector;
+  /** Obtained entries whose ability is not usable yet (shown as text, never as a playable card). */
+  backlog: BacklogEntry[];
   preview(layout: Layout): Promise<PreparedVector>;
   save(layout: Layout): Promise<void>;
 }
 interface Executor { execute<T extends VectorResult>(op: VectorOperation): Promise<T>; cancelAll(): void }
 
-/** Optional UI port. No model calls, no acceptance hooks, no writes before IDB commit. */
+/**
+ * Optional UI port. No acceptance hooks, no writes before IDB commit. Its only model call is the player's
+ * explicit ability retry, delegated to the round adapter and run like a board save (no round can start).
+ */
 export class VectorBoardAccess {
   private revision = 0;
   private writing = false;
@@ -31,7 +37,9 @@ export class VectorBoardAccess {
   constructor(private state: StateManager, private saves: Pick<SaveManager, 'assertCurrent' | 'saveGame'>,
     private slot: () => { profileId: string; slotId: string } | null, private busy: () => boolean,
     worker: Executor = new VectorWorkerClient(), private nativeRules?: NativeRules,
-    private onSaveSettled: () => void = () => {}) {
+    private onSaveSettled: () => void = () => {},
+    private regenerateAbility?: (entryId: string) => Promise<{ bound: boolean; requested: boolean }>,
+    private abilityField?: string) {
     this.worker = guardedExecutor(worker);
     this.unsubs = [subscribePlotVectorControl(() => this.invalidate()),
       eventBus.on<{ type: string }>('engine:state-changed', e => {
@@ -39,6 +47,17 @@ export class VectorBoardAccess {
       })];
   }
   private invalidate() { this.revision++; this.worker.cancelAll(); }
+  /** The player's retry for one entry's ability. Refused while a round, a save or another retry runs. */
+  async regenerate(entryId: string): Promise<{ bound: boolean; requested: boolean }> {
+    if (!this.regenerateAbility) throw new Error('ability-retry-unavailable');
+    if (this.busy() || this.writing || !readPlotVectorControl().enabled) throw new Error('board-save-busy');
+    this.writing = true;
+    try {
+      const result = await this.regenerateAbility(entryId);
+      this.invalidate();
+      return result;
+    } finally { this.writing = false; this.onSaveSettled(); }
+  }
   dispose() { this.invalidate(); this.unsubs.forEach(fn => fn()); }
   async open(): Promise<BoardView> {
     const slot = this.slot(), control = readPlotVectorControl(), revision = this.revision;
@@ -63,7 +82,7 @@ export class VectorBoardAccess {
       guard(); return result;
     };
     const prepared = await preview();
-    return { state, prepared, preview, save: async layout => {
+    return { state, prepared, backlog: abilityBacklog(state, entries, this.abilityField), preview, save: async layout => {
       guard();
       if (this.writing) throw new Error('board-save-busy');
       this.writing = true;

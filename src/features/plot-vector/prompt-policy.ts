@@ -1,6 +1,6 @@
 import type { RawPromptTransform } from '../../engine/prompt/raw-prompt-transform';
 import { compileStateUpdates, type StateUpdateContract } from './state-update-compiler';
-import { SNIPPET_API } from './genesis/generation-prompt';
+import { GENESIS_CARD_RULES, GENESIS_GUIDANCE, SNIPPET_API } from './genesis/generation-prompt';
 
 export interface VectorPromptPolicy {
   transform: RawPromptTransform;
@@ -9,6 +9,7 @@ export interface VectorPromptPolicy {
   stateUpdates?: StateUpdateContract;
   stateUpdatePrompt?: string;
   environmentAbility?: EnvironmentAbilityPolicy;
+  abilityRepair?: AbilityRepairPolicy;
 }
 /** Environment abilities written by Step2 with the environment tags (pack-owned wording, one interface). */
 export interface EnvironmentAbilityPolicy {
@@ -18,6 +19,18 @@ export interface EnvironmentAbilityPolicy {
   prompt: string;
   /** Step3 repair block template with `{{PATH}}` and `{{ITEMS}}`. */
   repair: string;
+}
+/**
+ * Step3 regeneration of item/talent/status abilities that failed (pack-owned task text). The new abilities
+ * come back in their own top-level reply field, never as commands on the saved entries.
+ */
+export interface AbilityRepairPolicy {
+  /** Top-level reply field that carries `[{ id, card }]`. */
+  field: string;
+  /** Task template with `{{ITEMS}}`. */
+  template: string;
+  /** The same guidance, card rules and snippet contract post-save genesis uses. */
+  prompt: string;
 }
 interface Replacement { promptId: string; from: string; to: string; scope: 'all' | 'inline' | 'separate' }
 
@@ -63,6 +76,12 @@ export function parseVectorPromptPolicy(raw: unknown, mode: unknown, stateUpdate
       || typeof e.repair !== 'string' || !e.repair.includes('{{ITEMS}}') || !e.repair.includes('{{PATH}}')) return;
     environmentAbility = { field: e.field, prompt: `${e.instruction.trim()}\n\n${SNIPPET_API}`, repair: e.repair };
   }
-  return { mode, stateUpdates, stateUpdatePrompt: stateUpdates ? stateUpdatePrompt as string : undefined, environmentAbility,
+  let abilityRepair: AbilityRepairPolicy | undefined;
+  if (r.abilityRepair !== undefined) {
+    const a = r.abilityRepair as Record<string, unknown> | null;
+    if (!a || typeof a.field !== 'string' || !a.field.trim() || typeof a.template !== 'string' || !a.template.includes('{{ITEMS}}')) return;
+    abilityRepair = { field: a.field, template: a.template, prompt: [GENESIS_GUIDANCE, GENESIS_CARD_RULES, SNIPPET_API].join('\n\n') };
+  }
+  return { mode, stateUpdates, stateUpdatePrompt: stateUpdates ? stateUpdatePrompt as string : undefined, environmentAbility, abilityRepair,
     transform: transformFor('inline'), separateTransform: transformFor('separate') };
 }

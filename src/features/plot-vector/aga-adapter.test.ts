@@ -10,6 +10,7 @@ import { executeVectorOperation, initialVectorState, type PreparedVector, type V
 import { writePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { POSITIVE_EXAMPLES } from './genesis/test-fixtures';
 import { tasksAfterSave, stable, type BoundCard } from './genesis/post-save';
+import { GENESIS_VALIDATION_REVISION } from './genesis/generation-prompt';
 import { projectSavedElements } from './saved-elements';
 import rulesJSON from '../../../public/packs/tianming/rules/plot-vector.json';
 import { parseNativeRules } from './native-input';
@@ -215,7 +216,7 @@ describe('AGA opt-in integration (zero network)', () => {
     ctx.meta.plotVectorCommitted!(); await h.adapter.afterSave(ctx);
     expect(h.ai.generate).not.toHaveBeenCalled();
     // Written without its ability: this round's Step3 gets one repair task for it.
-    expect((await h.adapter.environmentRepairTask())?.block).toContain('微风');
+    expect((await h.adapter.abilityRepairTask())?.block).toContain('微风');
   });
   it('rejects a stale loaded slot before executing cards or calling a model', async () => {
     const h = setup(); writePlotVectorControl(true);
@@ -460,7 +461,7 @@ describe('AGA opt-in integration (zero network)', () => {
     await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!(); await h.adapter.afterSave(ctx);
     expect(h.ai.generate).not.toHaveBeenCalled();
     const row = h.state.get<VectorState>(P.plotVector)!.tasks[0];
-    expect(row).toMatchObject({ status: 'bound', raw, validationRevision: 1 });
+    expect(row).toMatchObject({ status: 'bound', raw, validationRevision: GENESIS_VALIDATION_REVISION });
     expect(row.error).toBeUndefined();
   });
   it('disable after commit retains story, but changing slots still fences rendering', async () => {
@@ -759,13 +760,13 @@ describe('sources and environment abilities (PO correction)', () => {
     // Same name, effect updated from 湿滑 to 干燥, but Step2 left out the ability.
     await round(h, 2, () => h.state.set(P.environmentTags, [{ 名称: '路面', 描述: '石板路', 效果: '干燥' }]));
     expect(environmentCards(h)).toEqual([]); // the old wet-road ability no longer takes part
-    const repair = await h.adapter.environmentRepairTask();
+    const repair = await h.adapter.abilityRepairTask();
     expect(repair?.block).toContain('路面');
     expect(repair?.block).toContain('内容已更新但缺少新能力');
     const generate = vi.fn(async () => JSON.stringify({ commands: [{ action: 'set', key: P.environmentTags,
       value: [{ 名称: '路面', 描述: '石板路', 效果: '干燥', 能力: ability('S+') }] }] }));
     await new FieldRepairPipeline(h.state, new CommandExecutor(h.state), { generate } as unknown as AIService, new ResponseParser(),
-      {} as PromptAssembler, null, { rules: {}, promptFlows: {}, prompts: {} } as unknown as GamePack, P, () => h.adapter.environmentRepairTask()).execute();
+      {} as PromptAssembler, null, { rules: {}, promptFlows: {}, prompts: {} } as unknown as GamePack, P, () => h.adapter.abilityRepairTask()).execute();
     const dry = environmentCards(h).map(c => c.ref.hash);
     expect(dry).toHaveLength(1); expect(dry[0]).not.toBe(wet);
     // Next round, unchanged: the repaired ability is the one that runs.
@@ -783,7 +784,7 @@ describe('sources and environment abilities (PO correction)', () => {
     const repaired = [{ 名称: '浓雾', 描述: '看不清路', 效果: '', 能力: ability('S-') }];
     const generate = vi.fn(async () => JSON.stringify({ commands: [{ action: 'set', key: P.environmentTags, value: repaired }] }));
     const step3 = new FieldRepairPipeline(h.state, new CommandExecutor(h.state), { generate } as unknown as AIService, new ResponseParser(),
-      {} as PromptAssembler, null, { rules: {}, promptFlows: {}, prompts: {} } as unknown as GamePack, P, () => h.adapter.environmentRepairTask());
+      {} as PromptAssembler, null, { rules: {}, promptFlows: {}, prompts: {} } as unknown as GamePack, P, () => h.adapter.abilityRepairTask());
     await step3.execute();
     expect(generate).toHaveBeenCalledTimes(1);
     const request = String((generate.mock.calls[0] as unknown as [{ messages: Array<{ content: string }> }])[0].messages.at(-1)!.content);
@@ -793,7 +794,7 @@ describe('sources and environment abilities (PO correction)', () => {
     expect(request).toContain('onVisit');           // the same interface Step2 uses
     expect(environmentCards(h).map(c => c.task.entry.id)).toEqual(['environment:name:浓雾']);
     expect(h.state.get(P.environmentTags)).toEqual([{ 名称: '浓雾', 描述: '看不清路', 效果: '' }]);
-    expect(await h.adapter.environmentRepairTask()).toBeNull(); // nothing left to repair; Step3 is not a per-card pass
+    expect(await h.adapter.abilityRepairTask()).toBeNull(); // nothing left to repair; Step3 is not a per-card pass
   });
 
   it('a repair that never validates stays bounded, keeps the round, and is reported as unresolved (not as field success)', async () => {
@@ -802,7 +803,7 @@ describe('sources and environment abilities (PO correction)', () => {
     const still = [{ 名称: '浓雾', 描述: '看不清路', 效果: '', 能力: { hooks: { onVisit: 'return {', onRoundAccepted: null } } }];
     const generate = vi.fn(async () => JSON.stringify({ commands: [{ action: 'set', key: P.environmentTags, value: still }] }));
     const step3 = new FieldRepairPipeline(h.state, new CommandExecutor(h.state), { generate } as unknown as AIService, new ResponseParser(),
-      {} as PromptAssembler, null, { rules: {}, promptFlows: {}, prompts: {} } as unknown as GamePack, P, () => h.adapter.environmentRepairTask());
+      {} as PromptAssembler, null, { rules: {}, promptFlows: {}, prompts: {} } as unknown as GamePack, P, () => h.adapter.abilityRepairTask());
     const result = await step3.execute();
     expect(result.extra).toEqual({ resolved: false });
     expect(result.fieldsNeeded).toBe(false);
@@ -820,5 +821,180 @@ describe('sources and environment abilities (PO correction)', () => {
     expect(environmentCards(h).map(c => c.ref.hash)).toEqual(bound);
     await round(h, 3, () => h.state.set(P.environmentTags, []));
     expect(environmentCards(h)).toEqual([]);
+  });
+});
+
+describe('ability failure lifecycle: the obtained entry stays, only the snippet is dropped and can be regenerated (PO D8)', () => {
+  const ability = (channel: string) => ({ hooks: { onVisit: `return { effects: [{ kind: 'add', channel: '${channel}', amount: 1 }] };`, onRoundAccepted: null } });
+  const broken = JSON.stringify({ version: 3, card: { hooks: { onVisit: 'const x = null; return x.y;', onRoundAccepted: null } } });
+  const ointment = { 名称: '修复药膏', 数量: 1, 描述: '术后用' };
+  const vector = (h: ReturnType<typeof setup>) => h.state.get<VectorState>(P.plotVector)!;
+  const row = (h: ReturnType<typeof setup>, id: string) => vector(h).tasks.find(t => t.task.entry.id === id)!;
+  async function round(h: ReturnType<typeof setup>, roundNumber: number, during?: () => void) {
+    h.state.set(P.roundNumber, roundNumber);
+    const ctx = await h.adapter.prepare({ ...h.ctx(), roundNumber });
+    during?.();
+    await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!(); await h.adapter.afterSave(ctx);
+  }
+  /** The real Step3 pipeline with a stand-in model. */
+  function step3(h: ReturnType<typeof setup>, reply: () => unknown) {
+    const generate = vi.fn(async () => JSON.stringify(reply()));
+    const pipeline = new FieldRepairPipeline(h.state, new CommandExecutor(h.state), { generate } as unknown as AIService, new ResponseParser(),
+      {} as PromptAssembler, null, { rules: {}, promptFlows: {}, prompts: {} } as unknown as GamePack, P, () => h.adapter.abilityRepairTask());
+    return { generate, run: () => pipeline.execute() };
+  }
+  const lastRequest = (generate: ReturnType<typeof vi.fn>) =>
+    String((generate.mock.calls.at(-1) as unknown as [{ messages: Array<{ content: string }> }])[0].messages.at(-1)!.content);
+  /** A page reload: a new adapter over the saved tree, sharing the local receipt ledger. */
+  function reload(h: ReturnType<typeof setup>, store: MemoryRequests) {
+    const next = setup(new RequestJournal(store));
+    next.state.loadTree(structuredClone(h.state.toSnapshot()));
+    return next;
+  }
+  /** Mirrors AIService: with a checkpoint, the checkpoint decides whether `send` (the paid call) runs. */
+  function network(h: ReturnType<typeof setup>, send: () => Promise<string>) {
+    const sends = vi.fn(send);
+    h.ai.generate.mockImplementation((async (opts: { messages: AIMessage[]; checkpoint?: GenerationCheckpoint }) =>
+      opts.checkpoint ? opts.checkpoint.run({ config: apiConfig, messages: opts.messages, stream: false }, sends) : sends()) as never);
+    return sends;
+  }
+
+  it('a failed ability keeps the item, its name, description and quantity; no card is faked and the board lists it as not ready', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    h.ai.generate.mockImplementation(async () => broken);
+    await round(h, 1, () => h.state.set(P.inventoryItems, { ointment }));
+    expect(row(h, 'item:ointment')).toMatchObject({ status: 'failed', raw: broken });
+    expect(vector(h).cards).toEqual([]);
+    expect(h.state.get(`${P.inventoryItems}.ointment`)).toEqual(ointment);
+    expect(h.adapter.abilityBacklog().map(b => [b.id, b.name, b.state])).toEqual([['item:ointment', '修复药膏', 'failed']]);
+  });
+
+  it("this round's Step3 regenerates it in the task's own reply field and binds it without writing to the item", async () => {
+    const h = setup(); writePlotVectorControl(true);
+    h.ai.generate.mockImplementation(async () => broken);
+    await round(h, 1, () => h.state.set(P.inventoryItems, { ointment }));
+    const { generate, run } = step3(h, () => ({ commands: [], abilities: [{ id: 'item:ointment', card: ability('Y') }] }));
+    const result = await run();
+    expect(result.extra).toEqual({ resolved: true });
+    const request = lastRequest(generate);
+    expect(request).toContain('<能力补生>');
+    expect(request).toContain('修复药膏');
+    expect(request).toContain('x.y');       // the previous ability, so the new one can avoid the same failure
+    expect(request).toContain('"abilities"'); // the reply field, next to commands
+    expect(request).toContain('onVisit');     // the same snippet contract post-save genesis uses
+    expect(vector(h).cards.map(c => c.task.entry.id)).toEqual(['item:ointment']);
+    expect(row(h, 'item:ointment')).toMatchObject({ status: 'bound', raw: broken, retry: { attempts: 1, autoRounds: 1, source: 'step3' } });
+    expect(h.state.get(`${P.inventoryItems}.ointment`)).toEqual(ointment);
+    expect(await h.adapter.abilityRepairTask()).toBeNull(); // bound cards are never re-examined
+  });
+
+  it('an item-only regeneration asks for no commands and never applies commands from its reply', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    h.ai.generate.mockImplementation(async () => broken);
+    await round(h, 1, () => h.state.set(P.inventoryItems, { ointment }));
+    const { generate, run } = step3(h, () => ({
+      commands: [{ action: 'set', key: `${P.inventoryItems}.ointment.能力`, value: 'smuggled' }],
+      abilities: [{ id: 'item:ointment', card: ability('Y') }],
+    }));
+    expect((await run()).extra).toEqual({ resolved: true });
+    expect(lastRequest(generate)).not.toContain('"commands"');
+    expect(h.state.get(`${P.inventoryItems}.ointment`)).toEqual(ointment);
+  });
+
+  it('after a reload a later Step3 still finds the waiting entry; automatic tries stop after two rounds; the story keeps going', async () => {
+    const store = new MemoryRequests();
+    const h = setup(new RequestJournal(store)); writePlotVectorControl(true);
+    h.ai.generate.mockImplementation(async () => broken);
+    await round(h, 1, () => h.state.set(P.inventoryItems, { ointment }));
+    // Round 1's Step3 reply forgot the ability: bounded retries inside the round, counted as one round.
+    const first = step3(h, () => ({ commands: [] }));
+    expect((await first.run()).extra).toEqual({ resolved: false });
+    expect(row(h, 'item:ointment').retry).toMatchObject({ autoRounds: 1, lastAutoRound: 1 });
+    const h2 = reload(h, store);
+    await round(h2, 2);
+    const second = step3(h2, () => ({ commands: [], abilities: [{ id: 'item:ointment', card: JSON.parse(broken).card }] }));
+    expect((await second.run()).extra).toEqual({ resolved: false });
+    expect(row(h2, 'item:ointment')).toMatchObject({ status: 'failed', raw: broken, retry: { autoRounds: 2, source: 'step3' } });
+    expect(row(h2, 'item:ointment').retry?.error).toBeTruthy();
+    await round(h2, 3);
+    expect(await h2.adapter.abilityRepairTask()).toBeNull();                            // no third automatic round
+    expect(h2.adapter.abilityBacklog().map(b => b.id)).toEqual(['item:ointment']);        // still offered to the player
+    expect(vector(h2).last?.id).toBe('p/s/3');                                            // the story went on
+    expect(h2.state.get(`${P.inventoryItems}.ointment`)).toEqual(ointment);
+  });
+
+  it('a player retry checks an already received reply for free first', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 1 } });
+    const task = tasksAfterSave({ id: 'old', success: true, before: [], after: projectSavedElements(h.state.toSnapshot()).entries })[0];
+    // Rejected under older validation rules; valid under the current ones.
+    h.state.set(P.plotVector, { ...initialVectorState(), tasks: [{ task, status: 'failed', error: 'nothing to transfer',
+      raw: JSON.stringify(POSITIVE_EXAMPLES[0].output), validationRevision: 1 }] });
+    expect(await h.adapter.regenerateAbility('item:tea')).toEqual({ bound: true, requested: false });
+    expect(h.ai.generate).not.toHaveBeenCalled();
+    expect(vector(h).cards.map(c => c.task.entry.id)).toEqual(['item:tea']);
+    expect(h.saveGame).toHaveBeenCalled();
+  });
+
+  it('otherwise the player retry is a new recorded request with its own receipt; the first failure stays on record', async () => {
+    const store = new MemoryRequests();
+    const h = setup(new RequestJournal(store)); writePlotVectorControl(true);
+    h.ai.generate.mockImplementation(async () => broken);
+    await round(h, 1, () => h.state.set(P.inventoryItems, { ointment }));
+    const firstError = row(h, 'item:ointment').error;
+    const saves = h.saveGame.mock.calls.length;
+    const sends = network(h, async () => JSON.stringify({ version: 3, card: ability('J') }));
+    expect(await h.adapter.regenerateAbility('item:ointment')).toEqual({ bound: true, requested: true });
+    expect(sends).toHaveBeenCalledTimes(1);
+    const input = JSON.parse(String((h.ai.generate.mock.calls.at(-1) as unknown as [{ messages: AIMessage[] }])[0].messages[1].content));
+    expect(input).toMatchObject({ entry: { id: 'item:ointment' }, problem: firstError });
+    // Recorded as sending and saved before the request left, then saved again with the result.
+    const beforeSend = (h.saveGame.mock.calls[saves] as unknown as [string, string, Record<string, unknown>])[2];
+    expect(((beforeSend as { 系统: { 扩展: { plotVector: VectorState } } }).系统.扩展.plotVector.tasks[0].retry)).toMatchObject({ sending: true, attempts: 1 });
+    expect(row(h, 'item:ointment')).toMatchObject({ status: 'bound', raw: broken, error: firstError, retry: { attempts: 1, source: 'manual', sending: false } });
+    const key = row(h, 'item:ointment').task.key;
+    expect(await new RequestJournal(store).genesis({ profileId: 'p', slotId: 's' }, `${key}#retry-1`).lookup()).toMatchObject({ kind: 'raw' });
+    expect(h.state.get(`${P.inventoryItems}.ointment`)).toEqual(ointment);
+  });
+
+  it('an unknown outcome is never retried by Step3, but the player can retry it explicitly', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    h.state.set(P.roundNumber, 1);
+    h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 1 } });
+    const task = tasksAfterSave({ id: 'old', success: true, before: [], after: projectSavedElements(h.state.toSnapshot()).entries })[0];
+    h.state.set(P.plotVector, { ...initialVectorState(), tasks: [{ task, status: 'sending' }] });
+    expect(h.adapter.abilityBacklog().map(b => b.state)).toEqual(['unknown']);
+    expect(await h.adapter.abilityRepairTask()).toBeNull();
+    network(h, async () => JSON.stringify({ version: 3, card: ability('J') }));
+    expect(await h.adapter.regenerateAbility('item:tea')).toEqual({ bound: true, requested: true });
+    expect(row(h, 'item:tea')).toMatchObject({ status: 'bound', retry: { attempts: 1, source: 'manual' } });
+  });
+
+  it('an environment tag waiting for its ability survives a reload; a later Step3 fills it and the card carries on', async () => {
+    const store = new MemoryRequests();
+    const h = setup(new RequestJournal(store)); writePlotVectorControl(true);
+    await round(h, 1, () => h.state.set(P.environmentTags, [{ 名称: '微风', 描述: '街道上的风', 效果: '舒适' }]));
+    expect(row(h, 'environment:name:微风')).toMatchObject({ status: 'failed', error: '缺少能力' });
+    const h2 = reload(h, store);
+    await round(h2, 2, () => h2.state.set(P.environmentTags, [{ 名称: '微风', 描述: '街道上的风', 效果: '舒适' }]));
+    expect(row(h2, 'environment:name:微风')).toMatchObject({ status: 'failed' }); // unchanged, still waiting
+    const { run } = step3(h2, () => ({ commands: [{ action: 'set', key: P.environmentTags,
+      value: [{ 名称: '微风', 描述: '街道上的风', 效果: '舒适', 能力: ability('Y') }] }] }));
+    expect((await run()).extra).toEqual({ resolved: true });
+    expect(vector(h2).cards.map(c => c.task.entry.id)).toEqual(['environment:name:微风']);
+    expect(vector(h2).tasks.filter(t => t.task.entry.kind === 'environment')).toEqual([]);
+    await round(h2, 3, () => h2.state.set(P.environmentTags, [{ 名称: '微风', 描述: '街道上的风', 效果: '舒适' }]));
+    expect(vector(h2).last!.layout.placements['06']).toBe('environment:name:微风');
+  });
+
+  it('the player can regenerate an environment ability too; the tag itself is not rewritten', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    await round(h, 1, () => h.state.set(P.environmentTags, [{ 名称: '微风', 描述: '街道上的风', 效果: '舒适' }]));
+    network(h, async () => JSON.stringify({ version: 3, card: ability('J') }));
+    expect(await h.adapter.regenerateAbility('environment:name:微风')).toEqual({ bound: true, requested: true });
+    expect(h.state.get(P.environmentTags)).toEqual([{ 名称: '微风', 描述: '街道上的风', 效果: '舒适' }]);
+    await round(h, 2, () => h.state.set(P.environmentTags, [{ 名称: '微风', 描述: '街道上的风', 效果: '舒适' }]));
+    expect(vector(h).last!.layout.placements['06']).toBe('environment:name:微风');
+    expect(h.adapter.abilityBacklog()).toEqual([]);
   });
 });

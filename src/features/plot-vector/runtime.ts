@@ -14,11 +14,40 @@ import { readCardProgress, readSupplyProgress, type CardProgress } from './card-
 import { basicSupplyCards, hasUses } from './basic-supply';
 import { grantRoundSupplies } from '../../engine/plot-vector/core/card-state';
 
+/**
+ * Later attempts to give a saved entry its ability after the first one failed. The first attempt's
+ * `raw`/`error` on the task row are kept as they were; these fields describe only the retries.
+ */
+export interface AbilityRetry {
+  /** Retries made so far (Step3 requests and player requests). */
+  attempts: number;
+  /** Rounds in which Step3 tried this entry; automatic retries stop at a fixed number of rounds. */
+  autoRounds: number;
+  /** Story round of the last Step3 try, so several tries within one round count once. */
+  lastAutoRound?: number;
+  source?: 'step3' | 'manual';
+  /** A player request whose reply has not been recorded yet. Step3 never touches such an entry. */
+  sending?: boolean;
+  /** Reply of the latest retry, kept before validation. */
+  raw?: string;
+  /** Validation revision the latest `raw` was checked under. */
+  validationRevision?: number;
+  /** Why the latest retry did not give a usable ability. */
+  error?: string;
+}
+export interface VectorTaskRow {
+  task: GenesisTask;
+  status: 'pending' | 'sending' | 'failed' | 'bound';
+  error?: string;
+  raw?: string;
+  validationRevision?: number;
+  retry?: AbilityRetry;
+}
 export interface VectorState {
   version: 1;
   session: VectorSession;
   cards: BoundCard[];
-  tasks: Array<{ task: GenesisTask; status: 'pending' | 'sending' | 'failed' | 'bound'; error?: string; raw?: string; validationRevision?: number }>;
+  tasks: VectorTaskRow[];
   layout?: Layout;
   last?: { id: string; board: CompiledBoard; result: RunDone; layout: Layout; starting?: NativeInput; progress?: CardProgress[] };
 }
