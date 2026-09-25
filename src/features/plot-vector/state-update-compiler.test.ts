@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CommandExecutor } from '../../engine/core/command-executor';
 import { StateManager } from '../../engine/core/state-manager';
-import { compileStateUpdates, type StateUpdateBaseline, type StateUpdateContract } from './state-update-compiler';
+import { compileStateUpdates, StateUpdateError, type StateUpdateBaseline, type StateUpdateContract } from './state-update-compiler';
 
 const root = '角色.背包.物品';
 const contract: StateUpdateContract = {
@@ -137,6 +137,44 @@ describe('offline action compiler, synthetic cases (not model-quality evidence)'
   it('does not reuse an existing generated ID', () => {
     const base = baseline(); base.items.pv_88_1 = { 数量: 1 };
     expect(compile([{ id: 'a', op: 'acquire', ref: '__new_1', item: { 数量: 1 } }], base).commands[0].key).toBe(`${root}.pv_88_1_1`);
+  });
+  it('creates entries without a temporary ref; the host names them from the round and action position', () => {
+    const { state } = apply([
+      { op: 'acquire', item: { 名称: '修复药膏', 数量: 1 } },
+      { op: 'acquire', item: { 名称: '冰敷贴', 数量: 2 } },
+      { op: 'register_held', item: { 名称: '消肿药', 数量: 1 } },
+    ]);
+    expect(state.get(`${root}.pv_88_a1`)).toEqual({ 名称: '修复药膏', 数量: 1 });
+    expect(state.get(`${root}.pv_88_a2.数量`)).toBe(2);
+    expect(state.get(`${root}.pv_88_a3.名称`)).toBe('消肿药');
+    expect(state.get(`${root}.tea.数量`)).toBe(3);
+  });
+  it('an explicit temporary ref still works beside omitted ones and is never satisfied by an omitted one', () => {
+    const { state } = apply([
+      { op: 'acquire', item: { 名称: '修复药膏', 数量: 1 } },
+      { op: 'acquire', ref: '__new_1', item: { 名称: '冰敷贴', 数量: 2 } },
+      { op: 'consume', ref: '__new_1', amount: 1 },
+    ]);
+    expect(state.get(`${root}.pv_88_a1.数量`)).toBe(1);
+    expect(state.get(`${root}.pv_88_1.数量`)).toBe(1);
+    // A later action naming an alias nobody declared still fails; the ref-less entry is not bound to it.
+    expect(() => compile([{ op: 'acquire', item: { 名称: '修复药膏', 数量: 1 } }, { op: 'consume', ref: '__new_1', amount: 1 }]))
+      .toThrow('unknown item reference');
+  });
+  it('names ref-less entries deterministically and steps around an ID the baseline already holds', () => {
+    const actions = [{ op: 'acquire', item: { 名称: '修复药膏', 数量: 1 } }, { op: 'acquire', item: { 名称: '冰敷贴', 数量: 2 } }];
+    expect(compile(actions).commands).toEqual(compile(actions).commands);
+    const base = baseline(); base.items.pv_88_a1 = { 数量: 1 };
+    expect(compile(actions, base).commands.map(c => c.key)).toEqual([`${root}.pv_88_a1_1`, `${root}.pv_88_a2`]);
+  });
+  it('keeps every other creation and reference check when ref is omitted', () => {
+    expect(() => compile([{ op: 'acquire', item: { 名称: '修复药膏' } }])).toThrow('quantity must be a positive integer');
+    expect(() => compile([{ op: 'acquire', ref: null, item: { 名称: '修复药膏', 数量: 1 } }])).toThrow('invalid reference or path segment');
+    expect(() => compile([{ op: 'acquire', ref: 'tea', item: { 名称: '茶', 数量: 1 } }])).toThrow('creation requires a fresh __new_N alias');
+    expect(() => compile([{ op: 'update', fields: { 描述: '空盒' } }])).toThrow('invalid reference or path segment');
+    expect(() => compile([{ op: 'consume', amount: 1 }])).toThrow('invalid reference or path segment');
+    // Hosts recognise every rejection by type, not by parsing the diagnostic text.
+    expect(() => compile([{ op: 'consume', ref: 'missing', amount: 1 }])).toThrow(StateUpdateError);
   });
   it.each([
     { id: 'a', op: 'consume', ref: 'tea', amount: -1 },

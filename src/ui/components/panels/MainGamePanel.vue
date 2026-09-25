@@ -62,6 +62,7 @@ import { useRouter } from 'vue-router';
 import type { SaveHealthReport } from '@/engine/persistence/save-health';
 import type { EventBus } from '@/engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS, type BookmarkedRound } from '@/engine/pipeline/types';
+import { StateUpdateError } from '@/engine/state-updates/compiler';
 import Modal from '@/ui/components/common/Modal.vue';
 import FormattedText from '@/ui/components/common/FormattedText.vue';
 import SettingTaggedText from '@/ui/components/common/SettingTaggedText.vue';
@@ -1138,7 +1139,10 @@ onMounted(() => {
         composerRef.value?.restoreInput(_lastSentInput);
         _lastSentInput = '';
       }
-      const errMsg = (payload as { error?: Error })?.error?.message ?? t('mainGame.toast.aiErrorUnknown');
+      const failure = (payload as { error?: Error })?.error;
+      // A rejected item/money update is the model's reply, not a transport error: say so in player words.
+      const errMsg = failure instanceof StateUpdateError ? t('mainGame.recovery.stateUpdates')
+        : failure?.message ?? t('mainGame.toast.aiErrorUnknown');
       const recovery = payload as { regenerateToken?: string; retryInput?: string; roundFailure?: boolean };
       failedRound.value = recovery.regenerateToken && recovery.retryInput
         ? { token: recovery.regenerateToken, input: recovery.retryInput, error: errMsg } : null;

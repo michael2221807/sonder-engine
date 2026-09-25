@@ -296,6 +296,7 @@
   "mainGame.vectorBoard.receiptRoute": "route effect included in the replay below",
   "mainGame.vectorBoard.receiptMode": "mode effect included in the result",
   "mainGame.recovery.failed": "This round did not complete: {error}",
+  "mainGame.recovery.stateUpdates": "the model's item or money changes could not be applied safely, so nothing was saved",
   "mainGame.recovery.explain": "Regenerate this round using the same input. This makes new model requests and may incur new charges. Previous replies are retained.",
   "mainGame.recovery.regenerate": "Regenerate this round"
 }

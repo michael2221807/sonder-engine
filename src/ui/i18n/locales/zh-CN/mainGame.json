@@ -296,6 +296,7 @@
   "mainGame.vectorBoard.receiptRoute": "行程／方向已计入下方回放",
   "mainGame.vectorBoard.receiptMode": "运行状态已计入结果",
   "mainGame.recovery.failed": "本回合未完成：{error}",
+  "mainGame.recovery.stateUpdates": "模型给出的物品或金钱变化无法安全执行，没有保存",
   "mainGame.recovery.explain": "可以保留原输入重新生成本回合。将重新请求模型，可能产生新的费用；旧回复会保留。",
   "mainGame.recovery.regenerate": "重新生成本回合"
 }

@@ -6,7 +6,7 @@ Each action has an op and is executed in order:
 
 | op | Parameters and meaning |
 | --- | --- |
-| acquire / register_held | Acquire a new object / register an existing one. ref is a unique `__new_N` (N=1…999); item contains 名称 (name), 类型 (type), 品质 (quality), 数量 (quantity), 描述 (description), with a nonempty name and positive integer quantity. |
+| acquire / register_held | Acquire a new object / register an existing one. Give a unique temporary ref `__new_N` (N=1…999) only when a later action in this round refers to the new object; otherwise omit it and the engine assigns the ID; item contains 名称 (name), 类型 (type), 品质 (quality), 数量 (quantity), 描述 (description), with a nonempty name and positive integer quantity. |
 | update | ref is a saved ID; fields contains changed fields. The next two operations handle quantity. |
 | replenish / consume | ref and positive integer amount; increase / decrease quantity. |
 | transfer | ref and optional positive integer amount; omitted amount removes the whole entry. ref:null represents an untracked object. |

@@ -6,7 +6,7 @@ Step2（或单步完整输出）给出 `state_updates:{"version":1,"actions":[]}
 
 | op | 参数与含义 |
 | --- | --- |
-| acquire / register_held | 新获得／登记已有物件。ref 为唯一 `__new_N`（N=1…999）；item 含名称、类型、品质、数量、描述，名称非空、数量为正整数。 |
+| acquire / register_held | 新获得／登记已有物件。同轮后续动作需引用该新物时提供唯一临时 ref `__new_N`（N=1…999），否则可省略，ID 由引擎分配；item 含名称、类型、品质、数量、描述，名称非空、数量为正整数。 |
 | update | ref 为存档 ID，fields 为更新字段；数量由下两种操作处理。 |
 | replenish / consume | ref 与正整数 amount，增加／减少数量。 |
 | transfer | ref 与可选正整数 amount；省略 amount 移除整项，ref:null 表示未登记物件。 |

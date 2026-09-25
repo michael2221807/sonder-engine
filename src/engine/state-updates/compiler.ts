@@ -21,7 +21,14 @@ export interface CompiledStateUpdates {
 }
 
 const unsafe = new Set(['__proto__', 'constructor', 'prototype']);
-function fail(message: string): never { throw new Error(`State updates: ${message}`); }
+/** Any rejected round of state updates. Hosts show their own wording; `reason` stays diagnostic. */
+export class StateUpdateError extends Error {
+  constructor(readonly reason: string) {
+    super(`State updates: ${reason}`);
+    this.name = 'StateUpdateError';
+  }
+}
+function fail(message: string): never { throw new StateUpdateError(message); }
 function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) fail('expected an object');
   return value as Record<string, unknown>;
@@ -133,18 +140,23 @@ export function compileStateUpdates(
       case 'acquire':
       case 'register_held': {
         keys(a, ['id', 'op', 'ref', 'item']);
-        const ref = segment(a.ref);
-        if (!/^__new_[1-9][0-9]{0,2}$/.test(ref) || aliases.has(ref) || reserved.has(ref)) fail('creation requires a fresh __new_N alias');
+        // A temporary ref exists only so later actions of this round can point at the new entry.
+        // Without one, the host names the entry from the round and the action position; nothing is
+        // bound as an alias, so an unbound `__new_N` elsewhere still fails as an unknown reference.
+        const ref = a.ref === undefined ? undefined : segment(a.ref);
+        if (ref !== undefined && (!/^__new_[1-9][0-9]{0,2}$/.test(ref) || aliases.has(ref) || reserved.has(ref))) fail('creation requires a fresh __new_N alias');
         const item = cloneFields(a.item);
         quantity(item[qty]);
         if (contract.nameField) {
           const name = item[segment(contract.nameField)];
           if (typeof name !== 'string' || !name.trim()) fail('new item requires a name');
         }
-        const base = `pv_${baseline.round}_${ref.slice(6)}`;
+        // The `a` prefix keeps position-named IDs apart from `__new_N` ones, whose suffix is always digits.
+        const base = ref === undefined ? `pv_${baseline.round}_a${index + 1}` : `pv_${baseline.round}_${ref.slice(6)}`;
         let next = base;
         for (let n = 1; reserved.has(next); n++) next = `${base}_${n}`;
-        aliases.set(ref, next); reserved.add(next); items.set(next, item); touched.add(next);
+        if (ref !== undefined) aliases.set(ref, next);
+        reserved.add(next); items.set(next, item); touched.add(next);
         break;
       }
       case 'update': {
