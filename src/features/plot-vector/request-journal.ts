@@ -1,5 +1,7 @@
 import { openDB } from 'idb';
 import type { GenerationCheckpoint } from '../../engine/ai/types';
+import { randomId } from '../../engine/plot-vector/feature-control';
+import { sha256String } from '../../engine/sync/chunked-bundle-packer';
 import { stable } from './genesis/post-save';
 
 export interface Receipt { fingerprint: string; owner: string; raw?: string; createdAt?: number; slotKey?: string; expired?: boolean }
@@ -82,10 +84,9 @@ export class BrowserRequestStore implements RequestStore {
     } finally { db.close(); }
   }
 }
-async function digest(value: unknown): Promise<string> {
-  const bytes = new TextEncoder().encode(stable(value));
-  const hash = await crypto.subtle.digest('SHA-256', bytes);
-  return Array.from(new Uint8Array(hash), n => n.toString(16).padStart(2, '0')).join('');
+/** SHA-256 hex of the canonical value; the same key with or without crypto.subtle (LAN HTTP pages lack it). */
+function digest(value: unknown): Promise<string> {
+  return sha256String(stable(value));
 }
 
 /**
@@ -129,7 +130,7 @@ export class RequestJournal {
           await this.store.maintain?.();
           const key = await digest(scope), fingerprint = await digest({ step: 'genesis', task: taskKey });
           guard();
-          const owner = crypto.randomUUID();
+          const owner = randomId();
           const old = await this.store.claim(key, fingerprint, owner, guard, await digest(scope.slot));
           guard();
           if (old) {
@@ -154,7 +155,7 @@ export class RequestJournal {
         // Credentials affect identity but only a digest is stored, never the credentials or prompt.
         const key = await digest(scope), fingerprint = await digest({ baseline, request });
         guard();
-        const owner = crypto.randomUUID();
+        const owner = randomId();
         const slot = scope && typeof scope === 'object' && 'slot' in scope ? scope.slot : undefined;
         const old = await this.store.claim(key, fingerprint, owner, guard, slot ? await digest(slot) : undefined);
         guard();

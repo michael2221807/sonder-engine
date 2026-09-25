@@ -12,13 +12,17 @@ export function readPlotVectorControl(): PlotVectorControl {
       settlement: value?.settlement === 'separate' ? 'separate' : 'inline' };
   } catch { return { enabled: false, epoch: 'off', settlement: 'inline' }; }
 }
-function nextEpoch(): string {
-  // LAN HTTP pages may expose getRandomValues without the secure-context randomUUID API.
+/**
+ * 128 random bits as an identifier (epochs, request owners, Worker job ids, CSP nonces).
+ * LAN HTTP pages may expose getRandomValues without the secure-context randomUUID API;
+ * there is no weaker fallback: without getRandomValues this throws.
+ */
+export function randomId(): string {
   return typeof crypto.randomUUID === 'function' ? crypto.randomUUID()
     : Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('');
 }
 function writeControl(enabled: boolean, settlement: StateSettlementMode): void {
-  localStorage.setItem(PLOT_VECTOR_CONTROL_KEY, JSON.stringify({ enabled, settlement, epoch: nextEpoch() }));
+  localStorage.setItem(PLOT_VECTOR_CONTROL_KEY, JSON.stringify({ enabled, settlement, epoch: randomId() }));
   window.dispatchEvent(new Event(PLOT_VECTOR_CONTROL_EVENT));
 }
 export function writePlotVectorControl(enabled: boolean): void {

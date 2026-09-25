@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RequestJournal, type RequestStore } from './request-journal';
 import type { APIConfig } from '../../engine/ai/types';
 
@@ -119,5 +119,30 @@ describe('ability-generation receipts (R4)', () => {
     const receipt = new RequestJournal(store).genesis(slot, 'tea');
     await expect(receipt.checkpoint(() => {}).run(request, async () => { store.rows.clear(); return 'late'; })).rejects.toThrow();
     expect(await receipt.lookup()).toEqual({ kind: 'none' });
+  });
+});
+
+describe('pages without randomUUID or crypto.subtle (LAN HTTP)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const slot = { profileId: 'p', slotId: 's' };
+  const lanPage = () => { const random = crypto.getRandomValues.bind(crypto); vi.stubGlobal('crypto', { getRandomValues: random }); };
+  it('receipts written on a secure page keep the same identity, and new ones still record and replay', async () => {
+    const store = new MemoryRequests(), send = vi.fn(async () => 'story'), reused = vi.fn();
+    await new RequestJournal(store).genesis(slot, 'tea').checkpoint(() => {}).run(request, async () => 'card');
+    await new RequestJournal(store).checkpoint({ slot, step: 'step1' }, {}, () => {}, reused).run(request, send);
+    const keys = [...store.rows.keys()];
+    lanPage();
+    expect(typeof (crypto as { randomUUID?: unknown }).randomUUID).toBe('undefined');
+    expect((crypto as { subtle?: unknown }).subtle).toBeUndefined();
+    // Same SHA-256 keys: the old records are found, nothing is sent again.
+    expect(await new RequestJournal(store).genesis(slot, 'tea').lookup()).toEqual({ kind: 'raw', raw: 'card' });
+    expect(await new RequestJournal(store).checkpoint({ slot, step: 'step1' }, {}, () => {}, reused).run(request, send)).toBe('story');
+    expect(send).toHaveBeenCalledTimes(1); expect(reused).toHaveBeenCalledTimes(1);
+    // A new request claims, records and replays on the LAN page as well.
+    const fresh = new RequestJournal(store).genesis(slot, 'ointment');
+    expect(await fresh.checkpoint(() => {}).run(request, async () => 'second card')).toBe('second card');
+    expect(await fresh.lookup()).toEqual({ kind: 'raw', raw: 'second card' });
+    expect([...store.rows.keys()].slice(0, keys.length)).toEqual(keys);
+    expect(store.rows.size).toBe(keys.length + 1);
   });
 });

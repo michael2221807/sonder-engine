@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { readPlotVectorControl, writePlotVectorControl, writePlotVectorSettlementMode, PLOT_VECTOR_CONTROL_EVENT } from './feature-control';
+import { randomId, readPlotVectorControl, writePlotVectorControl, writePlotVectorSettlementMode, PLOT_VECTOR_CONTROL_EVENT } from './feature-control';
 afterEach(() => vi.unstubAllGlobals());
 it('can invalidate old tasks on LAN HTTP where randomUUID is unavailable', () => {
   const values = new Map<string, string>();
@@ -28,4 +28,16 @@ it('keeps inline as the old default and invalidates request identity when the ex
   expect(after.epoch).not.toBe(before.epoch);
   writePlotVectorControl(false);
   expect(readPlotVectorControl().settlement).toBe('separate');
+});
+it('ids stay strongly random without randomUUID, and never fall back to Math.random', () => {
+  const random = crypto.getRandomValues.bind(crypto);
+  vi.stubGlobal('crypto', {getRandomValues: random});
+  const weak = vi.spyOn(Math, 'random').mockImplementation(() => { throw new Error('weak randomness used'); });
+  const ids = new Set(Array.from({ length: 64 }, () => randomId()));
+  expect(ids.size).toBe(64);
+  for (const id of ids) expect(id).toMatch(/^[0-9a-f]{32}$/); // 128 bits; also a valid CSP nonce
+  vi.stubGlobal('crypto', {});
+  expect(() => randomId()).toThrow();
+  expect(weak).not.toHaveBeenCalled();
+  weak.mockRestore();
 });

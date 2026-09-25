@@ -1,5 +1,6 @@
 import source from 'virtual:plot-vector-runtime';
 import type { VectorOperation, VectorResult } from './runtime';
+import { randomId } from '../../engine/plot-vector/feature-control';
 
 /** Browser-enforced opaque origin and CSP; snippets never execute on the UI thread. */
 export class VectorWorkerClient {
@@ -11,7 +12,7 @@ export class VectorWorkerClient {
       frame.hidden = true;
       frame.setAttribute('sandbox', 'allow-scripts');
       frame.setAttribute('aria-hidden', 'true');
-      const id = crypto.randomUUID(), nonce = crypto.randomUUID();
+      const id = randomId(), nonce = randomId();
       let settled = false;
       const stop = (error?: Error, result?: T) => {
         if (settled) return;
