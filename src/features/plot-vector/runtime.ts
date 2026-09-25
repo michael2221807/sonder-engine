@@ -50,6 +50,12 @@ export interface VectorState {
   tasks: VectorTaskRow[];
   layout?: Layout;
   last?: { id: string; board: CompiledBoard; result: RunDone; layout: Layout; starting?: NativeInput; progress?: CardProgress[] };
+  /**
+   * Host-owned request branch, renewed when the player explicitly rolls a round back, so sending that round
+   * again is a new request rather than a replay of the undone reply. Lives in the save like the rollback itself;
+   * never taken from a Worker result.
+   */
+  branch?: string;
 }
 export interface PreparedVector { id: string; board: CompiledBoard; result: RunDone; layout: Layout; prompt: string; starting?: NativeInput; progress?: CardProgress[] }
 export type VectorOperation =

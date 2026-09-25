@@ -5,7 +5,7 @@ import type { AIService } from '../../engine/ai/ai-service';
 import type { SaveManager } from '../../engine/persistence/save-manager';
 import { DEFAULT_ENGINE_PATHS as P, type PipelineContext } from '../../engine/pipeline/types';
 import type { PlotVectorRoundPort } from '../../engine/plot-vector/round-port';
-import { readPlotVectorControl, subscribePlotVectorControl } from '../../engine/plot-vector/feature-control';
+import { randomId, readPlotVectorControl, subscribePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { projectSavedElements, readPath, savedEntryName } from './saved-elements';
 import { tasksAfterSave, stable, capabilityKey, toRuntimeCandidate, type BoundCard, type GenesisOutput, type GenesisTask, type SavedElement } from './genesis/post-save';
 import { buildAgaGenerationMessages, buildAbilityRetryMessages, parseAgaGenerationOutput, GENESIS_VALIDATION_REVISION, SNIPPET_API } from './genesis/generation-prompt';
@@ -72,7 +72,18 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
           }
           this.revision++; this.cancel();
         }
-      })];
+      }),
+      eventBus.on('engine:rollback-complete', () => this.branchAfterRollback())];
+  }
+  /**
+   * Only the player's explicit rollback starts a new branch; an automatic restore after a failed round does
+   * not emit this event, so retrying that round still recovers the replies it already paid for.
+   */
+  private branchAfterRollback(): void {
+    if (!readPlotVectorControl().enabled || !this.slot()) return;
+    const state = cloneDeep(this.state.get<VectorState>(P.plotVector) ?? initialVectorState());
+    state.branch = randomId();
+    this.state.set(P.plotVector, state);
   }
   private cancel() { this.attempt?.controller.abort(); this.worker.cancelAll(); }
   dispose() { this.cancel(); this.attempt?.release(); this.unsubs.forEach(fn => fn()); }
@@ -139,7 +150,8 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       ctx.meta.plotVectorRecovered = recovered;
       ctx.meta.plotVectorCheckpoint = step => this.journal.checkpoint(
         { slot, epoch: control.epoch, round: ctx.roundNumber, input: ctx.originalUserInput ?? ctx.userInput, step,
-          ...(ctx.meta.plotVectorRequestAttempt ? { attempt: ctx.meta.plotVectorRequestAttempt } : {}) },
+          ...(ctx.meta.plotVectorRequestAttempt ? { attempt: ctx.meta.plotVectorRequestAttempt } : {}),
+          ...(state.branch ? { branch: state.branch } : {}) },
         ctx.preRoundSnapshot ?? ctx.stateSnapshot, guard,
         () => { if (!recovered.includes(step)) recovered.push(step); });
       ctx.meta.plotVectorCommitted = () => {
@@ -197,6 +209,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     this.assertStructure(ctx);
     const next = a.state.last?.id === a.prepared.id ? a.state : await this.worker.execute<VectorState>({ kind: 'accept', state: a.state, prepared: a.prepared });
     a.guard();
+    if (a.state.branch === undefined) delete next.branch; else next.branch = a.state.branch; // host-owned
     const after = projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries;
     // Environment abilities arrive with the tags from Step2; they never queue a post-save generation.
     const tasks = tasksAfterSave({ id: a.prepared.id, success: true, before: a.before, after }, next.tasks.map(t => t.task.key))

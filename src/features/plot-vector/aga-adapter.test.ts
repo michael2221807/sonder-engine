@@ -1,4 +1,5 @@
 import { RoundStateUpdates } from '../../engine/state-updates/round-state-updates';
+import { eventBus } from '../../engine/core/event-bus';
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 import { StateManager } from '../../engine/core/state-manager';
 import { CommandExecutor } from '../../engine/core/command-executor';
@@ -582,6 +583,91 @@ describe('gate 1 · R3 one-off accept failure recovers without another paid requ
     expect(send).toHaveBeenCalledTimes(1);
     expect(h.state.get<VectorState>(P.plotVector)).toBeUndefined();
     expect(h.worker.execute.mock.calls.filter(([op]) => op.kind === 'accept')).toHaveLength(3);
+  });
+});
+
+describe('an explicit rollback starts a new request branch (PO trial: resend after rollback)', () => {
+  // What the orchestrator does on the player's rollback button: restore, then announce it.
+  const explicitRollback = (h: ReturnType<typeof setup>, before: Record<string, unknown>) => {
+    h.state.rollbackTo(before); eventBus.emit('engine:rollback-complete', undefined);
+  };
+  const run = async (h: ReturnType<typeof setup>, send: () => Promise<string>, request = modelRequest) => {
+    const ctx = await h.adapter.prepare(h.ctx());
+    const raw = await ctx.meta.plotVectorCheckpoint!('single').run(request, send);
+    return { ctx, raw, save: async () => { await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!(); } };
+  };
+  const rebuilt = { ...modelRequest, messages: [{ role: 'user' as const, content: 'story request, rebuilt after the rollback' }] };
+  it('after a successful round and the rollback button, the same input is generated again and saved', async () => {
+    const h = setup(new RequestJournal(new MemoryRequests())); writePlotVectorControl(true);
+    const before = h.state.toSnapshot();
+    const send = vi.fn(async () => `reply ${send.mock.calls.length}`);
+    const first = await run(h, send);
+    expect(first.raw).toBe('reply 1'); await first.save();
+    explicitRollback(h, before);
+    const branch = h.state.get<VectorState>(P.plotVector)?.branch;
+    expect(branch).toMatch(/^[0-9a-f-]{32,36}$/);
+    // The rebuilt request differs from the undone one; before the fix this refused with 上次请求与当前存档或模型配置不同.
+    const again = await run(h, send, rebuilt);
+    expect(again.raw).toBe('reply 2');
+    expect(again.ctx.meta.plotVectorRecovered).toEqual([]);
+    await again.save();
+    const saved = h.state.get<VectorState>(P.plotVector)!;
+    expect(saved.session.round).toBe(2); // accepted once on this branch, not on top of the undone round
+    expect(saved.branch).toBe(branch);
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+  it('an identical request after the rollback is not a silent replay of the undone reply', async () => {
+    const h = setup(new RequestJournal(new MemoryRequests())); writePlotVectorControl(true);
+    const before = h.state.toSnapshot();
+    const send = vi.fn(async () => `reply ${send.mock.calls.length}`);
+    await (await run(h, send)).save();
+    explicitRollback(h, before);
+    expect((await run(h, send)).raw).toBe('reply 2');
+  });
+  it('inside the new branch, a failed round retried with the same input reuses its reply instead of paying again', async () => {
+    const h = setup(new RequestJournal(new MemoryRequests())); writePlotVectorControl(true);
+    const before = h.state.toSnapshot();
+    const send = vi.fn(async () => `reply ${send.mock.calls.length}`);
+    await (await run(h, send)).save();
+    explicitRollback(h, before);
+    const branched = h.state.toSnapshot();
+    await run(h, send, rebuilt); // reply received, then the round fails before saving
+    h.state.rollbackTo(branched); // the orchestrator's automatic restore: no rollback-complete
+    const retry = await run(h, send, rebuilt);
+    expect(retry.raw).toBe('reply 2');
+    expect(retry.ctx.meta.plotVectorRecovered).toEqual(['single']);
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+  it('an automatic restore alone never opens a branch', async () => {
+    const h = setup(new RequestJournal(new MemoryRequests())); writePlotVectorControl(true);
+    const before = h.state.toSnapshot();
+    const send = vi.fn(async () => 'reply');
+    await run(h, send);
+    h.state.rollbackTo(before);
+    expect(h.state.get<VectorState>(P.plotVector)?.branch).toBeUndefined();
+    expect((await run(h, send)).ctx.meta.plotVectorRecovered).toEqual(['single']);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+  it('the branch travels with the saved rollback: reloading that save still generates anew', async () => {
+    const h = setup(new RequestJournal(new MemoryRequests())); writePlotVectorControl(true);
+    const before = h.state.toSnapshot();
+    const send = vi.fn(async () => `reply ${send.mock.calls.length}`);
+    await (await run(h, send)).save();
+    explicitRollback(h, before);
+    h.state.loadTree(structuredClone(h.state.toSnapshot())); // the player saved the rolled-back game and reopened it
+    expect((await run(h, send, rebuilt)).raw).toBe('reply 2');
+  });
+  it('the Worker cannot move the branch, and nothing is written while the feature is off', async () => {
+    const h = setup(new RequestJournal(new MemoryRequests())); writePlotVectorControl(true);
+    const before = h.state.toSnapshot();
+    explicitRollback(h, before);
+    const branch = h.state.get<VectorState>(P.plotVector)!.branch;
+    tamper(h, 'accept', (s: VectorState) => ({ ...s, branch: 'from-worker' }));
+    await (await run(h, async () => 'reply')).save();
+    expect(h.state.get<VectorState>(P.plotVector)!.branch).toBe(branch);
+    const off = setup(); writePlotVectorControl(false);
+    explicitRollback(off, off.state.toSnapshot());
+    expect(off.state.get(P.plotVector)).toBeUndefined();
   });
 });
 
