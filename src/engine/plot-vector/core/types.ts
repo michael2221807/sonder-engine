@@ -1,7 +1,7 @@
 /**
  * Plot Vector Lab — engine types.
  *
- * Implements the D59 v0.3 candidate contract from docs/research/plot-vector-framework.md.
+ * Implements the D59 v0.3 candidate contract from docs/history/archive/plot-vector-codex-2026-09/research/plot-vector-framework.md.
  * This layer is content-agnostic: dimension ids, cell tags, card names and every number
  * come from a fixture. Nothing in `engine/` may reference a game-specific concept, and
  * nothing in `engine/` may import from `src/engine/**` (see engine-boundary.test.ts).
