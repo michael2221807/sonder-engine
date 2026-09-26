@@ -8,6 +8,7 @@ export class PlotVectorPage {
   get board() { return this.page.getByTestId('vector-board'); }
   get boardSave() { return this.page.getByTestId('vector-save'); }
   get boardPreview() { return this.page.getByTestId('vector-preview'); }
+  get boardClear() { return this.page.getByTestId('vector-clear'); }
   get replay() { return this.board.getByRole('slider'); }
   get fixedStatusCell() { return this.board.locator('[data-cell="06"]'); }
   get nativeInput() { return this.board.getByTestId('vector-native'); }

@@ -43,8 +43,17 @@ function replyCardFor(output: unknown, id: string): unknown {
   const hit = output.find(e => e && typeof e === 'object' && (e as Record<string, unknown>).id === id) as Record<string, unknown> | undefined;
   return hit?.card;
 }
+/**
+ * One round's momentum. `prepared` is absent when this round's trip could not be computed: the round then
+ * runs without momentum, and nothing of the component advances except the bookkeeping of new entries.
+ */
 interface Attempt { ctx: PipelineContext; guard: () => void; controller: AbortController; before: SavedElement[];
-  state: VectorState; prepared: PreparedVector; slot: Slot; release: () => void; postSaved?: boolean;
+  state: VectorState; id: string; prepared?: PreparedVector; slot: Slot; release: () => void; postSaved?: boolean;
+}
+/** The component failed on its own; the story goes on. Only a cancellation or slot switch stops the round. */
+function degraded(i18nKey: string, message: string, error: unknown): void {
+  console.warn(`[PlotVector] ${message}`, error);
+  eventBus.emit('ui:toast', { type: 'warning', i18nKey, message, duration: 4000 });
 }
 
 /** Composition-root adapter. Models see saved capabilities; only the Worker sees executable cards. */
@@ -118,15 +127,22 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
         throw new Error('剧情动能已取消；未提交的回合不会扣次数');
     };
     ctx.meta.plotVectorGuard = () => ctx.meta.plotVectorLifecycle!.saved ? identityGuard() : guard();
-    const state = cloneDeep(this.state.get<VectorState>(P.plotVector) ?? initialVectorState());
-    const before = projectSavedElements(ctx.stateSnapshot, { includeEnvironment: true }).entries;
+    const id = `${slot.profileId}/${slot.slotId}/${ctx.roundNumber}`;
     try {
       guard();
-      const prepared = await this.worker.execute<PreparedVector>({ kind: 'prepare', state, entries: before,
-        native: projectNativeInput(ctx.stateSnapshot, this.nativeRules),
-        id: `${slot.profileId}/${slot.slotId}/${ctx.roundNumber}` });
+      let state: VectorState | undefined, before: SavedElement[] | undefined, prepared: PreparedVector | undefined;
+      try {
+        state = cloneDeep(this.state.get<VectorState>(P.plotVector) ?? initialVectorState());
+        before = projectSavedElements(ctx.stateSnapshot, { includeEnvironment: true }).entries;
+        prepared = await this.worker.execute<PreparedVector>({ kind: 'prepare', state, entries: before,
+          native: projectNativeInput(ctx.stateSnapshot, this.nativeRules), id });
+      } catch (error) {
+        guard();
+        degraded('mainGame.toast.vectorNotComputed', '本回合剧情动能没有算出来，剧情照常进行。', error);
+      }
       guard();
-      this.attempt = { ctx, controller, guard, state, before, prepared, slot,
+      // Without the saved entries of the round start, new entries cannot be told apart; skip the component.
+      if (state && before) this.attempt = { ctx, controller, guard, state, id, before, prepared, slot,
         release: () => ctx.abortSignal?.removeEventListener('abort', abort) };
       ctx.meta.plotVectorCommitted = () => {
         ctx.meta.plotVectorLifecycle!.saved = true;
@@ -136,7 +152,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       const additions: import('../../engine/ai/types').AIMessage[] = [];
       const sources: string[] = [];
       if (mode) { additions.push({ role: 'system', content: mode }); sources.push('plot-vector-mode'); }
-      if (prepared.prompt) { additions.push({ role: 'system', content: prepared.prompt }); sources.push('plot-vector'); }
+      if (prepared?.prompt) { additions.push({ role: 'system', content: prepared.prompt }); sources.push('plot-vector'); }
       // Environment tags are written by Step2 (or the single call), so their ability interface goes there;
       // Step1 never sees it.
       const environment = ctx.meta.plotVectorPromptMode ? this.promptPolicy?.environmentAbility?.prompt : undefined;
@@ -162,13 +178,23 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     const a = this.attempt;
     if (!a || a.ctx.generationId !== ctx.generationId) return;
     a.guard();
-    const next = a.state.last?.id === a.prepared.id ? a.state : await this.worker.execute<VectorState>({ kind: 'accept', state: a.state, prepared: a.prepared });
+    let next = a.state;
+    if (a.prepared && a.state.last?.id !== a.prepared.id) {
+      try { next = await this.worker.execute<VectorState>({ kind: 'accept', state: a.state, prepared: a.prepared }); }
+      catch (error) {
+        a.guard();
+        // The story and its items are saved as usual; this round's momentum and growth do not advance.
+        degraded('mainGame.toast.vectorNotSettled', '本回合剧情动能没有结算，剧情已照常保存。', error);
+      }
+    }
     a.guard();
-    const after = projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries;
-    // Environment abilities arrive with the tags from Step2; they never queue a post-save generation.
-    const tasks = tasksAfterSave({ id: a.prepared.id, success: true, before: a.before, after }, next.tasks.map(t => t.task.key))
-      .filter(task => task.entry.kind !== 'environment');
-    next.tasks.push(...tasks.map(task => ({ task, status: 'pending' as const })));
+    try {
+      const after = projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries;
+      // Environment abilities arrive with the tags from Step2; they never queue a post-save generation.
+      const tasks = tasksAfterSave({ id: a.id, success: true, before: a.before, after }, next.tasks.map(t => t.task.key))
+        .filter(task => task.entry.kind !== 'environment');
+      next.tasks.push(...tasks.map(task => ({ task, status: 'pending' as const })));
+    } catch (error) { console.warn('[PlotVector] New entries of this round were not queued for abilities:', error); }
     a.state = next;
     this.state.set(P.plotVector, next);
   }

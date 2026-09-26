@@ -4,6 +4,7 @@ import { CommandExecutor } from '../../engine/core/command-executor';
 import { ResponseParser } from '../../engine/ai/response-parser';
 import { DEFAULT_ENGINE_PATHS as P, type PipelineContext } from '../../engine/pipeline/types';
 import { AgaPlotVectorAdapter } from './aga-adapter';
+import { eventBus } from '../../engine/core/event-bus';
 import { executeVectorOperation, initialVectorState, type PreparedVector, type VectorState, type VectorOperation, type VectorResult } from './runtime';
 import { writePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { POSITIVE_EXAMPLES } from './genesis/test-fixtures';
@@ -389,26 +390,67 @@ function tamper<K extends VectorOperation['kind']>(h: ReturnType<typeof setup>, 
   }) as never);
 }
 
-describe('gate 1 · the host never uses an unchecked Worker result', () => {
-  it('a malformed prepare result never arms the round or reaches the prompt; the next round continues', async () => {
+/** Toasts the component emits while the story goes on without it. */
+function toasts() {
+  const seen: string[] = [];
+  const off = eventBus.on<{ i18nKey?: string }>('ui:toast', t => { if (t?.i18nKey) seen.push(t.i18nKey); });
+  return { seen, off };
+}
+
+describe('the component only degrades: the story always goes on (rebuild plan §7)', () => {
+  for (const [label, fail] of [
+    ['a malformed prepare result', (h: ReturnType<typeof setup>) => tamper(h, 'prepare', (p: PreparedVector) =>
+      ({ ...p, result: { ...p.result, finalState: { ...p.result.finalState, shuttle: { ...p.result.finalState.shuttle, Y: -5 } } } }))],
+    ['a failed trip computation', (h: ReturnType<typeof setup>) => h.worker.execute.mockImplementationOnce((async () => {
+      throw new Error('剧情动能这回合算不出来（test）'); }) as never)],
+  ] as const) it(`${label}: no momentum this round, the round is saved and new entries still queue`, async () => {
     const h = setup(); writePlotVectorControl(true);
-    const before = stable(h.state.get(P.plotVector) ?? null);
-    tamper(h, 'prepare', (p: PreparedVector) => ({ ...p, result: { ...p.result, finalState: { ...p.result.finalState, shuttle: { ...p.result.finalState.shuttle, Y: -5 } } } }));
-    const ctx = h.ctx();
-    await expect(h.adapter.prepare(ctx)).rejects.toThrow(/剧情动能计算结果无效（prepare）/);
-    expect(ctx.meta.plotVectorCommitted).toBeUndefined();
-    expect(stable(h.state.get(P.plotVector) ?? null)).toBe(before);
-    const next = await h.adapter.prepare(h.ctx());
-    expect(next.meta.plotVectorCommitted).toBeTypeOf('function');
+    h.state.set(P.characterAttributes, { 体质: 10, 魅力: 10 });
+    const before = h.state.get<VectorState>(P.plotVector);
+    fail(h);
+    const note = toasts();
+    try {
+      const c = h.ctx(); h.adapter.promptTransform(c);
+      const ctx = await h.adapter.prepare(c);
+      expect(ctx.messageSources).toContain('plot-vector-mode');   // the judgment stays replaced
+      expect(ctx.messageSources).not.toContain('plot-vector');     // but no momentum is injected
+      expect(note.seen).toEqual(['mainGame.toast.vectorNotComputed']);
+      h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 1 } });
+      await expect(h.adapter.beforeSave(ctx)).resolves.toBeUndefined();
+      expect(h.worker.execute.mock.calls.filter(([op]) => op.kind === 'accept')).toHaveLength(0);
+      const saved = h.state.get<VectorState>(P.plotVector)!;
+      expect(saved.session).toEqual((before ?? initialVectorState()).session); // nothing advanced
+      expect(saved.tasks.map(t => t.task.entry.id)).toEqual(['item:tea']);
+      ctx.meta.plotVectorCommitted!(); await h.adapter.afterSave(ctx);
+      expect(h.state.get<VectorState>(P.plotVector)!.cards.map(c => c.task.entry.id)).toEqual(['item:tea']);
+      // The next round computes again.
+      const next = await h.adapter.prepare(h.ctx());
+      expect(next.messageSources).toContain('plot-vector');
+    } finally { note.off(); }
   });
-  it('a malformed accept result is never written to the state or saved', async () => {
+  it('a cancelled or switched round still stops, as before', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    h.worker.execute.mockImplementationOnce((async () => { h.changeSlot(); throw new Error('cancelled'); }) as never);
+    const c = h.ctx();
+    await expect(h.adapter.prepare(c)).rejects.toThrow('存档已切换');
+    expect(c.meta.plotVectorLifecycle?.invalidated).toBe(true);
+  });
+  it('a failed settlement saves the story and items; this round\'s momentum and growth do not advance', async () => {
     const h = setup(); writePlotVectorControl(true);
     const ctx = await h.adapter.prepare(h.ctx());
-    const before = stable(h.state.get(P.plotVector) ?? null);
+    const before = h.state.get<VectorState>(P.plotVector) ?? initialVectorState();
     tamper(h, 'accept', (s: VectorState) => ({ ...s, session: { ...s.session, round: s.session.round + 5 } }));
-    await expect(h.adapter.beforeSave(ctx)).rejects.toThrow(/剧情动能计算结果无效（accept）/);
-    expect(stable(h.state.get(P.plotVector) ?? null)).toBe(before);
-    expect(h.saveGame).not.toHaveBeenCalled();
+    const note = toasts();
+    try {
+      h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 1 } });
+      await expect(h.adapter.beforeSave(ctx)).resolves.toBeUndefined();
+      expect(note.seen).toEqual(['mainGame.toast.vectorNotSettled']);
+    } finally { note.off(); }
+    const saved = h.state.get<VectorState>(P.plotVector)!;
+    expect(saved.session).toEqual(before.session);
+    expect(saved.last).toEqual(before.last);
+    expect(saved.tasks.map(t => t.task.entry.id)).toEqual(['item:tea']);
+    expect(h.state.get(`${P.inventoryItems}.tea.数量`)).toBe(1);
   });
   it('a malformed validate result never binds a card; the paid reply is kept and not resent', async () => {
     const h = setup(); writePlotVectorControl(true);

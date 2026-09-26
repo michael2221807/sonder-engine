@@ -102,6 +102,31 @@ test('optional board keeps explicit choices across reload; preview and layout sa
 
   });
 
+test('clearing the board takes every chosen card off and saves an empty arrangement',
+  { tag: ['@plot-vector', '@story-d148'] }, async ({ page, gameShell, plotVector }) => {
+    const ids = await seedSave(page);
+    await addBoardFixture(page, ids);
+    await enterSeededGame(page);
+    await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
+    await plotVector.openBoard();
+    await expect(plotVector.boardClear).toBeDisabled();
+    await plotVector.chooseCard('01', 'item:notebook');
+    await plotVector.chooseCard('02', 'basic:push');
+    await expect(plotVector.boardClear).toBeEnabled();
+    await plotVector.boardClear.click();
+    for (const cell of ['01', '02', '03', '04', '05']) await expect(plotVector.cellChoice(cell)).toHaveValue('');
+    await expect(plotVector.fixedStatusCell).toContainText('微风'); // the automatic status cell is not the player's
+    await expect(plotVector.boardClear).toBeDisabled();
+    await plotVector.boardSave.click();
+    await expect(plotVector.board.getByRole('status')).toHaveText('摆法已保存，下个回合自动沿用。');
+    const persisted = await page.evaluate(async ({ profileId, slotId }) => {
+      const path = '/src/engine/persistence/idb-adapter.ts';
+      const { idbAdapter } = await import(/* @vite-ignore */ path);
+      return (await idbAdapter.get(`save_${profileId}_${slotId}`)).系统.扩展.plotVector.layout.placements;
+    }, ids);
+    expect(['01', '02', '03', '04', '05'].map(cell => persisted[cell])).toEqual([null, null, null, null, null]);
+  });
+
 test('optional board fits a narrow viewport and renders English with its bottom controls reachable',
   { tag: ['@plot-vector', '@story-d147', '@story-d148'] }, async ({ page, gameShell, plotVector }, testInfo) => {
     await seedSave(page); await enterSeededGame(page);

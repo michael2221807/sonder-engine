@@ -77,15 +77,17 @@ it('a load after disk commit cannot receive the old layout in memory', async () 
 });
 it('gate 1: a malformed preview is never shown or saved, and the next preview works', async () => {
   const h = setup();
-  const honest = h.worker.execute.getMockImplementation()!;
   h.worker.execute.mockImplementationOnce((async (op: VectorOperation) => {
     const result = await executeVectorOperation(op) as PreparedVector;
     return { ...result, layout: { ...result.layout, placements: { ...result.layout.placements, '01': 'ghost-card' } } };
   }) as never);
-  await expect(access.open()).rejects.toThrow(/剧情动能计算结果无效（prepare）/);
+  // The board still opens (cleared) instead of locking; the malformed result is never shown.
+  const cleared = await access.open();
+  expect(cleared.cleared).toBe(true);
+  expect(Object.values(cleared.prepared.layout.placements)).not.toContain('ghost-card');
   expect(h.saveGame).not.toHaveBeenCalled();
-  h.worker.execute.mockImplementation(honest);
   const view = await access.open();
+  expect(view.cleared).toBe(false);
   h.worker.execute.mockImplementationOnce((async (op: VectorOperation) => {
     const result = await executeVectorOperation(op) as PreparedVector;
     return { ...result, result: { ...result.result, visits: result.board.budget.maxVisits + 1 } };
@@ -94,6 +96,25 @@ it('gate 1: a malformed preview is never shown or saved, and the next preview wo
   expect(h.saveGame).not.toHaveBeenCalled();
   await view.save(view.prepared.layout);
   expect(h.saveGame).toHaveBeenCalledTimes(1);
+});
+it('a saved arrangement that no longer computes opens cleared; saving keeps it cleared and the next open is normal', async () => {
+  const h = setup();
+  h.state.set(P.plotVector, { ...initialVectorState(), layout: { placements: { '01': 'basic:push', '02': null, '03': null, '04': null, '05': null, '06': null }, tray: [] } });
+  const honest = h.worker.execute.getMockImplementation()!;
+  h.worker.execute.mockImplementation((async (op: VectorOperation) => {
+    if (op.kind === 'prepare' && Object.values(op.state.layout?.placements ?? {}).some(Boolean))
+      throw new Error('剧情动能这回合算不出来（test）');
+    return honest(op);
+  }) as never);
+  const view = await access.open();
+  expect(view.cleared).toBe(true);
+  expect(Object.entries(view.prepared.layout.placements).filter(([cell, id]) => cell !== '06' && id)).toEqual([]);
+  expect(h.saveGame).not.toHaveBeenCalled(); // nothing is written until the player saves
+  await expect(view.preview({ placements: { '01': 'basic:push' }, tray: [] })).rejects.toThrow('算不出来');
+  await view.save(view.prepared.layout);
+  expect(h.saveGame).toHaveBeenCalledTimes(1);
+  expect(Object.entries(h.state.get<VectorState>(P.plotVector)!.layout!.placements).filter(([cell, id]) => cell !== '06' && id)).toEqual([]);
+  expect((await access.open()).cleared).toBe(false);
 });
 it('lists obtained entries whose ability is not ready; the player retry holds the board like a save and is refused during a round', async () => {
   const h = setup();

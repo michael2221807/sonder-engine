@@ -85,20 +85,33 @@ async function load() {
     if (ticket !== request) return;
     view.value = result; layout.value = cloneDeep(result.prepared.layout);
     shown.value = result.prepared; cursor.value = 0;
+    // The saved arrangement did not compute and is shown cleared: saving keeps it that way.
+    dirty.value = result.cleared;
   } catch { if (ticket === request) error.value = true; }
   finally { if (ticket === request) busy.value = false; }
 }
-function choose(cell: string, event: Event) {
-  const id = (event.target as HTMLSelectElement).value || null;
+function place(cell: string, id: string | null) {
   if (id) for (const key of Object.keys(layout.value.placements)) {
     if (layout.value.placements[key] === id) layout.value.placements[key] = null;
   }
   layout.value.placements[cell] = id;
+}
+function arranged() {
   layout.value.tray = editableCards.value.filter(c => !Object.values(layout.value.placements).includes(c.id)).map(c => c.id);
   dirty.value = true; saved.value = false; shown.value = undefined; cursor.value = 0;
   // The existing local preview is pure; show the card's actual effect without an extra player click.
   void calculate(false);
 }
+function choose(cell: string, event: Event) {
+  place(cell, (event.target as HTMLSelectElement).value || null);
+  arranged();
+}
+/** Take every chosen card off the board (the automatic status cell is not the player's). */
+function clearBoard() {
+  for (const cell of Object.keys(layout.value.placements)) if (cell !== '06') place(cell, null);
+  arranged();
+}
+const hasPlaced = computed(() => Object.entries(layout.value.placements).some(([cell, id]) => cell !== '06' && !!id));
 async function calculate(save: boolean) {
   if (!view.value || disabled.value) return;
   const ticket = ++request;
@@ -140,6 +153,7 @@ async function retryAbility(entryId: string) {
       <p v-if="busy" role="status">{{ t('mainGame.vectorBoard.loading') }}</p>
       <p v-if="error" role="alert">{{ t('mainGame.vectorBoard.error') }} <AgaButton size="sm" :disabled="busy" @click="load">{{ t('mainGame.vectorBoard.reload') }}</AgaButton></p>
       <p v-if="saved" role="status">{{ t('mainGame.vectorBoard.saved') }}</p>
+      <p v-if="view?.cleared && dirty" role="status" data-testid="vector-board-cleared">{{ t('mainGame.vectorBoard.layoutCleared') }}</p>
       <template v-if="view && board">
         <section v-if="backlog.length || retryNote" class="backlog" data-testid="vector-ability-backlog">
           <p v-if="backlog.length" class="intro">{{ t('mainGame.vectorBoard.backlogHelp') }}</p>
@@ -194,6 +208,7 @@ async function retryAbility(entryId: string) {
         <div v-if="!last" class="actions">
           <AgaButton size="sm" variant="secondary" :disabled="disabled" data-testid="vector-preview" @click="calculate(false)">{{ t('mainGame.vectorBoard.preview') }}</AgaButton>
           <AgaButton size="sm" :disabled="disabled || !dirty" data-testid="vector-save" @click="calculate(true)">{{ t('mainGame.vectorBoard.save') }}</AgaButton>
+          <AgaButton size="sm" variant="ghost" :disabled="disabled || !hasPlaced" data-testid="vector-clear" @click="clearBoard">{{ t('mainGame.vectorBoard.clear') }}</AgaButton>
           <span v-if="dirty">{{ t('mainGame.vectorBoard.unsaved') }}</span>
         </div>
         <template v-if="shown">

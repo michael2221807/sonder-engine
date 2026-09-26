@@ -18,6 +18,8 @@ export interface BoardView {
   prepared: PreparedVector;
   /** Obtained entries whose ability is not usable yet (shown as text, never as a playable card). */
   backlog: BacklogEntry[];
+  /** The saved arrangement could not be computed; the board opened with every card taken off (not saved yet). */
+  cleared: boolean;
   preview(layout: Layout): Promise<PreparedVector>;
   save(layout: Layout): Promise<void>;
 }
@@ -79,8 +81,17 @@ export class VectorBoardAccess {
         id: `${slot!.profileId}/${slot!.slotId}/${(this.state.get<number>(P.roundNumber) ?? 0) + 1}` });
       guard(); return result;
     };
-    const prepared = await preview();
-    return { state, prepared, backlog: abilityBacklog(state, entries, this.abilityField), preview, save: async layout => {
+    let prepared: PreparedVector, cleared = false;
+    try { prepared = await preview(); }
+    catch (error) {
+      guard();
+      // A card that no longer computes must not lock the board: open it with every card taken off,
+      // so the player can see it, arrange again and save.
+      console.warn('[PlotVector] Saved arrangement could not be computed; opened with the board cleared:', error);
+      prepared = await preview({ placements: {}, tray: [] });
+      cleared = true;
+    }
+    return { state, prepared, cleared, backlog: abilityBacklog(state, entries, this.abilityField), preview, save: async layout => {
       guard();
       if (this.writing) throw new Error('board-save-busy');
       this.writing = true;

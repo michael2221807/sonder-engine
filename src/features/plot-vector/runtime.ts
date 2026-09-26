@@ -143,9 +143,8 @@ export async function executeVectorOperation(op: VectorOperation): Promise<Vecto
   }), ...basic] }, { triggerDefault: 'a' });
   const result = run(board, { ...op.state.session, id: op.id, seed: op.id, layout, actionLog: [], visitBudget: starting.visitBudget,
     options: VECTOR_RUN_OPTIONS }, { scripts: registry });
-  // Shown to the player as "本回合未完成：{error}"; name what failed and the way to continue that always works
-  // (the board preview recomputes the same layout, so it cannot be relied on to fix it).
-  if (result.status === 'failed') throw new Error(`剧情动能这回合算不出来（${result.reason}）。可以在设置里关闭剧情动能，按原流程继续剧情。`);
+  // The round then runs without momentum and the board opens cleared (aga-adapter / board-access degrade).
+  if (result.status === 'failed') throw new Error(`剧情动能这回合算不出来（${result.reason}）`);
   if (result.status !== 'done') throw new Error('请先完成棋盘选择');
   return { id: op.id, board, result, layout, starting,
     progress: [...readCardProgress(bound, op.state.session), ...readSupplyProgress(basic, op.state.session.cardStates)],

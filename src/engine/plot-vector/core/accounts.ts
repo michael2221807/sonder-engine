@@ -9,6 +9,9 @@ import type {
 } from './types';
 import { SCALAR_KEY } from './types';
 
+/** Upper bound of any account total, far above every meaningful amount; keeps all sums finite. */
+export const ACCOUNT_CEILING = 1e12;
+
 /**
  * Account store: every quantity the runner touches lives in an account
  * (shuttle channels, card stores, cell buffers). Entries are round-stamped so
@@ -68,16 +71,15 @@ export class AccountStore {
   /**
    * Deposit into an account, honouring `cap`. Returns the amount actually
    * deposited (the remainder is dissipated or left for the caller per `onFull`).
+   * No amount fails the run: a non-number deposits nothing, and every account
+   * stops at ACCOUNT_CEILING the same way it stops at a full cap.
    */
   deposit(id: AccountId, channel: string, amount: number): { deposited: number; overflow: number } {
-    if (!Number.isFinite(amount) || !Number.isFinite(this.total(id) + amount)) throw new Error(`non-finite account amount: ${id}`);
-    if (amount <= 0) return { deposited: 0, overflow: 0 };
+    if (!(amount > 0)) return { deposited: 0, overflow: 0 };
     const def = this.def(id);
-    let allowed = amount;
-    if (def.cap !== undefined && def.cap !== 'unbounded') {
-      const room = Math.max(0, def.cap - this.total(id));
-      allowed = Math.min(amount, room);
-    }
+    const incoming = Math.min(amount, ACCOUNT_CEILING);
+    const limit = def.cap !== undefined && def.cap !== 'unbounded' ? Math.min(def.cap, ACCOUNT_CEILING) : ACCOUNT_CEILING;
+    const allowed = Math.min(incoming, Math.max(0, limit - this.total(id)));
     if (allowed > 0) {
       const st = this.state(id);
       let entry = st.entries.find((e) => e.round === this.round);
@@ -88,12 +90,12 @@ export class AccountStore {
       entry.amounts[channel] = (entry.amounts[channel] ?? 0) + allowed;
       this.prune(st);
     }
-    return { deposited: allowed, overflow: amount - allowed };
+    return { deposited: allowed, overflow: incoming - allowed };
   }
 
   /** Withdraw up to `amount` of a channel, oldest entries first. Returns the withdrawn amount. */
   withdraw(id: AccountId, channel: string, amount: number): number {
-    if (amount <= 0) return 0;
+    if (!(amount > 0)) return 0;
     const st = this.state(id);
     let remaining = amount;
     for (const e of st.entries) {
