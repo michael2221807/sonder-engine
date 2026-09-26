@@ -5,6 +5,8 @@ import { grow, growAtRound, growthCap, initialGrowth, readGrowth } from './growt
 import { checkCardSpec, readCardSpec, validateCard, SAMPLE_VALUES } from './validate';
 import { burstOf, passCard } from './pass';
 import type { CardSpec, PassValues } from './types';
+import { CARD_API } from '../genesis/generation-prompt';
+import { BASIC_SUPPLY } from '../basic-supply';
 
 const values = (over: Partial<PassValues> = {}): PassValues =>
   ({ push: 3, drag: 1, social: 2, chance: 4, pass: 1, step: 1, back: false, level: 0, stored: 0, ...over });
@@ -17,7 +19,7 @@ describe('in-page execution (rebuild plan §4)', () => {
     ['while (true) {}', 'while'], ['for (;;) {}', 'for'], ['do;', 'do'], ['function f() {}', 'function'],
     ['const f = () => 1;', '=>'], ['return new Object();', 'new'], ['return this;', 'this'], ['return Math.random();', 'Math.random'],
     ["return 'x'.repeat(9);", '.repeat('], ["return 'x'.padStart(9);", '.padStart('], ['return Array(9);', 'Array'],
-    ['return `x`;', '`'], ['return globalThis;', 'globalThis'], ['eval("1")', 'eval'], ['return x.__proto__;', '__proto__'],
+    ['return `x`;', '`'], ['return globalThis;', 'globalThis'], ['eval("1")', 'eval'], ['return x.__proto__;', '__'],
   ])('refuses %s', (source, token) => {
     expect(findForbiddenToken(source)).toBe(token);
     expect(() => compilePass(source)).toThrow(token);
@@ -27,8 +29,8 @@ describe('in-page execution (rebuild plan §4)', () => {
   });
   it('page globals read as undefined; Math has no random; Number and isFinite work', () => {
     expect(run('return typeof console + typeof navigator + typeof location + typeof alert + typeof parent;')).toEqual({ ok: true, value: 'undefinedundefinedundefinedundefinedundefined' });
-    expect(run('return Math.min(ctx.push, 2) + Math.max(1, 2) + Number(isFinite(1));')).toEqual({ ok: true, value: 5 });
-    expect(run('return Math["ran" + "dom"]();').ok).toBe(false);
+    expect(run('return Math.min(ctx.push, 2) + Math.max(1, 2) + (isFinite(1) ? 1 : 0) + (Number.isInteger(2) ? 10 : 0);')).toEqual({ ok: true, value: 15 });
+    expect(() => run('return Math.random();')).toThrow('Math.random');
   });
   it('assigning to an undeclared name fails the pass instead of leaking a global', () => {
     const out = run('leak = 1; return { push: 1 };');
@@ -52,11 +54,70 @@ describe('in-page execution (rebuild plan §4)', () => {
   });
 });
 
+describe('a body stays inside the card domain: it can never reach or change the page', () => {
+  const g = globalThis as Record<string, unknown>;
+  it.each([
+    // A name spelled at run time would reach the page's Function or prototypes.
+    ["ctx.rng['constr' + 'uctor']('glob' + 'alThis.esc = 1')(); return {};", 'forbidden token: ['],
+    ["({})['__pro' + 'to__'].polluted = 1; return {};", 'forbidden token: __'],
+    ['ctx.rng.\\u0063onstructor("x")(); return {};', 'forbidden token: \\'],
+    ['return { push: 1 }; <!-- x', 'forbidden token: <!--'],
+    // Only the domain's names after a dot, and only its functions called.
+    ['return ctx.rng.call(1);', 'not ".call"'],
+    ['const s = 1; return s.toFixed(9);', 'not ".toFixed"'],
+    ['return (Math.min)(1, 2);', 'not ")("'],
+    ['return Number(1);', 'not "Number("'],
+    ['const o = { m(n) { return n ? o.m(n - 1) + o.m(n - 1) : 0; } }; return { push: o.m(40) };', 'not "m("'],
+    ['const o = { get push() { return 1; } }; return o;', 'getters and setters'],
+    // A keyword-named getter run by a spread would recurse without any call syntax (review finding).
+    ['const bomb = { get in() { return ctx.step === 6 ? { ...bomb } : {}; } }; return ctx.step === 6 ? { ...bomb } : { push: 1 };', 'getters and setters'],
+    ["const o = { set 'x'(v) {} }; return {};", 'getters and setters'],
+    ['return ctx.rng?.();', 'optional calls'],
+    // Destructuring would hand over a built-in by any literal name.
+    ['const { toString: t } = {}; return {};', 'destructuring'],
+    ['let t; ({ valueOf: t } = {}); return {};', 'destructuring'],
+    // Regular expressions (and the tokenizer confusion they allow) are refused.
+    ["return /^(a+)+$/.test('aaaa!') ? {} : {};", 'regular expressions'],
+    ["if (1) /'/.x; const q = Math.abs.call; '/'; return {};", 'regular expressions'],
+    ['return { push: 1 } / 2;', 'regular expressions'],
+  ])('refuses %s', (source, reason) => {
+    g.esc = undefined;
+    expect(() => compilePass(source)).toThrow(reason);
+    expect(g.esc).toBeUndefined();
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  });
+  it('what a body can reach is frozen and its own, never a page built-in', () => {
+    expect(run('Number.isFinite = null; return {};')).toMatchObject({ ok: false });
+    expect(run('Math.min.push = 1; return {};')).toMatchObject({ ok: false });
+    expect(run('ctx.rng.push = 1; return {};')).toMatchObject({ ok: false });
+    expect(typeof Number.isFinite).toBe('function');
+    expect(Object.hasOwn(Math.min, 'push')).toBe(false);
+    expect(run('return Math.min === Math.min && Math.abs !== undefined;')).toEqual({ ok: true, value: true });
+  });
+  it('the ordinary shapes a card is written in still compile', () => {
+    for (const body of [
+      "if (!ctx.back) return {};\nreturn { convert: { from: 'drag', to: 'social', amount: ctx.drag / 2 } };",
+      'const n = Math.min(3, ctx.level + 1); return ctx.rng() < 0.5 ? { chance: n } : { push: n, steps: Number.isInteger(n) ? 1 : 0 };',
+      'let x = ctx.push; x = x * 2; x /= 4; return { push: x, from: "push" }; // a comment',
+      'const r = { push: 1 }; r.push = r.push + (ctx.stored >= 10 ? 5 : 0); return ctx.pass % 2 === 0 ? r : { ...r, turn: 1 };',
+      'return (ctx.push + ctx.drag) / 2 > 3 ? { relay: { xPush: 2, echo: 1 } } : { store: { from: "push", amount: Math.floor(ctx.push / 2) } };',
+      'if (ctx.step > 3) { return { steps: 1 }; } else { return {}; }',
+      'const get = ctx.push, set = ctx.drag; return { push: get - set };',
+      'const 推 = ctx.push; return { push: 推 * .5 + 1e-3 };',
+    ]) expect(() => compilePass(body), body).not.toThrow();
+  });
+  it('every example card in the card domain text, and every basic supply card, compiles', () => {
+    const examples = [...CARD_API.matchAll(/"onPass":"((?:[^"\\]|\\.)*)"/g)].map(m => JSON.parse(`"${m[1]}"`) as string);
+    expect(examples.length).toBeGreaterThanOrEqual(6);
+    for (const body of [...examples, ...BASIC_SUPPLY.map(c => c.spec.onPass)]) expect(() => compilePass(body), body).not.toThrow();
+  });
+});
+
 describe('the domain: every value a card reads (§2.3)', () => {
   it('reads all nine values and rng()', () => {
-    const out = run('return [ctx.push, ctx.drag, ctx.social, ctx.chance, ctx.pass, ctx.step, ctx.back, ctx.level, ctx.stored, typeof ctx.rng()];',
+    const out = run('return { a: ctx.push, b: ctx.drag, c: ctx.social, d: ctx.chance, e: ctx.pass, f: ctx.step, g: ctx.back, h: ctx.level, i: ctx.stored, j: typeof ctx.rng() };',
       { push: 1, drag: 2, social: 3, chance: 4, pass: 5, step: 6, back: true, level: 7, stored: 8 });
-    expect(out).toEqual({ ok: true, value: [1, 2, 3, 4, 5, 6, true, 7, 8, 'number'] });
+    expect(out).toEqual({ ok: true, value: { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: true, h: 7, i: 8, j: 'number' } });
   });
   it('the values are read-only', () => {
     expect(run('ctx.push = 99; return ctx.push;').ok).toBe(false);
@@ -175,12 +236,12 @@ describe('the bind-time check (§5)', () => {
       .toEqual({ ok: true, spec: { for: '药', type: 'status', summary: '一句', onPass: 'return {}', growth: { on: 'round', every: 1, max: 50, add: { drag: 1 } } } });
   });
   it('refuses code that does not compile or fails on every sample', () => {
-    expect(checkCardSpec(spec('return {'))).toEqual({ ok: false, reason: expect.any(String) });
+    expect(checkCardSpec(spec('return {'))).toEqual({ ok: false, reason: expect.stringMatching(/^onPass does not compile: /) });
     expect(checkCardSpec(spec('while (1) {}'))).toEqual({ ok: false, reason: 'forbidden token: while' });
-    expect(checkCardSpec(spec('return ctx.nothing.there;'))).toEqual({ ok: false, reason: expect.stringContaining('every sample') });
+    expect(checkCardSpec(spec('return ctx.rng.push.push;'))).toEqual({ ok: false, reason: expect.stringContaining('every sample') });
   });
   it('binds a card that fails only on some samples, or never fires on them (D7)', () => {
-    expect(checkCardSpec(spec('if (ctx.level > 5) return ctx.nothing.there; return {};'))).toEqual({ ok: true });
+    expect(checkCardSpec(spec('if (ctx.level > 5) return ctx.rng.push.push; return {};'))).toEqual({ ok: true });
     expect(checkCardSpec(spec('return ctx.pass > 99 ? { push: 1 } : {};'))).toEqual({ ok: true });
     expect(SAMPLE_VALUES).toHaveLength(6);
   });

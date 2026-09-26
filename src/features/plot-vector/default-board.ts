@@ -1,15 +1,12 @@
-import type { AccountDef, BoardDef, Cap, EffectDef, Provenance } from '../../engine/plot-vector/core/types';
+import type { BoardDef, EffectDef, Provenance } from '../../engine/plot-vector/core/types';
 import { SHUTTLE_ACCOUNT } from '../../engine/plot-vector/core/runner';
 
 export const SIX_CELL_ID = 'six-cell';
 export const SIX_CELL_RING_ID = 'six-cell-ring';
-export const C_BUFFER_ACCOUNT = 'buffer:03';
 export type SixCellTopology = 'line' | 'ring';
 export interface SixCellOptions {
   topology?: SixCellTopology;
   tripLength?: number;
-  bufferCap?: Cap;
-  bufferLifetime?: Cap;
 }
 
 const CH = { Sp: 'S+', Sm: 'S-', Y: 'Y', J: 'J' } as const;
@@ -30,7 +27,6 @@ function resonance(cellId: string): EffectDef {
       perNeighbor: 0.25,
       maxCount: 2,
     },
-    triggerPolicy: { limitScope: 'visit', maxTriggers: 'unlimited' },
     source: 'PO',
     provenance: TEMPLATE,
     label: {
@@ -58,16 +54,6 @@ const REVERSE = [
 
 export function buildSixCellBoard(opts: SixCellOptions = {}): BoardDef {
   const topology: SixCellTopology = opts.topology ?? 'line';
-  const cellBuffer: AccountDef = {
-    id: C_BUFFER_ACCOUNT,
-    owner: { kind: 'cell', id: '03' },
-    encoding: 'channelVector',
-    persist: 'acrossRounds',
-    cap: opts.bufferCap ?? 12,
-    lifetimeRounds: opts.bufferLifetime ?? 3,
-    onFull: 'dissipate',
-    label: { zh: '格内缓冲', en: 'Cell buffer' },
-  };
   return {
     id: topology === 'ring' ? SIX_CELL_RING_ID : SIX_CELL_ID,
     // Same cells, same cards: one layout serves both topologies (kernel plan K1).
@@ -106,19 +92,10 @@ export function buildSixCellBoard(opts: SixCellOptions = {}): BoardDef {
         tags: ['resonant'],
         ports: ['L', 'R'],
         effects: [resonance('02')],
-        windows: ['talent'],
-        capacity: {
-          cap: 12,
-          countedChannels: [CH.Sp, CH.Sm, CH.Y, CH.J],
-          transferableChannels: [CH.Sp, CH.Sm, CH.Y, CH.J],
-          destination: C_BUFFER_ACCOUNT,
-          order: 100,
-          source: 'Claude',
-        },
         locked: false,
         source: 'PO',
         provenance: TEMPLATE,
-        label: { zh: '共鸣格（可选承载上限）', en: 'Resonance cell (optional capacity)' },
+        label: { zh: '共鸣格', en: 'Resonance cell' },
       },
       {
         id: '03',
@@ -133,7 +110,6 @@ export function buildSixCellBoard(opts: SixCellOptions = {}): BoardDef {
             order: 10,
             entryPort: 'L',
             operations: [{ op: 'convert', target: SHUTTLE_ACCOUNT, from: CH.Sp, to: CH.Y, rate: 0.5, efficiency: 1 }],
-            triggerPolicy: { limitScope: 'run', maxTriggers: 'unlimited' },
             source: 'PO',
             provenance: TEMPLATE,
             label: { zh: '正向经过：把梭上一半的「顺利·推力」转成「人际」', en: 'Entering forward: half of the push on the shuttle turns into Relations' },
@@ -145,13 +121,11 @@ export function buildSixCellBoard(opts: SixCellOptions = {}): BoardDef {
             order: 10,
             entryPort: 'R',
             operations: [{ op: 'convert', target: SHUTTLE_ACCOUNT, from: CH.Y, to: CH.J, rate: 0.5, efficiency: 1 }],
-            triggerPolicy: { limitScope: 'run', maxTriggers: 'unlimited' },
             source: 'PO',
             provenance: TEMPLATE,
             label: { zh: '反向经过：把梭上一半的「人际」转成「机会」', en: 'Entering backward: half of the Relations on the shuttle turns into Openings' },
           },
         ],
-        buffer: cellBuffer,
         locked: false,
         source: 'PO',
         provenance: TEMPLATE,
@@ -198,7 +172,7 @@ export function buildSixCellBoard(opts: SixCellOptions = {}): BoardDef {
       // absent, which is what makes 06 an endpoint the shuttle folds at (D89).
       ...FORWARD.map((e) => ({ ...e })),
       ...(topology === 'ring'
-        ? [{ id: '06>01', kind: 'forward' as const, from: { cell: '06', port: 'R' as const }, to: { cell: '01', port: 'L' as const }, lapBoundary: true, label: { zh: '06 → 01（完成一圈）', en: '06 → 01 (one lap)' } }]
+        ? [{ id: '06>01', kind: 'forward' as const, from: { cell: '06', port: 'R' as const }, to: { cell: '01', port: 'L' as const }, label: { zh: '06 → 01（完成一圈）', en: '06 → 01 (one lap)' } }]
         : []),
       // Reverse chain: the way back. A natural fold at an endpoint uses these and costs
       // nothing; the return card uses them too and pays whatever the card declares.
@@ -209,13 +183,9 @@ export function buildSixCellBoard(opts: SixCellOptions = {}): BoardDef {
     ],
     adjacency: [['01', '02']],
     start: { cell: '01', entryPort: 'L' },
-    // One rule ends the run: the trip length is used up (D89). Nothing on the board says
-    // "stop here" any more.
-    endRules: [{ kind: 'visitBudget' }],
+    // The run ends when the trip length is used up (D89); at an end of the line the shuttle folds.
     budget: { maxVisits: 60, maxEvents: 800 },
-    traversal: { nMax: 24, nDefault: opts.tripLength ?? 6, onDeadEnd: 'fold' },
+    traversal: { nMax: 24, nDefault: opts.tripLength ?? 6 },
     cards: [],
-    talents: [],
-    items: [],
   };
 }

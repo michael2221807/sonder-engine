@@ -1,9 +1,7 @@
 import { configDefaults, defineConfig } from 'vitest/config';
 import { fileURLToPath, URL } from 'node:url';
-import { plotVectorSandbox } from './build/plot-vector-sandbox';
 
 export default defineConfig({
-  plugins: [plotVectorSandbox()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

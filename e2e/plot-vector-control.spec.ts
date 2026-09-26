@@ -53,35 +53,33 @@ test('local AGA control defaults off, survives refresh and disables without dele
       const { profileId, slotId } = root.activeProfile;
       return (await idbAdapter.get(`save_${profileId}_${slotId}`)).系统.扩展.plotVector;
     });
-    expect(kept).toMatchObject({ version: 1, cards: [], session: { round: 1 } });
+    expect(kept).toMatchObject({ version: 2, cards: [], session: { round: 1 } });
     await page.screenshot({ path: 'e2e/screenshots/plot-vector-control.png' });
   });
 
-test('real Worker and guarded IndexedDB commit support saved abilities without a model call',
+test('the in-page runtime and guarded IndexedDB commit support saved abilities without a model call',
   { tag: ['@plot-vector', '@story-d144'] }, async ({ page }) => {
     await seedSave(page);
     const result = await page.evaluate(async () => {
       const load = (path: string) => import(/* @vite-ignore */ path);
-      const { VectorWorkerClient } = await load('/src/features/plot-vector/worker-client.ts');
-      const { initialVectorState } = await load('/src/features/plot-vector/runtime.ts');
+      const { initialVectorState, bindCard, prepareVector, acceptVector } = await load('/src/features/plot-vector/runtime.ts');
       const { idbAdapter } = await load('/src/engine/persistence/idb-adapter.ts');
       const { POSITIVE_EXAMPLES } = await load('/src/features/plot-vector/genesis/test-fixtures.ts');
       const { tasksAfterSave } = await load('/src/features/plot-vector/genesis/post-save.ts');
       const sample = POSITIVE_EXAMPLES[2];
       const task = tasksAfterSave({ id: 'seed', success: true, before: [], after: [sample.entry] })[0];
-      const worker = new VectorWorkerClient();
-      const bound = await worker.execute({ kind: 'validate', task, output: sample.output, attempts: 1 });
+      const bound = bindCard(task, sample.card);
       const state = { ...initialVectorState(), cards: [bound], layout: { placements: { '01': sample.entry.id }, tray: [] } };
-      const prepared = await worker.execute({ kind: 'prepare', state, entries: [sample.entry], id: 'once' });
-      const accepted = await worker.execute({ kind: 'accept', state, prepared });
-      const twice = await worker.execute({ kind: 'accept', state: accepted, prepared });
+      const prepared = prepareVector(state, [sample.entry], 'once');
+      const accepted = acceptVector(state, prepared);
+      const twice = acceptVector(accepted, prepared);
       await idbAdapter.setGuarded('e2e_vector_commit', accepted, () => {});
       let refused = false, count = 0;
       try { await idbAdapter.setGuarded('e2e_vector_commit', state, () => { if (++count === 2) throw new Error('cancel'); }); }
       catch { refused = true; }
       const saved = await idbAdapter.get('e2e_vector_commit');
-      return { refused, preserved: JSON.stringify(saved) === JSON.stringify(accepted), once: JSON.stringify(twice) === JSON.stringify(accepted),
-        growth: Object.values(accepted.session.scriptStates).some((s: any) => s.pages === 1), prompt: prepared.prompt.length > 0 };
+      return { refused, preserved: JSON.stringify(saved) === JSON.stringify(accepted), once: twice === accepted,
+        growth: accepted.growth[sample.entry.id]?.level === 1, prompt: prepared.prompt.length > 0 };
     });
     expect(result).toEqual({ refused: true, preserved: true, once: true, growth: true, prompt: true });
   });

@@ -11,6 +11,8 @@ export class PlotVectorPage {
   get boardClear() { return this.page.getByTestId('vector-clear'); }
   get replay() { return this.board.getByRole('slider'); }
   get fixedStatusCell() { return this.board.locator('[data-cell="06"]'); }
+  /** Environment cards: no cell, they act once at each departure. */
+  get weather() { return this.board.getByTestId('vector-weather'); }
   get nativeInput() { return this.board.getByTestId('vector-native'); }
   get progress() { return this.board.getByTestId('vector-progress'); }
   cellChoice(cell: string) { return this.board.locator(`[data-cell="${cell}"] select`); }

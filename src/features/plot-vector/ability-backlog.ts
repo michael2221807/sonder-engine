@@ -1,5 +1,5 @@
 import { capabilityKey, type SavedElement } from './genesis/post-save';
-import type { GenesisEntryKind } from './genesis/types';
+import type { GenesisEntryKind } from './genesis/post-save';
 import type { VectorState, VectorTaskRow } from './runtime';
 
 /** An obtained entry without a usable ability. Step3 tries it again automatically; the player can too. */

@@ -4,7 +4,7 @@ import type { SeedIds } from './fixtures/seed-save';
 import { VECTOR_NOTEBOOK_ITEM } from './fixtures/seed-tree';
 
 async function addBoardFixture(page: Page, ids: SeedIds, accept = false, store = false) {
-    // Handwritten deterministic capability fixture, never a fabricated model/story response.
+    // Handwritten deterministic cards in the contract format, never a fabricated model/story response.
     await page.evaluate(async ({ profileId, slotId, accept, store, notebook }) => {
       const load = (p: string) => import(/* @vite-ignore */ p);
       const { idbAdapter } = await load('/src/engine/persistence/idb-adapter.ts');
@@ -13,8 +13,7 @@ async function addBoardFixture(page: Page, ids: SeedIds, accept = false, store =
       const { projectSavedElements } = await load('/src/features/plot-vector/saved-elements.ts');
       const { tasksAfterSave } = await load('/src/features/plot-vector/genesis/post-save.ts');
       const { POSITIVE_EXAMPLES } = await load('/src/features/plot-vector/genesis/test-fixtures.ts');
-      const { VectorWorkerClient } = await load('/src/features/plot-vector/worker-client.ts');
-      const { initialVectorState } = await load('/src/features/plot-vector/runtime.ts');
+      const { initialVectorState, bindCard, prepareVector, acceptVector } = await load('/src/features/plot-vector/runtime.ts');
       const key = `save_${profileId}_${slotId}`, state = new StateManager();
       state.loadTree(await idbAdapter.get(key));
       state.set(P.inventoryItems, { notebook });
@@ -22,34 +21,25 @@ async function addBoardFixture(page: Page, ids: SeedIds, accept = false, store =
       state.set(P.environmentTags, [{ 名称: '微风', 描述: '舒适的微风', 效果: '使人放松' }]);
       const entry = projectSavedElements(state.toSnapshot()).entries.find((e: {id: string}) => e.id === 'item:notebook');
       const task = tasksAfterSave({ id: 'fixture', success: true, before: [], after: [entry] })[0];
-      const worker = new VectorWorkerClient();
-      const growth = structuredClone(POSITIVE_EXAMPLES[2].output);
-      growth.card.stateDisplay = [{ key: 'pages', label: '已记页数' }];
-      const output = store ? { version: 3, card: {
-        hooks: { onVisit: `
-          const room=3-(ctx.selfStore.J||0), available=ctx.shuttle.J||0;
-          return {effects:room>0&&available>0?[{kind:'store',store:'self',channel:'J',amount:Math.min(room,available)}]:[]};
-        `, onRoundAccepted: null },
-        selfStore: { cap: 3, lifetimeRounds: 3, allowedIn: ['J'], allowedOut: ['J'] },
-        initialPersistentState: {},
-      } } : growth;
-      const bound = await worker.execute({ kind: 'validate', task, output, attempts: 1 });
+      // The diary grows a level every round; the store variant keeps up to 3 push in its own store.
+      const card = store
+        ? { for: '随身日记', type: 'item', summary: '把推力存起来，最多存 3 点。', onPass: 'return ctx.stored < 3 ? { store: { from: "push", amount: 3 - ctx.stored } } : {};' }
+        : POSITIVE_EXAMPLES[2].card;
+      const bound = bindCard(task, card);
       const env = projectSavedElements(state.toSnapshot(), { includeEnvironment: true }).entries.find((e: {kind: string}) => e.kind === 'environment');
       const envTask = tasksAfterSave({ id: 'fixture', success: true, before: [], after: [env] })[0];
-      const envOutput = structuredClone(POSITIVE_EXAMPLES[0].output); envOutput.card.name = '微风';
-      const environment = await worker.execute({ kind: 'validate', task: envTask, output: envOutput, attempts: 1 });
+      const environment = bindCard(envTask, { for: '微风', type: 'environment', summary: '出发时推力 +1。', onPass: 'return { push: 1 };' });
       let component = { ...initialVectorState(), cards: [bound, environment] };
       if (accept) {
         if (store) component = { ...component, layout: { placements: { '01': 'item:notebook' }, tray: [] } };
         const { projectNativeInput, parseNativeRules } = await load('/src/features/plot-vector/native-input.ts');
         const rules = parseNativeRules(await (await fetch('/packs/tianming/rules/plot-vector.json')).json());
-        const prepared = await worker.execute({ kind: 'prepare', state: component,
-          entries: projectSavedElements(state.toSnapshot(), { includeEnvironment: true }).entries,
-          native: projectNativeInput(state.toSnapshot(), rules), id: 'fixture-accepted' });
-        component = await worker.execute({ kind: 'accept', state: component, prepared });
+        const prepared = prepareVector(component, projectSavedElements(state.toSnapshot(), { includeEnvironment: true }).entries,
+          'fixture-accepted', projectNativeInput(state.toSnapshot(), rules));
+        component = acceptVector(component, prepared);
       }
       state.set(P.plotVector, component);
-      await idbAdapter.set(key, state.toSnapshot()); worker.cancelAll();
+      await idbAdapter.set(key, state.toSnapshot());
     }, { ...ids, accept, store, notebook: VECTOR_NOTEBOOK_ITEM });
 }
 
@@ -65,17 +55,19 @@ test('optional board keeps explicit choices across reload; preview and layout sa
     await expect(plotVector.nativeInput.locator('summary')).toHaveText('出发时：推力 2 · 人际 2 · 机会 2 · 走 11 格');
     await plotVector.nativeInput.locator('summary').click();
     await expect(plotVector.nativeInput).toContainText('悟性 · 15 → 行程 +3');
-    await expect(plotVector.fixedStatusCell).toContainText('微风');
+    // The environment acts like weather at each departure; it takes no cell.
+    await expect(plotVector.weather).toContainText('微风（出发时推力 +1。）');
+    await expect(plotVector.fixedStatusCell).not.toContainText('微风');
     // Leave empty + the saved notebook + the three basic supply cards (marked as such).
     await expect(plotVector.cellChoice('01').locator('option')).toHaveCount(5);
     await expect(plotVector.cellChoice('01').locator('option', { hasText: '基础补给' })).toHaveCount(3);
     await plotVector.progress.locator('summary').click();
-    await expect(plotVector.progress).toContainText('已记页数 0');
+    await expect(plotVector.progress).toContainText('级数 0 / 50');
     await expect(plotVector.cellChoice('01')).toHaveValue('');
     await plotVector.chooseCard('01', 'item:notebook');
     await plotVector.boardPreview.click();
     await expect(plotVector.boardPreview).toBeEnabled();
-    await expect(plotVector.progress).toContainText('已记页数 0');
+    await expect(plotVector.progress).toContainText('级数 0 / 50');
     await plotVector.replay.focus(); await plotVector.replay.press('Home'); await plotVector.replay.press('ArrowRight');
     await expect(plotVector.board.getByText('这一步触发：随身日记')).toBeVisible();
     const previewState = await page.evaluate(async () => {
@@ -84,7 +76,7 @@ test('optional board keeps explicit choices across reload; preview and layout sa
       return useEngineStateStore().tree.系统.扩展.plotVector;
     });
     expect(previewState.layout).toBeUndefined();
-    expect(previewState.session.round).toBe(1); expect(previewState.session.scriptStates).toEqual({});
+    expect(previewState.session.round).toBe(1); expect(previewState.growth).toEqual({});
     await plotVector.boardSave.click();
     await expect(plotVector.board.getByRole('status')).toHaveText('摆法已保存，下个回合自动沿用。');
     await expect(plotVector.cellChoice('01')).toHaveValue('item:notebook');
@@ -98,7 +90,7 @@ test('optional board keeps explicit choices across reload; preview and layout sa
       return (await idbAdapter.get(`save_${profileId}_${slotId}`)).系统.扩展.plotVector;
     }, ids);
     expect(persisted.layout.placements['01']).toBeNull(); expect(persisted.layout.tray).toEqual(['item:notebook', 'basic:push', 'basic:talk', 'basic:notice']);
-    expect(persisted.session.round).toBe(1); expect(persisted.session.scriptStates).toEqual({}); expect(persisted.last).toBeUndefined();
+    expect(persisted.session.round).toBe(1); expect(persisted.growth).toEqual({}); expect(persisted.last).toBeUndefined();
 
   });
 
@@ -115,7 +107,7 @@ test('clearing the board takes every chosen card off and saves an empty arrangem
     await expect(plotVector.boardClear).toBeEnabled();
     await plotVector.boardClear.click();
     for (const cell of ['01', '02', '03', '04', '05']) await expect(plotVector.cellChoice(cell)).toHaveValue('');
-    await expect(plotVector.fixedStatusCell).toContainText('微风'); // the automatic status cell is not the player's
+    await expect(plotVector.weather).toContainText('微风'); // weather is not the player's to place
     await expect(plotVector.boardClear).toBeDisabled();
     await plotVector.boardSave.click();
     await expect(plotVector.board.getByRole('status')).toHaveText('摆法已保存，下个回合自动沿用。');
@@ -153,18 +145,18 @@ test('optional board fits a narrow viewport and renders English with its bottom 
 test('accepted board progress survives disk reload without accepting it again',
   { tag: ['@plot-vector', '@story-d148'] }, async ({ page, gameShell, plotVector }, testInfo) => {
     const ids = await seedSave(page);
-    // Real Worker acceptance of a handwritten fixture, not a fabricated story turn.
+    // Real runtime acceptance of a handwritten fixture, not a fabricated story turn.
     await addBoardFixture(page, ids, true);
     await enterSeededGame(page);
     await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
     await plotVector.openBoard(); await plotVector.showLast();
     await expect(plotVector.nativeInput.locator('summary')).toContainText('走 11 格');
     await plotVector.progress.locator('summary').click();
-    await expect(plotVector.progress).toContainText('已记页数 1 (+1)');
+    await expect(plotVector.progress).toContainText('级数 1 / 50 (+1)');
     if (testInfo.repeatEachIndex === 0) await page.screenshot({ path: 'e2e/screenshots/plot-vector-progress.png' });
   });
 
-test('private store progress is the engine balance after disk reload, without a model progress label',
+test('the store of a card is the engine balance after disk reload',
   { tag: ['@plot-vector', '@story-d194'] }, async ({ page, plotVector }) => {
     const ids = await seedSave(page);
     await addBoardFixture(page, ids, true, true);
@@ -180,8 +172,8 @@ test('private store progress is the engine balance after disk reload, without a 
     };
     await dismissStorageNotice();
     await plotVector.openBoard(); await plotVector.showLast();
-    await expect(plotVector.board.locator('[data-cell="01"] .progress')).toContainText('实际已存机会 3 / 3 (+3)');
+    await expect(plotVector.board.locator('[data-cell="01"] .progress')).toContainText('存量 3 / 30 (+3)');
     await page.goto('/'); await enterSeededGame(page); await dismissStorageNotice();
     await plotVector.openBoard(); await plotVector.showLast();
-    await expect(plotVector.board.locator('[data-cell="01"] .progress')).toContainText('实际已存机会 3 / 3 (+3)');
+    await expect(plotVector.board.locator('[data-cell="01"] .progress')).toContainText('存量 3 / 30 (+3)');
   });

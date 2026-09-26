@@ -1,5 +1,7 @@
-import type { CardGenesisCandidateV1, GenesisEntryKind } from './types';
-import type { ScriptProgramRef } from '../../../engine/plot-vector/core/types';
+import type { CardSpec } from '../contract/types';
+
+/** Where a saved entry lives: inventory, talents, status effects or environment tags. */
+export type GenesisEntryKind = 'item' | 'talent' | 'environment' | 'effect' | 'other';
 
 /** Host-owned snapshots: capability excludes stock, charges and other bookkeeping. */
 export interface SavedElement {
@@ -14,20 +16,6 @@ export interface SavedAction {
   after: readonly SavedElement[];
 }
 export interface GenesisTask { key: string; actionId: string; entry: SavedElement }
-export interface GenesisOutputV2 {
-  version: 2;
-  card: Omit<CardGenesisCandidateV1['card'], 'initialPersistentState'> & {
-    initialPersistentState?: CardGenesisCandidateV1['card']['initialPersistentState'];
-  };
-}
-/** Production output contains only the model-owned executable ability. */
-export interface GenesisOutputV3 {
-  version: 3;
-  card: Pick<CardGenesisCandidateV1['card'], 'hooks' | 'selfStore' | 'stateDisplay'> & {
-    initialPersistentState?: CardGenesisCandidateV1['card']['initialPersistentState'];
-  };
-}
-export type GenesisOutput = GenesisOutputV2 | GenesisOutputV3;
 export function stable(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
   if (value && typeof value === 'object') return `{${Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([k,v]) => `${JSON.stringify(k)}:${stable(v)}`).join(',')}}`;
@@ -66,23 +54,5 @@ export function tasksAfterSave(action: SavedAction, known: readonly string[] = [
   });
 }
 
-/** Explicit adapter to the existing JS runtime. No model evidence is requested or checked. */
-export function toRuntimeCandidate(task: GenesisTask, output: GenesisOutput): CardGenesisCandidateV1 {
-  if (output.version !== 2 && output.version !== 3) throw new Error('Expected post-save card version 2 or 3');
-  const savedName = typeof task.entry.capability.name === 'string' && task.entry.capability.name.trim()
-    ? task.entry.capability.name.trim() : task.entry.id;
-  const savedDescription = typeof task.entry.capability.description === 'string' && task.entry.capability.description.trim()
-    ? task.entry.capability.description.trim() : savedName;
-  return {
-    version: 1,
-    anchor: { commandIndex: 0, entrySelector: task.entry.id, entryKind: task.entry.kind,
-      entryLabel: String(task.entry.capability.name ?? task.entry.id), storyEvidence: '' },
-    card: output.version === 2
-      ? { ...output.card, initialPersistentState: output.card.initialPersistentState ?? {} }
-      : { name: savedName, description: savedDescription, behaviorSummary: '以棋盘试走结果为准',
-        hooks: output.card.hooks, ...(output.card.selfStore ? { selfStore: output.card.selfStore } : {}),
-        ...(output.card.stateDisplay ? { stateDisplay: output.card.stateDisplay } : {}),
-        initialPersistentState: output.card.initialPersistentState ?? {} },
-  };
-}
-export interface BoundCard { task: GenesisTask; candidate: CardGenesisCandidateV1; ref: ScriptProgramRef; attempts: number }
+/** An obtained entry with its bound ability (rebuild plan §2.2), checked once when bound (§5). */
+export interface BoundCard { task: GenesisTask; spec: CardSpec }

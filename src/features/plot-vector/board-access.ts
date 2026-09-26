@@ -7,9 +7,7 @@ import { readPlotVectorControl, subscribePlotVectorControl } from '../../engine/
 import { projectSavedElements } from './saved-elements';
 import type { Layout } from '../../engine/plot-vector/core/types';
 import { stable } from './genesis/post-save';
-import { initialVectorState, type PreparedVector, type VectorState, type VectorOperation, type VectorResult } from './runtime';
-import { VectorWorkerClient } from './worker-client';
-import { guardedExecutor } from './result-guard';
+import { prepareVector, readVectorState, type PreparedVector, type VectorState } from './runtime';
 import { projectNativeInput, type NativeRules } from './native-input';
 import { abilityBacklog, type BacklogEntry } from './ability-backlog';
 
@@ -23,7 +21,6 @@ export interface BoardView {
   preview(layout: Layout): Promise<PreparedVector>;
   save(layout: Layout): Promise<void>;
 }
-interface Executor { execute<T extends VectorResult>(op: VectorOperation): Promise<T>; cancelAll(): void }
 
 /**
  * Optional UI port. No acceptance hooks, no writes before IDB commit. Its only model call is the player's
@@ -34,21 +31,18 @@ export class VectorBoardAccess {
   private writing = false;
   get isSaving(): boolean { return this.writing; }
   private unsubs: Array<() => void>;
-  /** Same host boundary as the main round: a preview never shows or saves an unchecked Worker result. */
-  private readonly worker: Executor;
   constructor(private state: StateManager, private saves: Pick<SaveManager, 'saveGame'>,
     private slot: () => { profileId: string; slotId: string } | null, private busy: () => boolean,
-    worker: Executor = new VectorWorkerClient(), private nativeRules?: NativeRules,
+    private nativeRules?: NativeRules,
     private onSaveSettled: () => void = () => {},
     private regenerateAbility?: (entryId: string) => Promise<{ bound: boolean; requested: boolean }>,
     private abilityField?: string) {
-    this.worker = guardedExecutor(worker);
     this.unsubs = [subscribePlotVectorControl(() => this.invalidate()),
       eventBus.on<{ type: string }>('engine:state-changed', e => {
         if (e.type === 'load' || e.type === 'rollback') this.invalidate();
       })];
   }
-  private invalidate() { this.revision++; this.worker.cancelAll(); }
+  private invalidate() { this.revision++; }
   /** The player's retry for one entry's ability. Refused while a round, a save or another retry runs. */
   async regenerate(entryId: string): Promise<{ bound: boolean; requested: boolean }> {
     if (!this.regenerateAbility) throw new Error('ability-retry-unavailable');
@@ -64,7 +58,7 @@ export class VectorBoardAccess {
   async open(): Promise<BoardView> {
     const slot = this.slot(), control = readPlotVectorControl(), revision = this.revision;
     const snapshot = this.state.toSnapshot(), fingerprint = stable(snapshot);
-    const state = cloneDeep(this.state.get<VectorState>(P.plotVector) ?? initialVectorState());
+    const state: VectorState = cloneDeep(readVectorState(this.state.get(P.plotVector)));
     const entries = projectSavedElements(snapshot, { includeEnvironment: true }).entries;
     const native = projectNativeInput(snapshot, this.nativeRules);
     const guard = () => {
@@ -74,12 +68,11 @@ export class VectorBoardAccess {
         throw new Error('board-view-stale');
     };
     guard();
+    // Computed in the page, synchronously (rebuild plan §4).
     const preview = async (layout?: Layout): Promise<PreparedVector> => {
       guard();
-      const result = await this.worker.execute<PreparedVector>({ kind: 'prepare',
-        state: { ...state, ...(layout ? { layout: cloneDeep(layout) } : {}) }, entries, native,
-        id: `${slot!.profileId}/${slot!.slotId}/${(this.state.get<number>(P.roundNumber) ?? 0) + 1}` });
-      guard(); return result;
+      return prepareVector({ ...state, ...(layout ? { layout: cloneDeep(layout) } : {}) }, entries,
+        `${slot!.profileId}/${slot!.slotId}/${(this.state.get<number>(P.roundNumber) ?? 0) + 1}`, native);
     };
     let prepared: PreparedVector, cleared = false;
     try { prepared = await preview(); }

@@ -4,8 +4,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import manifest from '../../../public/packs/tianming/manifest.json';
 import rules from '../../../public/packs/tianming/rules/plot-vector-prompts.json';
 import { parseVectorPromptPolicy } from './prompt-policy';
-import { AGA_GENESIS_SYSTEM, GENESIS_CARD_RULES, GENESIS_GUIDANCE, SNIPPET_API } from './genesis/generation-prompt';
-import { createHash } from 'node:crypto';
+import { AGA_GENESIS_SYSTEM, CARD_API, GENESIS_GUIDANCE } from './genesis/generation-prompt';
 import { PromptRegistry } from '../../engine/prompt/prompt-registry';
 import { PromptAssembler } from '../../engine/prompt/prompt-assembler';
 import { TemplateEngine } from '../../engine/prompt/template-engine';
@@ -21,7 +20,6 @@ import type { GenerateOptions } from '../../engine/ai/types';
 import { eventBus } from '../../engine/core/event-bus';
 import type { EmitAssemblyDebugParams } from '../../engine/core/prompt-debug';
 import { AgaPlotVectorAdapter } from './aga-adapter';
-import { executeVectorOperation, type VectorOperation, type VectorResult } from './runtime';
 import { writePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { parseNativeRules } from './native-input';
 import nativeRules from '../../../public/packs/tianming/rules/plot-vector.json';
@@ -174,15 +172,18 @@ describe('real pack judgment transition, zero network', () => {
     expect(parseVectorPromptPolicy({ ...rules, abilityRepair: { field: 'abilities', template: 'no placeholder' } }, 'mode')).toBeUndefined();
   });
 
-  it('ability regeneration uses the pack task text plus the same guidance, card rules and snippet contract as post-save genesis', () => {
+  it('ability regeneration and Step2 environment abilities use the same guidance and card domain as post-save genesis', () => {
     const repair = parseVectorPromptPolicy(rules, 'mode')!.abilityRepair!;
     expect(repair.field).toBe('abilities');
     expect(repair.template).toContain('{{ITEMS}}');
-    expect(repair.guidance).toBe([GENESIS_GUIDANCE, GENESIS_CARD_RULES].join('\n\n'));
+    expect(repair.guidance).toBe(GENESIS_GUIDANCE);
     const environment = parseVectorPromptPolicy(rules, 'mode')!.environmentAbility!;
-    expect(environment.prompt).toBe(`${environment.instruction}\n\n${SNIPPET_API}`);
-    // Splitting the genesis prompt into reusable parts left it byte-identical.
-    expect(createHash('sha256').update(AGA_GENESIS_SYSTEM, 'utf8').digest('hex').slice(0, 16)).toBe('74a043987cff4462');
+    expect(environment.prompt).toBe(`${environment.instruction}\n\n${CARD_API}`);
+    expect(AGA_GENESIS_SYSTEM).toBe(`${GENESIS_GUIDANCE}\n\n${CARD_API}`);
+    // The pack wording describes the card format the engine reads, not the retired snippet format.
+    for (const text of [environment.instruction, environment.repair, repair.template])
+      expect(text).not.toMatch(/hooks|onVisit|effects|persistentState|runState|version/);
+    expect(CARD_API).toMatch(/onPass/);
   });
 
   for (const en of [false, true]) it(`leaves opening and explicit phase overrides on their existing builder format, en=${en}`, async () => {
@@ -213,7 +214,6 @@ describe('real pack judgment transition, zero network', () => {
       writePlotVectorControl(true);
       const adapter = new AgaPlotVectorAdapter(h.state, { generate: vi.fn() },
         { saveGame: vi.fn() }, () => ({ profileId: 'phase', slotId: 'test' }),
-        { execute: <T extends VectorResult>(op: VectorOperation) => executeVectorOperation(op) as Promise<T>, cancelAll: vi.fn() },
         parseNativeRules(nativeRules), h.policy);
       const requests: GenerateOptions[] = [];
       const reply = { text: '本轮正文', commands: [],
@@ -281,7 +281,6 @@ describe('real pack judgment transition, zero network', () => {
     h.state.set(P.characterAttributes, { 体质: 5, 心性: 8, 魅力: 9, 悟性: 1, 直觉: 3, 气运: 4 });
     const adapter = new AgaPlotVectorAdapter(h.state, { generate: vi.fn() },
       { saveGame: vi.fn() }, () => ({ profileId: 'test', slotId: 'test' }),
-      { execute: <T extends VectorResult>(op: VectorOperation) => executeVectorOperation(op) as Promise<T>, cancelAll: vi.fn() },
       parseNativeRules(nativeRules), h.policy);
     const events: EmitAssemblyDebugParams[] = [];
     const unsubscribe = eventBus.on<EmitAssemblyDebugParams>('ui:debug-prompt', e => { events.push(e); });

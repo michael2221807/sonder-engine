@@ -1,5 +1,5 @@
 import type { RawPromptTransform } from '../../engine/prompt/raw-prompt-transform';
-import { GENESIS_CARD_RULES, GENESIS_GUIDANCE, SNIPPET_API } from './genesis/generation-prompt';
+import { CARD_API, GENESIS_GUIDANCE } from './genesis/generation-prompt';
 
 export interface VectorPromptPolicy {
   transform: RawPromptTransform;
@@ -9,11 +9,11 @@ export interface VectorPromptPolicy {
 }
 /** Environment abilities written by Step2 with the environment tags (pack-owned wording, one interface). */
 export interface EnvironmentAbilityPolicy {
-  /** Field on each environment tag that carries the snippet object. */
+  /** Field on each environment tag that carries its card (rebuild plan §2.2). */
   field: string;
-  /** Step2 interface: pack instruction + the shared snippet contract. */
+  /** Step2 interface: pack instruction + the shared card domain. */
   prompt: string;
-  /** The pack instruction alone (Step3 adds the shared snippet contract once for all its tasks). */
+  /** The pack instruction alone (Step3 adds the shared card domain once for all its tasks). */
   instruction: string;
   /** Step3 repair block template with `{{PATH}}` and `{{ITEMS}}`. */
   repair: string;
@@ -27,7 +27,7 @@ export interface AbilityRepairPolicy {
   field: string;
   /** Task template with `{{ITEMS}}`. */
   template: string;
-  /** The same guidance and card rules post-save genesis uses (Step3 adds the shared snippet contract once). */
+  /** The same guidance post-save generation uses (Step3 adds the shared card domain once). */
   guidance: string;
 }
 interface Replacement { promptId: string; from: string; to: string }
@@ -59,13 +59,13 @@ export function parseVectorPromptPolicy(raw: unknown, mode: unknown): VectorProm
     const e = r.environmentAbility as Record<string, unknown> | null;
     if (!e || typeof e.field !== 'string' || !e.field.trim() || typeof e.instruction !== 'string' || !e.instruction.trim()
       || typeof e.repair !== 'string' || !e.repair.includes('{{ITEMS}}') || !e.repair.includes('{{PATH}}')) return;
-    environmentAbility = { field: e.field, prompt: `${e.instruction.trim()}\n\n${SNIPPET_API}`, instruction: e.instruction.trim(), repair: e.repair };
+    environmentAbility = { field: e.field, prompt: `${e.instruction.trim()}\n\n${CARD_API}`, instruction: e.instruction.trim(), repair: e.repair };
   }
   let abilityRepair: AbilityRepairPolicy | undefined;
   if (r.abilityRepair !== undefined) {
     const a = r.abilityRepair as Record<string, unknown> | null;
     if (!a || typeof a.field !== 'string' || !a.field.trim() || typeof a.template !== 'string' || !a.template.includes('{{ITEMS}}')) return;
-    abilityRepair = { field: a.field, template: a.template, guidance: [GENESIS_GUIDANCE, GENESIS_CARD_RULES].join('\n\n') };
+    abilityRepair = { field: a.field, template: a.template, guidance: GENESIS_GUIDANCE };
   }
   return { mode, environmentAbility, abilityRepair, transform };
 }

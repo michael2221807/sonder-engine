@@ -3,10 +3,19 @@ import { StateManager } from '../../engine/core/state-manager';
 import { DEFAULT_ENGINE_PATHS as P } from '../../engine/pipeline/types';
 import { writePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { VectorBoardAccess } from './board-access';
-import { executeVectorOperation, initialVectorState, type PreparedVector, type VectorOperation, type VectorResult, type VectorState } from './runtime';
+import { initialVectorState, type VectorState } from './runtime';
 import { tasksAfterSave } from './genesis/post-save';
-import { GENESIS_VALIDATION_REVISION } from './genesis/generation-prompt';
 import { projectSavedElements } from './saved-elements';
+
+// The trip is computed in the page; a test can make an arrangement fail to compute.
+const failing = vi.hoisted(() => ({ placed: false }));
+vi.mock('./runtime', async importOriginal => {
+  const actual = await importOriginal<typeof import('./runtime')>();
+  return { ...actual, prepareVector: (...args: Parameters<typeof actual.prepareVector>) => {
+    if (failing.placed && Object.values(args[0].layout?.placements ?? {}).some(Boolean)) throw new Error('剧情动能这回合算不出来（test）');
+    return actual.prepareVector(...args);
+  } };
+});
 
 let access: VectorBoardAccess;
 beforeEach(() => {
@@ -15,20 +24,17 @@ beforeEach(() => {
   vi.stubGlobal('window', new EventTarget());
   writePlotVectorControl(true);
 });
-afterEach(() => { access?.dispose(); vi.unstubAllGlobals(); });
+afterEach(() => { access?.dispose(); vi.unstubAllGlobals(); failing.placed = false; });
 function setup() {
   const state = new StateManager(); state.loadTree({});
   state.set(P.plotVector, initialVectorState()); state.set(P.roundNumber, 7);
   let busy = false;
   const saveGame = vi.fn(async (_p: string, _s: string, _tree: unknown, _meta?: unknown,
     commit?: { guard: () => void; committed: () => void }) => { commit?.guard(); commit?.committed(); });
-  const worker = { execute: vi.fn(<T extends VectorResult>(op: VectorOperation) => executeVectorOperation(op) as Promise<T>), cancelAll: vi.fn() };
   const settled = vi.fn(() => { expect(access.isSaving).toBe(false); });
   access = new VectorBoardAccess(state, { saveGame },
-    () => ({ profileId: 'p', slotId: 's' }), () => busy, {
-      execute: <T extends VectorResult>(op: VectorOperation) => worker.execute(op) as Promise<T>, cancelAll: worker.cancelAll,
-    }, undefined, settled);
-  return { state, saveGame, worker, settled, busy: () => { busy = true; } };
+    () => ({ profileId: 'p', slotId: 's' }), () => busy, undefined, settled);
+  return { state, saveGame, settled, busy: () => { busy = true; } };
 }
 it('preview uses the next round seed and layout-only save preserves every lifecycle field', async () => {
   const h = setup(), before = h.state.get<VectorState>(P.plotVector)!;
@@ -40,7 +46,6 @@ it('preview uses the next round seed and layout-only save preserves every lifecy
   expect(h.saveGame).toHaveBeenCalledTimes(1);
   expect(h.settled).toHaveBeenCalledTimes(1);
   expect(h.state.get(P.plotVector)).toEqual({ ...before, layout: view.prepared.layout });
-  expect(h.worker.execute.mock.calls.every(([op]) => op.kind === 'prepare')).toBe(true);
   await expect(view.save(view.prepared.layout)).rejects.toThrow('stale');
 });
 it.each(['busy', 'load', 'changed', 'off'] as const)('rejects a stale draft after %s without saving', async reason => {
@@ -75,37 +80,16 @@ it('a load after disk commit cannot receive the old layout in memory', async () 
   await expect(view.save(view.prepared.layout)).rejects.toThrow('stale');
   expect(h.state.toSnapshot()).toEqual({ otherSlot: true });
 });
-it('gate 1: a malformed preview is never shown or saved, and the next preview works', async () => {
-  const h = setup();
-  h.worker.execute.mockImplementationOnce((async (op: VectorOperation) => {
-    const result = await executeVectorOperation(op) as PreparedVector;
-    return { ...result, layout: { ...result.layout, placements: { ...result.layout.placements, '01': 'ghost-card' } } };
-  }) as never);
-  // The board still opens (cleared) instead of locking; the malformed result is never shown.
-  const cleared = await access.open();
-  expect(cleared.cleared).toBe(true);
-  expect(Object.values(cleared.prepared.layout.placements)).not.toContain('ghost-card');
+it('a preview after the save changed is refused, never computed from the old snapshot', async () => {
+  const h = setup(), view = await access.open();
+  h.state.set(P.roundNumber, 9);
+  await expect(view.preview(view.prepared.layout)).rejects.toThrow('stale');
   expect(h.saveGame).not.toHaveBeenCalled();
-  const view = await access.open();
-  expect(view.cleared).toBe(false);
-  h.worker.execute.mockImplementationOnce((async (op: VectorOperation) => {
-    const result = await executeVectorOperation(op) as PreparedVector;
-    return { ...result, result: { ...result.result, visits: result.board.budget.maxVisits + 1 } };
-  }) as never);
-  await expect(view.save(view.prepared.layout)).rejects.toThrow(/剧情动能计算结果无效（prepare）/);
-  expect(h.saveGame).not.toHaveBeenCalled();
-  await view.save(view.prepared.layout);
-  expect(h.saveGame).toHaveBeenCalledTimes(1);
 });
 it('a saved arrangement that no longer computes opens cleared; saving keeps it cleared and the next open is normal', async () => {
   const h = setup();
   h.state.set(P.plotVector, { ...initialVectorState(), layout: { placements: { '01': 'basic:push', '02': null, '03': null, '04': null, '05': null, '06': null }, tray: [] } });
-  const honest = h.worker.execute.getMockImplementation()!;
-  h.worker.execute.mockImplementation((async (op: VectorOperation) => {
-    if (op.kind === 'prepare' && Object.values(op.state.layout?.placements ?? {}).some(Boolean))
-      throw new Error('剧情动能这回合算不出来（test）');
-    return honest(op);
-  }) as never);
+  failing.placed = true;
   const view = await access.open();
   expect(view.cleared).toBe(true);
   expect(Object.entries(view.prepared.layout.placements).filter(([cell, id]) => cell !== '06' && id)).toEqual([]);
@@ -114,20 +98,19 @@ it('a saved arrangement that no longer computes opens cleared; saving keeps it c
   await view.save(view.prepared.layout);
   expect(h.saveGame).toHaveBeenCalledTimes(1);
   expect(Object.entries(h.state.get<VectorState>(P.plotVector)!.layout!.placements).filter(([cell, id]) => cell !== '06' && id)).toEqual([]);
+  failing.placed = false;
   expect((await access.open()).cleared).toBe(false);
 });
 it('lists obtained entries whose ability is not ready; the player retry holds the board like a save and is refused during a round', async () => {
   const h = setup();
   h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 1 } });
   const task = tasksAfterSave({ id: 'x', success: true, before: [], after: projectSavedElements(h.state.toSnapshot()).entries })[0];
-  // A received reply that did not validate (checked under the current rules).
-  h.state.set(P.plotVector, { ...initialVectorState(), tasks: [{ task, status: 'failed', error: 'boom', raw: 'not an ability', validationRevision: GENESIS_VALIDATION_REVISION }] });
+  // A received reply that did not pass the one check.
+  h.state.set(P.plotVector, { ...initialVectorState(), tasks: [{ task, status: 'failed', error: 'boom', raw: 'not an ability' }] });
   let busy = false, heldDuringRetry: boolean | undefined;
   const regenerate = vi.fn(async () => { heldDuringRetry = retryAccess.isSaving; return { bound: true, requested: true }; });
   const retryAccess: VectorBoardAccess = new VectorBoardAccess(h.state, { saveGame: h.saveGame },
-    () => ({ profileId: 'p', slotId: 's' }), () => busy, {
-      execute: <T extends VectorResult>(op: VectorOperation) => h.worker.execute(op) as Promise<T>, cancelAll: h.worker.cancelAll,
-    }, undefined, () => {}, regenerate);
+    () => ({ profileId: 'p', slotId: 's' }), () => busy, undefined, () => {}, regenerate);
   try {
     const view = await retryAccess.open();
     expect(view.backlog.map(b => [b.id, b.name, b.state])).toEqual([['item:tea', '茶', 'failed']]);

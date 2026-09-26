@@ -758,7 +758,7 @@ async function bootstrap(): Promise<void> {
   const vectorNativeRules = parseNativeRules(pack?.rules.plotVector);
   const vectorPromptPolicy = parseVectorPromptPolicy(pack?.rules.plotVectorPrompts, pack?.prompts.plotVectorMode);
   const plotVectorBoard = new VectorBoardAccess(stateManager, saveManager, getActiveSlot,
-    () => !orchestrator || orchestrator.isBusy, undefined, vectorNativeRules,
+    () => !orchestrator || orchestrator.isBusy, vectorNativeRules,
     () => orchestrator?.onStateEditSettled(),
     // The player's ability retry runs through the round adapter (same repair and binding as Step 3).
     (entryId) => plotVectorAdapter ? plotVectorAdapter.regenerateAbility(entryId) : Promise.reject(new Error('ability-retry-unavailable')),
@@ -793,7 +793,7 @@ async function bootstrap(): Promise<void> {
         memoryManager,
         paths: DEFAULT_ENGINE_PATHS,
         plotEvaluation: plotEvaluationPipeline,
-        plotVector: plotVectorAdapter = new AgaPlotVectorAdapter(stateManager, aiService, saveManager, getActiveSlot, undefined, vectorNativeRules,
+        plotVector: plotVectorAdapter = new AgaPlotVectorAdapter(stateManager, aiService, saveManager, getActiveSlot, vectorNativeRules,
           vectorPromptPolicy),
         stateEditInProgress: () => plotVectorBoard.isSaving,
       },

@@ -1,6 +1,5 @@
 import { defineConfig, type Plugin } from 'vite';
 import vue from '@vitejs/plugin-vue';
-import { plotVectorSandbox } from './build/plot-vector-sandbox';
 import { fileURLToPath, URL } from 'node:url';
 
 /**
@@ -62,7 +61,7 @@ function lanSaveRelay(): Plugin {
 
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || '/',
-  plugins: [vue(), lanSaveRelay(), plotVectorSandbox()],
+  plugins: [vue(), lanSaveRelay()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

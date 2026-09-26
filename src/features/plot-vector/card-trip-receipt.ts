@@ -1,49 +1,33 @@
 import type { TraceEvent } from '../../engine/plot-vector/core/types';
 import { SHUTTLE_ACCOUNT } from '../../engine/plot-vector/core/runner';
+import { storeAccountId } from './contract/trip';
 
-/** A short, observed account of one card in this specific trial, never a promise for every board. */
+/** A short, observed account of one card in this specific trip, never a promise for every board. */
 export interface CardTripReceipt {
   activations: number;
   shuttleChanges: Record<string, number>;
   stored: number;
   released: number;
-  otherEffects: Array<'route' | 'mode'>;
+  otherEffects: Array<'route'>;
 }
 
-function observedKind(source: string): 'route' | 'mode' | null {
-  try {
-    const effect: unknown = JSON.parse(source);
-    if (!effect || typeof effect !== 'object' || !('kind' in effect)) return null;
-    const kind = effect.kind;
-    if (kind === 'addVisits' || kind === 'scaleRemainingVisits' || kind === 'turnShuttle') return 'route';
-    if (kind === 'setMode') return 'mode';
-  } catch { /* Old trace text is not an executable effect; deltas remain authoritative. */ }
-  return null;
-}
-
+/** What one card did in a trip, read from the trace (the deltas are authoritative). */
 export function cardTripReceipt(trace: readonly TraceEvent[], cardId: string): CardTripReceipt {
   const shuttleChanges: Record<string, number> = {};
-  const otherEffects = new Set<'route' | 'mode'>();
+  const otherEffects = new Set<'route'>();
   let activations = 0, stored = 0, released = 0;
+  const store = storeAccountId(cardId);
   for (const event of trace) {
     if (event.eventType !== 'effect' || event.owner?.kind !== 'card' || event.owner.id !== cardId
-      || !event.programHash || !event.scriptEffects?.length) continue;
+      || event.status !== 'applied' || !event.cardEffects?.length) continue;
     activations++;
     for (const delta of event.deltas) {
       const change = delta.after - delta.before;
-      if (delta.account === SHUTTLE_ACCOUNT) {
-        shuttleChanges[delta.channelOrField] = (shuttleChanges[delta.channelOrField] ?? 0) + change;
-      } else if (delta.account.startsWith('script-store:')) {
-        if (change > 0) stored += change;
-        else released -= change;
-      }
+      if (delta.account === SHUTTLE_ACCOUNT) shuttleChanges[delta.channelOrField] = (shuttleChanges[delta.channelOrField] ?? 0) + change;
+      else if (delta.account === store) { if (change > 0) stored += change; else released -= change; }
     }
-    // The trace does not expose a per-operation before/after trip length or mode.
-    // Name these categories only; the final trip and visit replay carry their actual result.
-    if (event.status === 'applied') for (const effect of event.scriptEffects) {
-      const kind = observedKind(effect);
-      if (kind) otherEffects.add(kind);
-    }
+    // Steps and turns change the route, which the trace records as the trip itself.
+    if (event.cardEffects.some(effect => effect.startsWith('steps') || effect === 'turn')) otherEffects.add('route');
   }
   return { activations, shuttleChanges, stored, released, otherEffects: [...otherEffects] };
 }

@@ -1,17 +1,15 @@
-import type { GenesisOutputV2, SavedElement } from './post-save';
+import type { SavedElement } from './post-save';
+import type { CardSpec } from '../contract/types';
 
-export interface SaveExample { entry: SavedElement; output: GenesisOutputV2; source: string; behaviorReview?: {programHash:string;issues:string[]} | null }
-const example = (id: string, kind: SavedElement['kind'], name: string, description: string,
-  onVisit: string, initialPersistentState?: Record<string, number | boolean>, onRoundAccepted: string | null = null): SaveExample => ({
+/** Hand-written cards in the contract format (interface examples, not model output). */
+export interface SaveExample { entry: SavedElement; card: CardSpec }
+const example = (id: string, kind: SavedElement['kind'], name: string, description: string, card: Omit<CardSpec, 'for'>): SaveExample => ({
   entry: { id, kind, capability: { name, description } },
-  source: 'Codex手写接口示例（不是新模型实验）',
-  output: { version: 2, card: { name, description, behaviorSummary: description,
-    hooks: { onVisit, onRoundAccepted }, ...(initialPersistentState ? { initialPersistentState } : {}) } },
+  card: { for: name, ...card },
 });
 export const POSITIVE_EXAMPLES: SaveExample[] = [
-  example('tea', 'item', '随身热茶', '每次经过，推力增加3。', "return {effects:[{kind:'add',channel:'S+',amount:3}]};"),
-  example('patience', 'talent', '耐心观察', '首次经过，多走2格。', "return {effects:ctx.runState.used?[]:[{kind:'addVisits',amount:2}],runState:{used:true}};"),
-  example('notebook', 'item', '随身日记', '经过时获得1点机会，每确认一轮多记一页，每页再加1点。',
-    "return {effects:[{kind:'add',channel:'J',amount:1+ctx.persistentState.pages}]};", { pages: 0 },
-    'return {persistentState:{pages:ctx.persistentState.pages+1}};'),
+  example('tea', 'item', '随身热茶', '每次经过，推力增加3。', { type: 'item', summary: '每次经过，推力 +3。', onPass: 'return { push: 3 };' }),
+  example('patience', 'talent', '耐心观察', '首次经过，多走2格。', { type: 'talent', summary: '第一次经过时多走两步。', onPass: 'return ctx.pass === 1 ? { steps: 2 } : {};' }),
+  example('notebook', 'item', '随身日记', '经过时获得1点机会，每过一回合多记一页，每页再加1点。',
+    { type: 'item', summary: '每过一回合多记一页，机会越来越多。', onPass: 'return { chance: 1 + ctx.level };', growth: { on: 'round', every: 1, max: 50 } }),
 ];

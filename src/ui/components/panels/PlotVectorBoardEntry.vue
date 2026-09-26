@@ -38,18 +38,18 @@ const backlog = computed(() => view.value?.backlog ?? []);
 const retrying = ref<string | null>(null);
 const retryNote = ref<'bound' | 'failed' | 'error' | null>(null);
 const starting = computed(() => last.value ? shown.value?.starting : view.value?.prepared.starting);
+const weather = computed(() => (board.value?.cards ?? []).filter(c => c.origin === 'environment'));
 const progress = computed(() => last.value ? shown.value?.progress : view.value?.prepared.progress);
 const number = (value: number) => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 2 }).format(value);
 const channelLabel = (target: string) => {
   const key = ({ 'S+': 'push', 'S-': 'resistance', Y: 'relations', J: 'chances', visits: 'steps' } as Record<string, string>)[target];
   return key ? t(`mainGame.vectorBoard.${key}`) : target;
 };
-const progressLabel = (row: CardProgress['rows'][number]) => row.key === 'uses' ? t('mainGame.vectorBoard.usesLeft')
-  : row.channel ? t('mainGame.vectorBoard.storedBalance', { channel: channelLabel(row.channel) }) : row.label;
+const progressLabel = (row: CardProgress['rows'][number]) => t(({ uses: 'mainGame.vectorBoard.usesLeft', level: 'mainGame.vectorBoard.level', stored: 'mainGame.vectorBoard.stored' } as const)[row.key]);
 const visits = computed(() => shown.value?.result.trace.filter(e => e.eventType === 'visitComplete') ?? []);
 const current = computed(() => visits.value[Math.max(0, cursor.value - 1)]);
 const triggered = computed(() => cursor.value ? shown.value?.result.trace.filter(e =>
-  e.visitId === current.value?.visitId && e.owner?.kind === 'card' && (e.scriptEffects?.length ?? 0) > 0)
+  e.visitId === current.value?.visitId && e.owner?.kind === 'card' && e.status === 'applied' && (e.cardEffects?.length ?? 0) > 0)
   .map(e => label(board.value?.cards.find(c => c.id === e.owner?.id)?.label)) ?? [] : []);
 const displayedLayout = computed(() => last.value ? shown.value!.layout : layout.value);
 const cardAt = (cell: string) => board.value?.cards.find(c => c.id === displayedLayout.value.placements[cell]);
@@ -70,7 +70,6 @@ function receiptText(cardId: string): string {
   if (receipt.stored > 1e-9) parts.push(t('mainGame.vectorBoard.receiptStored', { amount: receiptNumber(receipt.stored) }));
   if (receipt.released > 1e-9) parts.push(t('mainGame.vectorBoard.receiptReleased', { amount: receiptNumber(receipt.released) }));
   if (receipt.otherEffects.includes('route')) parts.push(t('mainGame.vectorBoard.receiptRoute'));
-  if (receipt.otherEffects.includes('mode')) parts.push(t('mainGame.vectorBoard.receiptMode'));
   if (parts.length === 1) parts.push(t('mainGame.vectorBoard.receiptNoChange'));
   return `${prefix}：${parts.join(' · ')}`;
 }
@@ -132,7 +131,7 @@ async function calculate(save: boolean) {
 function showLast() {
   const accepted = view.value?.state.last;
   if (!accepted) return;
-  last.value = true; shown.value = { ...accepted, prompt: '' }; cursor.value = 0;
+  last.value = true; shown.value = { ...accepted, prompt: '', growth: {} }; cursor.value = 0;
 }
 function showDraft() { last.value = false; shown.value = dirty.value ? undefined : view.value?.prepared; cursor.value = 0; }
 async function retryAbility(entryId: string) {
@@ -176,6 +175,7 @@ async function retryAbility(entryId: string) {
           <p>{{ t('mainGame.vectorBoard.nativeHelp') }}</p>
           <p v-for="(row, index) in starting.contributions" :key="index">{{ label(row.label) }} · {{ row.value === null ? t('mainGame.vectorBoard.missingAttribute') : number(row.value) }} → {{ channelLabel(row.target) }} +{{ number(row.amount) }}</p>
         </details>
+        <p v-if="weather.length" class="intro" data-testid="vector-weather">{{ t('mainGame.vectorBoard.weather', { cards: weather.map(c => `${label(c.label)}（${label(c.summary ?? c.originalText)}）`).join('；') }) }}</p>
         <p v-if="!editableCards.length && !last" class="intro">{{ t('mainGame.vectorBoard.empty') }}</p>
         <ol class="track">
           <li v-for="cell in board.cells" :key="cell.id" :class="{ active: cursor > 0 && current?.cellId === cell.id }" :data-cell="cell.id">
@@ -188,6 +188,7 @@ async function retryAbility(entryId: string) {
               </select>
             </label>
             <p v-else>{{ label(cardAt(cell.id)?.label) || t('mainGame.vectorBoard.leaveEmpty') }}</p>
+            <p v-if="cardAt(cell.id)?.summary" class="trip-receipt">{{ label(cardAt(cell.id)?.summary) }}</p>
             <p v-if="cardAt(cell.id)" class="description">{{ label(cardAt(cell.id)?.originalText) }}</p>
             <p v-if="cardAt(cell.id) && receiptText(cardAt(cell.id)!.id)" class="trip-receipt">{{ receiptText(cardAt(cell.id)!.id) }}</p>
             <p v-for="row in progress?.find(p => p.cardId === cardAt(cell.id)?.id)?.rows ?? []" :key="row.key" class="progress">

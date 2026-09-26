@@ -8,18 +8,15 @@ import type { PlotVectorRoundPort } from '../../engine/plot-vector/round-port';
 import type { RoundOwnership } from '../../engine/core/round-ownership';
 import { readPlotVectorControl, subscribePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { projectSavedElements, readPath, savedEntryName } from './saved-elements';
-import { tasksAfterSave, stable, capabilityKey, toRuntimeCandidate, type BoundCard, type GenesisOutput, type GenesisTask, type SavedElement } from './genesis/post-save';
-import { buildAgaGenerationMessages, buildAbilityRetryMessages, parseAgaGenerationOutput, GENESIS_VALIDATION_REVISION, SNIPPET_API } from './genesis/generation-prompt';
-import { initialVectorState, type AbilityRetry, type VectorState, type VectorTaskRow, type PreparedVector, type VectorOperation, type VectorResult } from './runtime';
+import { tasksAfterSave, stable, capabilityKey, type GenesisTask, type SavedElement } from './genesis/post-save';
+import { buildAgaGenerationMessages, buildAbilityRetryMessages, parseCardReply, CARD_API } from './genesis/generation-prompt';
+import { acceptVector, bindCard, prepareVector, readVectorState, type AbilityRetry, type VectorState, type VectorTaskRow, type PreparedVector } from './runtime';
 import { abilityBacklog, type BacklogEntry } from './ability-backlog';
-import { VectorWorkerClient } from './worker-client';
-import { guardedExecutor } from './result-guard';
 import { projectNativeInput, type NativeRules } from './native-input';
 import type { VectorPromptPolicy } from './prompt-policy';
 import type { ExtraRepairTask } from '../../engine/pipeline/sub-pipelines/field-repair';
 
 type Slot = { profileId: string; slotId: string };
-interface Executor { execute<T extends VectorResult>(op: VectorOperation): Promise<T>; cancelAll(): void }
 /** An environment tag whose ability is missing or failed validation (kept as a task row for later repair). */
 interface EnvironmentIssue { entry: SavedElement; ability?: unknown; reason: string }
 /**
@@ -34,7 +31,7 @@ const autoRoundsLeft = (row: VectorTaskRow, round: number) =>
 function previousAbility(row: VectorTaskRow): unknown {
   for (const raw of [row.retry?.raw, row.raw]) {
     if (raw === undefined) continue;
-    try { return (JSON.parse(raw) as { card?: unknown }).card ?? null; } catch { return raw.slice(0, 2000); }
+    try { return parseCardReply(raw); } catch { return raw.slice(0, 2000); }
   }
   return null;
 }
@@ -58,27 +55,24 @@ function degraded(i18nKey: string, message: string, error: unknown): void {
   eventBus.emit('ui:toast', { type: 'warning', i18nKey, message, duration: 4000 });
 }
 
-/** Composition-root adapter. Models see saved capabilities; only the Worker sees executable cards. */
+/** Composition-root adapter. Models see saved capabilities; cards run in the page (rebuild plan §4). */
 export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
   private attempt?: Attempt;
   private revision = 0;
   /** Entries with a player retry in flight in this page; Step3 and a second click never overlap it. */
   private readonly manualInFlight = new Set<string>();
   private unsubs: Array<() => void>;
-  /** Every Worker result crosses the shared host boundary (result-guard.ts) before it is used. */
-  private readonly worker: Executor;
   constructor(private state: StateManager, private ai: Pick<AIService, 'generate'>,
     private saves: Pick<SaveManager, 'saveGame'>, private slot: () => Slot | null,
-    worker: Executor = new VectorWorkerClient(), private nativeRules?: NativeRules,
+    private nativeRules?: NativeRules,
     private promptPolicy?: Pick<VectorPromptPolicy, 'mode' | 'transform' | 'environmentAbility' | 'abilityRepair'>) {
-    this.worker = guardedExecutor(worker);
     this.unsubs = [subscribePlotVectorControl(() => this.cancel()),
       // The round itself notices a load or rollback through its RoundOwnership; this stops work in flight.
       eventBus.on<{type: string}>('engine:state-changed', e => {
         if (e.type === 'load' || e.type === 'rollback') { this.revision++; this.cancel(); }
       })];
   }
-  private cancel() { this.attempt?.controller.abort(); this.worker.cancelAll(); }
+  private cancel() { this.attempt?.controller.abort(); }
   dispose() { this.cancel(); this.attempt?.release(); this.unsubs.forEach(fn => fn()); }
   promptTransform(ctx: PipelineContext) {
     if (ctx.meta.isEnhancedOpening) return;
@@ -104,7 +98,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     const owner = ctx.meta.roundOwnership;
     if (!control.enabled || !slot || ctx.meta.isEnhancedOpening || !owner) return ctx;
     const controller = new AbortController();
-    const abort = () => { controller.abort(); this.worker.cancelAll(); };
+    const abort = () => { controller.abort(); };
     ctx.abortSignal?.addEventListener('abort', abort, { once: true });
     const featureLive = () => {
       const live = readPlotVectorControl();
@@ -120,10 +114,9 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       guard();
       let state: VectorState | undefined, before: SavedElement[] | undefined, prepared: PreparedVector | undefined;
       try {
-        state = cloneDeep(this.state.get<VectorState>(P.plotVector) ?? initialVectorState());
+        state = cloneDeep(readVectorState(this.state.get(P.plotVector)));
         before = projectSavedElements(ctx.stateSnapshot, { includeEnvironment: true }).entries;
-        prepared = await this.worker.execute<PreparedVector>({ kind: 'prepare', state, entries: before,
-          native: projectNativeInput(ctx.stateSnapshot, this.nativeRules), id });
+        prepared = prepareVector(state, before, id, projectNativeInput(ctx.stateSnapshot, this.nativeRules));
       } catch (error) {
         guard();
         degraded('mainGame.toast.vectorNotComputed', '本回合剧情动能没有算出来，剧情照常进行。', error);
@@ -164,7 +157,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     a.guard();
     let next = a.state;
     if (a.prepared && a.state.last?.id !== a.prepared.id) {
-      try { next = await this.worker.execute<VectorState>({ kind: 'accept', state: a.state, prepared: a.prepared }); }
+      try { next = acceptVector(a.state, a.prepared); }
       catch (error) {
         a.guard();
         // The story and its items are saved as usual; this round's momentum and growth do not advance.
@@ -189,11 +182,9 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     try {
       a.guard();
       await this.syncEnvironment(a);
-      await this.recoverRetries(a);
       const current = projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries;
       // One new ability per round. Removed/replaced entries never cause paid generation.
-      const row = a.state.tasks.find(t => t.task.entry.kind !== 'environment' && (t.status === 'pending' || (t.status === 'sending' && t.raw !== undefined)
-        || (t.status === 'failed' && t.raw !== undefined && (t.validationRevision ?? 0) < GENESIS_VALIDATION_REVISION))
+      const row = a.state.tasks.find(t => t.task.entry.kind !== 'environment' && (t.status === 'pending' || (t.status === 'sending' && t.raw !== undefined))
         && current.some(e => capabilityKey(e) === capabilityKey(t.task.entry))
         && !a.state.cards.some(c => capabilityKey(c.task.entry) === capabilityKey(t.task.entry)));
       if (!row) return;
@@ -212,13 +203,12 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
           await this.persist(a); return;
         }
         a.guard();
-        // Keep the received output before validation, so a failed check can be repeated for free.
+        // Keep the received output before validation, so the page can check it after a reload.
         row.raw = raw;
         await this.persist(a);
       }
       try {
-        row.validationRevision = GENESIS_VALIDATION_REVISION;
-        const bound = await this.worker.execute<BoundCard>({ kind: 'validate', task: row.task, output: parseAgaGenerationOutput(row.raw), attempts: 1 });
+        const bound = bindCard(row.task, parseCardReply(row.raw));
         a.guard();
         a.state.cards = [...a.state.cards.filter(c => c.task.entry.id !== bound.task.entry.id), bound];
         row.status = 'bound';
@@ -228,22 +218,6 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       }
       await this.persist(a);
     } finally { a.release(); }
-  }
-  /**
-   * Free, after the round is saved: any received retry reply not yet checked under the current validation is
-   * checked. Nothing is sent from here.
-   */
-  private async recoverRetries(a: Attempt): Promise<void> {
-    let changed = false;
-    for (const row of a.state.tasks) {
-      const retry = row.retry;
-      if (!retry) continue;
-      if (retry.raw !== undefined && (retry.validationRevision ?? 0) < GENESIS_VALIDATION_REVISION && row.status !== 'bound') {
-        await this.validateReceived(a.state, row, a.guard);
-        changed = true;
-      }
-    }
-    if (changed) await this.persist(a);
   }
   /** Bind this round's environment abilities after the round is saved; they take part from the next round. */
   private async syncEnvironment(a: Attempt): Promise<void> {
@@ -292,12 +266,10 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
         else if (existing) cards.push({ ...existing, task });
         continue;
       }
-      let output: GenesisOutput;
-      try { output = parseAgaGenerationOutput(JSON.stringify({ version: 3, card: ability })); }
-      catch (error) { issues.push({ entry: bare, ability, reason: error instanceof Error ? error.message : String(error) }); continue; }
-      if (existing && stable(existing.candidate) === stable(toRuntimeCandidate(task, output))) { cards.push({ ...existing, task }); continue; }
       try {
-        cards.push(await this.worker.execute<BoundCard>({ kind: 'validate', task, output, attempts: 1 }));
+        const bound = bindCard(task, ability);
+        // The same ability re-sent with an unchanged tag keeps its card (and its growth).
+        cards.push(existing && stable(existing.spec) === stable(bound.spec) ? { ...existing, task } : bound);
         guard();
       } catch (error) {
         guard();
@@ -317,19 +289,19 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     const environmentRows = issues.map((issue): VectorTaskRow => {
       const task: GenesisTask = { key: capabilityKey(issue.entry), actionId: 'environment', entry: issue.entry };
       const prior = previousRows.get(task.key);
-      const ability = issue.ability === undefined ? undefined : JSON.stringify({ version: 3, card: issue.ability });
+      const ability = issue.ability === undefined ? undefined : JSON.stringify(issue.ability);
       let retry = prior?.retry;
       if (attempt?.ids.has(issue.entry.id)) {
         // The attempt was counted when its Step3 request left; here only its reply is recorded.
         retry = { ...(retry ?? { attempts: 1, autoRounds: 1, lastAutoRound: attempt.round }), source: 'step3', error: issue.reason };
         // `raw` always describes this attempt: a reply without a new ability leaves none.
-        delete retry.raw; delete retry.validationRevision;
-        if (ability) { retry.raw = ability; retry.validationRevision = GENESIS_VALIDATION_REVISION; }
+        delete retry.raw;
+        if (ability) retry.raw = ability;
       }
       // The first failure keeps its own reason and ability; later attempts are recorded under `retry`.
       const raw = prior ? prior.raw : ability;
       return { task, status: 'failed', error: prior?.error ?? issue.reason,
-        ...(raw !== undefined ? { raw, validationRevision: prior?.validationRevision ?? GENESIS_VALIDATION_REVISION } : {}),
+        ...(raw !== undefined ? { raw } : {}),
         ...(retry ? { retry } : {}) };
     });
     const tasks = [...state.tasks.filter(t => t.task.entry.kind !== 'environment'), ...environmentRows];
@@ -344,9 +316,9 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
   }
   /** Obtained entries whose ability is not usable yet (the saved entries themselves are never touched). */
   abilityBacklog(): BacklogEntry[] {
-    const state = this.state.get<VectorState>(P.plotVector);
-    if (!state) return [];
-    return abilityBacklog(state, projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries,
+    const raw = this.state.get(P.plotVector);
+    if (!raw) return [];
+    return abilityBacklog(readVectorState(raw), projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries,
       this.promptPolicy?.environmentAbility?.field);
   }
   /** Stops a repair whose save, feature epoch or loaded state changed underneath it. */
@@ -369,8 +341,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
   async abilityRepairTask(): Promise<ExtraRepairTask | null> {
     const environment = this.promptPolicy?.environmentAbility, items = this.promptPolicy?.abilityRepair;
     if (!this.slot() || !readPlotVectorControl().enabled || (!environment && !items)) return null;
-    const state = this.state.get<VectorState>(P.plotVector);
-    if (!state) return null;
+    if (!this.state.get(P.plotVector)) return null;
     const round = this.state.get<number>(P.roundNumber) ?? 0;
     const due = this.abilityBacklog().filter(b => b.state === 'failed' && !this.manualInFlight.has(b.id) && autoRoundsLeft(b.row, round));
     const tags = environment ? due.filter(b => b.kind === 'environment') : [];
@@ -391,7 +362,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
         problem: item.problem ?? '', ability: previousAbility(item.row) }];
       blocks.push(`${items.template.split('{{ITEMS}}').join(JSON.stringify(list, null, 2))}\n\n${items.guidance}`);
     }
-    blocks.push(SNIPPET_API);
+    blocks.push(CARD_API);
     const listed = [...tags, ...(item ? [item] : [])].map(b => capabilityKey(b.row.task.entry));
     return {
       block: blocks.join('\n\n'),
@@ -399,7 +370,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       // request that fails without a reply still uses up the automatic rounds (`settle` records a reply).
       sent: () => {
         guard();
-        const started = cloneDeep(this.state.get<VectorState>(P.plotVector) ?? initialVectorState());
+        const started = cloneDeep(readVectorState(this.state.get(P.plotVector)));
         let changed = false;
         for (const key of listed) {
           const row = started.tasks.find(t => capabilityKey(t.task.entry) === key && t.status !== 'bound');
@@ -408,7 +379,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
           const base: AbilityRetry = row.retry ?? { attempts: 0, autoRounds: 0 };
           const retry: AbilityRetry = { ...base, attempts: base.attempts + 1, source: 'step3', error: '补生请求没有得到回复',
             ...(base.lastAutoRound === round ? {} : { autoRounds: base.autoRounds + 1, lastAutoRound: round }) };
-          delete retry.raw; delete retry.validationRevision;
+          delete retry.raw;
           row.retry = retry;
         }
         if (changed) this.state.set(P.plotVector, started);
@@ -418,7 +389,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       ...(tags.length ? {} : { commands: false }),
       settle: async (output?: unknown) => {
         guard();
-        let next = cloneDeep(this.state.get<VectorState>(P.plotVector) ?? initialVectorState());
+        let next = cloneDeep(readVectorState(this.state.get(P.plotVector)));
         let resolved = true;
         if (environment && tags.length) {
           const ids = new Set(tags.map(b => b.id));
@@ -433,7 +404,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
         if (item) {
           const key = capabilityKey(item.row.task.entry);
           const row = next.tasks.find(t => capabilityKey(t.task.entry) === key && t.status !== 'bound');
-          if (!row || !(await this.recordRetryReply(next, row, replyCardFor(output, item.id), guard))) resolved = false;
+          if (!row || !this.recordRetryReply(next, row, replyCardFor(output, item.id), guard)) resolved = false;
         }
         this.state.set(P.plotVector, next);
         return resolved;
@@ -441,10 +412,9 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     };
   }
   /**
-   * The player's "regenerate ability" for one obtained entry. A reply that was already received is checked
-   * first, for free, under the current validation. Only then is a new request sent, recorded as a new attempt;
-   * earlier failures stay on record. Returns whether the entry now has a usable ability and whether a model
-   * request was made. The saved entry itself is never changed.
+   * The player's "regenerate ability" for one obtained entry: a new request, counted and saved before it is
+   * sent; earlier failures stay on record. Returns whether the entry now has a usable ability and whether a
+   * model request was made. The saved entry itself is never changed.
    */
   async regenerateAbility(entryId: string): Promise<{ bound: boolean; requested: boolean }> {
     const slot = this.slot();
@@ -454,22 +424,16 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     this.manualInFlight.add(entryId);
     try {
       guard();
-      const state = cloneDeep(this.state.get<VectorState>(P.plotVector) ?? initialVectorState());
+      const state = cloneDeep(readVectorState(this.state.get(P.plotVector)));
       const entry = abilityBacklog(state, projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries,
         this.promptPolicy?.environmentAbility?.field).find(b => b.id === entryId);
       if (!entry) throw new Error('这一条目前没有需要补生的能力');
       const key = capabilityKey(entry.row.task.entry);
       const row = state.tasks.find(t => capabilityKey(t.task.entry) === key && t.status !== 'bound')!;
-      // 1. Free: any received reply not yet checked under the current validation.
-      if (await this.validateReceived(state, row, guard)) {
-        await this.persistState(slot, state, guard);
-        return { bound: true, requested: false };
-      }
-      // 2. A new request, recorded as an attempt before it is sent.
       const problem = row.retry?.error ?? row.error;
       const base: AbilityRetry = row.retry ?? { attempts: 0, autoRounds: 0 };
       const retry: AbilityRetry = { ...base, attempts: base.attempts + 1, source: 'manual' };
-      delete retry.raw; delete retry.validationRevision;
+      delete retry.raw;
       row.retry = retry;
       await this.persistState(slot, state, guard);
       let raw: string;
@@ -484,7 +448,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       }
       guard();
       retry.raw = raw;
-      const bound = await this.validateReceived(state, row, guard);
+      const bound = this.bindRetryReply(state, row, guard);
       await this.persistState(slot, state, guard);
       return { bound, requested: true };
     } finally { this.manualInFlight.delete(entryId); }
@@ -493,49 +457,34 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
    * Record the reply of a Step3 attempt (already counted when its request left) and bind the ability if it
    * validates. `card` undefined: the reply had no ability for this entry.
    */
-  private async recordRetryReply(state: VectorState, row: VectorTaskRow, card: unknown, guard: () => void): Promise<boolean> {
+  private recordRetryReply(state: VectorState, row: VectorTaskRow, card: unknown, guard: () => void): boolean {
     const retry: AbilityRetry = { ...(row.retry ?? { attempts: 1, autoRounds: 1 }), source: 'step3' };
-    delete retry.raw; delete retry.validationRevision;
+    delete retry.raw;
     row.retry = retry;
     if (card === undefined) { retry.error = '补生回复没有给出这一条的能力'; return false; }
-    retry.raw = JSON.stringify({ version: 3, card });
-    return this.validateReceived(state, row, guard);
+    retry.raw = JSON.stringify(card);
+    return this.bindRetryReply(state, row, guard);
   }
   /**
-   * Check the received replies of a row that have not been checked under the current validation (the latest
-   * retry first, then the first attempt) and bind the first that validates. A failure is recorded on the
-   * reply it belongs to; nothing is sent.
+   * Bind the latest retry reply of a row if it passes the one check (§5); a failure is recorded on that retry
+   * and the first attempt's failure stays on record. Nothing is sent.
    */
-  private async validateReceived(state: VectorState, row: VectorTaskRow, guard: () => void): Promise<boolean> {
-    // `clear` runs on success: a retry's success leaves the first attempt's failure on record.
-    const replies: Array<{ raw: string; mark(): void; fail(reason: string): void; clear(): void }> = [];
+  private bindRetryReply(state: VectorState, row: VectorTaskRow, guard: () => void): boolean {
     const retry = row.retry;
-    if (retry?.raw !== undefined && (retry.validationRevision ?? 0) < GENESIS_VALIDATION_REVISION) {
-      const raw = retry.raw;
-      replies.push({ raw, mark: () => { retry.validationRevision = GENESIS_VALIDATION_REVISION; },
-        fail: reason => { retry.error = reason; }, clear: () => { delete retry.error; } });
+    if (retry?.raw === undefined) return false;
+    try {
+      const bound = bindCard(row.task, parseCardReply(retry.raw));
+      guard();
+      state.cards = [...state.cards.filter(c => c.task.entry.id !== row.task.entry.id), bound];
+      row.status = 'bound';
+      delete retry.error;
+      return true;
+    } catch (error) {
+      guard();
+      row.status = row.status === 'pending' ? row.status : 'failed';
+      retry.error = error instanceof Error ? error.message : String(error);
+      return false;
     }
-    if (row.raw !== undefined && (row.validationRevision ?? 0) < GENESIS_VALIDATION_REVISION) {
-      const raw = row.raw;
-      replies.push({ raw, mark: () => { row.validationRevision = GENESIS_VALIDATION_REVISION; },
-        fail: reason => { row.error = reason; }, clear: () => { delete row.error; } });
-    }
-    for (const reply of replies) {
-      reply.mark();
-      try {
-        const bound = await this.worker.execute<BoundCard>({ kind: 'validate', task: row.task, output: parseAgaGenerationOutput(reply.raw), attempts: 1 });
-        guard();
-        state.cards = [...state.cards.filter(c => c.task.entry.id !== row.task.entry.id), bound];
-        row.status = 'bound';
-        reply.clear();
-        return true;
-      } catch (error) {
-        guard();
-        row.status = row.status === 'pending' ? row.status : 'failed';
-        reply.fail(error instanceof Error ? error.message : String(error));
-      }
-    }
-    return false;
   }
   /** Save the vector state outside a round (player retry). A failed write never leaves the new state in memory. */
   private async persistState(slot: Slot, state: VectorState, guard: () => void): Promise<void> {

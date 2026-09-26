@@ -92,10 +92,9 @@ function baseSeedTree(): GameStateTree {
     系统: {
       扩展: {
           // Persisted component data must survive save/export even with the feature off.
-          // D148 optional last.starting/progress and card.stateDisplay are produced
-          // by the real Worker in plot-vector-board.spec.ts, not invented here.
-        plotVector: { version: 1, cards: [], tasks: [], session: { round: 1, carriedAccounts: {},
-          talentCharges: {}, itemUses: {}, resources: {}, committed: [], scriptStates: {}, scriptCommitLog: [] } },
+          // Cards, growth and last.progress are produced by the real runtime in
+          // plot-vector-board.spec.ts, not invented here.
+        plotVector: { version: 2, cards: [], tasks: [], growth: {}, session: { round: 1, carriedAccounts: {}, committed: [] } },
         engramMemory: {
           events: [],
           entities: [

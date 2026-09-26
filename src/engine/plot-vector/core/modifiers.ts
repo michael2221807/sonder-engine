@@ -4,10 +4,9 @@ export interface AdjacencyNeighbor {
   cellId: string;
   tags: string[];
   hasCard: boolean;
-  cardTags: string[];
 }
 
-/** Neighbour view frozen at visit start (D11-C / v0.3 section B). */
+/** Neighbour view frozen at visit start. */
 export interface AdjacencyView {
   neighbors: AdjacencyNeighbor[];
 }
@@ -17,34 +16,24 @@ export interface ActiveModifier {
   def: ModifierDef;
 }
 
-export function adjacencyViewFor(
-  board: CompiledBoard,
-  cellId: string,
-  placements: Record<string, string | null>,
-): AdjacencyView {
+export function adjacencyViewFor(board: CompiledBoard, cellId: string, placements: Record<string, string | null>): AdjacencyView {
   const neighbors: AdjacencyNeighbor[] = [];
   for (const [a, b] of board.adjacency) {
     const other = a === cellId ? b : b === cellId ? a : null;
     if (!other) continue;
     const cell = board.cells.find((c) => c.id === other);
     if (!cell) continue;
-    const card = board.cards.find((c) => c.id === placements[other]);
-    neighbors.push({ cellId: other, tags: [...cell.tags], hasCard: !!card, cardTags: [...(card?.tags ?? [])] });
+    neighbors.push({ cellId: other, tags: [...cell.tags], hasCard: board.cards.some((c) => c.id === placements[other]) });
   }
   return { neighbors };
 }
 
 function factorOf(def: ModifierDef, view: AdjacencyView): number {
-  if (def.kind === 'constant') return def.multiplier;
-  const tag = def.neighborTag;
-  const n = view.neighbors.filter((nb) => nb.tags.includes(tag) && (!def.requiresCard || nb.hasCard)).length;
+  const n = view.neighbors.filter((nb) => nb.tags.includes(def.neighborTag) && (!def.requiresCard || nb.hasCard)).length;
   return 1 + def.perNeighbor * Math.min(def.maxCount, n);
 }
 
-/**
- * modifyOperation sub-phase: the multiplier applied to one operation's delta.
- * Modifiers never emit operations and never modify themselves.
- */
+/** The multiplier applied to one operation's delta. Modifiers never emit operations. */
 export function multiplierFor(
   active: ActiveModifier[],
   opOwnerKind: OwnerRef['kind'],

@@ -2,17 +2,18 @@ import { buildSixCellBoard } from './default-board';
 import { compileBoard } from '../../engine/plot-vector/core/policies';
 import { run } from '../../engine/plot-vector/core/runner';
 import { commitRun, createSession, type VectorSession } from '../../engine/plot-vector/core/session';
-import { ScriptProgramRegistry, createScriptCardDef } from './genesis/script-runtime';
-import { GENESIS_CATALOG } from './genesis/catalog';
-import { probeGenerated } from './genesis/probe-generated';
+import { grantRoundSupplies } from '../../engine/plot-vector/core/card-state';
+import type { BoardDef, CardDef, CardOrigin, CompiledBoard, Layout, RunDone, RunOptions, VectorPacket } from '../../engine/plot-vector/core/types';
 import { activeSavedCards } from './saved-elements';
-import { toRuntimeCandidate, type BoundCard, type GenesisTask, type GenesisOutput, type SavedElement } from './genesis/post-save';
+import type { BoundCard, GenesisTask, SavedElement } from './genesis/post-save';
 import { buildNarrativeInputV2 } from './decoder/narrative-input-v2';
-import type { BoardDef, CardDef, CompiledBoard, Layout, RunDone, RunOptions, VectorPacket } from '../../engine/plot-vector/core/types';
 import { projectNativeInput, type NativeInput } from './native-input';
 import { readCardProgress, readSupplyProgress, type CardProgress } from './card-progress';
-import { basicSupplyCards, hasUses } from './basic-supply';
-import { grantRoundSupplies } from '../../engine/plot-vector/core/card-state';
+import { BASIC_SUPPLY, basicSupplyCards, hasUses } from './basic-supply';
+import { TripCards, storeAccount, type TripCard } from './contract/trip';
+import { growAtRound, initialGrowth, readGrowth } from './contract/growth';
+import { validateCard } from './contract/validate';
+import type { CardType, GrowthState } from './contract/types';
 
 /**
  * Later attempts to give a saved entry its ability after the first one failed. The first attempt's
@@ -28,8 +29,6 @@ export interface AbilityRetry {
   source?: 'step3' | 'manual';
   /** Reply of the latest retry, kept before validation. */
   raw?: string;
-  /** Validation revision the latest `raw` was checked under. */
-  validationRevision?: number;
   /** Why the latest retry did not give a usable ability. */
   error?: string;
 }
@@ -38,115 +37,142 @@ export interface VectorTaskRow {
   status: 'pending' | 'sending' | 'failed' | 'bound';
   error?: string;
   raw?: string;
-  validationRevision?: number;
   retry?: AbilityRetry;
 }
 export interface VectorState {
-  version: 1;
+  version: 2;
   session: VectorSession;
   cards: BoundCard[];
   tasks: VectorTaskRow[];
+  /** Engine-owned growth of every card, by card id (rebuild plan §2.5). */
+  growth: Record<string, GrowthState>;
   layout?: Layout;
   last?: { id: string; board: CompiledBoard; result: RunDone; layout: Layout; starting?: NativeInput; progress?: CardProgress[] };
 }
-export interface PreparedVector { id: string; board: CompiledBoard; result: RunDone; layout: Layout; prompt: string; starting?: NativeInput; progress?: CardProgress[] }
-export type VectorOperation =
-  | { kind: 'prepare'; state: VectorState; entries: SavedElement[]; id: string; native?: NativeInput }
-  | { kind: 'accept'; state: VectorState; prepared: PreparedVector }
-  | { kind: 'validate'; task: GenesisTask; output: GenesisOutput; attempts: number };
-export type VectorResult = PreparedVector | VectorState | BoundCard;
-export function initialVectorState(): VectorState { return { version: 1, session: createSession(), cards: [], tasks: [] }; }
+export interface PreparedVector {
+  id: string;
+  board: CompiledBoard;
+  result: RunDone;
+  layout: Layout;
+  prompt: string;
+  starting?: NativeInput;
+  progress?: CardProgress[];
+  /** Growth after this trip; kept only when the round is accepted. */
+  growth: Record<string, GrowthState>;
+}
+export function initialVectorState(): VectorState {
+  return { version: 2, session: createSession(), cards: [], tasks: [], growth: {} };
+}
+/**
+ * The stored component state. A state saved by an older version starts over: its cards and tasks used a
+ * retired card format (charter I14, rebuild plan §9); the story itself is untouched.
+ */
+export function readVectorState(raw: unknown): VectorState {
+  const state = (raw && typeof raw === 'object' ? raw : {}) as Partial<VectorState>;
+  if (state.version !== 2 || !state.session || !Array.isArray(state.cards) || !Array.isArray(state.tasks)) return initialVectorState();
+  return { ...(state as VectorState), growth: Object.fromEntries(Object.entries(state.growth ?? {}).map(([id, g]) => [id, readGrowth(g)])) };
+}
 
-/** The single board, run options and narrative strength every AGA vector round uses. The host
- * result guard reads these same values, so a Worker result cannot bring its own rules. */
-export const VECTOR_RUN_OPTIONS: RunOptions = { capacityEnabled: false, capacityScope: 'total', pickup: 'none', readout: { kind: 'N1', kappa: 10 } };
+/** The single board, run options and narrative strength every AGA vector round uses. */
+export const VECTOR_RUN_OPTIONS: RunOptions = { readout: { kind: 'N1', kappa: 10 } };
 export const VECTOR_NARRATIVE_STRENGTH = 0.25;
 export function vectorBaseBoard(): BoardDef { return buildSixCellBoard({ topology: 'line' }); }
-/** Pure: the narrative prompt a prepared round injects, derived only from its checked inputs and packet. */
-export function narrativePromptFor(starting: NativeInput, layout: Layout, packet: VectorPacket): string {
-  const hasInput = Object.values(starting.payload).some(n => n > 0) || Object.values(layout.placements).some(Boolean);
+/** Pure: the narrative prompt a prepared round injects, derived only from its inputs and packet. */
+export function narrativePromptFor(starting: NativeInput, layout: Layout, packet: VectorPacket, departed = false): string {
+  const hasInput = Object.values(starting.payload).some(n => n > 0) || Object.values(layout.placements).some(Boolean) || departed;
   return hasInput ? buildNarrativeInputV2(packet, undefined, VECTOR_NARRATIVE_STRENGTH).prompt : '';
 }
 
-/** One registry per operation: the player's bound cards (re-probed) plus the basic supply cards. */
-async function runtimeFor(cards: BoundCard[]): Promise<{ registry: ScriptProgramRegistry; basic: CardDef[] }> {
-  const registry = await registryFor(cards);
-  return { registry, basic: await basicSupplyCards(registry) };
+/** A saved entry's kind as a card type (rebuild plan §3); the entry's actual place decides it. */
+export function cardTypeOf(entry: SavedElement): CardType {
+  return entry.kind === 'effect' ? 'status' : entry.kind === 'talent' ? 'talent' : entry.kind === 'environment' ? 'environment' : 'item';
 }
-async function registryFor(cards: BoundCard[]): Promise<ScriptProgramRegistry> {
-  const registry = new ScriptProgramRegistry(GENESIS_CATALOG);
-  for (const card of cards) {
-    try {
-      const probe = new ScriptProgramRegistry(GENESIS_CATALOG);
-      const ref = await probe.register(card.candidate);
-      if (ref.hash !== card.ref.hash || ref.id !== card.ref.id || probeGenerated(probe, card.candidate, ref).length) continue;
-      await registry.register(card.candidate);
-    } catch { /* An unavailable ability does not invalidate the saved item. */ }
-  }
-  return registry;
+const originOf = (entry: SavedElement): CardOrigin => (entry.kind === 'other' ? 'item' : entry.kind);
+const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : undefined);
+
+function cardDefOf(card: BoundCard): CardDef {
+  const entry = card.task.entry;
+  const name = text(entry.capability.name) ?? card.spec.for;
+  const description = text(entry.capability.description);
+  return { id: entry.id, tags: [], source: 'Model', origin: originOf(entry), accounts: [storeAccount(entry.id)],
+    label: { zh: name, en: name }, summary: { zh: card.spec.summary, en: card.spec.summary },
+    ...(description ? { originalText: { zh: description, en: description } } : {}) };
 }
-/** Worker only in production. Pure inputs contain no story, model credentials or state manager. */
-export async function executeVectorOperation(op: VectorOperation): Promise<VectorResult> {
-  if (op.kind === 'validate') {
-    const candidate = toRuntimeCandidate(op.task, op.output);
-    const registry = new ScriptProgramRegistry(GENESIS_CATALOG);
-    const ref = await registry.register(candidate);
-    const issues = probeGenerated(registry, candidate, ref);
-    if (issues.length) throw new Error(issues.join('; '));
-    return { task: op.task, candidate, ref, attempts: op.attempts };
-  }
-  const { registry, basic } = await runtimeFor(op.state.cards);
-  if (op.kind === 'accept') {
-    if (op.state.session.committed.includes(op.prepared.result.settlementId)) return op.state;
-    const committed = commitRun(op.state.session, op.prepared.board, op.prepared.result, registry);
-    // Basic supply is topped up once per accepted round, after this round's uses were deducted.
-    // A repeated accept returns above, and a failed save never persists this state, so it is never granted twice.
-    const session = { ...committed, cardStates: grantRoundSupplies(basic, committed.cardStates ?? {}).states };
-    const active = op.state.cards.filter(c => op.prepared.board.cards.some(b => b.id === c.task.entry.id));
-    return { ...op.state, session, layout: op.prepared.layout,
-      last: { ...op.prepared, progress: [...readCardProgress(active, session, op.state.session),
-        ...readSupplyProgress(basic, session.cardStates, op.state.session.cardStates ?? {})] } };
-  }
-  const bound = activeSavedCards(op.entries, op.state.cards.map(bound => ({ task: bound.task, bound })))
-    .filter(card => registry.initialState(card.ref) !== null);
-  const automatic = (card: BoundCard) => card.task.entry.kind === 'effect' || card.task.entry.kind === 'environment';
-  const items = bound.filter(card => !automatic(card));
-  const effects = bound.filter(automatic);
-  // The hand: the player's own cards plus basic cards that still have uses. Exhausted basic cards stay
-  // on the board definition (so their count carries over) but cannot be placed until the next top-up.
-  const placeable = [...items.map(c => c.task.entry.id), ...basic.filter(c => hasUses(c, op.state.session.cardStates)).map(c => c.id)];
-  const seed = [...op.id].reduce((n, c) => (Math.imul(n, 31) + c.charCodeAt(0)) >>> 0, 0);
-  const effect = effects.length ? effects[seed % effects.length] : undefined;
+
+/**
+ * Bind a model-written ability to a saved entry: one check (§5). The entry's actual place decides the
+ * type, whatever the model declared. Throws with the reason when the ability cannot be used.
+ */
+export function bindCard(task: GenesisTask, output: unknown): BoundCard {
+  const checked = validateCard(output);
+  if (!checked.ok) throw new Error(checked.reason);
+  return { task, spec: { ...checked.spec, type: cardTypeOf(task.entry) } };
+}
+
+/**
+ * Prepare a round's trip in the page (rebuild plan §4): the player's arrangement for 01–05, one status
+ * card for the status cell, environment cards acting at departure. Throws when the trip cannot be run;
+ * the caller then runs the round without momentum.
+ */
+export function prepareVector(state: VectorState, entries: readonly SavedElement[], id: string, native?: NativeInput): PreparedVector {
+  const bound = activeSavedCards(entries, state.cards.map(card => ({ bound: card })));
+  const basic = basicSupplyCards();
+  const status = bound.filter(card => card.task.entry.kind === 'effect');
+  const environment = bound.filter(card => card.task.entry.kind === 'environment');
+  const hand = bound.filter(card => card.task.entry.kind !== 'effect' && card.task.entry.kind !== 'environment');
+  // The hand: the player's own cards plus basic cards that still have uses.
+  const placeable = [...hand.map(c => c.task.entry.id), ...basic.filter(c => hasUses(c, state.session.cardStates)).map(c => c.id)];
+  const seed = [...id].reduce((n, c) => (Math.imul(n, 31) + c.charCodeAt(0)) >>> 0, 0);
   const placements: Record<string, string | null> = {};
   const used = new Set<string>();
   for (let i = 1; i <= 5; i++) {
     const cell = String(i).padStart(2, '0');
-    const previous = op.state.layout?.placements[cell];
-    // Selection is opt-in, including the first run. Missing/removed cards leave
-    // their slots empty; acquiring an ability must never spend it automatically.
-    const id = placeable.find(candidate => candidate === previous && !used.has(candidate));
-    placements[cell] = id ?? null;
-    if (id) used.add(id);
+    // Selection is opt-in: acquiring an ability never places or spends it automatically.
+    const chosen = placeable.find(candidate => candidate === state.layout?.placements[cell] && !used.has(candidate));
+    placements[cell] = chosen ?? null;
+    if (chosen) used.add(chosen);
   }
-  placements['06'] = effect?.task.entry.id ?? null;
-  const layout: Layout = { placements, tray: placeable.filter(id => !used.has(id)) };
-  const base = vectorBaseBoard();
-  const starting = op.native ?? projectNativeInput(undefined);
-  const board = compileBoard({ ...base, startPayload: starting.payload, talents: [], items: [], cards: [...bound.map((c): CardDef => {
-    const card = createScriptCardDef(c.candidate, c.ref,
-      { id: c.task.entry.id, tags: [], source: 'Model', origin: c.task.entry.kind === 'other' ? 'item' : c.task.entry.kind });
-    // The saved element supplies story flavor. Numeric mechanics shown to the player
-    // come from this run's trace, because generated prose can diverge from generated JS.
-    const description = c.task.entry.capability.description;
-    return { ...card, originalText: typeof description === 'string' && description.trim()
-      ? { zh: description, en: description } : undefined };
-  }), ...basic] }, { triggerDefault: 'a' });
-  const result = run(board, { ...op.state.session, id: op.id, seed: op.id, layout, actionLog: [], visitBudget: starting.visitBudget,
-    options: VECTOR_RUN_OPTIONS }, { scripts: registry });
-  // The round then runs without momentum and the board opens cleared (aga-adapter / board-access degrade).
+  // The status cell takes at most one status card each round, chosen by the round's seed (C7).
+  placements['06'] = status.length ? status[seed % status.length].task.entry.id : null;
+  const layout: Layout = { placements, tray: placeable.filter(card => !used.has(card)) };
+  const starting = native ?? projectNativeInput(undefined);
+  const board = compileBoard({ ...vectorBaseBoard(), startPayload: starting.payload, cards: [...bound.map(cardDefOf), ...basic] });
+  const tripCards: TripCard[] = [
+    ...bound.map(card => ({ id: card.task.entry.id, spec: card.spec, departs: card.task.entry.kind === 'environment' })),
+    ...BASIC_SUPPLY.map(card => ({ id: card.id, spec: card.spec, departs: false })),
+  ];
+  const cards = new TripCards(tripCards, state.growth, id);
+  const result = run(board, { id, round: state.session.round, seed: id, layout, options: VECTOR_RUN_OPTIONS,
+    cardStates: state.session.cardStates, carriedAccounts: state.session.carriedAccounts, visitBudget: starting.visitBudget }, { cards });
   if (result.status === 'failed') throw new Error(`剧情动能这回合算不出来（${result.reason}）`);
-  if (result.status !== 'done') throw new Error('请先完成棋盘选择');
-  return { id: op.id, board, result, layout, starting,
-    progress: [...readCardProgress(bound, op.state.session), ...readSupplyProgress(basic, op.state.session.cardStates)],
-    prompt: narrativePromptFor(starting, layout, result.vectorPacket) };
+  const departed = environment.length > 0 || result.trace.some(e => e.eventType === 'departure');
+  return { id, board, result, layout, starting, growth: cards.finalGrowth(),
+    progress: [...readCardProgress(bound, { growth: state.growth, session: state.session }), ...readSupplyProgress(basic, state.session.cardStates)],
+    prompt: narrativePromptFor(starting, layout, result.vectorPacket, departed) };
+}
+
+/**
+ * Accept a prepared trip with its round: commit the session, top up basic supply, keep this trip's growth
+ * and count round growth. Idempotent: a trip already accepted leaves the state as it is.
+ */
+export function acceptVector(state: VectorState, prepared: PreparedVector): VectorState {
+  if (state.session.committed.includes(prepared.result.settlementId)) return state;
+  const basic = basicSupplyCards();
+  const committed = commitRun(state.session, prepared.board, prepared.result);
+  // Basic supply is topped up once per accepted round, after this round's uses were deducted.
+  const session = { ...committed, cardStates: grantRoundSupplies(basic, committed.cardStates ?? {}).states };
+  const onBoard = new Set(prepared.board.cards.map(card => card.id));
+  const placed = new Set(Object.values(prepared.layout.placements).filter((id): id is string => !!id));
+  const growth: Record<string, GrowthState> = { ...state.growth, ...prepared.growth };
+  for (const card of state.cards) {
+    const id = card.task.entry.id;
+    if (!onBoard.has(id)) continue;
+    // Environment cards take part at departure, so they count as on the board.
+    growth[id] = growAtRound(card.spec.growth, growth[id] ?? initialGrowth(), placed.has(id) || card.task.entry.kind === 'environment');
+  }
+  const active = state.cards.filter(card => onBoard.has(card.task.entry.id));
+  return { ...state, session, growth, layout: prepared.layout,
+    last: { id: prepared.id, board: prepared.board, result: prepared.result, layout: prepared.layout, starting: prepared.starting,
+      progress: [...readCardProgress(active, { growth, session }, { growth: state.growth, session: state.session }),
+        ...readSupplyProgress(basic, session.cardStates, state.session.cardStates ?? {})] } };
 }
