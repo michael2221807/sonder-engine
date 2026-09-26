@@ -91,3 +91,13 @@ describe('ComputedFieldsModule', () => {
     expect(sm.get('角色.pct')).toBe(75);
   });
 });
+
+describe('ComputedFieldsModule · the tianming vital percentages', () => {
+  it('never read above 100% even before the round-end clamp has run', async () => {
+    const config = (await import('../../../public/packs/tianming/rules/computed-fields.json')).default as { fields: ComputedFieldConfig[] };
+    const { sm } = createMockStateManager({ 角色: { 可变属性: { 体力: { 当前: 116, 上限: 100 }, 精力: { 当前: 35, 上限: 70 } } } });
+    new ComputedFieldsModule(config.fields).onRoundEnd(sm as never);
+    expect(sm.get('角色.可变属性.体力.百分比')).toBe(100);
+    expect(sm.get('角色.可变属性.精力.百分比')).toBe(50);
+  });
+});

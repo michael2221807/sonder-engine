@@ -377,3 +377,42 @@ describe('ValidationRepairModule', () => {
     });
   });
 });
+
+describe('ValidationRepairModule · a value never exceeds the sibling field named by x-maximum-field', () => {
+  const vital = { type: 'object', properties: {
+    当前: { type: 'number', minimum: 0, 'x-maximum-field': '上限' }, 上限: { type: 'number', minimum: 0 } } };
+  const schema = { type: 'object', properties: { 状态: { type: 'object', properties: { 体力: vital } },
+    名册: { type: 'array', items: { type: 'object', properties: { 气力: vital } } } } };
+  it('clamps an over-max current value down to its max and leaves an in-range value alone', async () => {
+    const { StateManager } = await import('../core/state-manager');
+    const sm = new StateManager();
+    sm.loadTree({ 状态: { 体力: { 当前: 116, 上限: 100 } }, 名册: [{ 气力: { 当前: 40, 上限: 50 } }, { 气力: { 当前: 90, 上限: 50 } }] });
+    new ValidationRepairModule(schema).onRoundEnd(sm);
+    expect(sm.get('状态.体力.当前')).toBe(100);
+    expect(sm.get('名册[0].气力.当前')).toBe(40);
+    expect(sm.get('名册[1].气力.当前')).toBe(50);
+  });
+  it('a lowered max pulls the current value down; a missing max leaves the value unbounded above', async () => {
+    const { StateManager } = await import('../core/state-manager');
+    const sm = new StateManager();
+    sm.loadTree({ 状态: { 体力: { 当前: 80, 上限: 60 } }, 名册: [{ 气力: { 当前: 999 } }] });
+    new ValidationRepairModule(schema).onGameLoad(sm);
+    expect(sm.get('状态.体力.当前')).toBe(60);
+    expect(sm.get('名册[0].气力.当前')).toBe(999);
+  });
+  it('the tianming pack: stamina and energy stop at their own max at round end, whatever the command order was', async () => {
+    const { StateManager } = await import('../core/state-manager');
+    const { CommandExecutor } = await import('../core/command-executor');
+    const pack = (await import('../../../public/packs/tianming/schemas/state-schema.json')).default as Record<string, unknown>;
+    const sm = new StateManager();
+    sm.loadTree({ 角色: { 可变属性: { 体力: { 当前: 66, 上限: 100 }, 精力: { 当前: 70, 上限: 100 } } } });
+    new CommandExecutor(sm, ['角色']).executeBatch([
+      { action: 'add', key: '角色.可变属性.体力.当前', value: 50 },   // a heal past the max
+      { action: 'add', key: '角色.可变属性.精力.当前', value: 50 },   // raised above the old max...
+      { action: 'set', key: '角色.可变属性.精力.上限', value: 130 },  // ...then the max itself grows this round
+    ]);
+    new ValidationRepairModule(pack).onRoundEnd(sm);
+    expect(sm.get('角色.可变属性.体力.当前')).toBe(100);
+    expect(sm.get('角色.可变属性.精力.当前')).toBe(120);
+  });
+});

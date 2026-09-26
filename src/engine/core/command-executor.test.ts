@@ -363,8 +363,10 @@ describe('CommandExecutor · numeric ranges declared by the pack schema', () => 
     const schema = (await import('../../../public/packs/tianming/schemas/state-schema.json')).default;
     for (const path of ['社交.关系[名称=林晚照].好感度', '社交.关系[0].好感度', '社交.关系.0.好感度'])
       expect(schemaNumberBounds(schema, path)).toEqual({ min: -100, max: 100 });
-    for (const path of ['角色.可变属性.体力.当前', '角色.背包.金钱.现金', '社交.关系[名称=林晚照].名称', '不存在.路径'])
+    for (const path of ['角色.背包.金钱.现金', '社交.关系[名称=林晚照].名称', '不存在.路径'])
       expect(schemaNumberBounds(schema, path)).toBeUndefined();
+    // A current vital declares only its floor here; its max is the sibling field, applied at round end.
+    expect(schemaNumberBounds(schema, '角色.可变属性.体力.当前')).toEqual({ min: 0, max: undefined });
   });
 
   it('an affinity may be negative and stays within -100~100 for set and add; undeclared fields keep the defaults', async () => {

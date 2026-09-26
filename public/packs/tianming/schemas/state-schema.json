@@ -150,16 +150,16 @@
               "type": "object",
               "default": { "当前": 100, "上限": 100 },
               "properties": {
-                "当前": { "type": "number" },
-                "上限": { "type": "number" }
+                "当前": { "type": "number", "minimum": 0, "x-maximum-field": "上限", "$comment": "不超过同级「上限」；每回合收尾与读档时校验夹取" },
+                "上限": { "type": "number", "minimum": 0 }
               }
             },
             "精力": {
               "type": "object",
               "default": { "当前": 100, "上限": 100 },
               "properties": {
-                "当前": { "type": "number" },
-                "上限": { "type": "number" }
+                "当前": { "type": "number", "minimum": 0, "x-maximum-field": "上限", "$comment": "不超过同级「上限」；每回合收尾与读档时校验夹取" },
+                "上限": { "type": "number", "minimum": 0 }
               }
             }
           }

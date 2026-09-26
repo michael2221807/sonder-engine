@@ -7,7 +7,8 @@
  *
  * 修复策略（按严重度）：
  * 1. 缺失字段 → 填入 schema 中的默认值
- * 2. 数值越界 → 钳制（clamp）到 min/max 范围
+ * 2. 数值越界 → 钳制（clamp）到 min/max 范围；声明了 `x-maximum-field` 的字段不超过同级那个字段的当前值
+ *    （如「当前」不超过「上限」——只在这里收尾，回合内命令先后顺序不影响结果）
  * 3. 类型错误 → 尝试类型转换，失败则替换为默认值
  *
  * 设计选择：
@@ -31,6 +32,8 @@ interface SchemaNode {
   default?: unknown;
   minimum?: number;
   maximum?: number;
+  /** Pack extension: the name of a sibling number field this value may not exceed (e.g. a current value and its max). */
+  'x-maximum-field'?: string;
   properties?: Record<string, SchemaNode>;
   items?: SchemaNode;
   required?: string[];
@@ -97,7 +100,7 @@ export class ValidationRepairModule implements BehaviorModule {
         // 检查 3: 数值范围钳制
         if (childSchema.type === 'number' || childSchema.type === 'integer') {
           const numValue = Number(stateManager.get(fieldPath));
-          const clamped = this.clampNumber(numValue, childSchema.minimum, childSchema.maximum);
+          const clamped = this.clampNumber(numValue, childSchema.minimum, this.maximumOf(stateManager, currentPath, childSchema));
           if (clamped !== numValue) {
             stateManager.set(fieldPath, clamped, 'system');
             repairCount++;
@@ -165,6 +168,19 @@ export class ValidationRepairModule implements BehaviorModule {
   }
 
   /**
+   * The effective maximum of a number field: its declared `maximum`, lowered to the value of the sibling
+   * field named by `x-maximum-field` when that sibling holds a number. A sibling that is missing or not a
+   * number leaves the declared maximum (if any) in force.
+   */
+  private maximumOf(stateManager: StateManager, parentPath: string, node: SchemaNode): number | undefined {
+    const field = node['x-maximum-field'];
+    if (!field) return node.maximum;
+    const sibling = Number(stateManager.get(parentPath ? `${parentPath}.${field}` : field));
+    if (!Number.isFinite(sibling)) return node.maximum;
+    return node.maximum === undefined ? sibling : Math.min(node.maximum, sibling);
+  }
+
+  /**
    * 数值钳制 — 将值限制在 [min, max] 范围内
    * undefined 的边界视为无限制
    */
@@ -228,7 +244,7 @@ export class ValidationRepairModule implements BehaviorModule {
         if (propSchema.type === 'number' || propSchema.type === 'integer') {
           const numVal = Number(stateManager.get(fieldPath) ?? propSchema.default ?? 0);
           if (!Number.isNaN(numVal)) {
-            const clamped = this.clampNumber(numVal, propSchema.minimum, propSchema.maximum);
+            const clamped = this.clampNumber(numVal, propSchema.minimum, this.maximumOf(stateManager, itemPath, propSchema));
             if (clamped !== numVal) {
               stateManager.set(fieldPath, clamped, 'system');
             }
@@ -276,7 +292,7 @@ export class ValidationRepairModule implements BehaviorModule {
       if (childSchema.type === 'number' || childSchema.type === 'integer') {
         const numVal = Number(stateManager.get(fieldPath) ?? childSchema.default ?? 0);
         if (!Number.isNaN(numVal)) {
-          const clamped = this.clampNumber(numVal, childSchema.minimum, childSchema.maximum);
+          const clamped = this.clampNumber(numVal, childSchema.minimum, this.maximumOf(stateManager, basePath, childSchema));
           if (clamped !== numVal) {
             stateManager.set(fieldPath, clamped, 'system');
           }
