@@ -415,7 +415,7 @@ export class PostProcessStage implements PipelineStage {
     ctx.meta.plotVectorGuard?.();
     try { await this.autoSave(ctx); }
     catch (error) {
-      if (!ctx.meta.roundOwnership?.saved && !ctx.meta.plotVectorLifecycle?.saved) throw error;
+      if (!ctx.meta.roundOwnership?.saved) throw error;
       console.warn('[PlotVector] Round saved; slot metadata update failed:', error);
     }
     // The accepted round remains accepted if optional post-save ability generation fails.
@@ -542,15 +542,12 @@ export class PostProcessStage implements PipelineStage {
         characterName: this.stateManager.get<string>(this.paths.playerName),
         currentLocation: this.stateManager.get<string>(this.paths.playerLocation),
       },
-      ctx.meta.roundOwnership || ctx.meta.plotVectorCommitted ? {
+      ctx.meta.roundOwnership ? {
         guard: () => {
           ctx.meta.roundOwnership?.guard();
           ctx.meta.plotVectorGuard?.();
         },
-        committed: () => {
-          if (ctx.meta.roundOwnership) ctx.meta.roundOwnership.saved = true;
-          ctx.meta.plotVectorCommitted?.();
-        },
+        committed: () => { ctx.meta.roundOwnership!.saved = true; },
       } : undefined,
     );
   }

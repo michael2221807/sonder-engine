@@ -580,8 +580,7 @@ export class GameOrchestrator {
       worldEventTriggered: false,
       roundNumber: 0,
       generationId: generateId(),
-      meta: { splitGen, contextCompiler, roundOwnership: ownership,
-        ...(this.subPipelines.plotVector ? { plotVectorLifecycle: {} } : {}) },
+      meta: { splitGen, contextCompiler, roundOwnership: ownership },
       abortSignal: this.abortController.signal,
       // 流式关闭时不设置 onStreamChunk，AICallStage 据此传 stream: false
       onStreamChunk: streaming
@@ -605,8 +604,7 @@ export class GameOrchestrator {
       // B0-1 修复（2026-08-20）：快照必须从**状态树**读，不能读 `initialCtx` —
       // 详见 `resolvePreRoundSnapshot()` 的注释（Runner 值传递 → initialCtx 恒为空 →
       // 这个分支此前从未执行过，报错回合会留下已递增的 `元数据.回合序号`）。
-      const recoveryAllowed = !ownership.saved && ownership.isCurrent()
-        && !initialCtx.meta.plotVectorLifecycle?.saved && !initialCtx.meta.plotVectorLifecycle?.invalidated;
+      const recoveryAllowed = !ownership.saved && ownership.isCurrent();
       const snapshot = resolvePreRoundSnapshot(stateManager, this._paths, {
         roundBefore,
         ctx: initialCtx,

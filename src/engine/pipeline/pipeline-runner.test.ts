@@ -14,6 +14,10 @@ vi.mock('@/engine/core/event-bus', () => {
 
 const { PipelineRunner } = await import('@/engine/pipeline/pipeline-runner');
 const { eventBus } = await import('@/engine/core/event-bus');
+const { RoundOwnership } = await import('@/engine/core/round-ownership');
+/** A round whose story is already saved. */
+const saved = (signal: AbortSignal) =>
+  Object.assign(new RoundOwnership(() => ({ profileId: 'p', slotId: 's' }), () => 0, signal), { saved: true });
 
 function getEmitted() {
   return (eventBus as unknown as { _emitted: Array<{ event: string }> })._emitted;
@@ -52,18 +56,18 @@ describe('PipelineRunner', () => {
     await expect(runner.run(makeCtx())).rejects.toThrow('No pipeline stages registered');
   });
 
-  it('renders an already saved vector round after optional generation is cancelled', async () => {
+  it('renders an already saved round after optional work is cancelled', async () => {
     const abort = new AbortController(); abort.abort();
     const render = vi.fn(async (ctx: PipelineContext) => ctx);
     runner.addStage({ name: 'Render', execute: render });
-    await runner.run(makeCtx({ abortSignal: abort.signal, meta: { plotVectorLifecycle: { saved: true } } }));
+    await runner.run(makeCtx({ abortSignal: abort.signal, meta: { roundOwnership: saved(abort.signal) } }));
     expect(render).toHaveBeenCalledTimes(1);
   });
 
   it('rechecks identity before rendering even when a vector round was saved', async () => {
     const render = vi.fn(async (ctx: PipelineContext) => ctx);
     runner.addStage({ name: 'Render', execute: render });
-    await expect(runner.run(makeCtx({ meta: { plotVectorLifecycle: { saved: true },
+    await expect(runner.run(makeCtx({ meta: { roundOwnership: saved(new AbortController().signal),
       plotVectorGuard: () => { throw new Error('changed slot'); } } }))).rejects.toThrow('changed slot');
     expect(render).not.toHaveBeenCalled();
   });

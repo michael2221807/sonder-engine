@@ -1,5 +1,6 @@
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 import { StateManager } from '../../engine/core/state-manager';
+import { RoundOwnership } from '../../engine/core/round-ownership';
 import { CommandExecutor } from '../../engine/core/command-executor';
 import { ResponseParser } from '../../engine/ai/response-parser';
 import { DEFAULT_ENGINE_PATHS as P, type PipelineContext } from '../../engine/pipeline/types';
@@ -22,13 +23,14 @@ import type { AIMessage } from '../../engine/ai/types';
 import promptRules from '../../../public/packs/tianming/rules/plot-vector-prompts.json';
 
 let adapters: AgaPlotVectorAdapter[];
+let cleanups: Array<() => void>;
 beforeEach(() => {
-  adapters = [];
+  adapters = []; cleanups = [];
   const values = new Map<string, string>();
   vi.stubGlobal('localStorage', { getItem: (k: string) => values.get(k) ?? null, setItem: (k: string, v: string) => values.set(k, v) });
   vi.stubGlobal('window', new EventTarget());
 });
-afterEach(() => { adapters.forEach(a => a.dispose()); vi.unstubAllGlobals(); });
+afterEach(() => { adapters.forEach(a => a.dispose()); cleanups.forEach(fn => fn()); vi.unstubAllGlobals(); });
 function setup() {
   const state = new StateManager(); state.loadTree({});
   let slot = { profileId: 'p', slotId: 's' };
@@ -42,8 +44,12 @@ function setup() {
   const adapter = new AgaPlotVectorAdapter(state, ai, { saveGame }, () => slot, {
     execute: <T extends VectorResult>(op: VectorOperation) => worker.execute(op) as Promise<T>, cancelAll: worker.cancelAll,
   }, parseNativeRules(rulesJSON), parseVectorPromptPolicy(promptRules, 'mode contract')); adapters.push(adapter);
+  // Like the orchestrator: a load or rollback makes an unfinished round stale.
+  let revision = 0;
+  cleanups.push(eventBus.on<{ type?: string }>('engine:state-changed', e => { if (e.type === 'load' || e.type === 'rollback') revision++; }));
   const ctx = (): PipelineContext => ({ generationId: crypto.randomUUID(), roundNumber: 1, stateSnapshot: state.toSnapshot(),
-    userInput: '继续', actionQueuePrompt: '', chatHistory: [], worldEventTriggered: false, messages: [{ role: 'user', content: '继续' }], meta: { plotVectorLifecycle: {} } });
+    userInput: '继续', actionQueuePrompt: '', chatHistory: [], worldEventTriggered: false, messages: [{ role: 'user', content: '继续' }],
+    meta: { roundOwnership: new RoundOwnership(() => slot, () => revision, new AbortController().signal) } });
   return { state, ai, saveGame, worker, adapter, ctx, changeSlot: () => { slot = { ...slot, slotId: 'other' }; },
     setSlot: (slotId: string) => { slot = { ...slot, slotId }; }, disk: () => disk };
 }
@@ -52,13 +58,13 @@ describe('AGA opt-in integration (zero network)', () => {
     const h = setup(); writePlotVectorControl(true);
     const ctx = await h.adapter.prepare(h.ctx());
     h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 1 } });
-    await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!();
+    await h.adapter.beforeSave(ctx); ctx.meta.roundOwnership!.saved = true;
     h.ai.generate.mockRejectedValueOnce(new Error('API 错误 503'));
     await expect(h.adapter.afterSave(ctx)).resolves.toBeUndefined();
     expect(h.state.get<VectorState>(P.plotVector)!.tasks[0]).toMatchObject({ status: 'failed', error: 'Error: API 错误 503' });
     expect(h.state.get(`${P.inventoryItems}.tea.数量`)).toBe(1);
     const next = await h.adapter.prepare(h.ctx());
-    await h.adapter.beforeSave(next); next.meta.plotVectorCommitted!(); await h.adapter.afterSave(next);
+    await h.adapter.beforeSave(next); next.meta.roundOwnership!.saved = true; await h.adapter.afterSave(next);
     expect(h.ai.generate).toHaveBeenCalledTimes(1);
   });
   for (const commands of [undefined, []]) it(`an unsuccessful parse in active mode keeps the story like the original flow, commands=${String(commands)}`, async () => {
@@ -129,7 +135,7 @@ describe('AGA opt-in integration (zero network)', () => {
     const h = setup(); writePlotVectorControl(true);
     const c = h.ctx(); h.adapter.promptTransform(c); h.changeSlot();
     await expect(h.adapter.prepare(c)).rejects.toThrow('存档已切换');
-    expect(c.meta.plotVectorLifecycle?.invalidated).toBe(true);
+    expect(c.meta.roundOwnership?.invalidated).toBe(true);
     expect(h.worker.execute).not.toHaveBeenCalled();
   });
   it('does not adapt enhanced opening or mutate persisted CoT preferences', async () => {
@@ -151,10 +157,17 @@ describe('AGA opt-in integration (zero network)', () => {
     h.state.set(P.environmentTags, [{ 名称: '微风', 描述: '街道上的风', 效果: '舒适' }]);
     await h.adapter.beforeSave(ctx);
     expect(h.state.get<VectorState>(P.plotVector)?.tasks).toEqual([]);
-    ctx.meta.plotVectorCommitted!(); await h.adapter.afterSave(ctx);
+    ctx.meta.roundOwnership!.saved = true; await h.adapter.afterSave(ctx);
     expect(h.ai.generate).not.toHaveBeenCalled();
     // Written without its ability: this round's Step3 gets one repair task for it.
     expect((await h.adapter.abilityRepairTask())?.block).toContain('微风');
+  });
+  it('a context outside a host-owned round is left untouched (the round owner is the only identity check)', async () => {
+    const h = setup(); writePlotVectorControl(true);
+    const c = h.ctx(); delete c.meta.roundOwnership;
+    expect(h.adapter.promptTransform(c)).toBeUndefined();
+    expect(await h.adapter.prepare(c)).toBe(c);
+    expect(h.worker.execute).not.toHaveBeenCalled();
   });
   it('off means identical context, no worker, no generation, no component state writes', async () => {
     const h = setup(), ctx = h.ctx();
@@ -171,7 +184,7 @@ describe('AGA opt-in integration (zero network)', () => {
     await h.adapter.beforeSave(ctx);
     expect(h.ai.generate).not.toHaveBeenCalled();
     expect(h.state.get<VectorState>(P.plotVector)?.tasks).toHaveLength(1);
-    ctx.meta.plotVectorCommitted!();
+    ctx.meta.roundOwnership!.saved = true;
     await h.adapter.afterSave(ctx); await h.adapter.afterSave(ctx);
     expect(h.ai.generate).toHaveBeenCalledTimes(1);
     const options = h.ai.generate.mock.calls[0] as unknown as [{messages: Array<{content: string}>; usageType: string}];
@@ -186,7 +199,7 @@ describe('AGA opt-in integration (zero network)', () => {
     h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 2 } });
     const ctx = await h.adapter.prepare(h.ctx());
     h.state.set(`${P.inventoryItems}.tea.数量`, 1);
-    await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!(); await h.adapter.afterSave(ctx);
+    await h.adapter.beforeSave(ctx); ctx.meta.roundOwnership!.saved = true; await h.adapter.afterSave(ctx);
     expect(h.ai.generate).not.toHaveBeenCalled();
   });
   it('parsed inventory commands enqueue only surviving new entries and preserve custody in generation input', async () => {
@@ -215,7 +228,7 @@ describe('AGA opt-in integration (zero network)', () => {
     expect(tasks.map(t => t.task.entry.id)).toEqual(['item:map']);
     await h.adapter.afterSave(ctx);
     expect(h.ai.generate).not.toHaveBeenCalled(); // No generation before save acknowledgement.
-    ctx.meta.plotVectorCommitted!();
+    ctx.meta.roundOwnership!.saved = true;
     await h.adapter.afterSave(ctx);
     expect(h.ai.generate).toHaveBeenCalledTimes(1);
     const options = h.ai.generate.mock.calls[0] as unknown as [{ messages: Array<{ content: string }> }];
@@ -239,7 +252,7 @@ describe('AGA opt-in integration (zero network)', () => {
     const h = setup(); writePlotVectorControl(true);
     const ctx = await h.adapter.prepare(h.ctx()); h.changeSlot();
     await expect(h.adapter.beforeSave(ctx)).rejects.toThrow();
-    expect(ctx.meta.plotVectorLifecycle?.invalidated).toBe(true);
+    expect(ctx.meta.roundOwnership?.invalidated).toBe(true);
   });
   it('load/rollback rejects a late model response; original item stays saved', async () => {
     const h = setup(); writePlotVectorControl(true);
@@ -247,7 +260,7 @@ describe('AGA opt-in integration (zero network)', () => {
     h.ai.generate.mockImplementation(() => new Promise(resolve => { answer = resolve; }));
     const ctx = await h.adapter.prepare(h.ctx());
     h.state.set(P.inventoryItems, { tea: { 名称: '茶' } });
-    await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!();
+    await h.adapter.beforeSave(ctx); ctx.meta.roundOwnership!.saved = true;
     const pending = h.adapter.afterSave(ctx);
     await vi.waitFor(() => expect(h.ai.generate).toHaveBeenCalledTimes(1));
     h.state.loadTree({ unrelated: true }); answer(JSON.stringify(POSITIVE_EXAMPLES[0].output));
@@ -257,10 +270,10 @@ describe('AGA opt-in integration (zero network)', () => {
   it('paid malformed output is retained and not automatically paid again', async () => {
     const h = setup(); writePlotVectorControl(true); h.ai.generate.mockResolvedValue('bad JSON');
     const ctx = await h.adapter.prepare(h.ctx()); h.state.set(P.inventoryItems, { tea: { 名称: '茶' } });
-    await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!(); await h.adapter.afterSave(ctx);
+    await h.adapter.beforeSave(ctx); ctx.meta.roundOwnership!.saved = true; await h.adapter.afterSave(ctx);
     expect(h.state.get<VectorState>(P.plotVector)?.tasks[0]).toMatchObject({ status: 'failed', raw: 'bad JSON' });
     const next = await h.adapter.prepare({ ...h.ctx(), roundNumber: 2 });
-    await h.adapter.beforeSave(next); next.meta.plotVectorCommitted!(); await h.adapter.afterSave(next);
+    await h.adapter.beforeSave(next); next.meta.roundOwnership!.saved = true; await h.adapter.afterSave(next);
     expect(h.ai.generate).toHaveBeenCalledTimes(1);
   });
   it('growth is accepted once, not per visit; component and story share the save snapshot', async () => {
@@ -276,11 +289,11 @@ describe('AGA opt-in integration (zero network)', () => {
     await h.adapter.beforeSave(ctx); expect(h.state.toSnapshot()).toEqual(first);
     const values = Object.values(h.state.get<VectorState>(P.plotVector)!.session.scriptStates ?? {});
     expect(values.some(s => s.pages === 1)).toBe(true);
-    ctx.meta.plotVectorCommitted!(); await h.adapter.afterSave(ctx);
+    ctx.meta.roundOwnership!.saved = true; await h.adapter.afterSave(ctx);
     h.state.set(`${P.inventoryItems}.notebook.描述`, '今天又写下几行待办');
     const restored = h.state.toSnapshot(); h.state.loadTree(restored);
     const next = await h.adapter.prepare({ ...h.ctx(), roundNumber: 2 });
-    await h.adapter.beforeSave(next); next.meta.plotVectorCommitted!(); await h.adapter.afterSave(next);
+    await h.adapter.beforeSave(next); next.meta.roundOwnership!.saved = true; await h.adapter.afterSave(next);
     const current = h.state.get<VectorState>(P.plotVector)!;
     expect(current.layout?.placements['01']).toBe(bound.task.entry.id);
     expect(Object.values(current.session.scriptStates ?? {}).some(s => s.pages === 2)).toBe(true);
@@ -300,19 +313,19 @@ describe('AGA opt-in integration (zero network)', () => {
       { task: { ...task, entry: changed, key: stable(changed) }, status: 'pending' },
     ] });
     const ctx = await h.adapter.prepare(h.ctx());
-    await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!(); await h.adapter.afterSave(ctx);
+    await h.adapter.beforeSave(ctx); ctx.meta.roundOwnership!.saved = true; await h.adapter.afterSave(ctx);
     expect(h.ai.generate).not.toHaveBeenCalled();
     expect(h.state.get<VectorState>(P.plotVector)!.cards[0].ref).toEqual(bound.ref);
   });
   it('failed task-checkpoint persistence prevents sending and retains the committed round', async () => {
     const h = setup(); writePlotVectorControl(true);
     const ctx = await h.adapter.prepare(h.ctx()); h.state.set(P.inventoryItems, { tea: { 名称: '茶' } });
-    await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!();
+    await h.adapter.beforeSave(ctx); ctx.meta.roundOwnership!.saved = true;
     const accepted = h.state.toSnapshot();
     h.saveGame.mockRejectedValueOnce(new Error('disk full'));
     await expect(h.adapter.afterSave(ctx)).rejects.toThrow('disk full');
     expect(h.ai.generate).not.toHaveBeenCalled(); expect(h.state.toSnapshot()).toEqual(accepted);
-    expect(ctx.meta.plotVectorLifecycle?.saved).toBe(true);
+    expect(ctx.meta.roundOwnership?.saved).toBe(true);
   });
   it('saved raw response resumes validation without another model call', async () => {
     const h = setup(); writePlotVectorControl(true);
@@ -322,7 +335,7 @@ describe('AGA opt-in integration (zero network)', () => {
     h.state.set(P.plotVector, { ...initialVectorState(), tasks: [{ task, status: 'sending', raw: JSON.stringify(POSITIVE_EXAMPLES[0].output) }] });
     h.state.set(`${P.inventoryItems}.tea.描述`, '新的日常记录');
     const ctx = await h.adapter.prepare(h.ctx());
-    await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!(); await h.adapter.afterSave(ctx);
+    await h.adapter.beforeSave(ctx); ctx.meta.roundOwnership!.saved = true; await h.adapter.afterSave(ctx);
     expect(h.ai.generate).not.toHaveBeenCalled();
     expect(h.state.get<VectorState>(P.plotVector)?.tasks[0].status).toBe('bound');
   });
@@ -331,7 +344,7 @@ describe('AGA opt-in integration (zero network)', () => {
     h.state.set(P.inventoryItems, {});
     const ctx = await h.adapter.prepare(h.ctx());
     h.state.set(P.inventoryItems, { tea: { 名称: '随身热茶', 描述: '忙碌时递来的一杯暖茶', 数量: 1 } });
-    await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!();
+    await h.adapter.beforeSave(ctx); ctx.meta.roundOwnership!.saved = true;
     const output = { version: 3, card: { name: '模型别名', description: '机械说明不可信',
       hooks: { onVisit: "return {effects:[{kind:'add',channel:'J',amount:2}]};", onRoundAccepted: null },
       initialPersistentState: {} } };
@@ -363,7 +376,7 @@ describe('AGA opt-in integration (zero network)', () => {
     const raw = JSON.stringify({ ...POSITIVE_EXAMPLES[0].output, stateDisplay: [] });
     h.state.set(P.plotVector, { ...initialVectorState(), tasks: [{ task, status: 'failed', error: 'old parser', raw }] });
     const ctx = await h.adapter.prepare(h.ctx());
-    await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!(); await h.adapter.afterSave(ctx);
+    await h.adapter.beforeSave(ctx); ctx.meta.roundOwnership!.saved = true; await h.adapter.afterSave(ctx);
     expect(h.ai.generate).not.toHaveBeenCalled();
     const row = h.state.get<VectorState>(P.plotVector)!.tasks[0];
     expect(row).toMatchObject({ status: 'bound', raw, validationRevision: GENESIS_VALIDATION_REVISION });
@@ -371,11 +384,11 @@ describe('AGA opt-in integration (zero network)', () => {
   });
   it('disable after commit retains story, but changing slots still fences rendering', async () => {
     const h = setup(); writePlotVectorControl(true);
-    const ctx = await h.adapter.prepare(h.ctx()); await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!();
+    const ctx = await h.adapter.prepare(h.ctx()); await h.adapter.beforeSave(ctx); ctx.meta.roundOwnership!.saved = true;
     writePlotVectorControl(false);
     expect(() => ctx.meta.plotVectorGuard!()).not.toThrow();
     h.changeSlot(); expect(() => ctx.meta.plotVectorGuard!()).toThrow();
-    expect(ctx.meta.plotVectorLifecycle?.saved).toBe(true);
+    expect(ctx.meta.roundOwnership?.saved).toBe(true);
   });
 });
 
@@ -421,7 +434,7 @@ describe('the component only degrades: the story always goes on (rebuild plan §
       const saved = h.state.get<VectorState>(P.plotVector)!;
       expect(saved.session).toEqual((before ?? initialVectorState()).session); // nothing advanced
       expect(saved.tasks.map(t => t.task.entry.id)).toEqual(['item:tea']);
-      ctx.meta.plotVectorCommitted!(); await h.adapter.afterSave(ctx);
+      ctx.meta.roundOwnership!.saved = true; await h.adapter.afterSave(ctx);
       expect(h.state.get<VectorState>(P.plotVector)!.cards.map(c => c.task.entry.id)).toEqual(['item:tea']);
       // The next round computes again.
       const next = await h.adapter.prepare(h.ctx());
@@ -433,7 +446,7 @@ describe('the component only degrades: the story always goes on (rebuild plan §
     h.worker.execute.mockImplementationOnce((async () => { h.changeSlot(); throw new Error('cancelled'); }) as never);
     const c = h.ctx();
     await expect(h.adapter.prepare(c)).rejects.toThrow('存档已切换');
-    expect(c.meta.plotVectorLifecycle?.invalidated).toBe(true);
+    expect(c.meta.roundOwnership?.invalidated).toBe(true);
   });
   it('a failed settlement saves the story and items; this round\'s momentum and growth do not advance', async () => {
     const h = setup(); writePlotVectorControl(true);
@@ -456,7 +469,7 @@ describe('the component only degrades: the story always goes on (rebuild plan §
     const h = setup(); writePlotVectorControl(true);
     const ctx = await h.adapter.prepare(h.ctx());
     h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 1 } });
-    await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!();
+    await h.adapter.beforeSave(ctx); ctx.meta.roundOwnership!.saved = true;
     tamper(h, 'validate', (b: BoundCard) => ({ ...b, ref: { hash: 'f'.repeat(64), id: `plot-card-${'f'.repeat(12)}` } }));
     await h.adapter.afterSave(ctx);
     const saved = h.state.get<VectorState>(P.plotVector)!;
@@ -473,7 +486,7 @@ describe('sources and environment abilities (PO correction)', () => {
   async function round(h: ReturnType<typeof setup>, roundNumber: number, during?: () => void) {
     const ctx = await h.adapter.prepare({ ...h.ctx(), roundNumber });
     during?.();
-    await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!(); await h.adapter.afterSave(ctx);
+    await h.adapter.beforeSave(ctx); ctx.meta.roundOwnership!.saved = true; await h.adapter.afterSave(ctx);
   }
   const vector = (h: ReturnType<typeof setup>) => h.state.get<VectorState>(P.plotVector)!;
   const environmentCards = (h: ReturnType<typeof setup>) => vector(h).cards.filter(c => c.task.entry.kind === 'environment');
@@ -593,7 +606,7 @@ describe('ability failure lifecycle: the obtained entry stays, only the snippet 
     h.state.set(P.roundNumber, roundNumber);
     const ctx = await h.adapter.prepare({ ...h.ctx(), roundNumber });
     during?.();
-    await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!(); await h.adapter.afterSave(ctx);
+    await h.adapter.beforeSave(ctx); ctx.meta.roundOwnership!.saved = true; await h.adapter.afterSave(ctx);
   }
   /** The real Step3 pipeline with a stand-in model. */
   function step3(h: ReturnType<typeof setup>, reply: () => unknown) {

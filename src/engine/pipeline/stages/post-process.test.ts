@@ -229,17 +229,16 @@ describe('PostProcessStage — Phase 1 per-turn metadata', () => {
   });
 
   it('post-save failure cannot undo an accepted vector round, including copied pipeline meta', async () => {
-    const lifecycle: { saved?: boolean } = {};
+    const owner = new RoundOwnership(() => ({ profileId: 'p', slotId: 's' }), () => 0, new AbortController().signal);
     const afterSave = vi.fn(async () => { throw new Error('optional card unavailable'); });
-    const ctx = makeCtx({ meta: { plotVectorLifecycle: lifecycle,
-      plotVectorCommitted: () => { lifecycle.saved = true; } } });
+    const ctx = makeCtx({ meta: { roundOwnership: owner } });
     const saveGame = vi.fn(async (_p: string, _s: string, _data: unknown, _meta: unknown,
       commit?: { committed: () => void }) => { commit?.committed(); throw new Error('metadata'); });
     const guardedStage = new PostProcessStage(sm as never, makeMemoryManager(), makeEngramManager(), makeBehaviorRunner(),
       { saveGame } as never, paths, () => ({ profileId: 'p', slotId: 's' }),
       { prepare: async c => c, beforeSave: async () => {}, afterSave, dispose: () => {} });
     await expect(guardedStage.execute({ ...ctx, meta: { ...ctx.meta } })).resolves.toBeDefined();
-    expect(lifecycle.saved).toBe(true); expect(afterSave).toHaveBeenCalledTimes(1);
+    expect(owner.saved).toBe(true); expect(afterSave).toHaveBeenCalledTimes(1);
   });
 
   it('persists step2 + total token fields and the per-source breakdown when promptMetrics is present (R1 P0)', async () => {

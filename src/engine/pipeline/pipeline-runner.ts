@@ -52,7 +52,7 @@ export class PipelineRunner {
       ctx.meta.plotVectorGuard?.();
       // 在启动每个阶段前检查取消信号，
       // 避免在用户已取消后继续执行耗时操作（特别是 AICallStage）
-      if (ctx.abortSignal?.aborted && !ctx.meta.roundOwnership?.saved && !ctx.meta.plotVectorLifecycle?.saved) {
+      if (ctx.abortSignal?.aborted && !ctx.meta.roundOwnership?.saved) {
         throw new Error('Pipeline aborted');
       }
 

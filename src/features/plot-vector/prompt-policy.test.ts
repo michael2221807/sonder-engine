@@ -11,6 +11,7 @@ import { PromptAssembler } from '../../engine/prompt/prompt-assembler';
 import { TemplateEngine } from '../../engine/prompt/template-engine';
 import { ContextAssemblyStage } from '../../engine/pipeline/stages/context-assembly';
 import { StateManager } from '../../engine/core/state-manager';
+import { RoundOwnership } from '../../engine/core/round-ownership';
 import { DEFAULT_ENGINE_PATHS as P, type PipelineContext } from '../../engine/pipeline/types';
 import type { GamePack, PromptFlowConfig } from '../../engine/types';
 import { AICallStage } from '../../engine/pipeline/stages/ai-call';
@@ -46,7 +47,8 @@ const behavior = { checkScheduledEvents: () => false, runOnContextAssembly: () =
   runAfterCommands: () => undefined, runOnRoundEnd: () => undefined };
 function ctx(split: boolean): PipelineContext {
   return { userInput: input, originalUserInput: input, actionQueuePrompt: '', stateSnapshot: {}, chatHistory: [],
-    messages: [], worldEventTriggered: false, roundNumber: 3, generationId: 'policy', meta: { splitGen: split } };
+    messages: [], worldEventTriggered: false, roundNumber: 3, generationId: 'policy',
+    meta: { splitGen: split, roundOwnership: new RoundOwnership(() => ({ profileId: 'p', slotId: 's' }), () => 0, new AbortController().signal) } };
 }
 function harness(en: boolean, builder: boolean, split: boolean, cot: boolean, cache: boolean) {
   const pack = packs[Number(en)], state = new StateManager();

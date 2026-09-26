@@ -49,8 +49,6 @@ export interface PipelineMeta {
   roundOwnership?: import('../core/round-ownership').RoundOwnership;
   /** Present only for an opted-in vector attempt. Rechecked at send/apply/save boundaries. */
   plotVectorGuard?: () => void;
-  plotVectorCommitted?: () => void;
-  plotVectorLifecycle?: { saved?: boolean; invalidated?: boolean };
   /** Frozen before asynchronous context assembly to avoid mixing feature modes. */
   plotVectorAssemblyEpoch?: string;
   plotVectorPromptMode?: boolean;

@@ -5,6 +5,7 @@ import type { AIService } from '../../engine/ai/ai-service';
 import type { SaveManager } from '../../engine/persistence/save-manager';
 import { DEFAULT_ENGINE_PATHS as P, type PipelineContext } from '../../engine/pipeline/types';
 import type { PlotVectorRoundPort } from '../../engine/plot-vector/round-port';
+import type { RoundOwnership } from '../../engine/core/round-ownership';
 import { readPlotVectorControl, subscribePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { projectSavedElements, readPath, savedEntryName } from './saved-elements';
 import { tasksAfterSave, stable, capabilityKey, toRuntimeCandidate, type BoundCard, type GenesisOutput, type GenesisTask, type SavedElement } from './genesis/post-save';
@@ -47,8 +48,9 @@ function replyCardFor(output: unknown, id: string): unknown {
  * One round's momentum. `prepared` is absent when this round's trip could not be computed: the round then
  * runs without momentum, and nothing of the component advances except the bookkeeping of new entries.
  */
-interface Attempt { ctx: PipelineContext; guard: () => void; controller: AbortController; before: SavedElement[];
-  state: VectorState; id: string; prepared?: PreparedVector; slot: Slot; release: () => void; postSaved?: boolean;
+interface Attempt { ctx: PipelineContext; owner: RoundOwnership; guard: () => void; controller: AbortController;
+  before: SavedElement[]; state: VectorState; id: string; prepared?: PreparedVector; slot: Slot; release: () => void;
+  postSaved?: boolean;
 }
 /** The component failed on its own; the story goes on. Only a cancellation or slot switch stops the round. */
 function degraded(i18nKey: string, message: string, error: unknown): void {
@@ -71,13 +73,9 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     private promptPolicy?: Pick<VectorPromptPolicy, 'mode' | 'transform' | 'environmentAbility' | 'abilityRepair'>) {
     this.worker = guardedExecutor(worker);
     this.unsubs = [subscribePlotVectorControl(() => this.cancel()),
+      // The round itself notices a load or rollback through its RoundOwnership; this stops work in flight.
       eventBus.on<{type: string}>('engine:state-changed', e => {
-        if (e.type === 'load' || e.type === 'rollback') {
-          if (this.attempt) {
-            this.attempt.ctx.meta.plotVectorLifecycle!.invalidated = true;
-          }
-          this.revision++; this.cancel();
-        }
+        if (e.type === 'load' || e.type === 'rollback') { this.revision++; this.cancel(); }
       })];
   }
   private cancel() { this.attempt?.controller.abort(); this.worker.cancelAll(); }
@@ -86,18 +84,13 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     if (ctx.meta.isEnhancedOpening) return;
     const control = readPlotVectorControl();
     ctx.meta.plotVectorAssemblyEpoch = control.epoch;
-    const slot = this.slot();
-    if (!control.enabled || !slot) return;
+    const owner = ctx.meta.roundOwnership;
+    // The component only takes part in a round the host owns (same save, same load).
+    if (!control.enabled || !this.slot() || !owner) return;
     if (!this.promptPolicy) throw new Error('当前游戏包尚未配置剧情动能提示，关闭剧情动能可继续原流程');
-    const revision = this.revision;
-    ctx.meta.plotVectorLifecycle ??= {};
     ctx.meta.plotVectorGuard = () => {
-      if (revision !== this.revision || stable(this.slot()) !== stable(slot)) {
-        ctx.meta.plotVectorLifecycle!.invalidated = true;
-        throw new Error('存档已切换，旧回合已取消');
-      }
-      if (readPlotVectorControl().epoch !== control.epoch || ctx.abortSignal?.aborted)
-        throw new Error('剧情动能开关在组装期间改变，请重新开始本回合');
+      owner.guard();
+      if (readPlotVectorControl().epoch !== control.epoch) throw new Error('剧情动能开关在组装期间改变，请重新开始本回合');
     };
     ctx.meta.plotVectorPromptMode = true;
     return this.promptPolicy.transform;
@@ -108,25 +101,20 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     const control = readPlotVectorControl(), slot = this.slot();
     if (ctx.meta.plotVectorAssemblyEpoch !== undefined && ctx.meta.plotVectorAssemblyEpoch !== control.epoch)
       throw new Error('剧情动能开关在组装期间改变，请重新开始本回合');
-    if (!control.enabled || !slot || ctx.meta.isEnhancedOpening) return ctx;
-    ctx.meta.plotVectorLifecycle ??= {};
-    const revision = this.revision, controller = new AbortController();
+    const owner = ctx.meta.roundOwnership;
+    if (!control.enabled || !slot || ctx.meta.isEnhancedOpening || !owner) return ctx;
+    const controller = new AbortController();
     const abort = () => { controller.abort(); this.worker.cancelAll(); };
     ctx.abortSignal?.addEventListener('abort', abort, { once: true });
-    const identityGuard = () => {
-      const currentSlot = this.slot();
-      if (revision !== this.revision || stable(currentSlot) !== stable(slot)) {
-        ctx.meta.plotVectorLifecycle!.invalidated = true;
-      }
-      if (ctx.meta.plotVectorLifecycle!.invalidated) throw new Error('存档已切换，旧回合已取消');
-    };
-    const guard = () => {
-      identityGuard();
+    const featureLive = () => {
       const live = readPlotVectorControl();
-      if (controller.signal.aborted || ctx.abortSignal?.aborted || !live.enabled || live.epoch !== control.epoch)
+      if (controller.signal.aborted || !live.enabled || live.epoch !== control.epoch)
         throw new Error('剧情动能已取消；未提交的回合不会扣次数');
     };
-    ctx.meta.plotVectorGuard = () => ctx.meta.plotVectorLifecycle!.saved ? identityGuard() : guard();
+    // Same save and load (owner), and the feature still on for this attempt.
+    const guard = () => { owner.guard(); featureLive(); };
+    // Once the story is saved, switching the feature off no longer stops the rest of the round.
+    ctx.meta.plotVectorGuard = () => { owner.guard(); if (!owner.saved) featureLive(); };
     const id = `${slot.profileId}/${slot.slotId}/${ctx.roundNumber}`;
     try {
       guard();
@@ -142,12 +130,8 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       }
       guard();
       // Without the saved entries of the round start, new entries cannot be told apart; skip the component.
-      if (state && before) this.attempt = { ctx, controller, guard, state, id, before, prepared, slot,
+      if (state && before) this.attempt = { ctx, owner, controller, guard, state, id, before, prepared, slot,
         release: () => ctx.abortSignal?.removeEventListener('abort', abort) };
-      ctx.meta.plotVectorCommitted = () => {
-        ctx.meta.plotVectorLifecycle!.saved = true;
-        // Committed story is never rolled back by a late cancellation/metadata failure.
-      };
       const mode = ctx.meta.plotVectorPromptMode ? this.promptPolicy?.mode : undefined;
       const additions: import('../../engine/ai/types').AIMessage[] = [];
       const sources: string[] = [];
@@ -200,7 +184,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
   }
   async afterSave(ctx: PipelineContext): Promise<void> {
     const a = this.attempt;
-    if (!a || a.ctx.generationId !== ctx.generationId || !ctx.meta.plotVectorLifecycle?.saved || a.postSaved) return;
+    if (!a || a.ctx.generationId !== ctx.generationId || !a.owner.saved || a.postSaved) return;
     a.postSaved = true;
     try {
       a.guard();
@@ -575,7 +559,8 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       await this.saves.saveGame(a.slot.profileId, a.slot.slotId, this.state.toSnapshot(), undefined,
         { guard: a.guard, committed: () => { committed = true; } });
     } catch (error) {
-      if (!committed && !a.ctx.meta.plotVectorLifecycle?.invalidated) this.state.set(P.plotVector, previous);
+      // After a save switch the live tree belongs to another save: leave it alone.
+      if (!committed && a.owner.isCurrent()) this.state.set(P.plotVector, previous);
       throw error;
     }
   }
