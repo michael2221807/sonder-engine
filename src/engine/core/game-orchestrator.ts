@@ -463,48 +463,60 @@ export class GameOrchestrator {
     // 快照由 PreProcessStage 捕获并存储在 paths.preRoundSnapshot。
     // 回滚后清空 action queue，并通知 UI 移除最后一条叙事条目。
     this.unsubscribers.push(
-      eventBus.on('engine:rollback-requested', () => {
-        if (this.abortController || this._subPipelineActive || this.subPipelines.stateEditInProgress?.()) return; // Do not race an editor's atomic save.
-
-        const snapshotPath = '元数据.上次对话前快照';
-        const snapshot = stateManager.get<Record<string, unknown>>(snapshotPath);
-        if (!snapshot) {
-          // R-05: 无快照时给用户明确反馈（连续第二次回退、或第一回合回退）
-          eventBus.emit('ui:toast', {
-            type: 'info',
-            i18nKey: 'engine.toast.noRollbackSnapshot',
-            message: '没有可回退的快照（每回合只能回退一次）',
-            duration: 2500,
-          });
-          return;
-        }
-
-        stateManager.rollbackTo(snapshot);
-        useActionQueueStore().consumeActions(); // 清空 action queue
-        this.memoryManager.clearConfigCache(); // R-04: 清除记忆配置缓存
-
-        // Engram 向量同步：状态树已回退，删除 IndexedDB 中被回退回合产生的孤立向量
-        if (this.engramManager.isEnabled()) {
-          this.engramManager.syncVectorsToState(stateManager).catch((e: unknown) =>
-            console.warn('[Rollback] Engram vector sync failed (non-blocking):', e),
-          );
-        }
-
-        eventBus.emit('engine:rollback-complete', undefined);
-      }),
+      eventBus.on('engine:rollback-requested', () => { this.rollbackLastRound(stateManager); }),
     );
 
     // ── UI 请求存档（配置变更、设置面板写入等触发）──
     // EventPanel / SettingsPanel 的配置写入 state 后 emit 此事件，
     // 在此处理实际的 IndexedDB 持久化，使 UI 不依赖对 saveManager 的直接注入。
     this.unsubscribers.push(
-      eventBus.on('engine:request-save', () => {
-        const slot = this._getActiveSlot();
-        if (!slot) return;
-        this.pendingSave = { ...slot };
-        void this.flushRequestedSave();
-      }),
+      eventBus.on('engine:request-save', () => { this.queueSave(); }),
     );
+  }
+
+  /**
+   * The player's rollback: restore the tree to the snapshot taken before the last round, then save it, so a
+   * reload does not bring the undone round back (2026-09-26, PO D6).
+   */
+  private rollbackLastRound(stateManager: StateManager): void {
+    if (this.abortController || this._subPipelineActive || this.subPipelines.stateEditInProgress?.()) return; // Do not race an editor's atomic save.
+
+    const snapshotPath = '元数据.上次对话前快照';
+    const snapshot = stateManager.get<Record<string, unknown>>(snapshotPath);
+    if (!snapshot) {
+      // R-05: 无快照时给用户明确反馈（连续第二次回退、或第一回合回退）
+      eventBus.emit('ui:toast', {
+        type: 'info',
+        i18nKey: 'engine.toast.noRollbackSnapshot',
+        message: '没有可回退的快照（每回合只能回退一次）',
+        duration: 2500,
+      });
+      return;
+    }
+
+    stateManager.rollbackTo(snapshot);
+    useActionQueueStore().consumeActions(); // 清空 action queue
+    this.memoryManager.clearConfigCache(); // R-04: 清除记忆配置缓存
+
+    // Engram 向量同步：状态树已回退，删除 IndexedDB 中被回退回合产生的孤立向量
+    if (this.engramManager.isEnabled()) {
+      this.engramManager.syncVectorsToState(stateManager).catch((e: unknown) =>
+        console.warn('[Rollback] Engram vector sync failed (non-blocking):', e),
+      );
+    }
+
+    eventBus.emit('engine:rollback-complete', undefined);
+    // The UI updates at once; the write follows on the same coalesced path as every other save, so the only
+    // window left is the IndexedDB write itself, as for an ordinary round.
+    this.queueSave();
+  }
+
+  /** Save the active slot through the coalesced path (waits for a running round or edit; never crosses slots). */
+  private queueSave(): void {
+    const slot = this._getActiveSlot();
+    if (!slot) return;
+    this.pendingSave = { ...slot };
+    void this.flushRequestedSave();
   }
 
   /** Coalesce UI saves; take the snapshot only after a round commits or rolls back. */
