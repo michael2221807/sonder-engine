@@ -46,12 +46,26 @@ describe('CommandExecutor', () => {
       expect(sm.get('角色.属性.体力')).toBe(110);
     });
 
-    it('add with negative delta: clamp prevents health reduction', () => {
-      // clampNumber(-10) = 0 → add(体力, 0) = 100 (unchanged)
-      // Design: add action can only INCREASE values, not decrease.
-      // To decrease, AI must use set with calculated value.
-      executor.execute({ action: 'add', key: '角色.属性.体力', value: -10 });
-      expect(sm.get('角色.属性.体力')).toBe(100);
+    it('add with a negative delta decreases the value (injury, spending)', () => {
+      const result = executor.execute({ action: 'add', key: '角色.属性.体力', value: -10 });
+      expect(result.success).toBe(true);
+      expect(sm.get('角色.属性.体力')).toBe(90);
+    });
+
+    it('add never takes a non-negative value below 0 and never goes above the cap', () => {
+      executor.execute({ action: 'add', key: '角色.属性.体力', value: -150 });
+      expect(sm.get('角色.属性.体力')).toBe(0);
+      sm.set('角色.属性.体力', 999_990);
+      executor.execute({ action: 'add', key: '角色.属性.体力', value: 100 });
+      expect(sm.get('角色.属性.体力')).toBe(999_999);
+    });
+
+    it('an ordinary add keeps its exact delta; a non-number adds nothing', () => {
+      sm.set('角色.属性.体力', 0.1);
+      executor.execute({ action: 'add', key: '角色.属性.体力', value: 0.2 });
+      expect(sm.get('角色.属性.体力')).toBe(0.1 + 0.2);
+      executor.execute({ action: 'add', key: '角色.属性.体力', value: '三十' });
+      expect(sm.get('角色.属性.体力')).toBe(0.1 + 0.2);
     });
 
     it('delete action removes path', () => {
@@ -310,5 +324,35 @@ describe('CommandExecutor · unknown path root → relocate or reject', () => {
     const ex = new CommandExecutor(mock.sm as never, null);
     const r = ex.execute({ action: 'set', key: '任意.路径', value: 1 });
     expect(r.success).toBe(true);
+  });
+});
+
+describe('CommandExecutor · add on the real state tree', () => {
+  it('spending and a filtered relation decrease apply, and stop at 0', async () => {
+    const { StateManager } = await import('@/engine/core/state-manager');
+    const sm = new StateManager();
+    sm.loadTree({ 角色: { 背包: { 金钱: { 现金: 10 } } }, 社交: { 关系: [{ 名称: '林晚照', 好感度: 50 }] } });
+    const ex = new CommandExecutor(sm, ['角色', '社交']);
+    const results = ex.executeBatch([
+      { action: 'add', key: '角色.背包.金钱.现金', value: -3 },
+      { action: 'add', key: '社交.关系[名称=林晚照].好感度', value: -20 },
+    ]).results;
+    expect(results.every(r => r.success)).toBe(true);
+    expect(sm.get('角色.背包.金钱.现金')).toBe(7);
+    expect(sm.get('社交.关系[名称=林晚照].好感度')).toBe(30);
+    ex.execute({ action: 'add', key: '角色.背包.金钱.现金', value: -30 });
+    expect(sm.get('角色.背包.金钱.现金')).toBe(0);
+  });
+  it('an already negative value is never pulled back to 0: an increase applies, a further decrease keeps it', async () => {
+    const { StateManager } = await import('@/engine/core/state-manager');
+    const sm = new StateManager();
+    sm.loadTree({ 社交: { 关系: [{ 名称: '沈墨琛', 好感度: -35 }] } });
+    const ex = new CommandExecutor(sm, ['社交']);
+    ex.execute({ action: 'add', key: '社交.关系[名称=沈墨琛].好感度', value: -5 });
+    expect(sm.get('社交.关系[名称=沈墨琛].好感度')).toBe(-35);
+    ex.execute({ action: 'add', key: '社交.关系[名称=沈墨琛].好感度', value: 5 });
+    expect(sm.get('社交.关系[名称=沈墨琛].好感度')).toBe(-30);
+    ex.execute({ action: 'add', key: '社交.关系[名称=沈墨琛].好感度', value: 50 });
+    expect(sm.get('社交.关系[名称=沈墨琛].好感度')).toBe(20);
   });
 });

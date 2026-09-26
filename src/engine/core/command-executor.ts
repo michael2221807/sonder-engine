@@ -11,7 +11,8 @@
  * 验证链（对齐 demo §24 四步验证）：
  * 1. 结构验证 — action/key 字段必须存在且合法
  * 2. 值清理 — NaN 转 0，字符串 trim
- * 3. 数值修复 — add/set 写入数值时，负值夹至 0，超过 MAX_NUMERIC_VALUE 夹至上限
+ * 3. 数值修复 — set 的值夹至 [0, MAX_NUMERIC_VALUE]；add 的增量可为负（受伤、花钱），结果不超过上限，
+ *    非负值减少时最低到 0；已经为负的值（如敌意好感度）不会被拉回 0
  * 4. 数组容量限制 — push 时若已达 MAX_ARRAY_CAPACITY，先 pull 最旧元素
  *
  * §11.4 路径根白名单（归位 / 拒绝模式，2026-09-04 起）：
@@ -130,9 +131,15 @@ export class CommandExecutor {
           // ── 步骤 2：值清理（NaN → 0） ──
           const raw = Number(cmd.value ?? 0);
           const numValue = Number.isNaN(raw) ? 0 : raw;
-          // ── 步骤 3：数值修复（夹至合法范围） ──
-          const clamped = clampNumber(numValue);
-          change = this.stateManager.add(cmd.key, clamped, 'command');
+          // ── 步骤 3：数值修复 — 增量可正可负；结果不超过上限，非负值最低到 0 ──
+          // An already negative value (legacy data such as a hostile NPC's affinity) keeps its floor, so a
+          // decrease never pulls it back up to 0. Only a result that leaves the range is adjusted; an
+          // ordinary add keeps its exact delta.
+          const current = Number(this.stateManager.get(cmd.key) ?? 0);
+          const next = current + numValue;
+          const bounded = Math.max(Math.min(0, current), Math.min(MAX_NUMERIC_VALUE, next));
+          const delta = Number.isNaN(next) || next === bounded ? numValue : bounded - current;
+          change = this.stateManager.add(cmd.key, delta, 'command');
           break;
         }
 
