@@ -6,12 +6,12 @@
   "replacements": [
     {
       "promptId": "core",
-      "to": "## 四、剧情动能\n\n只在贴合当前情境时使用引擎动能，它不是成败判定。尊重既定事实、人物自主性与自然因果，不另编数值裁决。\n\n",
+      "to": "## 四、剧情动能\n\n见「本回合使用剧情动能」。\n\n---\n\n",
       "from": "## 四、判定系统\n\n### 判定格式（必须遵守）\n\n```\n〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗\n```\n\n**注意：用`〖〗`不是`【】`；字段间用半角逗号`,`和半角冒号`:`，禁止用全角`，`和`：`**\n\n示例：\n```\n〖探索:成功,判定值:45,难度:35,基础:30,幸运:+8,环境:+5,状态:+2〗\n〖社交:大成功,判定值:68,难度:50,基础:52,幸运:+12,环境:+4,状态:0〗\n〖行动:失败,判定值:42,难度:55,基础:38,幸运:-3,环境:+7,状态:0〗\n```\n\n| 字段 | 说明 | 值域 |\n|------|------|------|\n| 类型 | 判定类型 | 探索/社交/行动/危机/躲避/感知等 |\n| 结果 | 判定结果 | 大失败/失败/成功/大成功/完美 |\n| 判定值 | 最终值 | 数字 |\n| 难度 | 目标值 | 10/20/35/50/70/90 |\n| 基础 | 属性与状态 | 数字 |\n| 幸运 | 运气波动 | +X 或 -X |\n| 环境 | 环境修正 | +X 或 0 |\n| 状态 | 状态修正 | +X 或 -X |\n\n### 判定公式\n\n```\n最终判定值 = 基础 + 幸运 + 环境 + 状态\n```\n\n**难度**：极易 10 | 简单 20 | 普通 35 | 困难 50 | 艰难 70 | 极难 90\n\n| 结果 | 条件 | 后果 |\n|------|------|------|\n| 大失败 | <难度-15 | 重伤/重大损失/关系恶化 |\n| 失败 | <难度 | 轻伤/部分损失/无进展 |\n| 成功 | ≥难度 | 达成目的 |\n| 大成功 | ≥难度+15 | 额外奖励/重创对手/好感大增 |\n| 完美 | ≥难度+30 | 重大转机/关键突破/结为盟友 |\n\n**何时判定**：\n- 必须：冲突攻防、危险探索、社交博弈、躲避逃跑、关键行动\n- 无需：日常行为、纯叙事对话\n\n### 属性对应用途\n\n| 属性 | 用途 |\n|------|------|\n| 体质 | 体力、耐力、受伤耐受、肉体挑战 |\n| 直觉 | 感知、闪避、危险预判、洞察 |\n| 悟性 | 学习、分析、技艺习得、谋略 |\n| 气运 | 随机事件倾向、机缘触发、意外救场 |\n| 魅力 | 社交、说服、印象、威慑 |\n| 心性 | 抗压、意志、情绪稳定、道德选择 |\n\n**判定规则**：相关属性 ≤ 5 → 大概率失败；6–10 → 各半；11–15 → 大概率成功；16–20 → 近乎必成。同时考虑情境修正（装备、状态效果、环境）。\n\n### 反媚俗规则（最高优先级）\n\n结果须基于规则与存档数据，而非玩家愿望。\n1. **禁止偏袒**：换作路人甲结果应相同\n2. **禁止轻描淡写**：大失败=重罚，不是「差点成功」\n3. **禁止主角光环**：对手不会突然变蠢\n4. **禁止巧合救场**：不要「恰好」「正巧」解围\n5. **禁止编造加成**：只使用存档数据\n\n---\n\n"
     },
     {
       "promptId": "core",
-      "to": "### 环境与节日\n\n记录当前真实存在的条件及影响，不为了凑分数编造环境标签。保留上面的三条必发 set 命令。环境标签的「能力」按本回合单独给出的环境能力接口一并写入；物品、天赋、状态的能力由实际入档后下游生成，不由本次正文直接生卡。\n\n---\n\n",
+      "to": "### 环境与节日\n\n记录当前真实存在的条件及影响，不为了凑分数编造环境标签。保留上面的三条必发 set 命令。\n\n---\n\n",
       "from": "### 与判定系统联动\n\n§四 的 `〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗` 中 `环境:E` 的数值必须**能与当前 `世界.环境[*].效果` 字段对应**。\n\n- 正例：当前环境里有 `{名称:\"雾气弥漫\", 效果:\"-3感知\"}` → 本回合感知判定写 `环境:-3`\n- 反例：环境为空却写 `环境:+7` → 无出处，属不合规\n\n如果 `环境:E` 非零但 `世界.环境` 为空，说明叙事层面需要即时增加相应标签 —— 在本回合 commands 中一并 set 进 `世界.环境`。\n\n### 节日字段独立使用\n\n`世界.节日.效果` 对判定的贡献也并入 `环境:E`（不额外开新字段）。节日的氛围影响通常与环境标签互斥或叠加 —— 由你裁定。\n\n---\n\n"
     },
     {
@@ -31,7 +31,7 @@
     },
     {
       "promptId": "mainRound",
-      "to": "### 剧情动能\n- 从事实、玩家输入与人物反应继续剧情；只取贴合情境的引擎倾向作小幅推动，不作为成败阈值。\n\n",
+      "to": "### 剧情动能\n- 见「本回合使用剧情动能」。\n\n",
       "from": "### 判定\n- 参考六维属性判断行动成败（体质/直觉/悟性/气运/魅力/心性）\n- 冲突/探索/社交博弈等关键行动**必须使用判定**，格式：`〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗`\n\n"
     },
     {
@@ -41,8 +41,8 @@
     },
     {
       "promptId": "splitGenStep1",
-      "to": "- 自然呈现剧情，不输出数值判定标签。",
-      "from": "- 系统判定：`〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗`"
+      "to": "",
+      "from": "\n- 系统判定：`〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗`"
     },
     {
       "promptId": "splitGenStep1",
@@ -51,12 +51,12 @@
     },
     {
       "promptId": "splitGenStep1",
-      "to": "3. **动能**：轻量使用贴合情境的引擎倾向，不相关或缺失时不必回应。",
+      "to": "3. **动能**：见「本回合使用剧情动能」。",
       "from": "3. **判定格式**：`〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗`"
     },
     {
       "promptId": "splitGenStep1",
-      "to": "## 冲突场景\n\n后果来自情境与行动，不将动能数值等同于自动受伤、获胜或惩罚。\n\n---\n\n",
+      "to": "",
       "from": "## 冲突场景特别要求\n\n- 每次攻防都要进行判定\n- 判定结果决定伤害和后果\n- 大失败=重伤，大成功=重创对手\n\n---\n\n"
     },
     {
@@ -81,22 +81,22 @@
     },
     {
       "promptId": "cot-preamble",
-      "to": "- 只考虑引擎所给且贴合当前情境的倾向，作少量可选推动。静场不强造事件；没有动能也不补做掷骰。",
-      "from": "- 命中判定时，准备 `<judge>` 并调用判定协议。静场、余波回合同样有判定：主角的辨读、承压、退潮，人物反常举动的识读，都按协议给判定，不因没有新事件而省略。"
+      "to": "",
+      "from": "\n- 命中判定时，准备 `<judge>` 并调用判定协议。静场、余波回合同样有判定：主角的辨读、承压、退潮，人物反常举动的识读，都按协议给判定，不因没有新事件而省略。"
     },
     {
       "promptId": "cot-preamble",
-      "to": "- 正文只呈现自然发生的变化，不展示动能数值或算分说明。",
-      "from": "- `<judge>` 只能作为 `<正文>` 内部子结构。"
+      "to": "",
+      "from": "\n- `<judge>` 只能作为 `<正文>` 内部子结构。"
     },
     {
       "promptId": "core",
-      "to": "## IV. Narrative Impulse\n\nUse the engine impulse only where it fits the scene. It is not an outcome roll. Preserve established facts, character agency and ordinary causality; never invent a numerical verdict.\n\n",
+      "to": "## IV. Narrative Impulse\n\nSee \"Narrative impulse mode for this round\".\n\n---\n\n",
       "from": "## IV. Judgement System\n\n### Judgement Format (Mandatory)\n\n```\n〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗\n```\n\n**Note: Use `〖〗` not `【】`; fields separated by half-width commas `,` and half-width colons `:`, never use full-width `，` or `：`**\n\nExamples:\n```\n〖探索:成功,判定值:45,难度:35,基础:30,幸运:+8,环境:+5,状态:+2〗\n〖社交:大成功,判定值:68,难度:50,基础:52,幸运:+12,环境:+4,状态:0〗\n〖行动:失败,判定值:42,难度:55,基础:38,幸运:-3,环境:+7,状态:0〗\n```\n\n| Field | Description | Range |\n|-------|-------------|-------|\n| 类型 (Type) | Judgement type | 探索/社交/行动/危机/躲避/感知 (Exploration/Social/Action/Crisis/Evasion/Perception) etc. |\n| 结果 (Result) | Judgement result | 大失败/失败/成功/大成功/完美 (Critical Failure/Failure/Success/Critical Success/Perfect) |\n| 判定值 (Final Value) | Final calculated value | Number |\n| 难度 (Difficulty) | Target value | 10/20/35/50/70/90 |\n| 基础 (Base) | Attribute and status | Number |\n| 幸运 (Luck) | Luck fluctuation | +X or -X |\n| 环境 (Environment) | Environmental modifier | +X or 0 |\n| 状态 (Status) | Status modifier | +X or -X |\n\n### Judgement Formula\n\n```\nFinal Judgement Value = Base + Luck + Environment + Status\n```\n\n**Difficulty**: Trivial 10 | Easy 20 | Normal 35 | Hard 50 | Very Hard 70 | Extreme 90\n\n| Result | Condition | Consequence |\n|--------|-----------|-------------|\n| 大失败 (Critical Failure) | <Difficulty-15 | Severe injury / major loss / relationship deterioration |\n| 失败 (Failure) | <Difficulty | Minor injury / partial loss / no progress |\n| 成功 (Success) | ≥Difficulty | Objective achieved |\n| 大成功 (Critical Success) | ≥Difficulty+15 | Bonus rewards / devastating blow to opponent / major affinity gain |\n| 完美 (Perfect) | ≥Difficulty+30 | Major turning point / critical breakthrough / alliance forged |\n\n**When to roll**:\n- Required: combat attacks/defense, dangerous exploration, social maneuvering, evasion/escape, critical actions\n- Not needed: daily activities, pure narrative dialogue\n\n### Attribute Usage Reference\n\n| Attribute | Usage |\n|-----------|-------|\n| 体质 (Constitution) | Physical strength, endurance, injury tolerance, physical challenges |\n| 直觉 (Intuition) | Perception, dodge, danger sense, insight |\n| 悟性 (Comprehension) | Learning, analysis, skill acquisition, strategy |\n| 气运 (Fortune) | Random event tendencies, serendipity triggers, unexpected saves |\n| 魅力 (Charisma) | Social interaction, persuasion, impression, intimidation |\n| 心性 (Willpower) | Stress resistance, willpower, emotional stability, moral choices |\n\n**Judgement rules**: Relevant attribute ≤ 5 → high probability of failure; 6–10 → coin flip; 11–15 → high probability of success; 16–20 → near-certain success. Also consider situational modifiers (equipment, status effects, environment).\n\n### Anti-Pandering Rule (Highest Priority)\n\nResults must be based on rules and save data, not player wishes.\n1. **No favoritism**: The result should be the same if a random NPC were in this position\n2. **No sugarcoating**: Critical failure = severe penalty, not \"almost succeeded\"\n3. **No plot armor**: Opponents do not suddenly become incompetent\n4. **No convenient rescues**: No \"just happens to\" or \"by coincidence\" bailouts\n5. **No fabricated bonuses**: Only use save data\n\n---\n\n"
     },
     {
       "promptId": "core",
-      "to": "### Environment and Festival\n\nRecord the actual current conditions and their effects. Never invent an environment tag to justify a score. Keep the three mandatory set commands above. Environment tags carry their 「能力」 per the separate environment-ability interface of this round; item, talent and status abilities are still generated downstream from saved entries.\n\n---\n\n",
+      "to": "### Environment and Festival\n\nRecord the actual current conditions and their effects. Never invent an environment tag to justify a score. Keep the three mandatory set commands above.\n\n---\n\n",
       "from": "### Integration with the Judgement System\n\nIn §IV's `〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗`, the `环境:E` value must be **traceable to the current `世界.环境[*].效果` field**.\n\n- Correct: The current environment includes `{名称:\"Dense Fog\", 效果:\"-3 Perception\"}` → this round's perception roll writes `环境:-3`\n- Incorrect: Environment is empty but the roll writes `环境:+7` → no source, non-compliant\n\nIf `环境:E` is non-zero but `世界.环境` is empty, it means the narrative layer needs to immediately add the corresponding tag — include it in this round's commands via set to `世界.环境`.\n\n### Festival Field Independent Usage\n\n`世界.节日.效果`'s contribution to judgement rolls is also folded into `环境:E` (no new field). A festival's atmospheric effect typically either conflicts with or stacks onto environment tags — adjudicated at your discretion.\n\n---\n\n"
     },
     {
@@ -116,7 +116,7 @@
     },
     {
       "promptId": "mainRound",
-      "to": "### Narrative Impulse\n- Continue from the facts, player input and character reactions. Use only fitting engine tendencies as a small optional nudge, never a success/failure threshold.\n\n",
+      "to": "### Narrative Impulse\n- See \"Narrative impulse mode for this round\".\n\n",
       "from": "### Judgement Rolls\n- Reference the six core attributes to determine action success or failure (体质/直觉/悟性/气运/魅力/心性)\n- Conflicts, exploration, social maneuvering, and other critical actions **must use judgement rolls**, format: `〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗`\n\n"
     },
     {
@@ -126,8 +126,8 @@
     },
     {
       "promptId": "splitGenStep1",
-      "to": "- Describe the narrative naturally; no numerical judgement label.",
-      "from": "- System judgement: `〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗`"
+      "to": "",
+      "from": "\n- System judgement: `〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗`"
     },
     {
       "promptId": "splitGenStep1",
@@ -136,12 +136,12 @@
     },
     {
       "promptId": "splitGenStep1",
-      "to": "3. **Impulse**: Use fitting engine tendencies lightly; irrelevant or absent tendencies need no response.",
+      "to": "3. **Impulse**: See \"Narrative impulse mode for this round\".",
       "from": "3. **Judgement format**: `〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗`"
     },
     {
       "promptId": "splitGenStep1",
-      "to": "## Conflict Scenes\n\nConsequences follow the scene and actions. Do not equate impulse values to automatic injury, victory or punishment.\n\n---\n\n",
+      "to": "",
       "from": "## Combat Scene Special Requirements\n\n- Every attack/defense exchange must include a judgement roll\n- Judgement results determine damage and consequences\n- Critical Failure = severe injury, Critical Success = devastating blow to opponent\n\n---\n\n"
     },
     {
@@ -166,13 +166,13 @@
     },
     {
       "promptId": "cot-preamble",
-      "to": "- Consider only the supplied engine tendencies that fit the current scene, as small optional nudges. Quiet scenes need no forced event; absent tendencies need no replacement roll.",
-      "from": "- When a judgement is triggered, prepare a `<judge>` block and invoke the judgement protocol. Still and aftermath rounds carry judgements too: the protagonist's reading, endurance and ebb, and the reading of a character's unusual gesture all go through the protocol — never skipped for lack of a new event."
+      "to": "",
+      "from": "\n- When a judgement is triggered, prepare a `<judge>` block and invoke the judgement protocol. Still and aftermath rounds carry judgements too: the protagonist's reading, endurance and ebb, and the reading of a character's unusual gesture all go through the protocol — never skipped for lack of a new event."
     },
     {
       "promptId": "cot-preamble",
-      "to": "- Keep numerical impulse and scoring explanations out of the narrative; show only natural consequences.",
-      "from": "- `<judge>` may only appear as an internal substructure within `<正文>`."
+      "to": "",
+      "from": "\n- `<judge>` may only appear as an internal substructure within `<正文>`."
     },
     {
       "promptId": "core",
@@ -213,6 +213,26 @@
       "promptId": "core",
       "from": "- If the corresponding command cannot be generated, remove the corresponding text content\n",
       "to": ""
+    },
+    {
+      "promptId": "mainRound",
+      "from": "\n- 判定的 `环境:E` 修正必须能追溯到当前 `世界.环境[*].效果` 字段（或节日的效果）；写非零却无出处属不合规",
+      "to": ""
+    },
+    {
+      "promptId": "mainRound",
+      "from": "\n- The judgement roll's `环境:E` modifier must be traceable to the current `世界.环境[*].效果` field (or the festival's effect); writing a nonzero value without a source is non-compliant",
+      "to": ""
+    },
+    {
+      "promptId": "characterVectors",
+      "from": "成不成由局面与判定决定",
+      "to": "成不成由局面决定"
+    },
+    {
+      "promptId": "characterVectors",
+      "from": "the scene and the dice decide",
+      "to": "the scene decides"
     }
   ],
   "abilityRepair": {

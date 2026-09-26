@@ -155,6 +155,19 @@ describe('real pack judgment transition, zero network', () => {
     expect(h.policy.transform('unrelated', `原样\r\n${oldFormat}`)).toBe(`原样\r\n${oldFormat}`);
   });
 
+  it('no module that takes part in a round still asks for a numerical verdict once the mode is on', () => {
+    // Body polish keeps old verdict blocks already in history, and the image/card helpers use "judge" in another sense.
+    const outside = new Set(['bodyPolish', 'imageSceneJudge', 'cardEdgeClassify', 'wordCountReq', 'assistantInjectionContract']);
+    for (const pack of packs) {
+      const policy = parseVectorPromptPolicy(rules, pack.prompts.plotVectorMode)!;
+      for (const [id, text] of Object.entries(pack.prompts)) {
+        if (outside.has(id) || id === 'plotVectorMode') continue;
+        const out = policy.transform(id, text);
+        expect(out, id).not.toMatch(/环境:E|判定决定|判定系统|判定格式|必须使用判定|judgement roll|the dice decide|Judgement System/);
+      }
+    }
+  });
+
   it('leaves the inventory and money lines of the pack untouched', () => {
     for (const pack of packs) {
       const policy = parseVectorPromptPolicy(rules, pack.prompts.plotVectorMode)!;
@@ -179,9 +192,12 @@ describe('real pack judgment transition, zero network', () => {
     expect(repair.guidance).toBe(GENESIS_GUIDANCE);
     const block = parseVectorPromptPolicy(rules, 'mode')!.abilityBlock!;
     expect(block.tag).toBe('能力');
-    expect(block.prompt).toBe(`${block.instruction}\n\n${CARD_API}`);
+    expect(block.prompt).toBe(`${block.instruction}\n\n${GENESIS_GUIDANCE}\n\n${CARD_API}`);
     expect(block.instruction).toContain('<能力>');
-    expect(AGA_GENESIS_SYSTEM).toBe(`${GENESIS_GUIDANCE}\n\n${CARD_API}`);
+    expect(AGA_GENESIS_SYSTEM.startsWith(`${GENESIS_GUIDANCE}\n\n${CARD_API}\n`)).toBe(true);
+    // The card domain describes one card; each caller says what to output (an array, `{id, card}` items, or one card).
+    expect(CARD_API).not.toMatch(/只输出/);
+    expect(AGA_GENESIS_SYSTEM).toMatch(/只输出这一张卡/);
     // The pack wording describes the card format the engine reads, not the retired snippet format.
     for (const text of [block.instruction, repair.template])
       expect(text).not.toMatch(/hooks|onVisit|effects|persistentState|runState|version|\{\{PATH\}\}/);
@@ -277,6 +293,32 @@ describe('real pack judgment transition, zero network', () => {
             { thread: '测试线', node_reached: false, gauge_updates: [{ gauge_id: '进展', delta: 1 }] },
           ]);
         }
+      } finally { adapter.dispose(); }
+    });
+  }
+
+  // Phase 4: "a light nudge, never a verdict" is said once, in the mode text; nothing else in the real requests restates it.
+  const DOCTRINE = { zh: /蝴蝶翅膀|不是成败|成败阈值|不作为成败|成功概率|补骰|不必回应|作少量可选推动|不另编数值裁决|自动受伤|不是必须兑现/,
+    en: /butterfly|outcome command|outcome roll|success\/failure|success probability|substitute roll|replacement roll|optional nudge|automatic injury|must be honoured/i };
+  for (const en of [false, true]) for (const builder of [false, true]) for (const split of [false, true]) {
+    it(`the nudge doctrine appears once, in the mode text only: en=${en}, builder=${builder}, split=${split}`, async () => {
+      vi.spyOn(console, 'debug').mockImplementation(() => {});
+      const h = harness(en, builder, split, true, false);
+      h.state.set(P.characterAttributes, { 体质: 12, 心性: 10, 魅力: 12, 直觉: 5, 气运: 15, 悟性: 15 });
+      writePlotVectorControl(true);
+      const adapter = new AgaPlotVectorAdapter(h.state, { generate: vi.fn() }, { saveGame: vi.fn() },
+        () => ({ profileId: 'once', slotId: 'test' }), parseNativeRules(nativeRules), h.policy);
+      const requests: GenerateOptions[] = [];
+      const ai = { generate: async (o: GenerateOptions) => { requests.push(o); return JSON.stringify({ text: '正文', commands: [], action_options: ['a', 'b', 'c'] }); } } as unknown as AIService;
+      try {
+        const prepared = await adapter.prepare(await h.stage(true, adapter).execute(h.ctx()));
+        await new AICallStage(ai, new ResponseParser()).execute(prepared);
+        const all = requests.flatMap(r => r.messages.map(m => String(m.content)));
+        expect(all.filter(c => c.includes('维度说明与数值'))).toHaveLength(1); // the impulse data is in the request
+        const restating = all.filter(c => DOCTRINE[en ? 'en' : 'zh'].test(c));
+        expect(restating).toEqual([h.policy.mode]);
+        // Step2 still carries the ability block and never the impulse data.
+        if (split) expect(requests[1].messages.some(m => String(m.content).includes('维度说明与数值'))).toBe(false);
       } finally { adapter.dispose(); }
     });
   }

@@ -16,7 +16,7 @@ export interface AbilityBlockPolicy {
   tag: string;
   /** The pack instruction alone. */
   instruction: string;
-  /** What the request carries: the instruction and the card domain. */
+  /** What the request carries: the instruction, the shared guidance and the card domain. */
   prompt: string;
 }
 /**
@@ -59,7 +59,8 @@ export function parseVectorPromptPolicy(raw: unknown, mode: unknown): VectorProm
   if (r.abilityBlock !== undefined) {
     const b = r.abilityBlock as Record<string, unknown> | null;
     if (!b || typeof b.tag !== 'string' || !/^[^<>\s/]+$/.test(b.tag) || typeof b.instruction !== 'string' || !b.instruction.trim()) return;
-    abilityBlock = { tag: b.tag, instruction: b.instruction.trim(), prompt: `${b.instruction.trim()}\n\n${CARD_API}` };
+    // One source for what a good card is and how it is written: the same guidance and domain as Step3 and the player's retry.
+    abilityBlock = { tag: b.tag, instruction: b.instruction.trim(), prompt: `${b.instruction.trim()}\n\n${GENESIS_GUIDANCE}\n\n${CARD_API}` };
   }
   let abilityRepair: AbilityRepairPolicy | undefined;
   if (r.abilityRepair !== undefined) {
