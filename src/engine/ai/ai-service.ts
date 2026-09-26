@@ -193,9 +193,6 @@ export class AIService {
     // 在最外层重置取消状态（一次调用只重置一次）
     this.resetAbortState();
 
-    // A checkpoint owns retry/recovery. An unknown transport outcome must not be sent twice.
-    if (options.checkpoint || options.singleAttempt) return this.doGenerate(options);
-
     return this.executeWithRetry(
       () => this.doGenerate(options),
       `generate(${options.usageType ?? 'main'})`,
@@ -280,18 +277,7 @@ export class AIService {
     });
 
     try {
-      const send = () => {
-        signal.throwIfAborted();
-        return provider.generate({ ...effectiveOptions, checkpoint: undefined,
-          singleAttempt: !!options.checkpoint || options.singleAttempt, signal });
-      };
-      let sent = false;
-      const result = options.checkpoint
-        ? await options.checkpoint.run({ config: effectiveConfig, messages: effectiveOptions.messages, stream: effectiveOptions.stream === true },
-          () => { sent = true; return send(); })
-        : await send();
-      signal.throwIfAborted();
-      if (options.checkpoint && !sent) options.onStreamChunk?.(result);
+      const result = await provider.generate({ ...effectiveOptions, signal });
       if (aiLogging) {
         console.log('[AI-LOG] response', {
           usageType: options.usageType ?? 'main',

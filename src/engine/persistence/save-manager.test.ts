@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { isEqual } from 'lodash-es';
 
 const memStore = new Map<string, unknown>();
 vi.mock('./idb-adapter', () => ({
@@ -10,9 +9,8 @@ vi.mock('./idb-adapter', () => ({
     async set(key: string, value: unknown): Promise<void> {
       memStore.set(key, JSON.parse(JSON.stringify(value)));
     },
-    async setGuarded(key: string, value: unknown, guard: () => void, expected?: { value: unknown }): Promise<void> {
+    async setGuarded(key: string, value: unknown, guard: () => void): Promise<void> {
       guard();
-      if (expected && !isEqual(memStore.get(key), expected.value)) throw new Error('conflict');
       memStore.set(key, JSON.parse(JSON.stringify(value)));
     },
     async delete(key: string): Promise<void> {
@@ -65,45 +63,6 @@ describe('SaveManager', () => {
   });
 
   describe('saveGame', () => {
-    it('rejects stale saves and export reads cannot refresh the active baseline', async () => {
-      memStore.set('save_p_s', { round: 1 });
-      const a = new SaveManager(pm, { enabled: () => true });
-      const b = new SaveManager(pm, { enabled: () => true });
-      a.adoptLoadedGame('p', 's', (await a.loadGame('p', 's'))!);
-      b.adoptLoadedGame('p', 's', (await b.loadGame('p', 's'))!);
-      await a.saveGame('p', 's', { round: 2 });
-      await b.loadGame('p', 's'); // Export/background inspection does not activate the tree.
-      await expect(b.assertCurrent('p', 's')).rejects.toThrow('重新读档');
-      await expect(b.saveGame('p', 's', { round: 99 })).rejects.toThrow('conflict');
-      expect(memStore.get('save_p_s')).toEqual({ round: 2 });
-      b.adoptLoadedGame('p', 's', (await b.loadGame('p', 's'))!);
-      await b.assertCurrent('p', 's');
-      await b.saveGame('p', 's', { round: 3 });
-      await a.deleteGame('p', 's');
-      await expect(b.saveGame('p', 's', { round: 4 })).rejects.toThrow('conflict');
-      expect(memStore.has('save_p_s')).toBe(false);
-    });
-    it('preserves the legacy overwrite path when protection is off', async () => {
-      memStore.set('save_p_s', { round: 2 });
-      await sm.saveGame('p', 's', { round: 1 });
-      expect(memStore.get('save_p_s')).toEqual({ round: 1 });
-    });
-    it('explicitly activating an imported tree replaces the previous active baseline', async () => {
-      const manager = new SaveManager(pm, { enabled: () => true });
-      await manager.saveGame('p', 's', { round: 1 });
-      memStore.set('save_p_s', { round: 5 });
-      manager.adoptLoadedGame('p', 's', { round: 5 });
-      await manager.assertCurrent('p', 's');
-      await manager.saveGame('p', 's', { round: 6 });
-      expect(memStore.get('save_p_s')).toEqual({ round: 6 });
-    });
-    it('cleans recovery records after deletion, without turning cleanup failure into failed deletion', async () => {
-      const deleted = vi.fn(async () => { throw new Error('recovery storage'); });
-      const protectedSave = new SaveManager(pm, { enabled: () => true, deleted });
-      memStore.set('save_p_s', { round: 2 });
-      await expect(protectedSave.deleteGame('p', 's')).resolves.toBeUndefined();
-      expect(deleted).toHaveBeenCalledWith('p', 's'); expect(memStore.has('save_p_s')).toBe(false);
-    });
     it('opt-in guard rejects before writing and never acknowledges a failed commit', async () => {
       const committed = vi.fn();
       await expect(sm.saveGame('p1', 's1', { round: 1 }, undefined,

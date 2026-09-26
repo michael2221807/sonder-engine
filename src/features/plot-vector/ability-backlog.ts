@@ -2,15 +2,8 @@ import { capabilityKey, type SavedElement } from './genesis/post-save';
 import type { GenesisEntryKind } from './genesis/types';
 import type { VectorState, VectorTaskRow } from './runtime';
 
-/**
- * Judged by the latest attempt:
- * - `failed`: a reply was received (or, for an environment tag, Step2 wrote it) but gave no usable ability;
- *   Step3 may try again.
- * - `unknown`: a request was sent and no reply was ever recorded, whatever the error said. Never re-sent
- *   automatically; only a free recovery from the local ledger or the player's explicit retry.
- * - `retrying`: a player retry was sent and its reply has not been recorded yet.
- */
-export type BacklogState = 'failed' | 'unknown' | 'retrying';
+/** An obtained entry without a usable ability. Step3 tries it again automatically; the player can too. */
+export type BacklogState = 'failed';
 export interface BacklogEntry {
   id: string;
   kind: GenesisEntryKind;
@@ -19,17 +12,6 @@ export interface BacklogEntry {
   /** Why the latest attempt did not give a usable ability (diagnostic text). */
   problem?: string;
   row: VectorTaskRow;
-}
-
-/**
- * Whether the latest attempt got a reply. A Step3 try is recorded as the request leaves and its outcome is
- * the field-repair round's (bounded by the automatic round limit); a player retry counts only with its own
- * reply, never with an older one; the first attempt of an environment tag is Step2's own reply.
- */
-function latestReceived(row: VectorTaskRow): boolean {
-  const retry = row.retry;
-  if (retry) return retry.source === 'step3' || retry.raw !== undefined;
-  return row.task.entry.kind === 'environment' || row.raw !== undefined;
 }
 
 /** The saved entry as ability identity sees it: the transport-only ability field of an environment tag is not content. */
@@ -43,6 +25,7 @@ export function bareEntry(entry: SavedElement, abilityField?: string): SavedElem
  * Entries the player has obtained whose ability is not usable yet. Only entries still in the save with
  * unchanged content count (a changed or removed source is handled as the current source); an entry that
  * already has a card for its current content is never listed. The saved entry itself is never touched.
+ * A request that never came back (page closed while it was out) counts as failed like any other.
  */
 export function abilityBacklog(state: VectorState, entries: readonly SavedElement[], abilityField?: string): BacklogEntry[] {
   const current = new Map(entries.map(e => { const bare = bareEntry(e, abilityField); return [capabilityKey(bare), bare] as const; }));
@@ -55,13 +38,10 @@ export function abilityBacklog(state: VectorState, entries: readonly SavedElemen
     if (!entry || withCard.has(key) || listed.has(key)) continue;
     // A received first reply still waiting for its free check is not backlog; the next round binds it.
     const waitingCheck = row.status === 'sending' && row.raw !== undefined && !row.retry;
-    const status: BacklogState | undefined = row.retry?.sending ? 'retrying'
-      : waitingCheck || (row.status !== 'failed' && row.status !== 'sending') ? undefined
-        : latestReceived(row) ? 'failed' : 'unknown';
-    if (!status) continue;
+    if (waitingCheck || (row.status !== 'failed' && row.status !== 'sending')) continue;
     listed.add(key);
     const name = typeof entry.capability.name === 'string' && entry.capability.name.trim() ? entry.capability.name.trim() : entry.id;
-    backlog.push({ id: entry.id, kind: entry.kind, name, state: status, problem: row.retry?.error ?? row.error, row });
+    backlog.push({ id: entry.id, kind: entry.kind, name, state: 'failed', problem: row.retry?.error ?? row.error, row });
   }
   return backlog;
 }

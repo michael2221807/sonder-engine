@@ -12,7 +12,6 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostProcessStage, collectCanonMutations } from './post-process';
-import { RoundStateUpdates } from '../../state-updates/round-state-updates';
 import { RoundOwnership } from '../../core/round-ownership';
 import type {
   PipelineContext,
@@ -166,26 +165,6 @@ describe('PostProcessStage — Phase 1 per-turn metadata', () => {
     return assistant?.value;
   }
 
-  it.each([false, true])('host synchronization gates actual autosave without a board (compiled=%s)', async compiled => {
-    const sync = new RoundStateUpdates(() => ({
-      contract: { inventoryPath: '角色.背包.物品', quantityField: '数量', accounts: {} },
-      prompt: 'existing protocol',
-    }));
-    const save = makeSaveManager();
-    const hostStage = new PostProcessStage(sm as never, makeMemoryManager(), makeEngramManager(),
-      makeBehaviorRunner(), save as never, paths, () => ({ profileId: 'p', slotId: 's' }), undefined, sync);
-    let ctx = sync.prepare(makeCtx({ parsedResponse: { text: 'round', commands: [], parseOk: true,
-      customFields: { state_updates: { version: 1, actions: [] } } } }));
-    if (compiled) ctx = sync.beforeCommands(ctx);
-    if (compiled) {
-      await expect(hostStage.execute(ctx)).resolves.toBeDefined();
-      expect(save.saveGame).toHaveBeenCalledTimes(1);
-    } else {
-      await expect(hostStage.execute(ctx)).rejects.toThrow('尚未处理');
-      expect(save.saveGame).not.toHaveBeenCalled();
-    }
-  });
-
   it('marks the durable host commit without a board even when later slot metadata fails', async () => {
     const slot = { profileId: 'p', slotId: 's' };
     const owner = new RoundOwnership(() => slot, () => 0, new AbortController().signal);
@@ -249,15 +228,6 @@ describe('PostProcessStage — Phase 1 per-turn metadata', () => {
     expect(metrics.outputTokens).toBeGreaterThan(0);
   });
 
-  it('preserves preflight failure diagnostics without storing duplicated item payloads', async () => {
-    await stage.execute(makeCtx({ rejectedCommands: [{ success: false,
-      command: { action: 'set', key: '角色.背包.物品.unknown', value: { 名称: 'duplicate' } },
-      error: 'Unknown item reference',
-    }] }));
-    expect(getAssistantEntry()?._rejectedCommands).toEqual([
-      { action: 'set', key: '角色.背包.物品.unknown', error: 'Unknown item reference' },
-    ]);
-  });
   it('post-save failure cannot undo an accepted vector round, including copied pipeline meta', async () => {
     const lifecycle: { saved?: boolean } = {};
     const afterSave = vi.fn(async () => { throw new Error('optional card unavailable'); });
@@ -303,31 +273,6 @@ describe('PostProcessStage — Phase 1 per-turn metadata', () => {
     expect(m.totalInputTokens).toBeUndefined();
     expect((m.breakdown as { step2?: unknown }).step2).toBeUndefined();
   });
-  it('meters and archives the dedicated settlement without counting a replayed reply twice', async () => {
-    await stage.execute(makeCtx({ meta: { stateSettlementRaw: '{"state_updates":{"version":1,"actions":[]}}',
-      stateSettlementStrict: true, plotVectorRecovered: ['step1'] },
-      promptMetrics: { step1: { inputTokens: 100, outputTokens: 10, breakdown: [] },
-        step2: { inputTokens: 300, outputTokens: 30, breakdown: [] },
-        settlement: { inputTokens: 40, outputTokens: 5, breakdown: [{ source: 'state-settlement-input', tokens: 40 }] } } }));
-    expect(getAssistantEntry()?._metrics).toMatchObject({ inputTokens: 0, step2InputTokens: 300,
-      settlementInputTokens: 40, settlementOutputTokens: 5, totalInputTokens: 340, totalOutputTokens: 35 });
-    expect(getAssistantEntry()?._rawResponseSettlement).toContain('state_updates');
-    expect(getAssistantEntry()?._settlementStrict).toBe(true);
-  });
-
-  it('does not count a recovered narrative as a new paid request', async () => {
-    await stage.execute(makeCtx({
-      meta: { plotVectorRecovered: ['step1'] },
-      promptMetrics: {
-        step1: { inputTokens: 100, outputTokens: 10, breakdown: [] },
-        step2: { inputTokens: 300, outputTokens: 30, breakdown: [] },
-      },
-    }));
-    expect(getAssistantEntry()?._metrics).toMatchObject({inputTokens: 0, outputTokens: 0,
-      step2InputTokens: 300, totalInputTokens: 300, totalOutputTokens: 30});
-    expect(getAssistantEntry()?._recoveredSteps).toEqual(['step1']);
-  });
-
   it('sets _metrics even when AICall did not populate timing (defensive defaults)', async () => {
     const ctx = makeCtx(); // no aiCallStartedAt / aiCallDurationMs
     await stage.execute(ctx);

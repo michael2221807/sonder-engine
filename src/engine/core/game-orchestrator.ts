@@ -17,8 +17,6 @@
  */
 import { PipelineRunner } from '../pipeline/pipeline-runner';
 import { RoundOwnership, type RoundSlot } from './round-ownership';
-import { RoundRecovery } from '../plot-vector/round-recovery';
-import { readPlotVectorControl } from '../plot-vector/feature-control';
 import { SettingCaptureStage } from '../pipeline/stages/setting-capture';
 import { parseSettingTagNames } from '../prompt/setting-tag-scanner';
 import { parseAnchorStopwords } from '../prompt/captured-entry-mutations';
@@ -62,7 +60,6 @@ import { ContextAssemblyStage } from '../pipeline/stages/context-assembly';
 import { AICallStage } from '../pipeline/stages/ai-call';
 import { ResponseRepairStage } from '../pipeline/stages/response-repair';
 import { BodyPolishStage } from '../pipeline/stages/body-polish-stage';
-import { StateUpdateSettlementStage } from '../pipeline/stages/state-update-settlement';
 import { ReasoningIngestStage } from '../pipeline/stages/reasoning-ingest';
 import { CommandExecutionStage } from '../pipeline/stages/command-execution';
 import { PostProcessStage } from '../pipeline/stages/post-process';
@@ -118,7 +115,6 @@ import type { OpeningStages } from '../pipeline/sub-pipelines/enhanced-opening';
  * 2. 未来增加新子管线时不会再改 Orchestrator 构造函数签名
  */
 export interface SubPipelineBundle {
-  stateUpdates?: import('../state-updates/round-state-updates').RoundStateUpdates;
   plotVector?: import('../plot-vector/round-port').PlotVectorRoundPort;
   stateEditInProgress?: () => boolean;
   memorySummary?: MemorySummaryPipeline;
@@ -220,7 +216,6 @@ export class GameOrchestrator {
   private stateRevision = 0;
   private pendingSave: RoundSlot | null = null;
   private requestedSaveActive = false;
-  private roundRecovery = new RoundRecovery(generateId);
   private readonly unsubscribers: Array<() => void> = [];
   /**
    * 子管线包 — GAP_AUDIT §G2 wiring
@@ -320,10 +315,6 @@ export class GameOrchestrator {
         ctx => subPipelines.plotVector?.promptTransform?.(ctx),
       ),
     );
-    if (subPipelines.stateUpdates) {
-      const port = subPipelines.stateUpdates;
-      this.runner.addStage({ name: 'StateUpdatePrepare', execute: async ctx => port.prepare(ctx) });
-    }
     if (subPipelines.plotVector) {
       const port = subPipelines.plotVector;
       this.runner.addStage({ name: 'PlotVector', execute: ctx => port.prepare(ctx) });
@@ -339,18 +330,7 @@ export class GameOrchestrator {
     // narrative entry. Previous sub-pipeline implementation ran AFTER the
     // pipeline — too late, the original text was already stored.
     this.runner.addStage(new BodyPolishStage(aiService, stateManager, promptAssembler));
-    if (subPipelines.stateUpdates) {
-      this.runner.addStage(new StateUpdateSettlementStage(aiService, responseParser, subPipelines.stateUpdates));
-    }
     this.runner.addStage(new ReasoningIngestStage(stateManager, paths));
-    if (subPipelines.stateUpdates) {
-      const port = subPipelines.stateUpdates;
-      this.runner.addStage({ name: 'StateUpdateCompile', execute: async ctx => port.beforeCommands(ctx) });
-    }
-    if (subPipelines.plotVector?.beforeCommands) {
-      const port = subPipelines.plotVector;
-      this.runner.addStage({ name: 'PlotVectorCommands', execute: async ctx => port.beforeCommands!(ctx) });
-    }
     this.runner.addStage(new CommandExecutionStage(commandExecutor, behaviorRunner, stateManager, paths));
     // Canon Capture — after commands are applied, before PostProcess persists history
     // and triggers the auto-save, so the captured settings are part of the SAME round
@@ -388,7 +368,6 @@ export class GameOrchestrator {
         paths,
         getActiveSlot,
         subPipelines.plotVector,
-        subPipelines.stateUpdates,
       ),
     );
     this.runner.addStage(new RenderStage());
@@ -404,9 +383,9 @@ export class GameOrchestrator {
       if (event.type === 'load') this.pendingSave = null;
     }));
     this.unsubscribers.push(
-      eventBus.on<{ text: string; regenerateToken?: string }>('pipeline:user-input', (payload) => {
+      eventBus.on<{ text: string }>('pipeline:user-input', (payload) => {
         if (!payload?.text) return;
-        void this.runRound(payload.text, stateManager, payload.regenerateToken);
+        void this.runRound(payload.text, stateManager);
       }),
     );
 
@@ -562,7 +541,7 @@ export class GameOrchestrator {
    * abortController 在回合结束（正常或取消）后置 null，
    * 确保下一回合使用全新的取消信号。
    */
-  private async runRound(userInput: string, stateManager: StateManager, regenerateToken?: string): Promise<void> {
+  private async runRound(userInput: string, stateManager: StateManager): Promise<void> {
     // UI events can be delivered twice before rendering disables the composer.
     // Keep one owner for the live state and optional post-save ability task.
     if (this.isBusy || this.subPipelines.stateEditInProgress?.()) {
@@ -571,16 +550,6 @@ export class GameOrchestrator {
         message: '上一项操作仍在收尾，输入已保留，请稍后发送。', duration: 3000 });
       return;
     }
-    const recoveryScope = () => {
-      const slot = useEngineStateStore();
-      return JSON.stringify([slot.activeProfileId, slot.activeSlotId, readPlotVectorControl().epoch]);
-    };
-    const scope = recoveryScope();
-    let requestAttempt: string | undefined;
-    try {
-      const next = this.roundRecovery.begin(userInput, scope, stateManager.toSnapshot(), regenerateToken);
-      userInput = next.input; requestAttempt = next.attempt;
-    } catch (error) { eventBus.emit('ai:error', { error, roundFailure: true }); return; }
     this.abortController = new AbortController();
     const ownership = new RoundOwnership(this._getActiveSlot, () => this.stateRevision, this.abortController.signal);
 
@@ -611,7 +580,7 @@ export class GameOrchestrator {
       worldEventTriggered: false,
       roundNumber: 0,
       generationId: generateId(),
-      meta: { splitGen, contextCompiler, roundOwnership: ownership, ...(requestAttempt ? { plotVectorRequestAttempt: requestAttempt } : {}),
+      meta: { splitGen, contextCompiler, roundOwnership: ownership,
         ...(this.subPipelines.plotVector ? { plotVectorLifecycle: {} } : {}) },
       abortSignal: this.abortController.signal,
       // 流式关闭时不设置 onStreamChunk，AICallStage 据此传 stream: false
@@ -650,10 +619,7 @@ export class GameOrchestrator {
         }
         console.log('[Orchestrator] Auto-rolled back to pre-round snapshot after pipeline error');
       }
-      const recoverable = readPlotVectorControl().enabled && !!this.subPipelines.plotVector
-        && !this.abortController.signal.aborted && recoveryAllowed && scope === recoveryScope();
-      const token = recoverable ? this.roundRecovery.offer(userInput, scope, stateManager.toSnapshot(), requestAttempt) : undefined;
-      eventBus.emit('ai:error', { error: err, roundFailure: recoverable, regenerateToken: token, retryInput: userInput });
+      eventBus.emit('ai:error', { error: err });
     } finally {
       this.abortController = null;
       if (!finalCtx) await this.flushRequestedSave();

@@ -91,7 +91,6 @@ export class PostProcessStage implements PipelineStage {
      */
     private getActiveSlot: () => { profileId: string; slotId: string } | null,
     private plotVector?: import('../../plot-vector/round-port').PlotVectorRoundPort,
-    private stateUpdates?: import('../../state-updates/round-state-updates').RoundStateUpdates,
   ) {}
 
   async execute(ctx: PipelineContext): Promise<PipelineContext> {
@@ -323,33 +322,24 @@ export class PostProcessStage implements PipelineStage {
     // on real saves and had never been recorded). `breakdown` says which context piece cost
     // what — the raw material for Context-Compiler budgeting.
     const pm = ctx.promptMetrics;
-    const recovered = ctx.meta.plotVectorRecovered ?? [];
-    const reusedNarrative = recovered.includes('single') || recovered.includes('step1');
-    // These are estimates for this attempt; replayed text is not another paid request.
-    const step1Input = reusedNarrative ? 0 : (pm?.step1.inputTokens ?? estimateMessagesTokens(ctx.messages));
-    const step1Output = reusedNarrative ? 0 : (pm?.step1.outputTokens ?? estimateTextTokens(ctx.rawResponse ?? ''));
-    const step2Input = recovered.includes('step2') ? 0 : (pm?.step2?.inputTokens ?? 0);
-    const step2Output = recovered.includes('step2') ? 0 : (pm?.step2?.outputTokens ?? 0);
-    const settlementInput = recovered.includes('settlement') ? 0 : (pm?.settlement?.inputTokens ?? 0);
-    const settlementOutput = recovered.includes('settlement') ? 0 : (pm?.settlement?.outputTokens ?? 0);
+    const step1Input = pm?.step1.inputTokens ?? estimateMessagesTokens(ctx.messages);
+    const step1Output = pm?.step1.outputTokens ?? estimateTextTokens(ctx.rawResponse ?? '');
     assistantEntry._metrics = {
       roundNumber: ctx.roundNumber,
       durationMs: ctx.aiCallDurationMs ?? 0,
       inputTokens: step1Input,
       outputTokens: step1Output,
       startedAt: ctx.aiCallStartedAt ?? 0,
-      ...(pm?.step2 || pm?.settlement
+      ...(pm?.step2
         ? {
-            step2InputTokens: step2Input,
-            step2OutputTokens: step2Output,
-            ...(pm?.settlement ? { settlementInputTokens: settlementInput, settlementOutputTokens: settlementOutput } : {}),
-            totalInputTokens: step1Input + step2Input + settlementInput,
-            totalOutputTokens: step1Output + step2Output + settlementOutput,
+            step2InputTokens: pm.step2.inputTokens,
+            step2OutputTokens: pm.step2.outputTokens,
+            totalInputTokens: step1Input + pm.step2.inputTokens,
+            totalOutputTokens: step1Output + pm.step2.outputTokens,
           }
         : {}),
       ...(pm
-        ? { breakdown: { step1: pm.step1.breakdown, ...(pm.step2 ? { step2: pm.step2.breakdown } : {}),
-          ...(pm.settlement ? { settlement: pm.settlement.breakdown } : {}) } }
+        ? { breakdown: { step1: pm.step1.breakdown, ...(pm.step2 ? { step2: pm.step2.breakdown } : {}) } }
         : {}),
     };
     if (ctx.parsedResponse.thinking) {
@@ -358,17 +348,9 @@ export class PostProcessStage implements PipelineStage {
     if (ctx.rawResponse) {
       assistantEntry._rawResponse = ctx.rawResponse;
     }
-    if (ctx.meta.plotVectorRecovered?.length) assistantEntry._recoveredSteps = [...ctx.meta.plotVectorRecovered];
-    if (ctx.rejectedCommands?.length) assistantEntry._rejectedCommands = ctx.rejectedCommands.map(r => ({
-      action: r.command.action, key: r.command.key, error: r.error,
-    }));
     const step2Raw = ctx.meta['rawResponseStep2'];
     if (typeof step2Raw === 'string' && step2Raw.length > 0) {
       assistantEntry._rawResponseStep2 = step2Raw;
-    }
-    if (typeof ctx.meta.stateSettlementRaw === 'string') {
-      assistantEntry._rawResponseSettlement = ctx.meta.stateSettlementRaw;
-      assistantEntry._settlementStrict = ctx.meta.stateSettlementStrict === true;
     }
     if (ctx.parsedResponse.commands && ctx.parsedResponse.commands.length > 0) {
       assistantEntry._commands = ctx.parsedResponse.commands;
@@ -427,7 +409,6 @@ export class PostProcessStage implements PipelineStage {
     // ── 11. 自动存档 ──
     // 在所有状态变更完成后保存，确保存档包含完整的回合结果
     // 只在有活跃的档案和槽位时存档（创角流程中可能还未创建）
-    this.stateUpdates?.beforeSave(ctx);
     ctx.meta.roundOwnership?.guard();
     await this.plotVector?.beforeSave(ctx);
     guard();
@@ -564,7 +545,6 @@ export class PostProcessStage implements PipelineStage {
       ctx.meta.roundOwnership || ctx.meta.plotVectorCommitted ? {
         guard: () => {
           ctx.meta.roundOwnership?.guard();
-          this.stateUpdates?.beforeSave(ctx);
           ctx.meta.plotVectorGuard?.();
         },
         committed: () => {

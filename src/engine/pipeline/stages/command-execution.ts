@@ -39,7 +39,7 @@ export class CommandExecutionStage implements PipelineStage {
 
   async execute(ctx: PipelineContext): Promise<PipelineContext> {
     // 无指令时跳过 — AI 纯叙事回复（无状态变更）是正常情况
-    if (!ctx.parsedResponse?.commands?.length && !ctx.rejectedCommands?.length) {
+    if (!ctx.parsedResponse?.commands?.length) {
       return ctx;
     }
 
@@ -48,14 +48,8 @@ export class CommandExecutionStage implements PipelineStage {
     // 即使某条失败也会继续执行剩余指令（fail-soft 策略）。
     // 返回值包含每条指令的成功/失败状态和完整的变更日志。
     const commandResults = this.commandExecutor.executeBatch(
-      ctx.parsedResponse?.commands ?? [], ctx.meta.stateUpdateCommandGuard,
+      ctx.parsedResponse.commands,
     );
-    const guardedFailures = ctx.meta.stateUpdateCommandGuard ? commandResults.results.filter(r => !r.success) : [];
-    if (ctx.rejectedCommands?.length) {
-      commandResults.results.push(...ctx.rejectedCommands);
-      commandResults.hasErrors = true;
-      console.warn('[CommandExecution] Preflight rejected commands:', ctx.rejectedCommands);
-    }
 
     // ── 2. 行为模块 afterCommands 钩子 ──
     // 传入变更日志（而非指令列表），让行为模块关注"发生了什么变化"
@@ -81,8 +75,7 @@ export class CommandExecutionStage implements PipelineStage {
     // 3. 扫描成本较低（只是字段存在性检查，不涉及 AI 调用）
     this.runPrivacyValidation(ctx);
 
-    return { ...ctx, commandResults,
-      ...(guardedFailures.length ? { rejectedCommands: [...(ctx.rejectedCommands ?? []), ...guardedFailures] } : {}) };
+    return { ...ctx, commandResults };
   }
 
   /**

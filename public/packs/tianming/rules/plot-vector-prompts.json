@@ -185,73 +185,6 @@
       "from": "| 字段 | 必填 | 说明 |\n|------|------|------|\n| `text` | ✅ | 本回合叙事，纯镜头记录，禁止数值/系统词 |\n| `commands` | ✅（可空数组） | 游戏状态变更指令；纯叙事回合用 `[]` |\n| `action_options` | ✅ | 3–5 个简短可选行动（字符串数组） |\n| `mid_term_memory` | ✅ | 本回合结构化记忆摘要（**对象格式**，见下方规范）；每回合必填，不允许 null |\n| `knowledge_facts` | ✅ | 本回合的知识事实（**对象格式**，见下方规范）；每回合 3-8 条，无重要事实时可空数组 |\n"
     },
     {
-      "promptId": "core",
-      "to": "| 物品 / 金钱变动 | `state_updates` |",
-      "from": "| 物品变动 | `set/delete 角色.背包.物品.{ID}` |",
-      "scope": "inline"
-    },
-    {
-      "promptId": "core",
-      "to": "| 物品 / 金钱变动 | 由独立结算处理，本步无需输出 |",
-      "from": "| 物品变动 | `set/delete 角色.背包.物品.{ID}` |",
-      "scope": "separate"
-    },
-    {
-      "promptId": "core",
-      "to": "角色.背包.金钱.现金 ← state_updates\n",
-      "from": "角色.背包.金钱.现金 / 铜 / 银 / 金\n",
-      "scope": "inline"
-    },
-    {
-      "promptId": "core",
-      "to": "",
-      "from": "角色.背包.金钱.现金 / 铜 / 银 / 金\n",
-      "scope": "separate"
-    },
-    {
-      "promptId": "core",
-      "to": "角色.背包.物品 ← state_updates\n",
-      "from": "角色.背包.物品             ← Record<id, Item>，set 添加，delete 删除\n",
-      "scope": "inline"
-    },
-    {
-      "promptId": "core",
-      "to": "",
-      "from": "角色.背包.物品             ← Record<id, Item>，set 添加，delete 删除\n",
-      "scope": "separate"
-    },
-    {
-      "promptId": "core",
-      "to": "",
-      "from": "删除物品用 `delete`，不用 `remove`。"
-    },
-    {
-      "promptId": "core",
-      "to": "正文中的状态变化使用以下接口：",
-      "from": "text 写什么，commands 就更新什么："
-    },
-    {
-      "promptId": "splitGenStep2",
-      "to": "{\"state_updates\":{\"version\":1,\"actions\":[]},\"mid_term_memory\":{\"相关角色\":[\"张三\"],\"事件时间\":\"1-01-15-08-30\",\"记忆主体\":\"50-100字\"},\"commands\":[{\"action\":\"add\",\"path\":\"世界.时间.分钟\",\"value\":30}],\"action_options\":[\"选项1\",\"选项2\",\"选项3\",\"选项4\",\"选项5\"],\"knowledge_facts\":[{\"fact\":\"...\",\"source_entity\":\"...\",\"target_entity\":\"...\"}]}",
-      "from": "{\"mid_term_memory\":{\"相关角色\":[\"张三\"],\"事件时间\":\"1-01-15-08-30\",\"记忆主体\":\"50-100字\"},\"commands\":[{\"action\":\"add\",\"path\":\"世界.时间.分钟\",\"value\":30}],\"action_options\":[\"选项1\",\"选项2\",\"选项3\",\"选项4\",\"选项5\"],\"knowledge_facts\":[{\"fact\":\"...\",\"source_entity\":\"...\",\"target_entity\":\"...\"}]}",
-      "scope": "inline"
-    },
-    {
-      "promptId": "splitGenStep2",
-      "to": "",
-      "from": "## 本步骤需要输出\n\n- `mid_term_memory`：必填，对象格式（如上）\n- `commands`：数据更新指令数组\n- `action_options`：3-5 个行动选项（字符串数组）\n- `knowledge_facts`（推荐）：本回合重要事实\n\n---\n\n"
-    },
-    {
-      "promptId": "splitGenStep2",
-      "to": "",
-      "from": "## 再次强调\n\n只输出：`{\"mid_term_memory\":{...},\"commands\":[...],\"action_options\":[...],\"knowledge_facts\":[...]}`\n禁止输出 text 字段！\n"
-    },
-    {
-      "promptId": "mainRound",
-      "to": "  \"state_updates\": {\"version\": 1, \"actions\": []},\n  \"commands\": [...],",
-      "from": "  \"commands\": [...],"
-    },
-    {
       "promptId": "splitGenStep1",
       "to": "",
       "from": "## 再次强调\n\n只输出：`{\"text\":\"叙事正文内容\"}`\n"
@@ -267,76 +200,9 @@
       "from": "| Field | Required | Description |\n|-------|----------|-------------|\n| `text` | ✅ | This round's narrative, pure camera recording, no numerical values or system terms |\n| `commands` | ✅ (may be empty array) | Game state change commands; use `[]` for pure narrative rounds |\n| `action_options` | ✅ | 3–5 short available actions (string array) |\n| `mid_term_memory` | ✅ | This round's structured memory summary (**object format**, see specification below); required every round, null is not allowed |\n| `knowledge_facts` | ✅ | This round's knowledge facts (**object format**, see specification below); 3-8 entries per round, may be empty array if no significant facts |\n"
     },
     {
-      "promptId": "core",
-      "to": "| Item / money change | `state_updates` |",
-      "from": "| Item change | `set/delete 角色.背包.物品.{ID}` |",
-      "scope": "inline"
-    },
-    {
-      "promptId": "core",
-      "to": "| Item / money change | Settled separately; no output in this step |",
-      "from": "| Item change | `set/delete 角色.背包.物品.{ID}` |",
-      "scope": "separate"
-    },
-    {
-      "promptId": "core",
-      "to": "角色.背包.金钱.现金 ← state_updates\n",
-      "from": "角色.背包.金钱.现金 / 铜 / 银 / 金 (Character > Inventory > Currency > Cash / Copper / Silver / Gold)\n",
-      "scope": "inline"
-    },
-    {
-      "promptId": "core",
-      "to": "",
-      "from": "角色.背包.金钱.现金 / 铜 / 银 / 金 (Character > Inventory > Currency > Cash / Copper / Silver / Gold)\n",
-      "scope": "separate"
-    },
-    {
-      "promptId": "core",
-      "to": "角色.背包.物品 ← state_updates\n",
-      "from": "角色.背包.物品 (Character > Inventory > Items)             ← Record<id, Item>, set to add, delete to remove\n",
-      "scope": "inline"
-    },
-    {
-      "promptId": "core",
-      "to": "",
-      "from": "角色.背包.物品 (Character > Inventory > Items)             ← Record<id, Item>, set to add, delete to remove\n",
-      "scope": "separate"
-    },
-    {
-      "promptId": "core",
-      "to": "",
-      "from": "Use `delete` to remove items, not `remove`."
-    },
-    {
-      "promptId": "core",
-      "to": "State changes in the narrative use the following interfaces:",
-      "from": "Whatever text describes, commands must update accordingly:"
-    },
-    {
-      "promptId": "splitGenStep2",
-      "to": "{\"state_updates\":{\"version\":1,\"actions\":[]},\"mid_term_memory\":{\"相关角色\":[\"Li Mingyang\"],\"事件时间\":\"1-01-15-08-30\",\"记忆主体\":\"50-100 characters\"},\"commands\":[{\"action\":\"add\",\"path\":\"世界.时间.分钟\",\"value\":30}],\"action_options\":[\"Option 1\",\"Option 2\",\"Option 3\",\"Option 4\",\"Option 5\"],\"knowledge_facts\":[{\"fact\":\"...\",\"source_entity\":\"...\",\"target_entity\":\"...\"}]}",
-      "from": "{\"mid_term_memory\":{\"相关角色\":[\"Li Mingyang\"],\"事件时间\":\"1-01-15-08-30\",\"记忆主体\":\"50-100 characters\"},\"commands\":[{\"action\":\"add\",\"path\":\"世界.时间.分钟\",\"value\":30}],\"action_options\":[\"Option 1\",\"Option 2\",\"Option 3\",\"Option 4\",\"Option 5\"],\"knowledge_facts\":[{\"fact\":\"...\",\"source_entity\":\"...\",\"target_entity\":\"...\"}]}",
-      "scope": "inline"
-    },
-    {
-      "promptId": "splitGenStep2",
-      "to": "",
-      "from": "## This Step Must Output\n\n- `mid_term_memory`: Required, object format (as above)\n- `commands`: Game state update command array\n- `action_options`: 3-5 action options (string array)\n- `knowledge_facts` (recommended): This round's important facts\n\n---\n\n"
-    },
-    {
-      "promptId": "splitGenStep2",
-      "to": "",
-      "from": "## Final Emphasis\n\nOutput only: `{\"mid_term_memory\":{...},\"commands\":[...],\"action_options\":[...],\"knowledge_facts\":[...]}`\nDo not output a text field!\n"
-    },
-    {
       "promptId": "splitGenStep1",
       "to": "",
       "from": "## Final Emphasis\n\nOutput only: `{\"text\":\"narrative body text content\"}`\n"
-    },
-    {
-      "promptId": "core",
-      "from": "- 每个变化至少一条指令，避免合并导致漏更\n",
-      "to": ""
     },
     {
       "promptId": "core",
@@ -345,38 +211,10 @@
     },
     {
       "promptId": "core",
-      "from": "- At least one command per change; do not merge changes to avoid missed updates\n",
-      "to": ""
-    },
-    {
-      "promptId": "core",
       "from": "- If the corresponding command cannot be generated, remove the corresponding text content\n",
       "to": ""
     }
   ],
-  "stateUpdates": {
-    "inventoryPath": "角色.背包.物品",
-    "quantityField": "数量",
-    "nameField": "名称",
-    "accounts": {
-      "cash": {
-        "path": "角色.背包.金钱.现金",
-        "decimals": 2
-      },
-      "copper": {
-        "path": "角色.背包.金钱.铜",
-        "decimals": 2
-      },
-      "silver": {
-        "path": "角色.背包.金钱.银",
-        "decimals": 2
-      },
-      "gold": {
-        "path": "角色.背包.金钱.金",
-        "decimals": 2
-      }
-    }
-  },
   "environmentAbility": {
     "field": "能力",
     "instruction": "## 环境能力（剧情动能）\n\n写 `set 世界.环境` 时，给**新出现**或**实际影响已变化**的环境标签加一个「能力」字段：{\"hooks\":{\"onVisit\":\"JS函数体源码\",\"onRoundAccepted\":null},\"initialPersistentState\":{}}，把这个环境对梭的直观影响写成可执行能力。影响没变的标签可以不写「能力」，引擎沿用它原来的能力；标签移除，能力随之失效。引擎每轮从人物状态与环境中至多自动选一张放入固定格。只写能力本身，不写说明、证据、使用次数或数值判定。",

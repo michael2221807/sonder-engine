@@ -1,4 +1,3 @@
-import { RoundStateUpdates } from '../../engine/state-updates/round-state-updates';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
@@ -22,7 +21,7 @@ import { eventBus } from '../../engine/core/event-bus';
 import type { EmitAssemblyDebugParams } from '../../engine/core/prompt-debug';
 import { AgaPlotVectorAdapter } from './aga-adapter';
 import { executeVectorOperation, type VectorOperation, type VectorResult } from './runtime';
-import { writePlotVectorControl, writePlotVectorSettlementMode } from '../../engine/plot-vector/feature-control';
+import { writePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { parseNativeRules } from './native-input';
 import nativeRules from '../../../public/packs/tianming/rules/plot-vector.json';
 import { OpenAIProvider } from '../../engine/ai/providers/openai-provider';
@@ -60,7 +59,7 @@ function harness(en: boolean, builder: boolean, split: boolean, cot: boolean, ca
   const registry = new PromptRegistry();
   Object.entries(pack.prompts).forEach(([id, content]) => registry.register({ id, content, enabled: true }));
   const assembler = new PromptAssembler(registry, new TemplateEngine());
-  const policy = parseVectorPromptPolicy(rules, pack.prompts.plotVectorMode, pack.prompts.stateUpdateProtocol)!;
+  const policy = parseVectorPromptPolicy(rules, pack.prompts.plotVectorMode)!;
   const stage = (active?: boolean, adapter?: AgaPlotVectorAdapter) => new ContextAssemblyStage(state, assembler, { retrieve: () => '' }, behavior,
     pack, P, undefined, undefined, () => [], () => [], builder, () => cache,
     active === undefined ? undefined : c => {
@@ -96,7 +95,6 @@ describe('real pack judgment transition, zero network', () => {
           if (split) {
             expect(format(on)).toContain(en ? 'Body Text Only' : '仅正文');
             expect(format(on)).not.toContain('"commands":');
-            expect(format(on)).not.toContain('"state_updates":');
           } else {
             expect(format(on)).toContain('"commands":');
           }
@@ -109,12 +107,11 @@ describe('real pack judgment transition, zero network', () => {
         const structuredSources = split ? on.meta.splitStep2Sources! : on.messageSources!;
         const phaseSource = split ? 'module:splitGenStep2' : builder ? 'builder:format_prompt' : 'module:mainRound';
         const phase = String(structuredContext[structuredSources.indexOf(phaseSource)]?.content);
-        expect(phase).toContain('"state_updates"');
-        expect(phase.match(/"state_updates"\s*:/g)).toHaveLength(1);
         expect(phase).toContain('"commands"');
         for (const [index, source] of structuredSources.entries()) if (source === 'module:core') {
           const core = String(structuredContext[index].content);
-          expect(core).not.toContain('set/delete 角色.背包');
+          // Items and money are written by the original commands again.
+          expect(core).toContain('set/delete 角色.背包');
           expect(core).not.toMatch(/\{"text":|\| `text` \|/);
           expect(core).toContain('mid_term_memory');
           expect(core).toContain('knowledge_facts');
@@ -124,8 +121,6 @@ describe('real pack judgment transition, zero network', () => {
           expect(off.meta.splitStep2Followup).toBeUndefined();
           expect(structuredSources).not.toContain('module:historyFraming');
           expect(off.meta.splitStep2Sources).toContain('module:historyFraming');
-          expect(phase).not.toContain(en ? '## This Step Must Output' : '## 本步骤需要输出');
-          expect(phase).not.toContain(en ? '## Final Emphasis' : '## 再次强调');
         }
         expect(on.messages.some(m => typeof m.content === 'string' && m.content.includes(input))).toBe(true);
         expect(on.messages.some(m => typeof m.content === 'string' && m.content.includes(history))).toBe(true);
@@ -140,9 +135,7 @@ describe('real pack judgment transition, zero network', () => {
           : '物品按回合结束时的实际持有情况入档';
         expect(structured).not.toContain(inventoryContract);
         expect((off.meta.splitStep2Messages ?? off.messages).map(m => m.content).join('\n')).not.toContain(inventoryContract);
-        expect(h.policy.mode).not.toContain('state_updates');
-        expect(h.policy.stateUpdatePrompt).toContain('state_updates');
-        expect(h.policy.stateUpdatePrompt).not.toMatch(/本轮唯一 id|unique per-round id/);
+        expect(on.messages.concat(on.meta.splitStep2Messages ?? []).map(m => String(m.content)).join('\n')).not.toContain('state_updates');
         expect(h.policy.mode).not.toMatch(/扫码|QR payments|Example fragment|示例片段/);
         expect(h.policy.transform('historyFraming', h.pack.prompts.historyFraming)).toBe(h.pack.prompts.historyFraming);
         expect(h.state.toSnapshot()).toEqual(before);
@@ -150,7 +143,7 @@ describe('real pack judgment transition, zero network', () => {
     }
 
   it('all literal edits match a current pack module; other text and interpolation remain intact', () => {
-    const editKeys = rules.replacements.map(e => JSON.stringify([e.promptId, e.from, e.scope ?? 'all']));
+    const editKeys = rules.replacements.map(e => JSON.stringify([e.promptId, e.from]));
     expect(new Set(editKeys).size).toBe(editKeys.length);
     for (const edit of rules.replacements) expect(packs.some(p => p.prompts[edit.promptId]?.replace(/\r\n/g, '\n').includes(edit.from))).toBe(true);
     const h = harness(false, false, false, true, false);
@@ -162,82 +155,29 @@ describe('real pack judgment transition, zero network', () => {
     expect(h.policy.transform('unrelated', `原样\r\n${oldFormat}`)).toBe(`原样\r\n${oldFormat}`);
   });
 
-  for (const en of [false, true]) for (const builder of [false, true]) {
-    it(`separate mode removes Step2 inventory work in the ${en ? 'English' : 'Chinese'} ${builder ? 'builder' : 'legacy'} flow`, async () => {
-      vi.spyOn(console, 'debug').mockImplementation(() => {});
-      const h = harness(en, builder, true, true, true);
-      writePlotVectorControl(true);
-      writePlotVectorSettlementMode('separate');
-      const adapter = new AgaPlotVectorAdapter(h.state, { generate: vi.fn() },
-        { saveGame: vi.fn(), assertCurrent: vi.fn() }, () => ({ profileId: 'mode', slotId: 'test' }),
-        { execute: <T extends VectorResult>(op: VectorOperation) => executeVectorOperation(op) as Promise<T>, cancelAll: vi.fn() },
-        undefined, parseNativeRules(nativeRules), h.policy);
-      try {
-        const assembled = await h.stage(true, adapter).execute(h.ctx());
-        expect(assembled.meta.stateUpdateSource).toBe('settlement');
-        const sync = new RoundStateUpdates(() => ({ contract: h.policy.stateUpdates!, prompt: h.policy.stateUpdatePrompt!,
-          source: 'settlement', settlementTemplate: h.pack.prompts.stateSettlement }));
-        const prepared = sync.prepare(assembled);
-        const step2 = prepared.meta.splitStep2Messages!.map(m => String(m.content)).join('\n');
-        expect(prepared.meta.splitStep2Sources).not.toContain('state-update-protocol');
-        expect(step2).not.toContain('state_updates');
-        expect(step2).not.toContain('set/delete 角色.背包');
-        expect(step2).not.toContain('角色.背包.金钱.现金 ←');
-        expect(step2).toContain(en ? 'Settled separately' : '由独立结算处理');
-        expect(sync.settlementInput(prepared)?.baseline.items).toBeDefined();
-      } finally { adapter.dispose(); }
-    });
-  }
-
-  it('keeps a single-call round on the inline contract even when separate mode is selected', async () => {
-    vi.spyOn(console, 'debug').mockImplementation(() => {});
-    const h = harness(false, true, false, true, true);
-    writePlotVectorControl(true);
-    const adapter = new AgaPlotVectorAdapter(h.state, { generate: vi.fn() },
-      { saveGame: vi.fn(), assertCurrent: vi.fn() }, () => ({ profileId: 'single', slotId: 'test' }),
-      { execute: <T extends VectorResult>(op: VectorOperation) => executeVectorOperation(op) as Promise<T>, cancelAll: vi.fn() },
-      undefined, parseNativeRules(nativeRules), h.policy);
-    try {
-      const inline = await h.stage(true, adapter).execute(h.ctx());
-      writePlotVectorSettlementMode('separate');
-      const separate = await h.stage(true, adapter).execute(h.ctx());
-      expect(separate.meta.stateUpdateSource).toBe('inline');
-      expect(separate.messages).toEqual(inline.messages);
-    } finally { adapter.dispose(); }
-  });
-
-  it('matches localized inventory reference lines without consuming another locale prefix', () => {
+  it('leaves the inventory and money lines of the pack untouched', () => {
     for (const pack of packs) {
-      const policy = parseVectorPromptPolicy(rules, pack.prompts.plotVectorMode, pack.prompts.stateUpdateProtocol)!;
-      const rendered = policy.transform('core', pack.prompts.core);
-      expect(rendered.split('\n').filter(line => line.startsWith('角色.背包.'))).toEqual([
-        '角色.背包.金钱.现金 ← state_updates',
-        '角色.背包.物品 ← state_updates',
-      ]);
-      for (const edit of rules.replacements.filter(e => e.promptId === 'core' && e.from.startsWith('角色.背包.'))) {
-        if (pack.prompts.core.replace(/\r\n/g, '\n').includes(edit.from)) expect(rendered).toContain(edit.to);
-      }
+      const policy = parseVectorPromptPolicy(rules, pack.prompts.plotVectorMode)!;
+      const lines = (text: string) => text.replace(/\r\n/g, '\n').split('\n').filter(line => line.includes('角色.背包.'));
+      expect(lines(policy.transform('core', pack.prompts.core))).toEqual(lines(pack.prompts.core));
     }
   });
 
   it('does not enable an incomplete or malformed pack policy', () => {
     expect(parseVectorPromptPolicy(rules, '')).toBeUndefined();
-    expect(parseVectorPromptPolicy(rules, 'mode')).toBeUndefined();
-    expect(parseVectorPromptPolicy(rules, 'mode', '  ')).toBeUndefined();
-    expect(parseVectorPromptPolicy(rules, 'mode', 123)).toBeUndefined();
-    const { stateUpdates: _contract, ...narrativeOnly } = rules;
-    expect(parseVectorPromptPolicy(narrativeOnly, 'mode')).toMatchObject({ mode: 'mode', stateUpdatePrompt: undefined });
+    expect(parseVectorPromptPolicy(rules, 123)).toBeUndefined();
+    expect(parseVectorPromptPolicy(rules, 'mode')).toMatchObject({ mode: 'mode' });
     expect(parseVectorPromptPolicy({ ...rules, replacements: [{ from: '' }] }, 'mode')).toBeUndefined();
     expect(parseVectorPromptPolicy(null, 'mode')).toBeUndefined();
-    expect(parseVectorPromptPolicy({ ...rules, abilityRepair: { field: 'abilities', template: 'no placeholder' } }, 'mode', 'contract')).toBeUndefined();
+    expect(parseVectorPromptPolicy({ ...rules, abilityRepair: { field: 'abilities', template: 'no placeholder' } }, 'mode')).toBeUndefined();
   });
 
   it('ability regeneration uses the pack task text plus the same guidance, card rules and snippet contract as post-save genesis', () => {
-    const repair = parseVectorPromptPolicy(rules, 'mode', 'contract')!.abilityRepair!;
+    const repair = parseVectorPromptPolicy(rules, 'mode')!.abilityRepair!;
     expect(repair.field).toBe('abilities');
     expect(repair.template).toContain('{{ITEMS}}');
     expect(repair.guidance).toBe([GENESIS_GUIDANCE, GENESIS_CARD_RULES].join('\n\n'));
-    const environment = parseVectorPromptPolicy(rules, 'mode', 'contract')!.environmentAbility!;
+    const environment = parseVectorPromptPolicy(rules, 'mode')!.environmentAbility!;
     expect(environment.prompt).toBe(`${environment.instruction}\n\n${SNIPPET_API}`);
     // Splitting the genesis prompt into reusable parts left it byte-identical.
     expect(createHash('sha256').update(AGA_GENESIS_SYSTEM, 'utf8').digest('hex').slice(0, 16)).toBe('74a043987cff4462');
@@ -270,11 +210,11 @@ describe('real pack judgment transition, zero network', () => {
       }] });
       writePlotVectorControl(true);
       const adapter = new AgaPlotVectorAdapter(h.state, { generate: vi.fn() },
-        { saveGame: vi.fn(), assertCurrent: vi.fn() }, () => ({ profileId: 'phase', slotId: 'test' }),
+        { saveGame: vi.fn() }, () => ({ profileId: 'phase', slotId: 'test' }),
         { execute: <T extends VectorResult>(op: VectorOperation) => executeVectorOperation(op) as Promise<T>, cancelAll: vi.fn() },
-        undefined, parseNativeRules(nativeRules), h.policy);
+        parseNativeRules(nativeRules), h.policy);
       const requests: GenerateOptions[] = [];
-      const reply = { text: '本轮正文', state_updates: { version: 1, actions: [] }, commands: [],
+      const reply = { text: '本轮正文', commands: [],
         action_options: ['继续', '休息', '交谈'], mid_term_memory: '记忆', knowledge_facts: [],
         ...(conditional ? { setting_updates: [], plot_evaluation: [{ thread: '测试线', node_reached: false,
           confidence: 0.2, evidence: '仍在路上', gauge_updates: [{ gauge_id: '进展', delta: 1 }] }] } : {}) };
@@ -284,8 +224,7 @@ describe('real pack judgment transition, zero network', () => {
         if (conditional) context.userInput = context.originalUserInput = `${input}<设定>测试角色喜欢音乐</设定>`;
         const assembled = await h.stage(true, adapter).execute(context);
         const baseStep2 = structuredClone(assembled.meta.splitStep2Messages);
-        const sync = new RoundStateUpdates(() => ({ contract: h.policy.stateUpdates!, prompt: h.policy.stateUpdatePrompt! }));
-        const prepared = await adapter.prepare(sync.prepare(assembled));
+        const prepared = await adapter.prepare(assembled);
         const result = await new AICallStage(ai, new ResponseParser()).execute(prepared);
         expect(requests).toHaveLength(split ? 2 : 1);
         const has = (index: number, content: string) => requests[index].messages.filter(m => m.content === content).length;
@@ -295,23 +234,21 @@ describe('real pack judgment transition, zero network', () => {
           expect(requests[0].messages[formatIndex].content).not.toContain('"commands":');
         }
         expect(has(0, h.policy.mode)).toBe(1);
-        expect(has(0, h.policy.stateUpdatePrompt!)).toBe(split ? 0 : 1);
         // The environment-ability interface goes only where environment tags are written.
         expect(has(0, h.policy.environmentAbility!.prompt)).toBe(split ? 0 : 1);
         expect(requests[0].messages.some(m => String(m.content).includes(input))).toBe(true);
         if (split) {
           expect(has(1, h.policy.mode)).toBe(0);
-          expect(has(1, h.policy.stateUpdatePrompt!)).toBe(1);
           expect(has(1, h.policy.environmentAbility!.prompt)).toBe(1);
-          expect(prepared.meta.splitStep2Sources?.slice(0, 2)).toEqual(['environment-ability', 'state-update-protocol']);
+          expect(prepared.meta.splitStep2Sources?.[0]).toBe('environment-ability');
           // Everything supplied by the host remains unchanged, including state and history.
-          expect(prepared.meta.splitStep2Messages?.slice(2)).toEqual(baseStep2);
+          expect(prepared.meta.splitStep2Messages?.slice(1)).toEqual(baseStep2);
           expect(requests[1].messages.at(-2)).toEqual({ role: 'assistant', content: JSON.stringify({ text: reply.text }) });
           expect(requests[1].messages.at(-1)?.role).toBe('user');
           expect(requests[1].messages.at(-1)?.content).toBe(h.pack.prompts.splitGenStep2Followup.trim());
           expect(String(requests[1].messages.at(-1)?.content)).not.toMatch(/state_updates|commands|setting_updates|knowledge_facts/);
         }
-        expect(result.parsedResponse?.customFields?.state_updates).toEqual(reply.state_updates);
+        expect(requests.every(r => r.messages.every(m => !String(m.content).includes('state_updates')))).toBe(true);
         const structuredRequest = requests[split ? 1 : 0];
         const sources = split ? prepared.meta.splitStep2Sources! : prepared.messageSources!;
         const from = (pattern: RegExp) => sources.flatMap((source, i) => pattern.test(source) ? [String(structuredRequest.messages[i].content)] : []);
@@ -331,7 +268,6 @@ describe('real pack judgment transition, zero network', () => {
             { thread: '测试线', node_reached: false, gauge_updates: [{ gauge_id: '进展', delta: 1 }] },
           ]);
         }
-        expect(sync.beforeCommands(result).rejectedCommands ?? []).toEqual([]);
       } finally { adapter.dispose(); }
     });
   }
@@ -342,16 +278,15 @@ describe('real pack judgment transition, zero network', () => {
     writePlotVectorControl(true);
     h.state.set(P.characterAttributes, { 体质: 5, 心性: 8, 魅力: 9, 悟性: 1, 直觉: 3, 气运: 4 });
     const adapter = new AgaPlotVectorAdapter(h.state, { generate: vi.fn() },
-      { saveGame: vi.fn(), assertCurrent: vi.fn() }, () => ({ profileId: 'test', slotId: 'test' }),
+      { saveGame: vi.fn() }, () => ({ profileId: 'test', slotId: 'test' }),
       { execute: <T extends VectorResult>(op: VectorOperation) => executeVectorOperation(op) as Promise<T>, cancelAll: vi.fn() },
-      undefined, parseNativeRules(nativeRules), h.policy);
+      parseNativeRules(nativeRules), h.policy);
     const events: EmitAssemblyDebugParams[] = [];
     const unsubscribe = eventBus.on<EmitAssemblyDebugParams>('ui:debug-prompt', e => { events.push(e); });
     try {
       const assembled = await h.stage(true, adapter).execute(h.ctx());
       expect(events).toHaveLength(0);
-      const sync = new RoundStateUpdates(() => ({ contract: h.policy.stateUpdates!, prompt: h.policy.stateUpdatePrompt! }));
-      const c = await adapter.prepare(sync.prepare(assembled));
+      const c = await adapter.prepare(assembled);
       const userIndex = c.messages.map(m => m.role).lastIndexOf('user');
       expect(c.messageSources).toContain('plot-vector');
       expect(c.messages.slice(userIndex + 1).every(m => m.role === 'assistant')).toBe(true);

@@ -31,8 +31,6 @@ export const useEngineStateStore = defineStore('engineState', () => {
    * loadGame() 需要通过它将数据就地写入响应式对象，而非替换 tree.value 引用。
    */
   let _linkedStateManager: StateManager | null = null;
-  let _onLoaded: ((profileId: string, slotId: string, data: GameStateTree) => void) | undefined;
-  function linkSaveObserver(observer: NonNullable<typeof _onLoaded>): void { _onLoaded = observer; }
 
   /**
    * 持有 linkBehaviorRunner 注入的 BehaviorRunner 引用（与 linkStateManager 同模式）。
@@ -129,7 +127,6 @@ export const useEngineStateStore = defineStore('engineState', () => {
     profileId: string,
     slotId: string,
   ): void {
-    _onLoaded?.(profileId, slotId, data);
     if (_linkedStateManager) {
       // 就地写入：保持 tree.value 与 StateManager.state 是同一个 reactive proxy
       _linkedStateManager.loadTree(data as Record<string, unknown>);
@@ -398,7 +395,6 @@ export const useEngineStateStore = defineStore('engineState', () => {
     toSnapshot,
     setValue,
     linkStateManager,
-    linkSaveObserver,
     linkBehaviorRunner,
     clearGame,
   };

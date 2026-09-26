@@ -4,10 +4,6 @@ export class PlotVectorPage {
   get control() { return this.page.getByTestId('plot-vector-control'); }
   get toggle() { return this.control.getByRole('switch'); }
   async toggleFeature() { await this.toggle.click(); }
-  get recovery() { return this.page.getByTestId('plot-vector-recovery'); }
-  async openRecovery() { await this.recovery.locator('summary').click(); }
-  get clearRecords() { return this.recovery.getByRole('button', {name: '清空本机恢复记录', exact: true}); }
-  async acknowledgeClear() { await this.recovery.getByRole('checkbox').check(); }
   get boardOpen() { return this.page.getByTestId('vector-board-open'); }
   get board() { return this.page.getByTestId('vector-board'); }
   get boardSave() { return this.page.getByTestId('vector-save'); }

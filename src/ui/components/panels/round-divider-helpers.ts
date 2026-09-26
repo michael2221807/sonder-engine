@@ -17,9 +17,7 @@ export interface RoundMetrics {
   /** Split-gen second call (R1 P0, 2026-09-03). Absent on single-call rounds and old saves. */
   step2InputTokens?: number;
   step2OutputTokens?: number;
-  settlementInputTokens?: number;
-  settlementOutputTokens?: number;
-  /** Whole-round totals (step1 + step2 + optional settlement). */
+  /** Whole-round totals (step1 + step2). What the divider pill shows when present. */
   totalInputTokens?: number;
   totalOutputTokens?: number;
   /**
@@ -30,7 +28,6 @@ export interface RoundMetrics {
   breakdown?: {
     step1: Array<{ source: string; tokens: number }>;
     step2?: Array<{ source: string; tokens: number }>;
-    settlement?: Array<{ source: string; tokens: number }>;
   };
 }
 

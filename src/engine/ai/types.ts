@@ -208,15 +208,7 @@ export interface APIAssignment {
 // ─── 调用选项 ───
 
 /** AI 生成调用选项 */
-/** Optional host-owned recovery boundary, invoked with the effective request before transport. */
-export interface GenerationCheckpoint {
-  run(request: { config: APIConfig; messages: AIMessage[]; stream: boolean }, send: () => Promise<string>): Promise<string>;
-}
-
 export interface GenerateOptions {
-  checkpoint?: GenerationCheckpoint;
-  /** A recovery owner requires exactly one transport attempt, including streaming fallback. */
-  singleAttempt?: boolean;
   /** 消息列表（由 PromptAssembler 组装） */
   messages: AIMessage[];
   /** 是否使用流式传输 */

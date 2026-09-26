@@ -170,7 +170,7 @@ export class OpenAIProvider extends BaseProvider {
 
       // forceStreaming: this endpoint is streaming-only — a non-streaming retry would
       // 404/hang. Re-throw instead of silently downgrading. See APIConfig.forceStreaming.
-      if (this.config.forceStreaming || options.singleAttempt) throw err;
+      if (this.config.forceStreaming) throw err;
 
       console.warn('[OpenAIProvider] 流式不支持，降级为非流式');
       return this.generateNonStreaming(url, apiKey, model, messages, temperature, maxTokens, options.signal);

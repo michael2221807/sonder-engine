@@ -13,7 +13,7 @@ type Outcome = { ok: true } | { ok: false; message: string };
 
 // Not layout-dependent: one viewport is enough (maintainability rule; the viewport matrix is for layout).
 test.beforeEach(({}, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop-1920', 'Worker/journal behavior, not layout: desktop-1920 only');
+  test.skip(testInfo.project.name !== 'desktop-1920', 'Worker behavior, not layout: desktop-1920 only');
 });
 
 async function validateCards(page: import('@playwright/test').Page, cards: Array<{ id: string; onVisit: string }>, timeoutMs?: number): Promise<Outcome[]> {
@@ -101,16 +101,10 @@ test('a bounded 64 MB string operation completes inside the Worker, the page hea
     await expect(page.locator('iframe[sandbox]')).toHaveCount(0);
   });
 
-test('a page without randomUUID or crypto.subtle (LAN HTTP) still runs the real Worker and keeps ability receipts',
+test('a page without randomUUID or crypto.subtle (LAN HTTP) still runs the real Worker',
   { tag: ['@plot-vector', '@gate-1'] }, async ({ page }) => {
     await seedSave(page);
-    const slot = { profileId: 'lan-check', slotId: 'lan-check' };
-    // A receipt recorded on the secure page (Web Crypto available).
-    await page.evaluate(async slot => {
-      const { RequestJournal } = await import(/* @vite-ignore */ '/src/features/plot-vector/request-journal.ts');
-      await new RequestJournal().genesis(slot, 'tea').checkpoint(() => {}).run({}, async () => 'card');
-    }, slot);
-    // The same browser as a LAN HTTP page sees it: no secure-context crypto APIs.
+    // The same browser as a LAN HTTP page: no secure-context crypto APIs.
     await page.addInitScript(() => {
       delete (Crypto.prototype as { randomUUID?: unknown }).randomUUID;
       Object.defineProperty(Crypto.prototype, 'subtle', { get: () => undefined, configurable: true });
@@ -120,12 +114,4 @@ test('a page without randomUUID or crypto.subtle (LAN HTTP) still runs the real 
       .toEqual({ randomUUID: 'undefined', subtle: 'undefined' });
     expect(await validateCards(page, [HONEST])).toEqual([{ ok: true }]);
     await expect(page.locator('iframe[sandbox]')).toHaveCount(0);
-    const receipts = await page.evaluate(async slot => {
-      const { RequestJournal } = await import(/* @vite-ignore */ '/src/features/plot-vector/request-journal.ts');
-      const journal = new RequestJournal(), fresh = journal.genesis(slot, 'ointment');
-      await fresh.checkpoint(() => {}).run({}, async () => 'second card');
-      return { old: await journal.genesis(slot, 'tea').lookup(), fresh: await fresh.lookup() };
-    }, slot);
-    // Same SHA-256 identity as the secure page, and a new record is written and replayed.
-    expect(receipts).toEqual({ old: { kind: 'raw', raw: 'card' }, fresh: { kind: 'raw', raw: 'second card' } });
   });

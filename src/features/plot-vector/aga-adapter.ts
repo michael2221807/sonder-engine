@@ -5,7 +5,7 @@ import type { AIService } from '../../engine/ai/ai-service';
 import type { SaveManager } from '../../engine/persistence/save-manager';
 import { DEFAULT_ENGINE_PATHS as P, type PipelineContext } from '../../engine/pipeline/types';
 import type { PlotVectorRoundPort } from '../../engine/plot-vector/round-port';
-import { randomId, readPlotVectorControl, subscribePlotVectorControl } from '../../engine/plot-vector/feature-control';
+import { readPlotVectorControl, subscribePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { projectSavedElements, readPath, savedEntryName } from './saved-elements';
 import { tasksAfterSave, stable, capabilityKey, toRuntimeCandidate, type BoundCard, type GenesisOutput, type GenesisTask, type SavedElement } from './genesis/post-save';
 import { buildAgaGenerationMessages, buildAbilityRetryMessages, parseAgaGenerationOutput, GENESIS_VALIDATION_REVISION, SNIPPET_API } from './genesis/generation-prompt';
@@ -13,12 +13,9 @@ import { initialVectorState, type AbilityRetry, type VectorState, type VectorTas
 import { abilityBacklog, type BacklogEntry } from './ability-backlog';
 import { VectorWorkerClient } from './worker-client';
 import { guardedExecutor } from './result-guard';
-import { RequestJournal } from './request-journal';
 import { projectNativeInput, type NativeRules } from './native-input';
 import type { VectorPromptPolicy } from './prompt-policy';
 import type { ExtraRepairTask } from '../../engine/pipeline/sub-pipelines/field-repair';
-import { resolveInventoryCommands } from './inventory-commands';
-import { compiledCommandGuard } from './command-guard';
 
 type Slot = { profileId: string; slotId: string };
 interface Executor { execute<T extends VectorResult>(op: VectorOperation): Promise<T>; cancelAll(): void }
@@ -60,9 +57,9 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
   /** Every Worker result crosses the shared host boundary (result-guard.ts) before it is used. */
   private readonly worker: Executor;
   constructor(private state: StateManager, private ai: Pick<AIService, 'generate'>,
-    private saves: Pick<SaveManager, 'saveGame' | 'assertCurrent'>, private slot: () => Slot | null,
-    worker: Executor = new VectorWorkerClient(), private journal = new RequestJournal(), private nativeRules?: NativeRules,
-    private promptPolicy?: Pick<VectorPromptPolicy, 'mode' | 'transform' | 'separateTransform' | 'environmentAbility' | 'abilityRepair'>) {
+    private saves: Pick<SaveManager, 'saveGame'>, private slot: () => Slot | null,
+    worker: Executor = new VectorWorkerClient(), private nativeRules?: NativeRules,
+    private promptPolicy?: Pick<VectorPromptPolicy, 'mode' | 'transform' | 'environmentAbility' | 'abilityRepair'>) {
     this.worker = guardedExecutor(worker);
     this.unsubs = [subscribePlotVectorControl(() => this.cancel()),
       eventBus.on<{type: string}>('engine:state-changed', e => {
@@ -72,18 +69,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
           }
           this.revision++; this.cancel();
         }
-      }),
-      eventBus.on('engine:rollback-complete', () => this.branchAfterRollback())];
-  }
-  /**
-   * Only the player's explicit rollback starts a new branch; an automatic restore after a failed round does
-   * not emit this event, so retrying that round still recovers the replies it already paid for.
-   */
-  private branchAfterRollback(): void {
-    if (!readPlotVectorControl().enabled || !this.slot()) return;
-    const state = cloneDeep(this.state.get<VectorState>(P.plotVector) ?? initialVectorState());
-    state.branch = randomId();
-    this.state.set(P.plotVector, state);
+      })];
   }
   private cancel() { this.attempt?.controller.abort(); this.worker.cancelAll(); }
   dispose() { this.cancel(); this.attempt?.release(); this.unsubs.forEach(fn => fn()); }
@@ -105,9 +91,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
         throw new Error('剧情动能开关在组装期间改变，请重新开始本回合');
     };
     ctx.meta.plotVectorPromptMode = true;
-    const separate = control.settlement === 'separate' && ctx.meta.splitGen === true;
-    ctx.meta.stateUpdateSource = separate ? 'settlement' : 'inline';
-    return separate ? this.promptPolicy.separateTransform : this.promptPolicy.transform;
+    return this.promptPolicy.transform;
   }
   async prepare(ctx: PipelineContext): Promise<PipelineContext> {
     ctx.meta.plotVectorGuard?.();
@@ -138,22 +122,12 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     const before = projectSavedElements(ctx.stateSnapshot, { includeEnvironment: true }).entries;
     try {
       guard();
-      await this.saves.assertCurrent(slot.profileId, slot.slotId);
-      guard();
       const prepared = await this.worker.execute<PreparedVector>({ kind: 'prepare', state, entries: before,
         native: projectNativeInput(ctx.stateSnapshot, this.nativeRules),
         id: `${slot.profileId}/${slot.slotId}/${ctx.roundNumber}` });
       guard();
       this.attempt = { ctx, controller, guard, state, before, prepared, slot,
         release: () => ctx.abortSignal?.removeEventListener('abort', abort) };
-      const recovered: string[] = [];
-      ctx.meta.plotVectorRecovered = recovered;
-      ctx.meta.plotVectorCheckpoint = step => this.journal.checkpoint(
-        { slot, epoch: control.epoch, round: ctx.roundNumber, input: ctx.originalUserInput ?? ctx.userInput, step,
-          ...(ctx.meta.plotVectorRequestAttempt ? { attempt: ctx.meta.plotVectorRequestAttempt } : {}),
-          ...(state.branch ? { branch: state.branch } : {}) },
-        ctx.preRoundSnapshot ?? ctx.stateSnapshot, guard,
-        () => { if (!recovered.includes(step)) recovered.push(step); });
       ctx.meta.plotVectorCommitted = () => {
         ctx.meta.plotVectorLifecycle!.saved = true;
         // Committed story is never rolled back by a late cancellation/metadata failure.
@@ -163,8 +137,8 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       const sources: string[] = [];
       if (mode) { additions.push({ role: 'system', content: mode }); sources.push('plot-vector-mode'); }
       if (prepared.prompt) { additions.push({ role: 'system', content: prepared.prompt }); sources.push('plot-vector'); }
-      // Environment tags are written by Step2 (or the single call), so their ability interface goes there,
-      // the same way the state-update protocol does; Step1 never sees it.
+      // Environment tags are written by Step2 (or the single call), so their ability interface goes there;
+      // Step1 never sees it.
       const environment = ctx.meta.plotVectorPromptMode ? this.promptPolicy?.environmentAbility?.prompt : undefined;
       if (environment && ctx.meta.splitStep2Messages) {
         const base = ctx.meta.splitStep2Messages;
@@ -184,32 +158,12 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
           ...(ctx.messageSources ?? ctx.messages.map(() => 'unknown')).slice(at)] };
     } catch (error) { ctx.abortSignal?.removeEventListener('abort', abort); throw error; }
   }
-  beforeCommands(ctx: PipelineContext): PipelineContext {
-    const a = this.attempt;
-    if (!a || a.ctx.generationId !== ctx.generationId) return ctx;
-    a.guard();
-    if (a.ctx.meta.plotVectorLifecycle?.saved) throw new Error('本回合已经提交，不能再次执行状态更新');
-    this.assertStructure(ctx);
-    // Host synchronization already owns these commands and their execution guard.
-    if (ctx.meta.stateUpdatesRequired) return ctx;
-    if (!ctx.parsedResponse?.commands) return ctx;
-    const ids = a.before.filter(e => e.kind === 'item').map(e => e.id.slice('item:'.length));
-    const resolved = resolveInventoryCommands(ctx.parsedResponse.commands, ids, ctx.roundNumber);
-    return { ...ctx, parsedResponse: { ...ctx.parsedResponse, commands: resolved.commands },
-      rejectedCommands: [...(ctx.rejectedCommands ?? []), ...resolved.rejected.map(r => ({
-        success: false, command: ctx.parsedResponse!.commands![r.index], error: r.reason,
-      }))],
-      meta: { ...ctx.meta, plotVectorInventoryRejected: resolved.rejected,
-        stateUpdateCommandGuard: compiledCommandGuard([P.inventoryItems], resolved.commands.filter(c => c.key.startsWith(P.inventoryItems + '.'))) } };
-  }
   async beforeSave(ctx: PipelineContext): Promise<void> {
     const a = this.attempt;
     if (!a || a.ctx.generationId !== ctx.generationId) return;
     a.guard();
-    this.assertStructure(ctx);
     const next = a.state.last?.id === a.prepared.id ? a.state : await this.worker.execute<VectorState>({ kind: 'accept', state: a.state, prepared: a.prepared });
     a.guard();
-    if (a.state.branch === undefined) delete next.branch; else next.branch = a.state.branch; // host-owned
     const after = projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries;
     // Environment abilities arrive with the tags from Step2; they never queue a post-save generation.
     const tasks = tasksAfterSave({ id: a.prepared.id, success: true, before: a.before, after }, next.tasks.map(t => t.task.key))
@@ -224,7 +178,6 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     a.postSaved = true;
     try {
       a.guard();
-      await this.recoverReceipts(a);
       await this.syncEnvironment(a);
       await this.recoverRetries(a);
       const current = projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries;
@@ -241,17 +194,15 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
         let raw: string;
         try {
           raw = await this.ai.generate({ messages: buildAgaGenerationMessages(row.task.entry),
-            usageType: 'main', stream: false, singleAttempt: true, generationId: `${ctx.generationId}:card`, signal: a.controller.signal,
-            checkpoint: this.journal.genesis(a.slot, row.task.key).checkpoint(a.guard) });
+            usageType: 'main', stream: false, generationId: `${ctx.generationId}:card`, signal: a.controller.signal });
         } catch (error) {
           a.guard();
           row.status = 'failed'; row.error = String(error);
-          // The story is already committed. Record failure, never claim a request
-          // is still sending and never automatically repeat an uncertain paid call.
+          // The story is already committed. The entry stays; Step3 or the player can generate it again.
           await this.persist(a); return;
         }
         a.guard();
-        // Keep the paid output before validation. Reload never automatically repeats a sending task.
+        // Keep the received output before validation, so a failed check can be repeated for free.
         row.raw = raw;
         await this.persist(a);
       }
@@ -269,39 +220,14 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     } finally { a.release(); }
   }
   /**
-   * Free recovery of ability replies that were received but never reached this save (page closed,
-   * slot switched, save write failed). Rows without a reply are looked up read-only in the local
-   * ledger: a recorded reply is adopted and validated later in this round like any other; anything
-   * else (`unknown`, `none`, `expired`) is left exactly as it is. Nothing is sent from here, and no
-   * row is marked failed, because another tab may still be waiting for that request.
-   */
-  private async recoverReceipts(a: Attempt): Promise<void> {
-    let adopted = false;
-    for (const row of a.state.tasks) {
-      if ((row.status !== 'sending' && row.status !== 'failed') || row.raw !== undefined || row.task.entry.kind === 'environment') continue;
-      const receipt = await this.journal.genesis(a.slot, row.task.key).lookup();
-      a.guard();
-      if (receipt.kind !== 'raw') continue;
-      row.raw = receipt.raw; row.status = 'sending'; delete row.error; delete row.validationRevision;
-      adopted = true;
-    }
-    if (adopted) await this.persist(a);
-  }
-  /**
-   * Free, after the round is saved: a player retry whose reply was recorded but never reached the save
-   * (page closed) is adopted from the local ledger, and any recorded retry reply not yet checked under the
-   * current validation is checked. Nothing is sent from here.
+   * Free, after the round is saved: any received retry reply not yet checked under the current validation is
+   * checked. Nothing is sent from here.
    */
   private async recoverRetries(a: Attempt): Promise<void> {
     let changed = false;
     for (const row of a.state.tasks) {
       const retry = row.retry;
       if (!retry) continue;
-      if (retry.sending && retry.raw === undefined) {
-        const receipt = await this.journal.genesis(a.slot, `${row.task.key}#retry-${retry.attempts}`).lookup();
-        a.guard();
-        if (receipt.kind === 'raw') { retry.raw = receipt.raw; retry.sending = false; delete retry.validationRevision; changed = true; }
-      }
       if (retry.raw !== undefined && (retry.validationRevision ?? 0) < GENESIS_VALIDATION_REVISION && row.status !== 'bound') {
         await this.validateReceived(a.state, row, a.guard);
         changed = true;
@@ -427,8 +353,8 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
    * field-repair request. Environment tags are fixed as ordinary commands on the environment array (as
    * before); one item/talent/status entry per round comes back in the task's own reply field, never as a
    * write to the saved entry. `settle` binds what now validates and reports whether every listed entry has
-   * an ability. Entries with an unknown outcome or a player retry in flight are never included; each entry
-   * is tried automatically in at most AUTO_REPAIR_ROUNDS rounds.
+   * an ability. Entries with a player retry in flight are never included; each entry is tried automatically in
+   * at most AUTO_REPAIR_ROUNDS rounds.
    */
   async abilityRepairTask(): Promise<ExtraRepairTask | null> {
     const environment = this.promptPolicy?.environmentAbility, items = this.promptPolicy?.abilityRepair;
@@ -470,7 +396,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
           if (!row) continue;
           changed = true;
           const base: AbilityRetry = row.retry ?? { attempts: 0, autoRounds: 0 };
-          const retry: AbilityRetry = { ...base, attempts: base.attempts + 1, source: 'step3', sending: false, error: '补生请求没有得到回复',
+          const retry: AbilityRetry = { ...base, attempts: base.attempts + 1, source: 'step3', error: '补生请求没有得到回复',
             ...(base.lastAutoRound === round ? {} : { autoRounds: base.autoRounds + 1, lastAutoRound: round }) };
           delete retry.raw; delete retry.validationRevision;
           row.retry = retry;
@@ -506,10 +432,9 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
   }
   /**
    * The player's "regenerate ability" for one obtained entry. A reply that was already received is checked
-   * first, for free (under the current validation, or adopted from the local ledger if it never reached the
-   * save). Only then is a new request sent, as a new recorded attempt with its own receipt: earlier failures
-   * and unknown receipts stay as they were. Returns whether the entry now has a usable ability and whether a
-   * model request was made. The saved entry itself is never changed.
+   * first, for free, under the current validation. Only then is a new request sent, recorded as a new attempt;
+   * earlier failures stay on record. Returns whether the entry now has a usable ability and whether a model
+   * request was made. The saved entry itself is never changed.
    */
   async regenerateAbility(entryId: string): Promise<{ bound: boolean; requested: boolean }> {
     const slot = this.slot();
@@ -518,7 +443,6 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     const guard = this.repairGuard('能力补生');
     this.manualInFlight.add(entryId);
     try {
-      await this.saves.assertCurrent(slot.profileId, slot.slotId);
       guard();
       const state = cloneDeep(this.state.get<VectorState>(P.plotVector) ?? initialVectorState());
       const entry = abilityBacklog(state, projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries,
@@ -526,47 +450,30 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       if (!entry) throw new Error('这一条目前没有需要补生的能力');
       const key = capabilityKey(entry.row.task.entry);
       const row = state.tasks.find(t => capabilityKey(t.task.entry) === key && t.status !== 'bound')!;
-      // 1. Free: a reply recorded in the local ledger that never reached this save (first attempt without a reply,
-      // whether it was left as sending or recorded as a failed request).
-      if (!row.retry && row.raw === undefined && row.task.entry.kind !== 'environment') {
-        const receipt = await this.journal.genesis(slot, row.task.key).lookup();
-        guard();
-        if (receipt.kind === 'raw') { row.raw = receipt.raw; delete row.validationRevision; }
-      }
-      if (row.retry?.sending && row.retry.raw === undefined) {
-        const receipt = await this.journal.genesis(slot, `${row.task.key}#retry-${row.retry.attempts}`).lookup();
-        guard();
-        if (receipt.kind === 'raw') { row.retry.raw = receipt.raw; delete row.retry.validationRevision; }
-        // Not in flight in this page (manualInFlight is empty for it), so its reply can no longer reach this save.
-        // Its receipt stays as it is; this explicit click becomes a new attempt below instead of a permanent block
-        // (charter D8). Nothing retries it automatically: Step3 never touches `retrying` entries.
-        row.retry.sending = false;
-      }
-      // 2. Free: any received reply not yet checked under the current validation.
+      // 1. Free: any received reply not yet checked under the current validation.
       if (await this.validateReceived(state, row, guard)) {
         await this.persistState(slot, state, guard);
         return { bound: true, requested: false };
       }
-      // 3. A new request, recorded before it is sent.
+      // 2. A new request, recorded as an attempt before it is sent.
       const problem = row.retry?.error ?? row.error;
       const base: AbilityRetry = row.retry ?? { attempts: 0, autoRounds: 0 };
-      const retry: AbilityRetry = { ...base, attempts: base.attempts + 1, source: 'manual', sending: true };
+      const retry: AbilityRetry = { ...base, attempts: base.attempts + 1, source: 'manual' };
       delete retry.raw; delete retry.validationRevision;
       row.retry = retry;
       await this.persistState(slot, state, guard);
       let raw: string;
       try {
         raw = await this.ai.generate({ messages: buildAbilityRetryMessages(row.task.entry, problem),
-          usageType: 'main', stream: false, singleAttempt: true, generationId: `ability-retry:${retry.attempts}`,
-          checkpoint: this.journal.genesis(slot, `${row.task.key}#retry-${retry.attempts}`).checkpoint(guard) });
+          usageType: 'main', stream: false, generationId: `ability-retry:${retry.attempts}` });
       } catch (error) {
         guard();
-        retry.sending = false; retry.error = error instanceof Error ? error.message : String(error);
+        retry.error = error instanceof Error ? error.message : String(error);
         await this.persistState(slot, state, guard);
         return { bound: false, requested: true };
       }
       guard();
-      retry.sending = false; retry.raw = raw;
+      retry.raw = raw;
       const bound = await this.validateReceived(state, row, guard);
       await this.persistState(slot, state, guard);
       return { bound, requested: true };
@@ -577,7 +484,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
    * validates. `card` undefined: the reply had no ability for this entry.
    */
   private async recordRetryReply(state: VectorState, row: VectorTaskRow, card: unknown, guard: () => void): Promise<boolean> {
-    const retry: AbilityRetry = { ...(row.retry ?? { attempts: 1, autoRounds: 1 }), source: 'step3', sending: false };
+    const retry: AbilityRetry = { ...(row.retry ?? { attempts: 1, autoRounds: 1 }), source: 'step3' };
     delete retry.raw; delete retry.validationRevision;
     row.retry = retry;
     if (card === undefined) { retry.error = '补生回复没有给出这一条的能力'; return false; }
@@ -644,13 +551,6 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     } catch (error) {
       if (!committed && !a.ctx.meta.plotVectorLifecycle?.invalidated) this.state.set(P.plotVector, previous);
       throw error;
-    }
-  }
-  private assertStructure(ctx: PipelineContext): void {
-    // Repair has already had its chance. A failed parse is not a valid
-    // no-change turn: never accept growth or save a narrative-only success.
-    if (ctx.parsedResponse?.parseOk === false) {
-      throw new Error('本回合状态更新格式有误，未获得可保存的结果。' + (typeof ctx.meta.plotVectorRepairError === 'string' ? ctx.meta.plotVectorRepairError : ''));
     }
   }
 }

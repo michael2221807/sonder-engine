@@ -1,10 +1,7 @@
-import { RoundStateUpdates } from '../../engine/state-updates/round-state-updates';
-import { eventBus } from '../../engine/core/event-bus';
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 import { StateManager } from '../../engine/core/state-manager';
 import { CommandExecutor } from '../../engine/core/command-executor';
 import { ResponseParser } from '../../engine/ai/response-parser';
-import { CommandExecutionStage } from '../../engine/pipeline/stages/command-execution';
 import { DEFAULT_ENGINE_PATHS as P, type PipelineContext } from '../../engine/pipeline/types';
 import { AgaPlotVectorAdapter } from './aga-adapter';
 import { executeVectorOperation, initialVectorState, type PreparedVector, type VectorState, type VectorOperation, type VectorResult } from './runtime';
@@ -16,12 +13,11 @@ import { projectSavedElements } from './saved-elements';
 import rulesJSON from '../../../public/packs/tianming/rules/plot-vector.json';
 import { parseNativeRules } from './native-input';
 import { parseVectorPromptPolicy } from './prompt-policy';
-import { RequestJournal, type RequestStore } from './request-journal';
 import { FieldRepairPipeline } from '../../engine/pipeline/sub-pipelines/field-repair';
 import type { AIService } from '../../engine/ai/ai-service';
 import type { PromptAssembler } from '../../engine/prompt/prompt-assembler';
 import type { GamePack } from '../../engine/types';
-import type { AIMessage, APIConfig, GenerationCheckpoint } from '../../engine/ai/types';
+import type { AIMessage } from '../../engine/ai/types';
 import promptRules from '../../../public/packs/tianming/rules/plot-vector-prompts.json';
 
 let adapters: AgaPlotVectorAdapter[];
@@ -32,7 +28,7 @@ beforeEach(() => {
   vi.stubGlobal('window', new EventTarget());
 });
 afterEach(() => { adapters.forEach(a => a.dispose()); vi.unstubAllGlobals(); });
-function setup(journal?: RequestJournal) {
+function setup() {
   const state = new StateManager(); state.loadTree({});
   let slot = { profileId: 'p', slotId: 's' };
   let disk: unknown;
@@ -42,14 +38,12 @@ function setup(journal?: RequestJournal) {
     commit?.guard(); disk = structuredClone(data); commit?.committed();
   });
   const worker = { execute: vi.fn(<T extends VectorResult>(op: VectorOperation) => executeVectorOperation(op) as Promise<T>), cancelAll: vi.fn() };
-  const assertCurrent = vi.fn(async () => {});
-  const adapter = new AgaPlotVectorAdapter(state, ai, { saveGame, assertCurrent }, () => slot, {
+  const adapter = new AgaPlotVectorAdapter(state, ai, { saveGame }, () => slot, {
     execute: <T extends VectorResult>(op: VectorOperation) => worker.execute(op) as Promise<T>, cancelAll: worker.cancelAll,
-  }, journal ?? new RequestJournal(new MemoryRequests()), parseNativeRules(rulesJSON), parseVectorPromptPolicy(promptRules, 'mode contract', 'state update contract')); adapters.push(adapter);
-  const sync = new RoundStateUpdates(() => ({ contract: promptRules.stateUpdates, prompt: 'state update contract' }));
+  }, parseNativeRules(rulesJSON), parseVectorPromptPolicy(promptRules, 'mode contract')); adapters.push(adapter);
   const ctx = (): PipelineContext => ({ generationId: crypto.randomUUID(), roundNumber: 1, stateSnapshot: state.toSnapshot(),
     userInput: '继续', actionQueuePrompt: '', chatHistory: [], worldEventTriggered: false, messages: [{ role: 'user', content: '继续' }], meta: { plotVectorLifecycle: {} } });
-  return { state, ai, saveGame, assertCurrent, worker, adapter, sync, ctx, changeSlot: () => { slot = { ...slot, slotId: 'other' }; },
+  return { state, ai, saveGame, worker, adapter, ctx, changeSlot: () => { slot = { ...slot, slotId: 'other' }; },
     setSlot: (slotId: string) => { slot = { ...slot, slotId }; }, disk: () => disk };
 }
 describe('AGA opt-in integration (zero network)', () => {
@@ -66,75 +60,17 @@ describe('AGA opt-in integration (zero network)', () => {
     await h.adapter.beforeSave(next); next.meta.plotVectorCommitted!(); await h.adapter.afterSave(next);
     expect(h.ai.generate).toHaveBeenCalledTimes(1);
   });
-  it('compiles parsed actions from a frozen baseline, blocks relocated raw writes, then creates tasks only at save', async () => {
-    const h = setup(); writePlotVectorControl(true);
-    h.state.set('角色.背包.金钱.现金', 100);
-    h.state.set(P.inventoryItems, {});
-    const start = h.ctx(); h.adapter.promptTransform(start);
-    const prepared = await h.adapter.prepare(h.sync.prepare(start));
-    h.state.set('角色.背包.金钱.现金', 99); // Never becomes the compilation baseline.
-    const parsed = new ResponseParser().parse(JSON.stringify({ text: '买好本子。', commands: [
-      { action: 'set', key: '金钱.现金', value: 1 },
-      { action: 'set', key: '背包.物品.invented', value: { 名称: '不应出现' } },
-    ], state_updates: { version: 1, actions: [
-      { id: 'a', op: 'acquire', ref: '__new_1', item: { 名称: '本子', 数量: 1 } },
-      { id: 'b', op: 'pay', account: 'cash', amount: 3.5 },
-    ] } }));
-    const ctx = h.adapter.beforeCommands(h.sync.beforeCommands({ ...prepared, parsedResponse: parsed }));
-    const stage = new CommandExecutionStage(new CommandExecutor(h.state, ['角色']),
-      { runAfterCommands: vi.fn() } as never, h.state, P);
-    const executed = await stage.execute(ctx);
-    expect(executed.commandResults?.results.filter(r => !r.success)).toHaveLength(2);
-    expect(h.state.get('角色.背包.金钱.现金')).toBe(96.5);
-    expect(h.state.get(`${P.inventoryItems}.invented`)).toBeUndefined();
-    expect(h.state.get(`${P.inventoryItems}.pv_1_1.名称`)).toBe('本子');
-    expect(() => h.sync.beforeCommands({ ...prepared, parsedResponse: parsed })).toThrow('重复执行');
-    expect(h.ai.generate).not.toHaveBeenCalled();
-    await h.adapter.beforeSave(executed);
-    expect(h.state.get<VectorState>(P.plotVector)?.tasks).toHaveLength(1);
-    expect(h.ai.generate).not.toHaveBeenCalled();
-  });
-  it('requires an explicit action envelope in active mode; empty actions are valid', async () => {
-    const h = setup(); writePlotVectorControl(true);
-    const start = h.ctx(); h.adapter.promptTransform(start);
-    const prepared = await h.adapter.prepare(h.sync.prepare(start));
-    const missing = { ...prepared, parsedResponse: { text: '安静的一天', commands: [], parseOk: true } };
-    expect(() => h.sync.beforeCommands(missing)).toThrow();
-    expect(() => h.sync.beforeSave(missing)).toThrow('尚未处理');
-    const valid = h.sync.beforeCommands({ ...missing, parsedResponse: { ...missing.parsedResponse,
-      customFields: { state_updates: { version: 1, actions: [] } } } });
-    await expect(h.adapter.beforeSave(valid)).resolves.toBeUndefined();
-  });
-  it('blocks rootless inventory writes even under the previous command protocol', async () => {
-    const h = setup(); writePlotVectorControl(true); h.state.set(P.inventoryItems, {});
-    const prepared = await h.adapter.prepare(h.ctx());
-    const ctx = h.adapter.beforeCommands({ ...prepared, parsedResponse: { text: 'test', commands: [
-      { action: 'set', key: '背包.物品.fake', value: { 名称: 'fake' } },
-    ] } });
-    const stage = new CommandExecutionStage(new CommandExecutor(h.state, ['角色']),
-      { runAfterCommands: vi.fn() } as never, h.state, P);
-    const out = await stage.execute(ctx);
-    expect(out.commandResults?.hasErrors).toBe(true);
-    expect(h.state.get(`${P.inventoryItems}.fake`)).toBeUndefined();
-  });
-  for (const commands of [undefined, []]) it(`blocks unrepaired structure before commands and before acceptance, commands=${String(commands)}`, async () => {
+  for (const commands of [undefined, []]) it(`an unsuccessful parse in active mode keeps the story like the original flow, commands=${String(commands)}`, async () => {
     const h = setup(); writePlotVectorControl(true);
     const prepared = await h.adapter.prepare(h.ctx());
-    const before = h.state.toSnapshot();
     const broken = { ...prepared, parsedResponse: { text: '东西买好了。', commands, parseOk: false } };
-    expect(() => h.adapter.beforeCommands(broken)).toThrow('未获得可保存的结果');
-    await expect(h.adapter.beforeSave(broken)).rejects.toThrow('未获得可保存的结果');
-    expect(h.state.toSnapshot()).toEqual(before);
-    expect(h.worker.execute.mock.calls.filter(([op]) => op.kind === 'accept')).toHaveLength(0);
-    expect(h.saveGame).not.toHaveBeenCalled();
+    await expect(h.adapter.beforeSave(broken)).resolves.toBeUndefined();
+    expect(h.worker.execute.mock.calls.filter(([op]) => op.kind === 'accept')).toHaveLength(1);
+    expect(h.state.get<VectorState>(P.plotVector)?.session.round).toBe(2);
     expect(h.ai.generate).not.toHaveBeenCalled();
-    const repaired = { ...broken, parsedResponse: { ...broken.parsedResponse, commands: [], parseOk: true } };
-    expect(() => h.adapter.beforeCommands(repaired)).not.toThrow();
-    await expect(h.adapter.beforeSave(repaired)).resolves.toBeUndefined();
   });
   it('does not change legacy off-mode handling of an unsuccessful parse', async () => {
     const h = setup(); const ctx = { ...h.ctx(), parsedResponse: { text: 'raw', parseOk: false } };
-    expect(h.adapter.beforeCommands(ctx)).toBe(ctx);
     await h.adapter.beforeSave(ctx);
     expect(h.worker.execute).not.toHaveBeenCalled();
   });
@@ -165,15 +101,15 @@ describe('AGA opt-in integration (zero network)', () => {
     expect(c.messages).toEqual(originals);
     expect(out.messages).toHaveLength(out.messageSources!.length);
   });
-  it('keeps mode even with no impulse and gives Step2 the contracts (state updates, environment abilities), not the vector', async () => {
+  it('keeps mode even with no impulse and gives Step2 the environment-ability interface, not the vector', async () => {
     const h = setup(); writePlotVectorControl(true);
     const c = h.ctx(); c.meta.splitStep2Messages = [{ role: 'system', content: 'commands' }];
     expect(h.adapter.promptTransform(c)).toBeTypeOf('function');
-    const result = await h.adapter.prepare(h.sync.prepare(c));
+    const result = await h.adapter.prepare(c);
     expect(result.messageSources).toContain('plot-vector-mode');
     expect(result.messages.find(m => m.content === 'mode contract')).toBeDefined();
-    expect(result.meta.splitStep2Messages!.slice(1)).toEqual([{ role: 'system', content: 'state update contract' }, { role: 'system', content: 'commands' }]);
-    expect(result.meta.splitStep2Sources).toEqual(['environment-ability', 'state-update-protocol', 'unknown']);
+    expect(result.meta.splitStep2Messages!.slice(1)).toEqual([{ role: 'system', content: 'commands' }]);
+    expect(result.meta.splitStep2Sources).toEqual(['environment-ability', 'unknown']);
     expect(String(result.meta.splitStep2Messages![0].content)).toContain('onVisit');
     // The vector itself (axes and values) stays out of Step2.
     expect(result.meta.splitStep2Messages!.some(m => typeof m.content === 'string' && m.content.includes('维度说明与数值'))).toBe(false);
@@ -219,45 +155,12 @@ describe('AGA opt-in integration (zero network)', () => {
     // Written without its ability: this round's Step3 gets one repair task for it.
     expect((await h.adapter.abilityRepairTask())?.block).toContain('微风');
   });
-  it('rejects a stale loaded slot before executing cards or calling a model', async () => {
-    const h = setup(); writePlotVectorControl(true);
-    h.assertCurrent.mockRejectedValue(new Error('stale'));
-    await expect(h.adapter.prepare(h.ctx())).rejects.toThrow('stale');
-    expect(h.worker.execute).not.toHaveBeenCalled(); expect(h.ai.generate).not.toHaveBeenCalled();
-  });
   it('off means identical context, no worker, no generation, no component state writes', async () => {
     const h = setup(), ctx = h.ctx();
     expect(await h.adapter.prepare(ctx)).toBe(ctx);
     await h.adapter.beforeSave(ctx); await h.adapter.afterSave(ctx);
     expect(h.worker.execute).not.toHaveBeenCalled(); expect(h.ai.generate).not.toHaveBeenCalled();
     expect(h.state.get(P.plotVector)).toBeUndefined();
-    const withCommands = { ...ctx, parsedResponse: { text: '', commands: [
-      { action: 'set' as const, key: `${P.inventoryItems}.old_style`, value: { 名称: '普通物品' } },
-    ] } };
-    expect(h.adapter.beforeCommands(withCommands)).toBe(withCommands);
-  });
-  it('resolves item references before real command execution and reports unknown IDs as failures', async () => {
-    const h = setup(); writePlotVectorControl(true);
-    h.state.set(P.inventoryItems, { book: { 名称: '日记', 描述: '原记录' } });
-    const prepared = await h.adapter.prepare(h.ctx());
-    const commands = [
-      { action: 'set' as const, key: `${P.inventoryItems}.invented`, value: { 名称: '日记' } },
-      { action: 'set' as const, key: `${P.inventoryItems}.book.描述`, value: '新记录' },
-      { action: 'set' as const, key: `${P.inventoryItems}.__new_1`, value: { 名称: '日记', 描述: '新买的另一本' } },
-    ];
-    const input = { ...prepared, parsedResponse: { text: '', commands } };
-    const resolved = h.adapter.beforeCommands(input);
-    const stage = new CommandExecutionStage(new CommandExecutor(h.state),
-      { runAfterCommands: vi.fn() } as unknown as import('../../engine/pipeline/types').IBehaviorRunner, h.state, P);
-    const executed = await stage.execute(resolved);
-    expect(executed.commandResults?.hasErrors).toBe(true);
-    expect(executed.commandResults?.results.filter(r => !r.success)).toHaveLength(1);
-    expect(h.state.get(`${P.inventoryItems}.invented`)).toBeUndefined();
-    expect(h.state.get(`${P.inventoryItems}.book.描述`)).toBe('新记录');
-    expect(h.state.get(`${P.inventoryItems}.pv_1_1.名称`)).toBe('日记');
-    expect(input.parsedResponse.commands).toBe(commands);
-    await h.adapter.beforeSave(executed);
-    expect(h.state.get<VectorState>(P.plotVector)!.tasks.map(r => r.task.entry.id)).toEqual(['item:pv_1_1']);
   });
   it('saved new entry generates once, board absent from prompt, repeated post-save does not repeat', async () => {
     const h = setup(); writePlotVectorControl(true);
@@ -475,23 +378,6 @@ describe('AGA opt-in integration (zero network)', () => {
   });
 });
 
-class MemoryRequests implements RequestStore {
-  rows = new Map<string, { fingerprint: string; owner: string; raw?: string }>();
-  async claim(key: string, fingerprint: string, owner: string, guard: () => void) {
-    guard(); const old = this.rows.get(key);
-    if (!old) this.rows.set(key, { fingerprint, owner });
-    return old;
-  }
-  async peek(key: string) { return this.rows.get(key); }
-  async complete(key: string, owner: string, raw: string, guard: () => void) {
-    guard(); const old = this.rows.get(key)!;
-    if (old.owner !== owner) throw new Error('owner');
-    this.rows.set(key, { ...old, raw });
-  }
-}
-const apiConfig: APIConfig = { id: 'test', name: 'test', apiCategory: 'llm', provider: 'openai',
-  url: 'https://test.invalid', apiKey: 'secret', model: 'test', temperature: 0.7, maxTokens: 100, enabled: true };
-const modelRequest = { config: apiConfig, messages: [{ role: 'user' as const, content: 'story request' }], stream: false };
 /** Wraps the real runtime; `bad` rewrites the result of one operation kind (the Worker is not trusted). */
 function tamper<K extends VectorOperation['kind']>(h: ReturnType<typeof setup>, kind: K, bad: (result: never) => unknown, times = 1) {
   let left = times;
@@ -510,10 +396,10 @@ describe('gate 1 · the host never uses an unchecked Worker result', () => {
     tamper(h, 'prepare', (p: PreparedVector) => ({ ...p, result: { ...p.result, finalState: { ...p.result.finalState, shuttle: { ...p.result.finalState.shuttle, Y: -5 } } } }));
     const ctx = h.ctx();
     await expect(h.adapter.prepare(ctx)).rejects.toThrow(/剧情动能计算结果无效（prepare）/);
-    expect(ctx.meta.plotVectorCheckpoint).toBeUndefined();
+    expect(ctx.meta.plotVectorCommitted).toBeUndefined();
     expect(stable(h.state.get(P.plotVector) ?? null)).toBe(before);
     const next = await h.adapter.prepare(h.ctx());
-    expect(next.meta.plotVectorCheckpoint).toBeTypeOf('function');
+    expect(next.meta.plotVectorCommitted).toBeTypeOf('function');
   });
   it('a malformed accept result is never written to the state or saved', async () => {
     const h = setup(); writePlotVectorControl(true);
@@ -537,261 +423,6 @@ describe('gate 1 · the host never uses an unchecked Worker result', () => {
     expect(saved.tasks[0].error).toMatch(/剧情动能计算结果无效（validate）/);
     expect(h.state.get(`${P.inventoryItems}.tea.数量`)).toBe(1);
     expect(h.ai.generate).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('gate 1 · R3 one-off accept failure recovers without another paid request', () => {
-  const failAccepts = (h: ReturnType<typeof setup>, times: number) => {
-    let left = times;
-    h.worker.execute.mockImplementation((async (op: VectorOperation) => {
-      if (op.kind === 'accept' && left > 0) { left -= 1; throw new Error('能力计算超时；保留上一步'); }
-      return executeVectorOperation(op);
-    }) as never);
-  };
-  const attempt = async (h: ReturnType<typeof setup>, send: () => Promise<string>) => {
-    const ctx = await h.adapter.prepare(h.ctx());
-    const raw = await ctx.meta.plotVectorCheckpoint!('single').run(modelRequest, send);
-    return { ctx, raw, save: () => h.adapter.beforeSave(ctx) };
-  };
-  it('the retry with the same input reuses the journaled reply and commits exactly once', async () => {
-    const h = setup(new RequestJournal(new MemoryRequests())); writePlotVectorControl(true);
-    const send = vi.fn(async () => 'model reply');
-    failAccepts(h, 1);
-    const first = await attempt(h, send);
-    await expect(first.save()).rejects.toThrow('超时');
-    expect(h.state.get<VectorState>(P.plotVector)).toBeUndefined();
-    const second = await attempt(h, send);
-    expect(second.raw).toBe('model reply');
-    expect(second.ctx.meta.plotVectorRecovered).toEqual(['single']);
-    await second.save();
-    await second.save(); // a repeated save of the same attempt is a no-op
-    const saved = h.state.get<VectorState>(P.plotVector)!;
-    expect(send).toHaveBeenCalledTimes(1);
-    expect(saved.session.round).toBe(2);
-    expect(saved.session.committed).toEqual(['p/s/1']);
-    expect(h.worker.execute.mock.calls.filter(([op]) => op.kind === 'accept')).toHaveLength(2);
-  });
-  it('a persistent accept failure never commits, never resends and never advances the round', async () => {
-    const h = setup(new RequestJournal(new MemoryRequests())); writePlotVectorControl(true);
-    const send = vi.fn(async () => 'model reply');
-    failAccepts(h, 99);
-    for (let i = 0; i < 3; i++) {
-      const next = await attempt(h, send);
-      expect(next.raw).toBe('model reply');
-      await expect(next.save()).rejects.toThrow('超时');
-    }
-    expect(send).toHaveBeenCalledTimes(1);
-    expect(h.state.get<VectorState>(P.plotVector)).toBeUndefined();
-    expect(h.worker.execute.mock.calls.filter(([op]) => op.kind === 'accept')).toHaveLength(3);
-  });
-});
-
-describe('an explicit rollback starts a new request branch (PO trial: resend after rollback)', () => {
-  // What the orchestrator does on the player's rollback button: restore, then announce it.
-  const explicitRollback = (h: ReturnType<typeof setup>, before: Record<string, unknown>) => {
-    h.state.rollbackTo(before); eventBus.emit('engine:rollback-complete', undefined);
-  };
-  const run = async (h: ReturnType<typeof setup>, send: () => Promise<string>, request = modelRequest) => {
-    const ctx = await h.adapter.prepare(h.ctx());
-    const raw = await ctx.meta.plotVectorCheckpoint!('single').run(request, send);
-    return { ctx, raw, save: async () => { await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!(); } };
-  };
-  const rebuilt = { ...modelRequest, messages: [{ role: 'user' as const, content: 'story request, rebuilt after the rollback' }] };
-  it('after a successful round and the rollback button, the same input is generated again and saved', async () => {
-    const h = setup(new RequestJournal(new MemoryRequests())); writePlotVectorControl(true);
-    const before = h.state.toSnapshot();
-    const send = vi.fn(async () => `reply ${send.mock.calls.length}`);
-    const first = await run(h, send);
-    expect(first.raw).toBe('reply 1'); await first.save();
-    explicitRollback(h, before);
-    const branch = h.state.get<VectorState>(P.plotVector)?.branch;
-    expect(branch).toMatch(/^[0-9a-f-]{32,36}$/);
-    // The rebuilt request differs from the undone one; before the fix this refused with 上次请求与当前存档或模型配置不同.
-    const again = await run(h, send, rebuilt);
-    expect(again.raw).toBe('reply 2');
-    expect(again.ctx.meta.plotVectorRecovered).toEqual([]);
-    await again.save();
-    const saved = h.state.get<VectorState>(P.plotVector)!;
-    expect(saved.session.round).toBe(2); // accepted once on this branch, not on top of the undone round
-    expect(saved.branch).toBe(branch);
-    expect(send).toHaveBeenCalledTimes(2);
-  });
-  it('an identical request after the rollback is not a silent replay of the undone reply', async () => {
-    const h = setup(new RequestJournal(new MemoryRequests())); writePlotVectorControl(true);
-    const before = h.state.toSnapshot();
-    const send = vi.fn(async () => `reply ${send.mock.calls.length}`);
-    await (await run(h, send)).save();
-    explicitRollback(h, before);
-    expect((await run(h, send)).raw).toBe('reply 2');
-  });
-  it('inside the new branch, a failed round retried with the same input reuses its reply instead of paying again', async () => {
-    const h = setup(new RequestJournal(new MemoryRequests())); writePlotVectorControl(true);
-    const before = h.state.toSnapshot();
-    const send = vi.fn(async () => `reply ${send.mock.calls.length}`);
-    await (await run(h, send)).save();
-    explicitRollback(h, before);
-    const branched = h.state.toSnapshot();
-    await run(h, send, rebuilt); // reply received, then the round fails before saving
-    h.state.rollbackTo(branched); // the orchestrator's automatic restore: no rollback-complete
-    const retry = await run(h, send, rebuilt);
-    expect(retry.raw).toBe('reply 2');
-    expect(retry.ctx.meta.plotVectorRecovered).toEqual(['single']);
-    expect(send).toHaveBeenCalledTimes(2);
-  });
-  it('an automatic restore alone never opens a branch', async () => {
-    const h = setup(new RequestJournal(new MemoryRequests())); writePlotVectorControl(true);
-    const before = h.state.toSnapshot();
-    const send = vi.fn(async () => 'reply');
-    await run(h, send);
-    h.state.rollbackTo(before);
-    expect(h.state.get<VectorState>(P.plotVector)?.branch).toBeUndefined();
-    expect((await run(h, send)).ctx.meta.plotVectorRecovered).toEqual(['single']);
-    expect(send).toHaveBeenCalledTimes(1);
-  });
-  it('the branch travels with the saved rollback: reloading that save still generates anew', async () => {
-    const h = setup(new RequestJournal(new MemoryRequests())); writePlotVectorControl(true);
-    const before = h.state.toSnapshot();
-    const send = vi.fn(async () => `reply ${send.mock.calls.length}`);
-    await (await run(h, send)).save();
-    explicitRollback(h, before);
-    h.state.loadTree(structuredClone(h.state.toSnapshot())); // the player saved the rolled-back game and reopened it
-    expect((await run(h, send, rebuilt)).raw).toBe('reply 2');
-  });
-  it('the Worker cannot move the branch, and nothing is written while the feature is off', async () => {
-    const h = setup(new RequestJournal(new MemoryRequests())); writePlotVectorControl(true);
-    const before = h.state.toSnapshot();
-    explicitRollback(h, before);
-    const branch = h.state.get<VectorState>(P.plotVector)!.branch;
-    tamper(h, 'accept', (s: VectorState) => ({ ...s, branch: 'from-worker' }));
-    await (await run(h, async () => 'reply')).save();
-    expect(h.state.get<VectorState>(P.plotVector)!.branch).toBe(branch);
-    const off = setup(); writePlotVectorControl(false);
-    explicitRollback(off, off.state.toSnapshot());
-    expect(off.state.get(P.plotVector)).toBeUndefined();
-  });
-});
-
-describe('gate 1 · R4 ability-generation receipts: free recovery, never a second paid request', () => {
-  const SLOT = { profileId: 'p', slotId: 's' };
-  const reply = JSON.stringify(POSITIVE_EXAMPLES[0].output);
-  /** Mirrors AIService: with a checkpoint, the checkpoint decides whether `send` (the paid call) runs. */
-  function network(h: ReturnType<typeof setup>, send: () => Promise<string>) {
-    const sends = vi.fn(send);
-    h.ai.generate.mockImplementation((async (opts: { messages: AIMessage[]; checkpoint?: GenerationCheckpoint }) =>
-      opts.checkpoint ? opts.checkpoint.run({ config: apiConfig, messages: opts.messages, stream: false }, sends) : sends()) as never);
-    return sends;
-  }
-  async function round(h: ReturnType<typeof setup>, roundNumber: number, during?: () => void): Promise<unknown> {
-    const ctx = await h.adapter.prepare({ ...h.ctx(), roundNumber });
-    during?.(); // story changes land between prepare and save, like a real round
-    await h.adapter.beforeSave(ctx); ctx.meta.plotVectorCommitted!();
-    return h.adapter.afterSave(ctx).then(() => null, (error: unknown) => error);
-  }
-  const rows = (h: ReturnType<typeof setup>) => h.state.get<VectorState>(P.plotVector)!.tasks;
-  const teaTask = (h: ReturnType<typeof setup>) => tasksAfterSave({ id: 'x', success: true, before: [],
-    after: projectSavedElements(h.state.toSnapshot(), { includeEnvironment: true }).entries })[0];
-
-  it('a reply received after a slot switch is recorded, never written into the other slot, and binds free next round despite a toggle', async () => {
-    const store = new MemoryRequests();
-    const h = setup(new RequestJournal(store)); writePlotVectorControl(true);
-    const sends = network(h, async () => { h.changeSlot(); return reply; }); // the player switches slots mid-request
-    await round(h, 1, () => h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 1 } }));
-    expect(sends).toHaveBeenCalledTimes(1);
-    const key = rows(h)[0].task.key;
-    expect(rows(h)[0]).toMatchObject({ status: 'sending' });
-    expect(rows(h)[0].raw).toBeUndefined();
-    expect(h.saveGame.mock.calls.every(call => call[1] === 's')).toBe(true); // nothing reached slot "other"
-    expect(await new RequestJournal(store).genesis(SLOT, key).lookup()).toEqual({ kind: 'raw', raw: reply });
-    h.setSlot('s'); writePlotVectorControl(false); writePlotVectorControl(true); // back, with a new feature epoch
-    const saves = h.saveGame.mock.calls.length;
-    expect(await round(h, 2)).toBeNull();
-    expect(sends).toHaveBeenCalledTimes(1);
-    expect(rows(h)[0]).toMatchObject({ status: 'bound', raw: reply });
-    expect(h.state.get<VectorState>(P.plotVector)!.cards.map(c => c.task.entry.id)).toEqual(['item:tea']);
-    expect(h.state.get(`${P.inventoryItems}.tea.数量`)).toBe(1);
-    expect(h.saveGame.mock.calls.slice(saves).every(call => call[1] === 's')).toBe(true);
-  });
-
-  it('an unknown outcome is never re-sent or failed across rounds and toggles; a reply that lands later is adopted free', async () => {
-    const store = new MemoryRequests();
-    const h = setup(new RequestJournal(store)); writePlotVectorControl(true);
-    h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 1 } });
-    const task = teaTask(h);
-    h.state.set(P.plotVector, { ...initialVectorState(), tasks: [{ task, status: 'sending' }] });
-    // Another tab owns the request and is still waiting for it.
-    let land!: (raw: string) => void;
-    const elsewhere = new RequestJournal(store).genesis(SLOT, task.key).checkpoint(() => {})
-      .run({ config: apiConfig, messages: [], stream: false }, () => new Promise<string>(resolve => { land = resolve; }));
-    await vi.waitFor(() => expect(land).toBeTypeOf('function'));
-    const sends = network(h, async () => reply);
-    await round(h, 1);
-    writePlotVectorControl(false); writePlotVectorControl(true);
-    await round(h, 2);
-    expect(sends).not.toHaveBeenCalled();
-    expect(rows(h)[0]).toEqual({ task, status: 'sending' });
-    land(reply); await elsewhere;
-    await round(h, 3);
-    expect(sends).not.toHaveBeenCalled();
-    expect(rows(h)[0]).toMatchObject({ status: 'bound', raw: reply });
-    expect(h.state.get(`${P.inventoryItems}.tea.数量`)).toBe(1);
-  });
-
-  it('a pending task already claimed elsewhere is not sent here; it is adopted when that reply lands', async () => {
-    const store = new MemoryRequests();
-    const h = setup(new RequestJournal(store)); writePlotVectorControl(true);
-    h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 1 } });
-    const task = teaTask(h);
-    h.state.set(P.plotVector, { ...initialVectorState(), tasks: [{ task, status: 'pending' }] });
-    let land!: (raw: string) => void;
-    const elsewhere = new RequestJournal(store).genesis(SLOT, task.key).checkpoint(() => {})
-      .run({ config: apiConfig, messages: [], stream: false }, () => new Promise<string>(resolve => { land = resolve; }));
-    await vi.waitFor(() => expect(land).toBeTypeOf('function'));
-    const sends = network(h, async () => reply);
-    await round(h, 1);
-    expect(sends).not.toHaveBeenCalled();
-    expect(rows(h)[0]).toMatchObject({ status: 'failed', error: expect.stringMatching(/尚不明确/) });
-    land(reply); await elsewhere;
-    await round(h, 2);
-    expect(sends).not.toHaveBeenCalled();
-    expect(rows(h)[0]).toMatchObject({ status: 'bound', raw: reply });
-  });
-
-  it('with no record at all nothing is sent, and the read-only lookup creates no record', async () => {
-    const store = new MemoryRequests();
-    const h = setup(new RequestJournal(store)); writePlotVectorControl(true);
-    h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 1 } });
-    const task = teaTask(h);
-    h.state.set(P.plotVector, { ...initialVectorState(), tasks: [{ task, status: 'sending' }] });
-    const sends = network(h, async () => reply);
-    await round(h, 1); await round(h, 2);
-    expect(sends).not.toHaveBeenCalled();
-    expect(store.rows.size).toBe(0);
-    expect(rows(h)[0]).toEqual({ task, status: 'sending' });
-  });
-
-  it('a reply whose save write failed is recovered from the ledger next round without paying again', async () => {
-    const store = new MemoryRequests();
-    const h = setup(new RequestJournal(store)); writePlotVectorControl(true);
-    const sends = network(h, async () => reply);
-    let failWrite = false;
-    const honestSave = h.saveGame.getMockImplementation()!;
-    h.saveGame.mockImplementation((async (...args: Parameters<typeof honestSave>) => {
-      if (failWrite) throw new Error('disk full');
-      return honestSave(...args);
-    }) as never);
-    const original = h.worker.execute.getMockImplementation()!;
-    // The raw write happens right after the reply: fail exactly that save.
-    h.ai.generate.mockImplementationOnce((async (opts: { messages: AIMessage[]; checkpoint?: GenerationCheckpoint }) => {
-      const raw = await opts.checkpoint!.run({ config: apiConfig, messages: opts.messages, stream: false }, sends);
-      failWrite = true; return raw;
-    }) as never);
-    await round(h, 1, () => h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 1 } }));
-    expect(sends).toHaveBeenCalledTimes(1);
-    expect(rows(h)[0].raw).toBeUndefined();
-    failWrite = false; h.worker.execute.mockImplementation(original);
-    await round(h, 2);
-    expect(sends).toHaveBeenCalledTimes(1);
-    expect(rows(h)[0]).toMatchObject({ status: 'bound', raw: reply });
   });
 });
 
@@ -931,17 +562,16 @@ describe('ability failure lifecycle: the obtained entry stays, only the snippet 
   }
   const lastRequest = (generate: ReturnType<typeof vi.fn>) =>
     String((generate.mock.calls.at(-1) as unknown as [{ messages: Array<{ content: string }> }])[0].messages.at(-1)!.content);
-  /** A page reload: a new adapter over the saved tree, sharing the local receipt ledger. */
-  function reload(h: ReturnType<typeof setup>, store: MemoryRequests) {
-    const next = setup(new RequestJournal(store));
+  /** A page reload: a new adapter over the saved tree. */
+  function reload(h: ReturnType<typeof setup>) {
+    const next = setup();
     next.state.loadTree(structuredClone(h.state.toSnapshot()));
     return next;
   }
-  /** Mirrors AIService: with a checkpoint, the checkpoint decides whether `send` (the paid call) runs. */
+  /** The model call behind a player retry. */
   function network(h: ReturnType<typeof setup>, send: () => Promise<string>) {
     const sends = vi.fn(send);
-    h.ai.generate.mockImplementation((async (opts: { messages: AIMessage[]; checkpoint?: GenerationCheckpoint }) =>
-      opts.checkpoint ? opts.checkpoint.run({ config: apiConfig, messages: opts.messages, stream: false }, sends) : sends()) as never);
+    h.ai.generate.mockImplementation(sends as never);
     return sends;
   }
 
@@ -988,15 +618,14 @@ describe('ability failure lifecycle: the obtained entry stays, only the snippet 
   });
 
   it('after a reload a later Step3 still finds the waiting entry; automatic tries stop after two rounds; the story keeps going', async () => {
-    const store = new MemoryRequests();
-    const h = setup(new RequestJournal(store)); writePlotVectorControl(true);
+    const h = setup(); writePlotVectorControl(true);
     h.ai.generate.mockImplementation(async () => broken);
     await round(h, 1, () => h.state.set(P.inventoryItems, { ointment }));
     // Round 1's Step3 reply forgot the ability: bounded retries inside the round, counted as one round.
     const first = step3(h, () => ({ commands: [] }));
     expect((await first.run()).extra).toEqual({ resolved: false });
     expect(row(h, 'item:ointment').retry).toMatchObject({ autoRounds: 1, lastAutoRound: 1 });
-    const h2 = reload(h, store);
+    const h2 = reload(h);
     await round(h2, 2);
     const second = step3(h2, () => ({ commands: [], abilities: [{ id: 'item:ointment', card: JSON.parse(broken).card }] }));
     expect((await second.run()).extra).toEqual({ resolved: false });
@@ -1022,9 +651,8 @@ describe('ability failure lifecycle: the obtained entry stays, only the snippet 
     expect(h.saveGame).toHaveBeenCalled();
   });
 
-  it('otherwise the player retry is a new recorded request with its own receipt; the first failure stays on record', async () => {
-    const store = new MemoryRequests();
-    const h = setup(new RequestJournal(store)); writePlotVectorControl(true);
+  it('otherwise the player retry is a new request, counted before it leaves; the first failure stays on record', async () => {
+    const h = setup(); writePlotVectorControl(true);
     h.ai.generate.mockImplementation(async () => broken);
     await round(h, 1, () => h.state.set(P.inventoryItems, { ointment }));
     const firstError = row(h, 'item:ointment').error;
@@ -1034,43 +662,33 @@ describe('ability failure lifecycle: the obtained entry stays, only the snippet 
     expect(sends).toHaveBeenCalledTimes(1);
     const input = JSON.parse(String((h.ai.generate.mock.calls.at(-1) as unknown as [{ messages: AIMessage[] }])[0].messages[1].content));
     expect(input).toMatchObject({ entry: { id: 'item:ointment' }, problem: firstError });
-    // Recorded as sending and saved before the request left, then saved again with the result.
+    // Counted and saved before the request left, then saved again with the result.
     const beforeSend = (h.saveGame.mock.calls[saves] as unknown as [string, string, Record<string, unknown>])[2];
-    expect(((beforeSend as { 系统: { 扩展: { plotVector: VectorState } } }).系统.扩展.plotVector.tasks[0].retry)).toMatchObject({ sending: true, attempts: 1 });
-    expect(row(h, 'item:ointment')).toMatchObject({ status: 'bound', raw: broken, error: firstError, retry: { attempts: 1, source: 'manual', sending: false } });
-    const key = row(h, 'item:ointment').task.key;
-    expect(await new RequestJournal(store).genesis({ profileId: 'p', slotId: 's' }, `${key}#retry-1`).lookup()).toMatchObject({ kind: 'raw' });
+    expect(((beforeSend as { 系统: { 扩展: { plotVector: VectorState } } }).系统.扩展.plotVector.tasks[0].retry)).toMatchObject({ attempts: 1, source: 'manual' });
+    expect(row(h, 'item:ointment')).toMatchObject({ status: 'bound', raw: broken, error: firstError, retry: { attempts: 1, source: 'manual' } });
     expect(h.state.get(`${P.inventoryItems}.ointment`)).toEqual(ointment);
   });
 
-  it('a request that failed without a reply stays "no result": Step3 never sends for it, only the player does, and a failed retry never borrows the old reply', async () => {
+  it('a request that failed without a reply counts as failed: Step3 fills it, and the player can retry it too', async () => {
     const h = setup(); writePlotVectorControl(true);
     h.ai.generate.mockImplementation(async () => { throw new Error('network down'); });
     await round(h, 1, () => h.state.set(P.inventoryItems, { ointment }));
     expect(row(h, 'item:ointment')).toMatchObject({ status: 'failed', error: 'Error: network down' });
     expect(row(h, 'item:ointment').raw).toBeUndefined();
-    expect(h.adapter.abilityBacklog().map(b => b.state)).toEqual(['unknown']);
-    expect(await h.adapter.abilityRepairTask()).toBeNull();
-    // The player's retry fails the same way: still no reply, still not Step3's.
+    expect(h.adapter.abilityBacklog().map(b => b.state)).toEqual(['failed']);
+    expect((await h.adapter.abilityRepairTask())?.block).toContain('修复药膏');
+    // The player's retry fails the same way: the entry stays, still failed, still Step3's to fill.
     const failing = network(h, async () => { throw new Error('still down'); });
     expect(await h.adapter.regenerateAbility('item:ointment')).toEqual({ bound: false, requested: true });
     expect(failing).toHaveBeenCalledTimes(1);
-    expect(row(h, 'item:ointment').retry).toMatchObject({ attempts: 1, source: 'manual', sending: false, error: 'still down' });
-    expect(h.adapter.abilityBacklog().map(b => b.state)).toEqual(['unknown']);
-    expect(await h.adapter.abilityRepairTask()).toBeNull();
-    // An entry whose first reply was received and rejected, then a retry got no reply: still "no result".
-    const h2 = setup(); writePlotVectorControl(true);
-    h2.ai.generate.mockImplementation(async () => broken);
-    await round(h2, 1, () => h2.state.set(P.inventoryItems, { ointment }));
-    expect(h2.adapter.abilityBacklog().map(b => b.state)).toEqual(['failed']);
-    network(h2, async () => { throw new Error('down'); });
-    await h2.adapter.regenerateAbility('item:ointment');
-    expect(h2.adapter.abilityBacklog().map(b => b.state)).toEqual(['unknown']);
-    expect(await h2.adapter.abilityRepairTask()).toBeNull();
+    expect(row(h, 'item:ointment').retry).toMatchObject({ attempts: 1, source: 'manual', error: 'still down' });
+    expect(h.adapter.abilityBacklog().map(b => b.state)).toEqual(['failed']);
+    expect(await h.adapter.abilityRepairTask()).not.toBeNull();
     // A later explicit retry that gets a reply binds it.
     network(h, async () => JSON.stringify({ version: 3, card: ability('J') }));
     expect(await h.adapter.regenerateAbility('item:ointment')).toEqual({ bound: true, requested: true });
     expect(row(h, 'item:ointment').retry).toMatchObject({ attempts: 2, source: 'manual' });
+    expect(h.state.get(`${P.inventoryItems}.ointment`)).toEqual(ointment);
   });
 
   it('Step3 requests that fail without a reply still use up the automatic rounds; the entry stays and the player can retry', async () => {
@@ -1126,25 +744,23 @@ describe('ability failure lifecycle: the obtained entry stays, only the snippet 
     expect(vector(h).cards.map(c => c.task.entry.id).sort()).toEqual(['environment:name:微风', 'item:ointment']);
   });
 
-  it('an unknown outcome is never retried by Step3, but the player can retry it explicitly', async () => {
+  it('a request left when the page closed counts as failed: Step3 fills it in this round', async () => {
     const h = setup(); writePlotVectorControl(true);
     h.state.set(P.roundNumber, 1);
     h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 1 } });
     const task = tasksAfterSave({ id: 'old', success: true, before: [], after: projectSavedElements(h.state.toSnapshot()).entries })[0];
     h.state.set(P.plotVector, { ...initialVectorState(), tasks: [{ task, status: 'sending' }] });
-    expect(h.adapter.abilityBacklog().map(b => b.state)).toEqual(['unknown']);
-    expect(await h.adapter.abilityRepairTask()).toBeNull();
-    network(h, async () => JSON.stringify({ version: 3, card: ability('J') }));
-    expect(await h.adapter.regenerateAbility('item:tea')).toEqual({ bound: true, requested: true });
-    expect(row(h, 'item:tea')).toMatchObject({ status: 'bound', retry: { attempts: 1, source: 'manual' } });
+    expect(h.adapter.abilityBacklog().map(b => b.state)).toEqual(['failed']);
+    const { run } = step3(h, () => ({ commands: [], abilities: [{ id: 'item:tea', card: ability('J') }] }));
+    expect((await run()).extra).toEqual({ resolved: true });
+    expect(row(h, 'item:tea')).toMatchObject({ status: 'bound', retry: { attempts: 1, source: 'step3' } });
   });
 
   it('an environment tag waiting for its ability survives a reload; a later Step3 fills it and the card carries on', async () => {
-    const store = new MemoryRequests();
-    const h = setup(new RequestJournal(store)); writePlotVectorControl(true);
+    const h = setup(); writePlotVectorControl(true);
     await round(h, 1, () => h.state.set(P.environmentTags, [{ 名称: '微风', 描述: '街道上的风', 效果: '舒适' }]));
     expect(row(h, 'environment:name:微风')).toMatchObject({ status: 'failed', error: '缺少能力' });
-    const h2 = reload(h, store);
+    const h2 = reload(h);
     await round(h2, 2, () => h2.state.set(P.environmentTags, [{ 名称: '微风', 描述: '街道上的风', 效果: '舒适' }]));
     expect(row(h2, 'environment:name:微风')).toMatchObject({ status: 'failed' }); // unchanged, still waiting
     const { run } = step3(h2, () => ({ commands: [{ action: 'set', key: P.environmentTags,

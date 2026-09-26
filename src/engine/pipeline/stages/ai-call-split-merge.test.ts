@@ -71,42 +71,12 @@ describe('impulse split input boundary', () => {
     await expect(stage.execute(ctx)).rejects.toThrow('存档已切换');
     expect(generate).toHaveBeenCalledTimes(1);
   });
-  for (const captureActive of [false, true]) it(`final instruction matches action protocol, capture=${captureActive}`, async () => {
-    const requests: GenerateOptions[] = [];
-    const ai = { generate: async (o: GenerateOptions) => { requests.push(o); return requests.length === 1 ? STEP1 : STEP2; } } as unknown as AIService;
-    const ctx = splitCtx(); ctx.meta.stateUpdatesRequired = true;
-    ctx.meta.plotVectorPromptMode = true; ctx.meta.settingCaptureActive = captureActive;
-    await new AICallStage(ai, new ResponseParser()).execute(ctx);
-    const instruction = String(requests[1].messages.at(-1)?.content);
-    expect(instruction).toContain('state_updates / commands');
-    expect(instruction).toContain('物品和金额仅写 state_updates');
-    expect(instruction).not.toContain('四个字段');
-    expect(instruction).not.toContain('每条都要对应一条 command');
-    expect(instruction.includes('/ setting_updates')).toBe(captureActive);
-  });
-  it('keeps the legacy final checklist when no action contract is active', async () => {
+  it('keeps the four-field final checklist', async () => {
     const requests: GenerateOptions[] = [];
     const ai = { generate: async (o: GenerateOptions) => { requests.push(o); return requests.length === 1 ? STEP1 : STEP2; } } as unknown as AIService;
     await new AICallStage(ai, new ResponseParser()).execute(splitCtx());
     const instruction = String(requests[1].messages.at(-1)?.content);
     expect(instruction).toContain('四个字段'); expect(instruction).not.toContain('state_updates');
-  });
-  it('separate mode does not let an unsolicited Step2 state_updates become the settlement result', async () => {
-    const requests: GenerateOptions[] = [];
-    const ai = { generate: async (o: GenerateOptions) => {
-      requests.push(o);
-      return requests.length === 1 ? STEP1 : JSON.stringify({ ...JSON.parse(STEP2),
-        state_updates: { version: 1, actions: [{ op: 'pay', account: 'cash', amount: 99 }] } });
-    } } as unknown as AIService;
-    const ctx = splitCtx();
-    ctx.meta.plotVectorPromptMode = true;
-    ctx.meta.stateUpdatesRequired = true;
-    ctx.meta.stateUpdateSource = 'settlement';
-    const out = await new AICallStage(ai, new ResponseParser()).execute(ctx);
-    expect(String(requests[1].messages.at(-1)?.content)).not.toContain('state_updates');
-    expect(out.parsedResponse?.customFields?.state_updates).toBeUndefined();
-    expect(out.meta.rawResponseStep2).toContain('state_updates');
-    expect(out.parsedResponse?.commands).toHaveLength(1);
   });
   for (const tagged of [false, true]) for (const enabled of [false, true]) {
     it(`preserves narrative and raw records, tagged=${tagged} enabled=${enabled}`, async () => {
@@ -168,31 +138,6 @@ describe('AICallStage · prompt metrics (R1 P0)', () => {
 });
 
 describe('AICallStage · split-gen merge whitelist', () => {
-  it('resumes after interruption before Step2 without regenerating Step1', async () => {
-    const replies = new Map<string, string>();
-    const sent: string[] = [];
-    const service = { generate: async (opts: GenerateOptions) => opts.checkpoint!.run(
-      { config: {} as never, messages: opts.messages, stream: !!opts.stream }, async () => {
-        const step = opts.generationId!.endsWith('_step2') ? 'step2' : 'step1';
-        sent.push(step); return step === 'step1' ? STEP1 : STEP2;
-      }) } as unknown as AIService;
-    const stage = new AICallStage(service, new ResponseParser());
-    const context = () => {
-      const ctx = splitCtx();
-      ctx.meta.plotVectorCheckpoint = step => ({run: async (_request, send) => {
-        if (replies.has(step)) return replies.get(step)!;
-        const raw = await send(); replies.set(step, raw); return raw;
-      }});
-      return ctx;
-    };
-    const first = context();
-    first.meta.plotVectorGuard = vi.fn().mockImplementationOnce(() => {}).mockImplementationOnce(() => {throw new Error('interrupted');});
-    await expect(stage.execute(first)).rejects.toThrow('interrupted');
-    const resumed = await stage.execute(context());
-    expect(sent).toEqual(['step1', 'step2']);
-    expect(resumed.parsedResponse?.text).toContain('码头的风很凉');
-    expect(resumed.parsedResponse?.commands).toHaveLength(1);
-  });
   it('carries setting_updates from step2 into the merged response', async () => {
     const stage = new AICallStage(fakeAiService(), new ResponseParser());
     const out = await stage.execute(splitCtx());

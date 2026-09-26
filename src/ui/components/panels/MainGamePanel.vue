@@ -62,7 +62,6 @@ import { useRouter } from 'vue-router';
 import type { SaveHealthReport } from '@/engine/persistence/save-health';
 import type { EventBus } from '@/engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS, type BookmarkedRound } from '@/engine/pipeline/types';
-import { StateUpdateError } from '@/engine/state-updates/compiler';
 import Modal from '@/ui/components/common/Modal.vue';
 import FormattedText from '@/ui/components/common/FormattedText.vue';
 import SettingTaggedText from '@/ui/components/common/SettingTaggedText.vue';
@@ -116,7 +115,6 @@ interface ChatMessage {
   _thinking?: string;
   _rawResponse?: string;
   _rawResponseStep2?: string;
-  _rawResponseSettlement?: string;
   _commands?: unknown[];
   _shortTermPreview?: string;
   // Engram per-round visualization snapshots
@@ -296,7 +294,7 @@ const showCommandsViewer = ref(false);
 const activeThinking = ref<{ text: string; roundNumber: number } | null>(null);
 const showThinkingViewer = ref(false);
 
-const activeRaw = ref<{ step1: string; step2: string; settlement: string; roundNumber: number } | null>(null);
+const activeRaw = ref<{ step1: string; step2: string; roundNumber: number } | null>(null);
 const showRawViewer = ref(false);
 
 function openThinkingViewer(msg: ChatMessage): void {
@@ -321,7 +319,6 @@ function openRawViewer(msg: ChatMessage): void {
   activeRaw.value = {
     step1: msg._rawResponse ?? '',
     step2: msg._rawResponseStep2 ?? '',
-    settlement: msg._rawResponseSettlement ?? '',
     roundNumber: round,
   };
   showRawViewer.value = true;
@@ -905,23 +902,8 @@ function onHealthGateGoToSave(): void {
   void router.push('/game/save');
 }
 
-const failedRound = ref<{ token: string; input: string; error: string } | null>(null);
-const regenerationClickLocked = ref(false);
-let regeneratedInput: string | null = null;
-function regenerateFailedRound(): void {
-  const failed = failedRound.value;
-  if (!failed || isGenerating.value || isWorldBuilding.value || regenerationClickLocked.value) return;
-  regenerationClickLocked.value = true;
-  setTimeout(() => { regenerationClickLocked.value = false; }, 1000);
-  regeneratedInput = failed.input;
-  _lastSentInput = failed.input;
-  localStorage.setItem(_PENDING_INPUT_KEY, failed.input);
-  eventBus?.emit('pipeline:user-input', { text: failed.input, regenerateToken: failed.token });
-}
-
 /** Hand the input to the pipeline (the pre-gate send semantics, unchanged). */
 function dispatchInput(trimmed: string): void {
-  regeneratedInput = null;
   // Safety net: mirror the sent input to the system clipboard so the player
   // can recover it even if the round fails. Failure must never block the send.
   void writeClipboard(trimmed).catch((err: unknown) => {
@@ -1070,8 +1052,7 @@ onMounted(() => {
    */
   unsubscribers.push(
     eventBus.on('engine:round-start', () => {
-      if (regeneratedInput === null && _lastSentInput) composerRef.value?.clearInputIfMatches(_lastSentInput);
-      failedRound.value = null;
+      if (_lastSentInput) composerRef.value?.clearInputIfMatches(_lastSentInput);
       if (windowMode.value === 'pinned') jumpToLatest();
       isGenerating.value = true;
       streamingText.value = '';
@@ -1109,9 +1090,6 @@ onMounted(() => {
       stopTimer();
       isGenerating.value = false;
       streamingText.value = '';
-      if (regeneratedInput !== null) composerRef.value?.clearInputIfMatches(regeneratedInput);
-      regeneratedInput = null;
-      failedRound.value = null;
       _lastSentInput = '';
       localStorage.removeItem(_PENDING_INPUT_KEY);
 
@@ -1130,7 +1108,6 @@ onMounted(() => {
 
   unsubscribers.push(
     eventBus.on('ai:error', (payload) => {
-      regeneratedInput = null;
       stopTimer();
       isGenerating.value = false;
       streamingText.value = '';
@@ -1139,16 +1116,10 @@ onMounted(() => {
         composerRef.value?.restoreInput(_lastSentInput);
         _lastSentInput = '';
       }
-      const failure = (payload as { error?: Error })?.error;
-      // A rejected item/money update is the model's reply, not a transport error: say so in player words.
-      const errMsg = failure instanceof StateUpdateError ? t('mainGame.recovery.stateUpdates')
-        : failure?.message ?? t('mainGame.toast.aiErrorUnknown');
-      const recovery = payload as { regenerateToken?: string; retryInput?: string; roundFailure?: boolean };
-      failedRound.value = recovery.regenerateToken && recovery.retryInput
-        ? { token: recovery.regenerateToken, input: recovery.retryInput, error: errMsg } : null;
+      const errMsg = (payload as { error?: Error })?.error?.message ?? t('mainGame.toast.aiErrorUnknown');
       eventBus.emit('ui:toast', {
         type: 'error',
-        message: t(recovery.roundFailure ? 'mainGame.recovery.failed' : 'mainGame.toast.aiError', { error: errMsg }),
+        message: t('mainGame.toast.aiError', { error: errMsg }),
         duration: 5000,
       });
     }),
@@ -1168,9 +1139,7 @@ onMounted(() => {
 
   unsubscribers.push(
     eventBus.on('pipeline:input-rejected', () => {
-      // No round was accepted: keep the draft and any existing recovery ticket.
-      regeneratedInput = null;
-      regenerationClickLocked.value = false;
+      // No round was accepted (busy or gated): keep the draft in the composer.
       _lastSentInput = '';
     }),
   );
@@ -1599,13 +1568,6 @@ watch(
       @go-to-save="onHealthGateGoToSave"
     />
     <!-- Story 9: hidden in worldBuilding mode (no turn advancement while building the world). -->
-    <div v-if="failedRound && !isGenerating && !isWorldBuilding" class="round-recovery" role="alert" data-testid="round-recovery">
-      <p>{{ $t('mainGame.recovery.failed', { error: failedRound.error }) }}</p>
-      <p>{{ $t('mainGame.recovery.explain') }}</p>
-      <button type="button" class="modal-btn modal-btn--confirm" data-testid="regenerate-round" :disabled="regenerationClickLocked" @click="regenerateFailedRound">
-        {{ $t('mainGame.recovery.regenerate') }}
-      </button>
-    </div>
     <GameComposer
       v-if="!isWorldBuilding"
       ref="composerRef"
@@ -1651,7 +1613,6 @@ watch(
       v-model="showRawViewer"
       :step1="activeRaw?.step1 ?? ''"
       :step2="activeRaw?.step2 ?? ''"
-      :settlement="activeRaw?.settlement ?? ''"
       :round-number="activeRaw?.roundNumber ?? 0"
     />
     <EngramRoundViewer
@@ -1665,17 +1626,6 @@ watch(
 </template>
 
 <style scoped>
-.round-recovery {
-  flex: 0 0 auto;
-  padding: 12px max(16px, var(--sidebar-right-reserve, 40px)) 12px max(16px, var(--sidebar-left-reserve, 40px));
-  border-top: 1px solid var(--border-color, #45453f);
-  font-size: 13px;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-  max-height: 30vh;
-  overflow-y: auto;
-}
-.round-recovery p { margin: 0 0 8px; }
 /*
  * MainGamePanel — sanctuary migration (2026-04-21)
  *

@@ -71,26 +71,3 @@ test('infinite Worker can be timed out and cancelled without leaving frames', {t
   expect(result.timed).toContain('超时'); expect(result.cancelled).toContain('取消');
   await expect(page.locator('iframe[sandbox]')).toHaveCount(0);
 });
-
-test('real IndexedDB recovery survives reload and atomically excludes a second claimant', {tag: ['@plot-vector', '@story-d145']}, async ({page}) => {
-  await seedSave(page);
-  const result = await page.evaluate(async () => {
-    const path = '/src/features/plot-vector/request-journal.ts';
-    const { BrowserRequestStore } = await import(/* @vite-ignore */ path);
-    const a = new BrowserRequestStore(), b = new BrowserRequestStore();
-    const rows = await Promise.all([a.claim('test', 'fingerprint', 'a', () => {}), b.claim('test', 'fingerprint', 'b', () => {})]);
-    const owner = rows[0] === undefined ? 'a' : 'b';
-    await a.complete('test', owner, 'complete reply', () => {});
-    let refused = false;
-    try { await b.complete('test', 'wrong', 'overwrite', () => {}); } catch { refused = true; }
-    return {winners: rows.filter(row => row === undefined).length, refused};
-  });
-  expect(result).toEqual({winners: 1, refused: true});
-  await page.reload();
-  const raw = await page.evaluate(async () => {
-    const path = '/src/features/plot-vector/request-journal.ts';
-    const { BrowserRequestStore } = await import(/* @vite-ignore */ path);
-    return (await new BrowserRequestStore().claim('test', 'fingerprint', 'c', () => {})).raw;
-  });
-  expect(raw).toBe('complete reply');
-});

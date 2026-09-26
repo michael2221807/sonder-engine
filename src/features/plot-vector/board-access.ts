@@ -34,7 +34,7 @@ export class VectorBoardAccess {
   private unsubs: Array<() => void>;
   /** Same host boundary as the main round: a preview never shows or saves an unchecked Worker result. */
   private readonly worker: Executor;
-  constructor(private state: StateManager, private saves: Pick<SaveManager, 'assertCurrent' | 'saveGame'>,
+  constructor(private state: StateManager, private saves: Pick<SaveManager, 'saveGame'>,
     private slot: () => { profileId: string; slotId: string } | null, private busy: () => boolean,
     worker: Executor = new VectorWorkerClient(), private nativeRules?: NativeRules,
     private onSaveSettled: () => void = () => {},
@@ -71,8 +71,6 @@ export class VectorBoardAccess {
         || stable(this.slot()) !== stable(slot) || stable(this.state.toSnapshot()) !== fingerprint)
         throw new Error('board-view-stale');
     };
-    guard();
-    await this.saves.assertCurrent(slot!.profileId, slot!.slotId);
     guard();
     const preview = async (layout?: Layout): Promise<PreparedVector> => {
       guard();

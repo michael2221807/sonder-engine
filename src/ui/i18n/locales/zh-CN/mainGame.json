@@ -120,7 +120,6 @@
   "mainGame.rawViewer.titleGeneric": "原始响应",
   "mainGame.rawViewer.tabStep1": "Step 1 · 叙事",
   "mainGame.rawViewer.tabStep2": "Step 2 · 结构化",
-  "mainGame.rawViewer.tabSettlement": "物品结算",
   "mainGame.rawViewer.textareaLabel": "原始 AI 响应文本（只读）",
   "mainGame.rawViewer.empty": "（该回合未记录原始文本）",
   "mainGame.engram.title": "Engram · 第 {n} 回合",
@@ -285,8 +284,6 @@
   "mainGame.vectorBoard.storedBalance": "实际已存{channel}",
   "mainGame.vectorBoard.backlogHelp": "这些已获得的条目还没有可用的能力。剧情和物品不受影响；之后的回合会自动再试，你也可以现在补生（会调用一次模型）。",
   "mainGame.vectorBoard.backlogState.failed": "能力没有生成成功",
-  "mainGame.vectorBoard.backlogState.unknown": "上次请求没有收到结果",
-  "mainGame.vectorBoard.backlogState.retrying": "补生请求没有收到结果",
   "mainGame.vectorBoard.retryAbility": "补生能力",
   "mainGame.vectorBoard.retryingAbility": "正在补生…",
   "mainGame.vectorBoard.retryResult.bound": "能力已补上，可以放上棋盘了。",
@@ -302,9 +299,5 @@
   "mainGame.vectorBoard.receiptStored": "存入 {amount}",
   "mainGame.vectorBoard.receiptReleased": "释放 {amount}",
   "mainGame.vectorBoard.receiptRoute": "行程／方向已计入下方回放",
-  "mainGame.vectorBoard.receiptMode": "运行状态已计入结果",
-  "mainGame.recovery.failed": "本回合未完成：{error}",
-  "mainGame.recovery.stateUpdates": "模型给出的物品或金钱变化无法安全执行，没有保存",
-  "mainGame.recovery.explain": "可以保留原输入重新生成本回合。将重新请求模型，可能产生新的费用；旧回复会保留。",
-  "mainGame.recovery.regenerate": "重新生成本回合"
+  "mainGame.vectorBoard.receiptMode": "运行状态已计入结果"
 }

@@ -24,7 +24,7 @@ function setup() {
     commit?: { guard: () => void; committed: () => void }) => { commit?.guard(); commit?.committed(); });
   const worker = { execute: vi.fn(<T extends VectorResult>(op: VectorOperation) => executeVectorOperation(op) as Promise<T>), cancelAll: vi.fn() };
   const settled = vi.fn(() => { expect(access.isSaving).toBe(false); });
-  access = new VectorBoardAccess(state, { assertCurrent: vi.fn(async () => {}), saveGame },
+  access = new VectorBoardAccess(state, { saveGame },
     () => ({ profileId: 'p', slotId: 's' }), () => busy, {
       execute: <T extends VectorResult>(op: VectorOperation) => worker.execute(op) as Promise<T>, cancelAll: worker.cancelAll,
     }, undefined, settled);
@@ -103,7 +103,7 @@ it('lists obtained entries whose ability is not ready; the player retry holds th
   h.state.set(P.plotVector, { ...initialVectorState(), tasks: [{ task, status: 'failed', error: 'boom', raw: 'not an ability', validationRevision: GENESIS_VALIDATION_REVISION }] });
   let busy = false, heldDuringRetry: boolean | undefined;
   const regenerate = vi.fn(async () => { heldDuringRetry = retryAccess.isSaving; return { bound: true, requested: true }; });
-  const retryAccess: VectorBoardAccess = new VectorBoardAccess(h.state, { assertCurrent: vi.fn(async () => {}), saveGame: h.saveGame },
+  const retryAccess: VectorBoardAccess = new VectorBoardAccess(h.state, { saveGame: h.saveGame },
     () => ({ profileId: 'p', slotId: 's' }), () => busy, {
       execute: <T extends VectorResult>(op: VectorOperation) => h.worker.execute(op) as Promise<T>, cancelAll: h.worker.cancelAll,
     }, undefined, () => {}, regenerate);

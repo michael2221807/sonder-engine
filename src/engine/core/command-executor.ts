@@ -99,7 +99,7 @@ export class CommandExecutor {
   ) {}
 
   /** 执行单条指令 — 返回执行结果 */
-  execute(command: Command, guard?: (resolved: Command) => string | undefined): CommandResult {
+  execute(command: Command): CommandResult {
     // ── 步骤 1：结构验证 ──
     if (!command.action || !command.key) {
       return { success: false, command, error: 'Missing action or key' };
@@ -114,8 +114,6 @@ export class CommandExecutor {
     const relocatedFrom = resolution.kind === 'relocated' ? command.key : undefined;
 
     try {
-      const rejection = guard?.(cmd);
-      if (rejection) return { success: false, command: cmd, error: rejection, relocatedFrom };
       let change;
 
       switch (cmd.action) {
@@ -194,12 +192,12 @@ export class CommandExecutor {
    * 当前实现为"尽力执行"：单条失败不影响后续指令。
    * 失败的指令会记录到 results 中并在 console 输出警告。
    */
-  executeBatch(commands: Command[], guard?: (resolved: Command) => string | undefined): BatchCommandResult {
+  executeBatch(commands: Command[]): BatchCommandResult {
     const results: CommandResult[] = [];
     const changes: ChangeLog['changes'] = [];
 
     for (const cmd of commands) {
-      const result = this.execute(cmd, guard);
+      const result = this.execute(cmd);
       results.push(result);
       // 只收集成功执行的变更
       if (result.change) {

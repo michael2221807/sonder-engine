@@ -4,7 +4,6 @@ import type { PipelineContext } from '../pipeline/types';
 export interface PlotVectorRoundPort {
   promptTransform?(ctx: PipelineContext): import('../prompt/raw-prompt-transform').RawPromptTransform | undefined;
   prepare(ctx: PipelineContext): Promise<PipelineContext>;
-  beforeCommands?(ctx: PipelineContext): PipelineContext;
   beforeSave(ctx: PipelineContext): Promise<void>;
   afterSave(ctx: PipelineContext): Promise<void>;
   dispose(): void;

@@ -50,19 +50,6 @@ export interface PipelineMeta {
   /** Present only for an opted-in vector attempt. Rechecked at send/apply/save boundaries. */
   plotVectorGuard?: () => void;
   plotVectorCommitted?: () => void;
-  plotVectorCheckpoint?: (step: 'single' | 'step1' | 'step2' | 'repair' | 'polish' | 'settlement') => import('../ai/types').GenerationCheckpoint;
-  stateUpdateCommandGuard?: (resolved: import('../types').Command) => string | undefined;
-  stateUpdatesRequired?: boolean;
-  stateUpdateSource?: 'inline' | 'settlement';
-  /** Model reply from the optional dedicated item/money stage. Not mixed into Step2. */
-  stateSettlementUpdates?: unknown;
-  stateSettlementRaw?: string;
-  stateSettlementStrict?: boolean;
-  stateSettlementDurationMs?: number;
-  /** Opaque host-owned, per-attempt synchronization token; never persisted. */
-  stateUpdateSession?: object;
-  plotVectorRequestAttempt?: string;
-  plotVectorRecovered?: string[];
   plotVectorLifecycle?: { saved?: boolean; invalidated?: boolean };
   /** Frozen before asynchronous context assembly to avoid mixing feature modes. */
   plotVectorAssemblyEpoch?: string;
@@ -162,8 +149,6 @@ export interface PromptMetrics {
   step1: PromptStepMetrics;
   /** Present only in split-gen mode. */
   step2?: PromptStepMetrics;
-  /** Present only for the experimental dedicated item/money call. */
-  settlement?: PromptStepMetrics;
 }
 
 /**
@@ -221,8 +206,6 @@ export interface PipelineContext {
   parsedResponse?: AIResponse;
   /** 指令执行结果（包含每条指令的成功/失败和变更日志） */
   commandResults?: BatchCommandResult;
-  /** Component preflight failures, reported with executed commands without applying them. */
-  rejectedCommands?: import('../types').CommandResult[];
   /** 最终叙事文本（渲染用） */
   narrativeText?: string;
   /** 行动选项列表（渲染用） */

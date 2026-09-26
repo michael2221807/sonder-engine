@@ -47,19 +47,6 @@ function makeProfile(): ProfileMeta {
 }
 
 describe('ProfileManager — sessionType (Story 9)', () => {
-  it('clears related recovery storage before clearing game data', async () => {
-    memStore.set('save_test', { data: true });
-    const cleanup = vi.fn(async () => { expect(memStore.has('save_test')).toBe(true); });
-    const manager = new ProfileManager(cleanup); await manager.initialize();
-    await manager.clearAll();
-    expect(cleanup).toHaveBeenCalledTimes(1); expect(memStore.size).toBe(0);
-  });
-  it('does not claim a complete reset or delete saves when related cleanup fails', async () => {
-    const manager = new ProfileManager(async () => { throw new Error('cleanup failed'); });
-    await manager.initialize(); memStore.set('save_test', { data: true });
-    await expect(manager.clearAll()).rejects.toThrow('cleanup failed');
-    expect(memStore.has('save_test')).toBe(true);
-  });
   let pm: ProfileManager;
 
   beforeEach(async () => {

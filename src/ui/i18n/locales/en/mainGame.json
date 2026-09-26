@@ -120,7 +120,6 @@
   "mainGame.rawViewer.titleGeneric": "Raw Response",
   "mainGame.rawViewer.tabStep1": "Step 1 · Narrative",
   "mainGame.rawViewer.tabStep2": "Step 2 · Structured",
-  "mainGame.rawViewer.tabSettlement": "Item settlement",
   "mainGame.rawViewer.textareaLabel": "Raw AI response text (read-only)",
   "mainGame.rawViewer.empty": "(No raw text recorded for this round)",
   "mainGame.engram.title": "Engram · Round {n}",
@@ -285,8 +284,6 @@
   "mainGame.vectorBoard.storedBalance": "Actually stored {channel}",
   "mainGame.vectorBoard.backlogHelp": "These obtained entries have no usable ability yet. Your story and items are unaffected; later rounds retry automatically, or you can regenerate now (one model call).",
   "mainGame.vectorBoard.backlogState.failed": "Ability generation failed",
-  "mainGame.vectorBoard.backlogState.unknown": "The last request got no result",
-  "mainGame.vectorBoard.backlogState.retrying": "The retry got no result",
   "mainGame.vectorBoard.retryAbility": "Regenerate ability",
   "mainGame.vectorBoard.retryingAbility": "Regenerating…",
   "mainGame.vectorBoard.retryResult.bound": "The ability is ready; you can place it on the board.",
@@ -302,9 +299,5 @@
   "mainGame.vectorBoard.receiptStored": "stored {amount}",
   "mainGame.vectorBoard.receiptReleased": "released {amount}",
   "mainGame.vectorBoard.receiptRoute": "route effect included in the replay below",
-  "mainGame.vectorBoard.receiptMode": "mode effect included in the result",
-  "mainGame.recovery.failed": "This round did not complete: {error}",
-  "mainGame.recovery.stateUpdates": "the model's item or money changes could not be applied safely, so nothing was saved",
-  "mainGame.recovery.explain": "Regenerate this round using the same input. This makes new model requests and may incur new charges. Previous replies are retained.",
-  "mainGame.recovery.regenerate": "Regenerate this round"
+  "mainGame.vectorBoard.receiptMode": "mode effect included in the result"
 }

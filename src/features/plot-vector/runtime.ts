@@ -26,8 +26,6 @@ export interface AbilityRetry {
   /** Story round of the last Step3 try, so several tries within one round count once. */
   lastAutoRound?: number;
   source?: 'step3' | 'manual';
-  /** A player request whose reply has not been recorded yet. Step3 never touches such an entry. */
-  sending?: boolean;
   /** Reply of the latest retry, kept before validation. */
   raw?: string;
   /** Validation revision the latest `raw` was checked under. */
@@ -50,12 +48,6 @@ export interface VectorState {
   tasks: VectorTaskRow[];
   layout?: Layout;
   last?: { id: string; board: CompiledBoard; result: RunDone; layout: Layout; starting?: NativeInput; progress?: CardProgress[] };
-  /**
-   * Host-owned request branch, renewed when the player explicitly rolls a round back, so sending that round
-   * again is a new request rather than a replay of the undone reply. Lives in the save like the rollback itself;
-   * never taken from a Worker result.
-   */
-  branch?: string;
 }
 export interface PreparedVector { id: string; board: CompiledBoard; result: RunDone; layout: Layout; prompt: string; starting?: NativeInput; progress?: CardProgress[] }
 export type VectorOperation =
