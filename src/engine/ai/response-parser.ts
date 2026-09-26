@@ -44,6 +44,39 @@ function tryParseWithSanitizer(src: string): Record<string, unknown> | null {
   }
 }
 
+/**
+ * Lift `<tag>…</tag>` blocks out of a reply: the text without them, and each tag's contents (several blocks
+ * of one tag are joined by a blank line). One pass over the text: inside a JSON object, string state is
+ * tracked, so the same characters inside a JSON string are never taken; outside JSON (prose, or a block
+ * before or after the JSON) quotes do not matter. A block's own content is skipped whole. An opening tag left
+ * unclosed (a cut-off reply) takes the rest of the text. Tags that do not appear are absent from `sidecars`.
+ */
+export function liftSidecars(text: string, tags: readonly string[] | undefined): { text: string; sidecars: Record<string, string> } {
+  const wanted = (tags ?? []).filter(Boolean);
+  const found = new Map<string, string[]>();
+  let kept = '', depth = 0, inString = false, escaped = false, i = 0;
+  while (i < text.length) {
+    const tag = inString ? undefined : wanted.find(t => text.startsWith(`<${t}>`, i));
+    if (tag) {
+      const open = i + tag.length + 2, close = text.indexOf(`</${tag}>`, open);
+      found.set(tag, [...(found.get(tag) ?? []), text.slice(open, close < 0 ? text.length : close).trim()]);
+      i = close < 0 ? text.length : close + tag.length + 3;
+      continue;
+    }
+    const c = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (c === '\\') escaped = true;
+      else if (c === '"') inString = false;
+    } else if (c === '{') depth++;
+    else if (c === '}' && depth > 0) depth--;
+    else if (c === '"' && depth > 0) inString = true;
+    kept += c;
+    i++;
+  }
+  return { text: kept.trim(), sidecars: Object.fromEntries([...found].map(([tag, blocks]) => [tag, blocks.join('\n\n')])) };
+}
+
 export class ResponseParser {
   /**
    * 思维链标签的匹配模式（英文标签名 —— PRINCIPLES §3.17）
@@ -98,7 +131,7 @@ export class ResponseParser {
    *   false（默认）= 销毁式 strip，与 pre-migration 行为 byte-identical。
    *   true = 捕获 thinking 内容填入 AIResponse.thinking + strip from text。
    */
-  parse(raw: string, options?: { captureThinking?: boolean }): AIResponse {
+  parse(raw: string, options?: { captureThinking?: boolean; sidecars?: readonly string[] }): AIResponse {
     const capture = options?.captureThinking === true;
 
     let sanitized: string;
@@ -111,6 +144,10 @@ export class ResponseParser {
     } else {
       sanitized = this.sanitize(raw);
     }
+    // A feature's own block after the JSON is lifted out first, so it can neither break the JSON nor be lost with it.
+    const lifted = options?.sidecars?.length ? liftSidecars(sanitized, options.sidecars) : undefined;
+    if (lifted) sanitized = lifted.text;
+    const sidecars = lifted && Object.keys(lifted.sidecars).length ? { sidecars: lifted.sidecars } : {};
 
     // Extract <正文> block before JSON parsing — some models put narrative
     // outside the JSON in CoT-style tags instead of inside json.text.
@@ -147,6 +184,7 @@ export class ResponseParser {
         thinking,
         raw: sanitized,
         parseOk: true,
+        ...sidecars,
       };
     }
 
@@ -158,6 +196,7 @@ export class ResponseParser {
       thinking,
       raw: sanitized,
       parseOk: false,
+      ...sidecars,
     };
   }
 

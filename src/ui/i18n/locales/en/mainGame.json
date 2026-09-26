@@ -285,7 +285,7 @@
   "mainGame.vectorBoard.savedProgress": "Saved levels, stores and uses",
   "mainGame.vectorBoard.acceptedProgress": "Progress saved with this turn",
   "mainGame.vectorBoard.progressHelp": "Only saved progress appears here. A preview cannot change it. The engine tracks every level and store.",
-  "mainGame.vectorBoard.backlogHelp": "These obtained entries have no usable ability yet. Your story and items are unaffected; later rounds retry automatically, or you can regenerate now (one model call).",
+  "mainGame.vectorBoard.backlogHelp": "These obtained entries (including ones you had before turning the feature on) have no usable ability yet. The story and items are unaffected; later turns generate them automatically, up to 8 per turn and two automatic turns per entry. You can also retry one now (one model call).",
   "mainGame.vectorBoard.backlogState.failed": "Ability generation failed",
   "mainGame.vectorBoard.retryAbility": "Regenerate ability",
   "mainGame.vectorBoard.retryingAbility": "Regenerating…",
@@ -304,5 +304,10 @@
   "mainGame.vectorBoard.receiptRoute": "route effect included in the replay below",
   "mainGame.vectorBoard.level": "Level",
   "mainGame.vectorBoard.stored": "Stored",
-  "mainGame.vectorBoard.weather": "At departure (like weather): {cards}"
+  "mainGame.vectorBoard.weather": "At departure (like weather): {cards}",
+  "mainGame.vectorBoard.openHint": "Plot-vector board: place cards, preview a trip, see the last turn",
+  "mainGame.vectorBoard.newCards": "{count} new cards",
+  "mainGame.vectorBoard.backlogSummary": "Entries without an ability ({count})",
+  "mainGame.vectorBoard.backlogState.waiting": "Waiting for an ability",
+  "mainGame.toast.vectorNewCards": "New cards: {names} (place them on the board)"
 }

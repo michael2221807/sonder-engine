@@ -74,7 +74,7 @@ export class AICallStage implements PipelineStage {
     streamFilter?.flush();
     const aiCallDurationMs = performance.now() - aiCallStartedAt;
     const captureThinking = ctx.meta.cotEnabled === true;
-    const parsedResponse = this.responseParser.parse(rawResponse, { captureThinking });
+    const parsedResponse = this.responseParser.parse(rawResponse, { captureThinking, sidecars: ctx.meta.responseSidecars });
     emitDebugPromptResponse('mainRound', ctx.generationId, parsedResponse.thinking, rawResponse);
     const promptMetrics: PromptMetrics = {
       step1: buildStepMetrics(ctx.messages, ctx.messageSources, rawResponse),
@@ -218,7 +218,7 @@ export class AICallStage implements PipelineStage {
       generationId: ctx.generationId + '_step2',
       signal: ctx.abortSignal,
     });
-    const parsedStep2 = this.responseParser.parse(rawStep2);
+    const parsedStep2 = this.responseParser.parse(rawStep2, { sidecars: ctx.meta.responseSidecars });
     emitDebugPromptResponse(
       'splitGenMainRoundStep2',
       `${ctx.generationId ?? ''}_step2`,
@@ -241,6 +241,8 @@ export class AICallStage implements PipelineStage {
       // split-gen mode only, which is exactly the class of bug this merge causes.
       settingUpdates: parsedStep2.settingUpdates,
       customFields: parsedStep2.customFields,
+      // A feature's block appended after step2's JSON (lifted out before parsing).
+      ...(parsedStep2.sidecars ? { sidecars: parsedStep2.sidecars } : {}),
       thinking: parsedStep1.thinking,
       raw: rawStep1,
       // The structured fields all come from step2, so step2's parse verdict is the

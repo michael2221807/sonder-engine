@@ -761,8 +761,7 @@ async function bootstrap(): Promise<void> {
     () => !orchestrator || orchestrator.isBusy, vectorNativeRules,
     () => orchestrator?.onStateEditSettled(),
     // The player's ability retry runs through the round adapter (same repair and binding as Step 3).
-    (entryId) => plotVectorAdapter ? plotVectorAdapter.regenerateAbility(entryId) : Promise.reject(new Error('ability-retry-unavailable')),
-    vectorPromptPolicy?.environmentAbility?.field);
+    (entryId) => plotVectorAdapter ? plotVectorAdapter.regenerateAbility(entryId) : Promise.reject(new Error('ability-retry-unavailable')));
   if (pack) {
     orchestrator = new GameOrchestrator(
       stateManager,

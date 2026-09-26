@@ -172,18 +172,23 @@ describe('real pack judgment transition, zero network', () => {
     expect(parseVectorPromptPolicy({ ...rules, abilityRepair: { field: 'abilities', template: 'no placeholder' } }, 'mode')).toBeUndefined();
   });
 
-  it('ability regeneration and Step2 environment abilities use the same guidance and card domain as post-save genesis', () => {
+  it('the ability block of a round, Step3 regeneration and the player retry share one guidance and card domain', () => {
     const repair = parseVectorPromptPolicy(rules, 'mode')!.abilityRepair!;
     expect(repair.field).toBe('abilities');
     expect(repair.template).toContain('{{ITEMS}}');
     expect(repair.guidance).toBe(GENESIS_GUIDANCE);
-    const environment = parseVectorPromptPolicy(rules, 'mode')!.environmentAbility!;
-    expect(environment.prompt).toBe(`${environment.instruction}\n\n${CARD_API}`);
+    const block = parseVectorPromptPolicy(rules, 'mode')!.abilityBlock!;
+    expect(block.tag).toBe('能力');
+    expect(block.prompt).toBe(`${block.instruction}\n\n${CARD_API}`);
+    expect(block.instruction).toContain('<能力>');
     expect(AGA_GENESIS_SYSTEM).toBe(`${GENESIS_GUIDANCE}\n\n${CARD_API}`);
     // The pack wording describes the card format the engine reads, not the retired snippet format.
-    for (const text of [environment.instruction, environment.repair, repair.template])
-      expect(text).not.toMatch(/hooks|onVisit|effects|persistentState|runState|version/);
+    for (const text of [block.instruction, repair.template])
+      expect(text).not.toMatch(/hooks|onVisit|effects|persistentState|runState|version|\{\{PATH\}\}/);
     expect(CARD_API).toMatch(/onPass/);
+    // A malformed block declaration disables the policy instead of half-enabling it.
+    expect(parseVectorPromptPolicy({ ...rules, abilityBlock: { tag: '能 力', instruction: 'x' } }, 'mode')).toBeUndefined();
+    expect(parseVectorPromptPolicy({ ...rules, abilityBlock: { tag: '能力', instruction: '' } }, 'mode')).toBeUndefined();
   });
 
   for (const en of [false, true]) it(`leaves opening and explicit phase overrides on their existing builder format, en=${en}`, async () => {
@@ -236,15 +241,17 @@ describe('real pack judgment transition, zero network', () => {
           expect(requests[0].messages[formatIndex].content).not.toContain('"commands":');
         }
         expect(has(0, h.policy.mode)).toBe(1);
-        // The environment-ability interface goes only where environment tags are written.
-        expect(has(0, h.policy.environmentAbility!.prompt)).toBe(split ? 0 : 1);
+        // The ability block goes only with the request that writes the round's entries, late in its context.
+        expect(has(0, h.policy.abilityBlock!.prompt)).toBe(split ? 0 : 1);
+        expect(prepared.meta.responseSidecars).toEqual(['能力']);
         expect(requests[0].messages.some(m => String(m.content).includes(input))).toBe(true);
         if (split) {
           expect(has(1, h.policy.mode)).toBe(0);
-          expect(has(1, h.policy.environmentAbility!.prompt)).toBe(1);
-          expect(prepared.meta.splitStep2Sources?.[0]).toBe('environment-ability');
+          expect(has(1, h.policy.abilityBlock!.prompt)).toBe(1);
+          const at = prepared.meta.splitStep2Sources!.indexOf('ability-block');
+          expect(prepared.meta.splitStep2Sources!.slice(at + 1).every(source => !source.startsWith('module:'))).toBe(true);
           // Everything supplied by the host remains unchanged, including state and history.
-          expect(prepared.meta.splitStep2Messages?.slice(1)).toEqual(baseStep2);
+          expect(prepared.meta.splitStep2Messages?.filter((_, i) => i !== at)).toEqual(baseStep2);
           expect(requests[1].messages.at(-2)).toEqual({ role: 'assistant', content: JSON.stringify({ text: reply.text }) });
           expect(requests[1].messages.at(-1)?.role).toBe('user');
           expect(requests[1].messages.at(-1)?.content).toBe(h.pack.prompts.splitGenStep2Followup.trim());

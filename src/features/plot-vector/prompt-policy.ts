@@ -4,23 +4,24 @@ import { CARD_API, GENESIS_GUIDANCE } from './genesis/generation-prompt';
 export interface VectorPromptPolicy {
   transform: RawPromptTransform;
   mode: string;
-  environmentAbility?: EnvironmentAbilityPolicy;
+  abilityBlock?: AbilityBlockPolicy;
   abilityRepair?: AbilityRepairPolicy;
 }
-/** Environment abilities written by Step2 with the environment tags (pack-owned wording, one interface). */
-export interface EnvironmentAbilityPolicy {
-  /** Field on each environment tag that carries its card (rebuild plan §2.2). */
-  field: string;
-  /** Step2 interface: pack instruction + the shared card domain. */
-  prompt: string;
-  /** The pack instruction alone (Step3 adds the shared card domain once for all its tasks). */
+/**
+ * The round's abilities (rebuild plan §6.1, I21/I22): the request that writes the round's entries may append
+ * one tagged block of cards after its JSON. Pack-owned tag and wording; the card domain is shared.
+ */
+export interface AbilityBlockPolicy {
+  /** Tag of the block (lifted out of the reply before its JSON is parsed). */
+  tag: string;
+  /** The pack instruction alone. */
   instruction: string;
-  /** Step3 repair block template with `{{PATH}}` and `{{ITEMS}}`. */
-  repair: string;
+  /** What the request carries: the instruction and the card domain. */
+  prompt: string;
 }
 /**
- * Step3 regeneration of item/talent/status abilities that failed (pack-owned task text). The new abilities
- * come back in their own top-level reply field, never as commands on the saved entries.
+ * Step3 abilities for the backlog (pack-owned task text). They come back in their own top-level reply field,
+ * never as commands on the saved entries.
  */
 export interface AbilityRepairPolicy {
   /** Top-level reply field that carries `[{ id, card }]`. */
@@ -54,12 +55,11 @@ export function parseVectorPromptPolicy(raw: unknown, mode: unknown): VectorProm
     for (const edit of edits) result = result.split(edit.from).join(edit.to);
     return result;
   };
-  let environmentAbility: EnvironmentAbilityPolicy | undefined;
-  if (r.environmentAbility !== undefined) {
-    const e = r.environmentAbility as Record<string, unknown> | null;
-    if (!e || typeof e.field !== 'string' || !e.field.trim() || typeof e.instruction !== 'string' || !e.instruction.trim()
-      || typeof e.repair !== 'string' || !e.repair.includes('{{ITEMS}}') || !e.repair.includes('{{PATH}}')) return;
-    environmentAbility = { field: e.field, prompt: `${e.instruction.trim()}\n\n${CARD_API}`, instruction: e.instruction.trim(), repair: e.repair };
+  let abilityBlock: AbilityBlockPolicy | undefined;
+  if (r.abilityBlock !== undefined) {
+    const b = r.abilityBlock as Record<string, unknown> | null;
+    if (!b || typeof b.tag !== 'string' || !/^[^<>\s/]+$/.test(b.tag) || typeof b.instruction !== 'string' || !b.instruction.trim()) return;
+    abilityBlock = { tag: b.tag, instruction: b.instruction.trim(), prompt: `${b.instruction.trim()}\n\n${CARD_API}` };
   }
   let abilityRepair: AbilityRepairPolicy | undefined;
   if (r.abilityRepair !== undefined) {
@@ -67,5 +67,5 @@ export function parseVectorPromptPolicy(raw: unknown, mode: unknown): VectorProm
     if (!a || typeof a.field !== 'string' || !a.field.trim() || typeof a.template !== 'string' || !a.template.includes('{{ITEMS}}')) return;
     abilityRepair = { field: a.field, template: a.template, guidance: GENESIS_GUIDANCE };
   }
-  return { mode, environmentAbility, abilityRepair, transform };
+  return { mode, abilityBlock, abilityRepair, transform };
 }

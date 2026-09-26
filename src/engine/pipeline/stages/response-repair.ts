@@ -30,7 +30,7 @@
  */
 import type { PipelineStage, PipelineContext } from '../types';
 import type { AIService } from '../../ai/ai-service';
-import type { ResponseParser } from '../../ai/response-parser';
+import { liftSidecars, type ResponseParser } from '../../ai/response-parser';
 import type { AIMessage } from '../../ai/types';
 import {
   emitPromptAssemblyDebug,
@@ -125,7 +125,10 @@ export class ResponseRepairStage implements PipelineStage {
     // can never contain setting_updates. Round-62 incident (2026-08-25).
     const metaStep2Raw = ctx.meta.rawResponseStep2;
     const usingStep2Raw = typeof metaStep2Raw === 'string' && metaStep2Raw.trim().length > 0;
-    const structureRaw = usingStep2Raw ? (metaStep2Raw as string) : ctx.rawResponse;
+    // A feature's own block after the JSON was already lifted out at parse time (kept in
+    // parsed.sidecars); the repair model only sees the structure it has to fix.
+    const rawStructure = usingStep2Raw ? (metaStep2Raw as string) : ctx.rawResponse;
+    const structureRaw = ctx.meta.responseSidecars?.length ? liftSidecars(rawStructure, ctx.meta.responseSidecars).text : rawStructure;
 
     // Step 1: 正文抢救 —— 零成本（narrative always lives in ctx.rawResponse）
     let recoveredText: string | null = extractNarrativeFromWrapper(ctx.rawResponse);

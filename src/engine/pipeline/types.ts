@@ -107,6 +107,11 @@ export interface PipelineMeta {
   cotJudgeEnabled?: boolean;
   /** step2 原始响应（PostProcess 消费） */
   rawResponseStep2?: string;
+  /**
+   * Tag names of blocks a feature lets the model append after the structured JSON (set during context
+   * assembly). The AI call lifts them out before parsing, into `parsedResponse.sidecars`.
+   */
+  responseSidecars?: string[];
   /** 推理内容已摄入标记（ReasoningIngestStage） */
   reasoningIngested?: boolean;
 

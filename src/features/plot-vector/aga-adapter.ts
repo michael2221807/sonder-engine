@@ -2,29 +2,30 @@ import { cloneDeep } from 'lodash-es';
 import type { StateManager } from '../../engine/core/state-manager';
 import { eventBus } from '../../engine/core/event-bus';
 import type { AIService } from '../../engine/ai/ai-service';
+import type { AIMessage } from '../../engine/ai/types';
 import type { SaveManager } from '../../engine/persistence/save-manager';
 import { DEFAULT_ENGINE_PATHS as P, type PipelineContext } from '../../engine/pipeline/types';
 import type { PlotVectorRoundPort } from '../../engine/plot-vector/round-port';
 import type { RoundOwnership } from '../../engine/core/round-ownership';
 import { readPlotVectorControl, subscribePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { projectSavedElements, readPath, savedEntryName } from './saved-elements';
-import { tasksAfterSave, stable, capabilityKey, type GenesisTask, type SavedElement } from './genesis/post-save';
-import { buildAgaGenerationMessages, buildAbilityRetryMessages, parseCardReply, CARD_API } from './genesis/generation-prompt';
-import { acceptVector, bindCard, prepareVector, readVectorState, type AbilityRetry, type VectorState, type VectorTaskRow, type PreparedVector } from './runtime';
+import { stable, capabilityKey, type BoundCard, type SavedElement } from './genesis/post-save';
+import { buildAbilityRetryMessages, parseCardReply, CARD_API } from './genesis/generation-prompt';
+import { acceptVector, bindCard, cardTypeOf, prepareVector, readVectorState, type AbilityRetry, type VectorState, type VectorTaskRow, type PreparedVector } from './runtime';
 import { abilityBacklog, type BacklogEntry } from './ability-backlog';
+import { bindRoundAbilities, readAbilityBlock } from './round-abilities';
 import { projectNativeInput, type NativeRules } from './native-input';
 import type { VectorPromptPolicy } from './prompt-policy';
 import type { ExtraRepairTask } from '../../engine/pipeline/sub-pipelines/field-repair';
 
 type Slot = { profileId: string; slotId: string };
-/** An environment tag whose ability is missing or failed validation (kept as a task row for later repair). */
-interface EnvironmentIssue { entry: SavedElement; ability?: unknown; reason: string }
 /**
  * Step3 retries an entry's ability in at most this many rounds (several tries inside one round count
- * once); after that only the player's explicit retry sends another request. One item/talent/status
- * entry is retried per round, the same pace as post-save generation.
+ * once); after that only the player's explicit retry sends another request.
  */
 const AUTO_REPAIR_ROUNDS = 2;
+/** Step3 fills at most this many backlog entries per request; the rest wait for later rounds (agent-set, I25). */
+export const REPAIR_BATCH = 8;
 const autoRoundsLeft = (row: VectorTaskRow, round: number) =>
   (row.retry?.autoRounds ?? 0) < AUTO_REPAIR_ROUNDS || row.retry?.lastAutoRound === round;
 /** The previous ability card of a row (latest retry first), for the repair request's context. */
@@ -41,13 +42,27 @@ function replyCardFor(output: unknown, id: string): unknown {
   const hit = output.find(e => e && typeof e === 'object' && (e as Record<string, unknown>).id === id) as Record<string, unknown> | undefined;
   return hit?.card;
 }
+/** The stored row of a backlog entry, created when the entry had none yet (an entry never tried, I20). */
+function rowOf(state: VectorState, entry: BacklogEntry): VectorTaskRow {
+  const key = capabilityKey(entry.row.task.entry);
+  let row = state.tasks.find(t => capabilityKey(t.task.entry) === key);
+  if (!row) { row = { task: entry.row.task }; state.tasks.push(row); }
+  return row;
+}
+/** Insert messages right before the last user turn (or at the end when there is none), keeping the sources aligned. */
+function beforeLastUser(messages: AIMessage[], sources: string[] | undefined, added: AIMessage[], addedSources: string[]) {
+  let at = messages.length;
+  for (let i = messages.length - 1; i >= 0; i--) if (messages[i].role === 'user') { at = i; break; }
+  const own = sources ?? messages.map(() => 'unknown');
+  return { messages: [...messages.slice(0, at), ...added, ...messages.slice(at)], sources: [...own.slice(0, at), ...addedSources, ...own.slice(at)] };
+}
 /**
  * One round's momentum. `prepared` is absent when this round's trip could not be computed: the round then
- * runs without momentum, and nothing of the component advances except the bookkeeping of new entries.
+ * runs without momentum, and nothing of the component advances except the round's new abilities.
  */
 interface Attempt { ctx: PipelineContext; owner: RoundOwnership; guard: () => void; controller: AbortController;
   before: SavedElement[]; state: VectorState; id: string; prepared?: PreparedVector; slot: Slot; release: () => void;
-  postSaved?: boolean;
+  gained: BoundCard[];
 }
 /** The component failed on its own; the story goes on. Only a cancellation or slot switch stops the round. */
 function degraded(i18nKey: string, message: string, error: unknown): void {
@@ -65,7 +80,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
   constructor(private state: StateManager, private ai: Pick<AIService, 'generate'>,
     private saves: Pick<SaveManager, 'saveGame'>, private slot: () => Slot | null,
     private nativeRules?: NativeRules,
-    private promptPolicy?: Pick<VectorPromptPolicy, 'mode' | 'transform' | 'environmentAbility' | 'abilityRepair'>) {
+    private promptPolicy?: Pick<VectorPromptPolicy, 'mode' | 'transform' | 'abilityBlock' | 'abilityRepair'>) {
     this.unsubs = [subscribePlotVectorControl(() => this.cancel()),
       // The round itself notices a load or rollback through its RoundOwnership; this stops work in flight.
       eventBus.on<{type: string}>('engine:state-changed', e => {
@@ -123,21 +138,26 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       }
       guard();
       // Without the saved entries of the round start, new entries cannot be told apart; skip the component.
-      if (state && before) this.attempt = { ctx, owner, controller, guard, state, id, before, prepared, slot,
+      if (state && before) this.attempt = { ctx, owner, controller, guard, state, id, before, prepared, slot, gained: [],
         release: () => ctx.abortSignal?.removeEventListener('abort', abort) };
-      const mode = ctx.meta.plotVectorPromptMode ? this.promptPolicy?.mode : undefined;
-      const additions: import('../../engine/ai/types').AIMessage[] = [];
+      const active = ctx.meta.plotVectorPromptMode === true;
+      const mode = active ? this.promptPolicy?.mode : undefined;
+      const additions: AIMessage[] = [];
       const sources: string[] = [];
       if (mode) { additions.push({ role: 'system', content: mode }); sources.push('plot-vector-mode'); }
       if (prepared?.prompt) { additions.push({ role: 'system', content: prepared.prompt }); sources.push('plot-vector'); }
-      // Environment tags are written by Step2 (or the single call), so their ability interface goes there;
-      // Step1 never sees it.
-      const environment = ctx.meta.plotVectorPromptMode ? this.promptPolicy?.environmentAbility?.prompt : undefined;
-      if (environment && ctx.meta.splitStep2Messages) {
-        const base = ctx.meta.splitStep2Messages;
-        ctx.meta.splitStep2Messages = [{ role: 'system', content: environment }, ...base];
-        ctx.meta.splitStep2Sources = ['environment-ability', ...(ctx.meta.splitStep2Sources ?? base.map(() => 'unknown'))];
-      } else if (environment) { additions.push({ role: 'system', content: environment }); sources.push('environment-ability'); }
+      // The ability block goes with the request that writes the round's entries (Step2, or the single call),
+      // late and optional (I22); its block is lifted out of the reply before the JSON is parsed (I21).
+      const block = active ? this.promptPolicy?.abilityBlock : undefined;
+      if (block) {
+        ctx.meta.responseSidecars = [...(ctx.meta.responseSidecars ?? []).filter(tag => tag !== block.tag), block.tag];
+        const message: AIMessage = { role: 'system', content: block.prompt };
+        if (ctx.meta.splitStep2Messages) {
+          const placed = beforeLastUser(ctx.meta.splitStep2Messages, ctx.meta.splitStep2Sources, [message], ['ability-block']);
+          ctx.meta.splitStep2Messages = placed.messages;
+          ctx.meta.splitStep2Sources = placed.sources;
+        } else { additions.push(message); sources.push('ability-block'); }
+      }
       if (!additions.length) return { ...ctx, abortSignal: controller.signal };
       // The builder can end with user + assistant prefill. Mid-conversation
       // system messages must precede that user turn, not split it from prefill.
@@ -151,6 +171,10 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
           ...(ctx.messageSources ?? ctx.messages.map(() => 'unknown')).slice(at)] };
     } catch (error) { ctx.abortSignal?.removeEventListener('abort', abort); throw error; }
   }
+  /**
+   * Right before the round is written: accept this round's trip and bind the round's new abilities to the
+   * entries that are actually being saved, so cards are written together with the round (rebuild plan §6).
+   */
   async beforeSave(ctx: PipelineContext): Promise<void> {
     const a = this.attempt;
     if (!a || a.ctx.generationId !== ctx.generationId) return;
@@ -166,160 +190,42 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     }
     a.guard();
     try {
-      const after = projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries;
-      // Environment abilities arrive with the tags from Step2; they never queue a post-save generation.
-      const tasks = tasksAfterSave({ id: a.id, success: true, before: a.before, after }, next.tasks.map(t => t.task.key))
-        .filter(task => task.entry.kind !== 'environment');
-      next.tasks.push(...tasks.map(task => ({ task, status: 'pending' as const })));
-    } catch (error) { console.warn('[PlotVector] New entries of this round were not queued for abilities:', error); }
+      const snapshot = this.state.toSnapshot();
+      const after = projectSavedElements(snapshot, { includeEnvironment: true }).entries;
+      const policy = this.promptPolicy?.abilityBlock;
+      const raw = policy && ctx.meta.plotVectorPromptMode ? ctx.parsedResponse?.sidecars?.[policy.tag] : undefined;
+      // Environment tags still in the save but not projectable this time (e.g. two share a name) keep their cards.
+      const tags = readPath(snapshot, P.environmentTags);
+      const present = new Set((Array.isArray(tags) ? tags : []).flatMap(tag => {
+        const name = savedEntryName(tag), id = tag && typeof tag === 'object' ? (tag as Record<string, unknown>).id ?? (tag as Record<string, unknown>).ID : undefined;
+        return [...(name ? [`environment:name:${name}`] : []), ...(typeof id === 'string' && id ? [`environment:${id}`] : [])];
+      }));
+      const bound = bindRoundAbilities(next, a.before, after, raw === undefined ? undefined : readAbilityBlock(raw), id => present.has(id));
+      next = bound.state;
+      a.gained = bound.gained;
+    } catch (error) { console.warn('[PlotVector] This round\'s abilities were not bound; the entries wait for Step3:', error); }
     a.state = next;
     this.state.set(P.plotVector, next);
   }
+  /** After the round is saved: tell the player about the cards it brought. Nothing is requested or written. */
   async afterSave(ctx: PipelineContext): Promise<void> {
     const a = this.attempt;
-    if (!a || a.ctx.generationId !== ctx.generationId || !a.owner.saved || a.postSaved) return;
-    a.postSaved = true;
-    try {
-      a.guard();
-      await this.syncEnvironment(a);
-      const current = projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries;
-      // One new ability per round. Removed/replaced entries never cause paid generation.
-      const row = a.state.tasks.find(t => t.task.entry.kind !== 'environment' && (t.status === 'pending' || (t.status === 'sending' && t.raw !== undefined))
-        && current.some(e => capabilityKey(e) === capabilityKey(t.task.entry))
-        && !a.state.cards.some(c => capabilityKey(c.task.entry) === capabilityKey(t.task.entry)));
-      if (!row) return;
-      if (row.raw === undefined) {
-        row.status = 'sending';
-        await this.persist(a);
-        a.guard();
-        let raw: string;
-        try {
-          raw = await this.ai.generate({ messages: buildAgaGenerationMessages(row.task.entry),
-            usageType: 'main', stream: false, generationId: `${ctx.generationId}:card`, signal: a.controller.signal });
-        } catch (error) {
-          a.guard();
-          row.status = 'failed'; row.error = String(error);
-          // The story is already committed. The entry stays; Step3 or the player can generate it again.
-          await this.persist(a); return;
-        }
-        a.guard();
-        // Keep the received output before validation, so the page can check it after a reload.
-        row.raw = raw;
-        await this.persist(a);
-      }
-      try {
-        const bound = bindCard(row.task, parseCardReply(row.raw));
-        a.guard();
-        a.state.cards = [...a.state.cards.filter(c => c.task.entry.id !== bound.task.entry.id), bound];
-        row.status = 'bound';
-        delete row.error;
-      } catch (error) {
-        a.guard(); row.status = 'failed'; row.error = String(error);
-      }
-      await this.persist(a);
-    } finally { a.release(); }
+    if (!a || a.ctx.generationId !== ctx.generationId) return;
+    try { if (a.owner.saved && a.gained.length) this.announce(a.gained); }
+    finally { a.gained = []; a.release(); }
   }
-  /** Bind this round's environment abilities after the round is saved; they take part from the next round. */
-  private async syncEnvironment(a: Attempt): Promise<void> {
-    const policy = this.promptPolicy?.environmentAbility;
-    if (!policy) return;
-    // What each tag looked like when the round started (ability field excluded: it is only transport).
-    const before = new Map(a.before.filter(e => e.kind === 'environment').map(e => {
-      const { [policy.field]: _ability, ...capability } = e.capability;
-      return [e.id, capabilityKey({ ...e, capability })] as const;
-    }));
-    // A tag still waiting for its ability from an earlier round stays on record even though it did not change.
-    const waiting = new Set(a.state.tasks.filter(t => t.task.entry.kind === 'environment' && t.status === 'failed').map(t => t.task.key));
-    const synced = await this.environmentCards(a.state, policy.field, (id, key) => before.get(id) !== key || waiting.has(key), a.guard);
-    if (!synced.changed && !synced.tags) return;
-    a.state = synced.state;
-    if (synced.tags) this.state.set(P.environmentTags, synced.tags);
-    await this.persist(a);
-  }
-  /**
-   * One pass over the saved environment tags. A tag carrying a new ability gets a validated card that
-   * replaces its old one; an unchanged tag without one keeps its card; a vanished tag loses its card. The ability
-   * field is then taken out of the tags so no snippet stays in the story state or later prompts.
-   * `needsAbility(id, key)` says whether a tag without a new ability is new, changed or still waiting (saved
-   * content key, ability excluded): such a tag loses any old card and is repaired; otherwise its card carries over.
-   * Tags that still need an ability are kept as failed task rows (with their retry history) so a later Step3
-   * or the player can fill them after a reload; `attempt` marks the rows a Step3 request just tried.
-   */
-  private async environmentCards(state: VectorState, field: string, needsAbility: (id: string, key: string) => boolean, guard: () => void,
-    attempt?: { round: number; ids: ReadonlySet<string> }):
-    Promise<{ state: VectorState; changed: boolean; issues: EnvironmentIssue[]; tags?: unknown[] }> {
-    const snapshot = this.state.toSnapshot();
-    const rawTags = readPath(snapshot, P.environmentTags);
-    const entries = projectSavedElements(snapshot, { includeEnvironment: true }).entries.filter(e => e.kind === 'environment');
-    const previous = new Map(state.cards.filter(c => c.task.entry.kind === 'environment').map(c => [c.task.entry.id, c]));
-    const cards = state.cards.filter(c => c.task.entry.kind !== 'environment');
-    const issues: EnvironmentIssue[] = [];
-    for (const entry of entries) {
-      const { [field]: ability, ...capability } = entry.capability;
-      const bare: SavedElement = { ...entry, capability };
-      const task: GenesisTask = { key: capabilityKey(bare), actionId: 'environment', entry: bare };
-      const existing = previous.get(entry.id);
-      if (ability === undefined) {
-        // A new or updated tag without its new ability must not keep running the old one: Step3 fills it.
-        // Only a tag whose saved content is unchanged keeps its card.
-        if (needsAbility(entry.id, task.key)) issues.push({ entry: bare, reason: existing ? '内容已更新但缺少新能力' : '缺少能力' });
-        else if (existing) cards.push({ ...existing, task });
-        continue;
-      }
-      try {
-        const bound = bindCard(task, ability);
-        // The same ability re-sent with an unchanged tag keeps its card (and its growth).
-        cards.push(existing && stable(existing.spec) === stable(bound.spec) ? { ...existing, task } : bound);
-        guard();
-      } catch (error) {
-        guard();
-        issues.push({ entry: bare, ability, reason: error instanceof Error ? error.message : String(error) });
-      }
-    }
-    // A tag that is still present but could not be projected (e.g. two tags share a name) keeps its card:
-    // only a tag that is actually gone loses its ability here.
-    const present = new Set((Array.isArray(rawTags) ? rawTags : []).map(savedEntryName).filter((n): n is string => !!n));
-    const projected = new Set(entries.map(e => e.id));
-    for (const [id, card] of previous) {
-      if (!projected.has(id) && present.has(String(card.task.entry.capability.name))) cards.push(card);
-    }
-    // Environment rows are exactly the tags that still need an ability. Old post-save environment tasks and
-    // rows of tags that are gone, changed or now have a card are dropped.
-    const previousRows = new Map(state.tasks.filter(t => t.task.entry.kind === 'environment').map(t => [t.task.key, t]));
-    const environmentRows = issues.map((issue): VectorTaskRow => {
-      const task: GenesisTask = { key: capabilityKey(issue.entry), actionId: 'environment', entry: issue.entry };
-      const prior = previousRows.get(task.key);
-      const ability = issue.ability === undefined ? undefined : JSON.stringify(issue.ability);
-      let retry = prior?.retry;
-      if (attempt?.ids.has(issue.entry.id)) {
-        // The attempt was counted when its Step3 request left; here only its reply is recorded.
-        retry = { ...(retry ?? { attempts: 1, autoRounds: 1, lastAutoRound: attempt.round }), source: 'step3', error: issue.reason };
-        // `raw` always describes this attempt: a reply without a new ability leaves none.
-        delete retry.raw;
-        if (ability) retry.raw = ability;
-      }
-      // The first failure keeps its own reason and ability; later attempts are recorded under `retry`.
-      const raw = prior ? prior.raw : ability;
-      return { task, status: 'failed', error: prior?.error ?? issue.reason,
-        ...(raw !== undefined ? { raw } : {}),
-        ...(retry ? { retry } : {}) };
-    });
-    const tasks = [...state.tasks.filter(t => t.task.entry.kind !== 'environment'), ...environmentRows];
-    const next = { ...state, cards, tasks };
-    const hasField = Array.isArray(rawTags) && rawTags.some(t => t && typeof t === 'object' && Object.hasOwn(t, field));
-    const tags = hasField ? (rawTags as unknown[]).map(t => {
-      if (!t || typeof t !== 'object' || !Object.hasOwn(t, field)) return t;
-      const { [field]: _ability, ...rest } = t as Record<string, unknown>;
-      return rest;
-    }) : undefined;
-    return { state: next, changed: stable(next) !== stable(state), issues, tags };
+  /** One short notice per batch of new cards, and a signal for the board entry's badge (I24). */
+  private announce(cards: readonly BoundCard[]): void {
+    const names = cards.map(card => String(card.task.entry.capability.name ?? card.spec.for));
+    eventBus.emit('ui:toast', { type: 'success', i18nKey: 'mainGame.toast.vectorNewCards', i18nParams: { names: names.join('、'), count: names.length },
+      message: `获得新卡：${names.join('、')}`, duration: 4000 });
+    eventBus.emit('plotVector:cards-gained', { names });
   }
   /** Obtained entries whose ability is not usable yet (the saved entries themselves are never touched). */
   abilityBacklog(): BacklogEntry[] {
     const raw = this.state.get(P.plotVector);
     if (!raw) return [];
-    return abilityBacklog(readVectorState(raw), projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries,
-      this.promptPolicy?.environmentAbility?.field);
+    return abilityBacklog(readVectorState(raw), projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries);
   }
   /** Stops a repair whose save, feature epoch or loaded state changed underneath it. */
   private repairGuard(label: string): () => void {
@@ -331,82 +237,60 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     };
   }
   /**
-   * Step3 hook: saved entries whose ability is missing or failed, as one task inside the existing
-   * field-repair request. Environment tags are fixed as ordinary commands on the environment array (as
-   * before); one item/talent/status entry per round comes back in the task's own reply field, never as a
-   * write to the saved entry. `settle` binds what now validates and reports whether every listed entry has
-   * an ability. Entries with a player retry in flight are never included; each entry is tried automatically in
-   * at most AUTO_REPAIR_ROUNDS rounds.
+   * Step3 hook (rebuild plan §6.4, I3/I20): the backlog — every saved entry without a usable ability, including
+   * entries that were there before the feature was on — in one task of the existing step-3 request, at most
+   * REPAIR_BATCH per request (fresh entries first). The task carries only the entries, the guidance and the
+   * card domain, so on its own it needs no game state. Abilities come back in the task's own reply field, never
+   * as writes to the saved entries. Entries with a player retry in flight are never included; each entry is
+   * tried automatically in at most AUTO_REPAIR_ROUNDS rounds.
    */
   async abilityRepairTask(): Promise<ExtraRepairTask | null> {
-    const environment = this.promptPolicy?.environmentAbility, items = this.promptPolicy?.abilityRepair;
-    if (!this.slot() || !readPlotVectorControl().enabled || (!environment && !items)) return null;
-    if (!this.state.get(P.plotVector)) return null;
+    const policy = this.promptPolicy?.abilityRepair;
+    if (!policy || !this.slot() || !readPlotVectorControl().enabled || !this.state.get(P.plotVector)) return null;
     const round = this.state.get<number>(P.roundNumber) ?? 0;
-    const due = this.abilityBacklog().filter(b => b.state === 'failed' && !this.manualInFlight.has(b.id) && autoRoundsLeft(b.row, round));
-    const tags = environment ? due.filter(b => b.kind === 'environment') : [];
-    // Fresh failures first: an entry that has not been retried yet goes ahead of one already tried.
-    const item = items ? due.filter(b => b.kind !== 'environment')
-      .sort((x, y) => (x.row.retry?.autoRounds ?? 0) - (y.row.retry?.autoRounds ?? 0))[0] : undefined;
-    if (!tags.length && !item) return null;
+    const batch = this.abilityBacklog().filter(b => !this.manualInFlight.has(b.id) && autoRoundsLeft(b.row, round))
+      .sort((x, y) => (x.row.retry?.autoRounds ?? 0) - (y.row.retry?.autoRounds ?? 0)).slice(0, REPAIR_BATCH);
+    if (!batch.length) return null;
     const guard = this.repairGuard('能力补生');
-    // Each task keeps its own instructions and output contract; the shared snippet contract is sent once.
-    const blocks: string[] = [];
-    if (environment && tags.length) {
-      const list = tags.map(b => ({ name: b.name, ability: previousAbility(b.row), problem: b.problem ?? '缺少能力' }));
-      blocks.push(`${environment.repair.split('{{PATH}}').join(P.environmentTags).split('{{ITEMS}}').join(JSON.stringify(list, null, 2))}\n\n${environment.instruction}`);
-    }
-    if (items && item) {
-      const description = item.row.task.entry.capability.description;
-      const list = [{ id: item.id, kind: item.kind, name: item.name, description: typeof description === 'string' ? description : '',
-        problem: item.problem ?? '', ability: previousAbility(item.row) }];
-      blocks.push(`${items.template.split('{{ITEMS}}').join(JSON.stringify(list, null, 2))}\n\n${items.guidance}`);
-    }
-    blocks.push(CARD_API);
-    const listed = [...tags, ...(item ? [item] : [])].map(b => capabilityKey(b.row.task.entry));
+    const list = batch.map(b => {
+      const description = b.row.task.entry.capability.description, ability = previousAbility(b.row);
+      return { id: b.id, type: cardTypeOf(b.row.task.entry), name: b.name, description: typeof description === 'string' ? description : '',
+        ...(b.problem ? { problem: b.problem } : {}), ...(ability !== null ? { ability } : {}) };
+    });
     return {
-      block: blocks.join('\n\n'),
+      block: `${policy.template.split('{{ITEMS}}').join(JSON.stringify(list, null, 2))}\n\n${policy.guidance}\n\n${CARD_API}`,
+      field: policy.field,
+      commands: false,
+      standalone: true,
       // The request carrying this task is leaving: it is an attempt for every listed entry. Counted now, so a
       // request that fails without a reply still uses up the automatic rounds (`settle` records a reply).
       sent: () => {
         guard();
         const started = cloneDeep(readVectorState(this.state.get(P.plotVector)));
-        let changed = false;
-        for (const key of listed) {
-          const row = started.tasks.find(t => capabilityKey(t.task.entry) === key && t.status !== 'bound');
-          if (!row) continue;
-          changed = true;
+        for (const entry of batch) {
+          const row = rowOf(started, entry);
           const base: AbilityRetry = row.retry ?? { attempts: 0, autoRounds: 0 };
           const retry: AbilityRetry = { ...base, attempts: base.attempts + 1, source: 'step3', error: '补生请求没有得到回复',
             ...(base.lastAutoRound === round ? {} : { autoRounds: base.autoRounds + 1, lastAutoRound: round }) };
           delete retry.raw;
           row.retry = retry;
         }
-        if (changed) this.state.set(P.plotVector, started);
+        this.state.set(P.plotVector, started);
       },
-      ...(items && item ? { field: items.field } : {}),
-      // Environment tags are fixed as commands on the tag array; item abilities never are.
-      ...(tags.length ? {} : { commands: false }),
       settle: async (output?: unknown) => {
         guard();
-        let next = cloneDeep(readVectorState(this.state.get(P.plotVector)));
+        const next = cloneDeep(readVectorState(this.state.get(P.plotVector)));
+        const gained: BoundCard[] = [];
         let resolved = true;
-        if (environment && tags.length) {
-          const ids = new Set(tags.map(b => b.id));
-          // Tags waiting outside this batch (automatic rounds used up, player retry in flight) keep their rows.
-          const waiting = new Set(next.tasks.filter(t => t.task.entry.kind === 'environment' && t.status === 'failed').map(t => t.task.key));
-          const synced = await this.environmentCards(next, environment.field, (id, key) => ids.has(id) || waiting.has(key), guard, { round, ids });
-          guard();
-          next = synced.state;
-          if (synced.tags) this.state.set(P.environmentTags, synced.tags);
-          if (synced.issues.some(i => ids.has(i.entry.id))) resolved = false;
-        }
-        if (item) {
-          const key = capabilityKey(item.row.task.entry);
-          const row = next.tasks.find(t => capabilityKey(t.task.entry) === key && t.status !== 'bound');
-          if (!row || !this.recordRetryReply(next, row, replyCardFor(output, item.id), guard)) resolved = false;
+        for (const entry of batch) {
+          const key = capabilityKey(entry.row.task.entry);
+          // Bound in the meantime (e.g. by the player's retry): resolved, nothing to record.
+          if (next.cards.some(card => capabilityKey(card.task.entry) === key)) continue;
+          const bound = this.recordRetryReply(next, rowOf(next, entry), replyCardFor(output, entry.id), guard);
+          if (bound) gained.push(bound); else resolved = false;
         }
         this.state.set(P.plotVector, next);
+        if (gained.length) this.announce(gained);
         return resolved;
       },
     };
@@ -425,11 +309,10 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     try {
       guard();
       const state = cloneDeep(readVectorState(this.state.get(P.plotVector)));
-      const entry = abilityBacklog(state, projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries,
-        this.promptPolicy?.environmentAbility?.field).find(b => b.id === entryId);
+      const entry = abilityBacklog(state, projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries)
+        .find(b => b.id === entryId);
       if (!entry) throw new Error('这一条目前没有需要补生的能力');
-      const key = capabilityKey(entry.row.task.entry);
-      const row = state.tasks.find(t => capabilityKey(t.task.entry) === key && t.status !== 'bound')!;
+      const row = rowOf(state, entry);
       const problem = row.retry?.error ?? row.error;
       const base: AbilityRetry = row.retry ?? { attempts: 0, autoRounds: 0 };
       const retry: AbilityRetry = { ...base, attempts: base.attempts + 1, source: 'manual' };
@@ -450,40 +333,40 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       retry.raw = raw;
       const bound = this.bindRetryReply(state, row, guard);
       await this.persistState(slot, state, guard);
-      return { bound, requested: true };
+      if (bound) this.announce([bound]);
+      return { bound: !!bound, requested: true };
     } finally { this.manualInFlight.delete(entryId); }
   }
   /**
    * Record the reply of a Step3 attempt (already counted when its request left) and bind the ability if it
-   * validates. `card` undefined: the reply had no ability for this entry.
+   * passes the one check. `card` undefined: the reply had no ability for this entry.
    */
-  private recordRetryReply(state: VectorState, row: VectorTaskRow, card: unknown, guard: () => void): boolean {
+  private recordRetryReply(state: VectorState, row: VectorTaskRow, card: unknown, guard: () => void): BoundCard | null {
     const retry: AbilityRetry = { ...(row.retry ?? { attempts: 1, autoRounds: 1 }), source: 'step3' };
     delete retry.raw;
     row.retry = retry;
-    if (card === undefined) { retry.error = '补生回复没有给出这一条的能力'; return false; }
+    if (card === undefined) { retry.error = '补生回复没有给出这一条的能力'; return null; }
     retry.raw = JSON.stringify(card);
     return this.bindRetryReply(state, row, guard);
   }
   /**
-   * Bind the latest retry reply of a row if it passes the one check (§5); a failure is recorded on that retry
-   * and the first attempt's failure stays on record. Nothing is sent.
+   * Bind the latest retry reply of a row if it passes the one check (§5): the card replaces any earlier one and
+   * the row is dropped (only failures are kept). A failure is recorded on that retry; the first attempt's
+   * failure stays on record. Nothing is sent.
    */
-  private bindRetryReply(state: VectorState, row: VectorTaskRow, guard: () => void): boolean {
+  private bindRetryReply(state: VectorState, row: VectorTaskRow, guard: () => void): BoundCard | null {
     const retry = row.retry;
-    if (retry?.raw === undefined) return false;
+    if (retry?.raw === undefined) return null;
     try {
       const bound = bindCard(row.task, parseCardReply(retry.raw));
       guard();
       state.cards = [...state.cards.filter(c => c.task.entry.id !== row.task.entry.id), bound];
-      row.status = 'bound';
-      delete retry.error;
-      return true;
+      state.tasks = state.tasks.filter(t => t !== row);
+      return bound;
     } catch (error) {
       guard();
-      row.status = row.status === 'pending' ? row.status : 'failed';
       retry.error = error instanceof Error ? error.message : String(error);
-      return false;
+      return null;
     }
   }
   /** Save the vector state outside a round (player retry). A failed write never leaves the new state in memory. */
@@ -496,20 +379,6 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       await this.saves.saveGame(slot.profileId, slot.slotId, this.state.toSnapshot(), undefined, { guard, committed: () => { committed = true; } });
     } catch (error) {
       if (!committed) this.state.set(P.plotVector, previous);
-      throw error;
-    }
-  }
-  private async persist(a: Attempt): Promise<void> {
-    a.guard();
-    const previous = cloneDeep(this.state.get<VectorState>(P.plotVector));
-    this.state.set(P.plotVector, cloneDeep(a.state));
-    let committed = false;
-    try {
-      await this.saves.saveGame(a.slot.profileId, a.slot.slotId, this.state.toSnapshot(), undefined,
-        { guard: a.guard, committed: () => { committed = true; } });
-    } catch (error) {
-      // After a save switch the live tree belongs to another save: leave it alone.
-      if (!committed && a.owner.isCurrent()) this.state.set(P.plotVector, previous);
       throw error;
     }
   }

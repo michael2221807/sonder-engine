@@ -32,9 +32,12 @@ export interface AbilityRetry {
   /** Why the latest retry did not give a usable ability. */
   error?: string;
 }
+/**
+ * The failed ability attempts of one saved entry: the first failure's reason and reply, and the later retries.
+ * Removed once the entry has a card; an entry without a card and without a row simply has not been tried.
+ */
 export interface VectorTaskRow {
   task: GenesisTask;
-  status: 'pending' | 'sending' | 'failed' | 'bound';
   error?: string;
   raw?: string;
   retry?: AbilityRetry;
@@ -70,7 +73,9 @@ export function initialVectorState(): VectorState {
 export function readVectorState(raw: unknown): VectorState {
   const state = (raw && typeof raw === 'object' ? raw : {}) as Partial<VectorState>;
   if (state.version !== 2 || !state.session || !Array.isArray(state.cards) || !Array.isArray(state.tasks)) return initialVectorState();
-  return { ...(state as VectorState), growth: Object.fromEntries(Object.entries(state.growth ?? {}).map(([id, g]) => [id, readGrowth(g)])) };
+  // Rows only record failures; a row saved as bound by an earlier build is dropped.
+  const tasks = state.tasks.filter(row => row && typeof row === 'object' && row.task?.entry && (row as { status?: unknown }).status !== 'bound');
+  return { ...(state as VectorState), tasks, growth: Object.fromEntries(Object.entries(state.growth ?? {}).map(([id, g]) => [id, readGrowth(g)])) };
 }
 
 /** The single board, run options and narrative strength every AGA vector round uses. */

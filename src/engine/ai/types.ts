@@ -327,6 +327,12 @@ export interface AIResponse {
    * 自行做类型校验。Sprint Plot-1。
    */
   customFields?: Record<string, unknown>;
+  /**
+   * Tagged blocks lifted out of the reply before its JSON was parsed (`parse(raw, { sidecars })`), by tag
+   * name. A feature asks for them when the model may append its own section after the JSON; a broken block
+   * never affects the JSON, and a broken JSON never loses the block.
+   */
+  sidecars?: Record<string, string>;
   /** 原始 AI 输出（调试用） */
   raw?: string;
   /**

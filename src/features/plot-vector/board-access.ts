@@ -35,8 +35,7 @@ export class VectorBoardAccess {
     private slot: () => { profileId: string; slotId: string } | null, private busy: () => boolean,
     private nativeRules?: NativeRules,
     private onSaveSettled: () => void = () => {},
-    private regenerateAbility?: (entryId: string) => Promise<{ bound: boolean; requested: boolean }>,
-    private abilityField?: string) {
+    private regenerateAbility?: (entryId: string) => Promise<{ bound: boolean; requested: boolean }>) {
     this.unsubs = [subscribePlotVectorControl(() => this.invalidate()),
       eventBus.on<{ type: string }>('engine:state-changed', e => {
         if (e.type === 'load' || e.type === 'rollback') this.invalidate();
@@ -84,7 +83,7 @@ export class VectorBoardAccess {
       prepared = await preview({ placements: {}, tray: [] });
       cleared = true;
     }
-    return { state, prepared, cleared, backlog: abilityBacklog(state, entries, this.abilityField), preview, save: async layout => {
+    return { state, prepared, cleared, backlog: abilityBacklog(state, entries), preview, save: async layout => {
       guard();
       if (this.writing) throw new Error('board-save-busy');
       this.writing = true;

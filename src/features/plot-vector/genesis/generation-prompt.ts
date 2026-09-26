@@ -24,9 +24,6 @@ export const AGA_GENESIS_SYSTEM = `${GENESIS_GUIDANCE}\n\n${CARD_API}`;
 function entryInput(entry: SavedElement, problem?: string): string {
   return JSON.stringify({ entry: { id: entry.id, kind: entry.kind, capability: entry.capability }, ...(problem ? { problem } : {}) });
 }
-export function buildAgaGenerationMessages(entry: SavedElement): { role: 'system' | 'user'; content: string }[] {
-  return [{ role: 'system', content: AGA_GENESIS_SYSTEM }, { role: 'user', content: entryInput(entry) }];
-}
 /** A player-requested retry: the same contract, with the previous failure passed as data. */
 export function buildAbilityRetryMessages(entry: SavedElement, problem?: string): { role: 'system' | 'user'; content: string }[] {
   return [{ role: 'system', content: AGA_GENESIS_SYSTEM }, { role: 'user', content: entryInput(entry, problem) }];

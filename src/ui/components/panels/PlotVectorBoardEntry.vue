@@ -5,6 +5,8 @@ import { useI18n } from 'vue-i18n';
 import { cloneDeep } from 'lodash-es';
 import Modal from '../common/Modal.vue';
 import AgaButton from '../shared/AgaButton.vue';
+import Tooltip from '../shared/Tooltip.vue';
+import { eventBus } from '@/engine/core/event-bus';
 import type { VectorBoardAccess, BoardView } from '@/features/plot-vector/board-access';
 import type { PreparedVector } from '@/features/plot-vector/runtime';
 import type { CardProgress } from '@/features/plot-vector/card-progress';
@@ -26,6 +28,9 @@ onUnmounted(subscribePlotVectorControl(() => {
   open.value = false;
 }));
 onUnmounted(() => { request++; });
+// New cards since the board was last opened (I24): the entry shows how many; opening it clears the count.
+const newCards = ref(0);
+onUnmounted(eventBus.on<{ names?: string[] }>('plotVector:cards-gained', e => { newCards.value += e?.names?.length ?? 1; }));
 watch(open, value => { if (!value) { request++; busy.value = false; } });
 watch(() => props.generating, value => { if (value) open.value = false; });
 const label = (value?: LocalizedLabel) => value ? (locale.value === 'en' ? value.en : value.zh) : '';
@@ -77,6 +82,7 @@ const disabled = computed(() => busy.value || props.generating);
 async function load() {
   if (!access || props.generating) return;
   const ticket = ++request;
+  newCards.value = 0;
   open.value = true; busy.value = true; error.value = false; saved.value = false;
   view.value = undefined; shown.value = undefined; last.value = false; dirty.value = false;
   try {
@@ -145,7 +151,11 @@ async function retryAbility(entryId: string) {
 </script>
 
 <template>
-  <AgaButton v-if="enabled && access" size="sm" variant="ghost" :disabled="generating" data-testid="vector-board-open" @click="load">{{ t('mainGame.vectorBoard.open') }}</AgaButton>
+  <Tooltip v-if="enabled && access" :text="t('mainGame.vectorBoard.openHint')" interactive>
+    <AgaButton size="sm" variant="secondary" :disabled="generating" data-testid="vector-board-open" @click="load">
+      {{ t('mainGame.vectorBoard.open') }}<span v-if="newCards" class="new-cards" data-testid="vector-new-cards" :aria-label="t('mainGame.vectorBoard.newCards', { count: newCards })">{{ newCards }}</span>
+    </AgaButton>
+  </Tooltip>
   <Modal v-model="open" :title="t('mainGame.vectorBoard.title')" width="960px" :closable="!busy">
     <section data-testid="vector-board" class="vector-board" :aria-busy="busy">
       <p class="intro">{{ t('mainGame.vectorBoard.help') }}</p>
@@ -155,14 +165,17 @@ async function retryAbility(entryId: string) {
       <p v-if="view?.cleared && dirty" role="status" data-testid="vector-board-cleared">{{ t('mainGame.vectorBoard.layoutCleared') }}</p>
       <template v-if="view && board">
         <section v-if="backlog.length || retryNote" class="backlog" data-testid="vector-ability-backlog">
-          <p v-if="backlog.length" class="intro">{{ t('mainGame.vectorBoard.backlogHelp') }}</p>
-          <div v-for="entry in backlog" :key="entry.id" class="backlog-row">
-            <strong>{{ entry.name }}</strong>
-            <span class="backlog-state">{{ t(`mainGame.vectorBoard.backlogState.${entry.state}`) }}</span>
-            <AgaButton size="sm" variant="secondary" :disabled="disabled || retrying !== null" data-testid="vector-ability-retry" @click="retryAbility(entry.id)">
-              {{ retrying === entry.id ? t('mainGame.vectorBoard.retryingAbility') : t('mainGame.vectorBoard.retryAbility') }}
-            </AgaButton>
-          </div>
+          <details v-if="backlog.length" :open="backlog.length <= 3">
+            <summary>{{ t('mainGame.vectorBoard.backlogSummary', { count: backlog.length }) }}</summary>
+            <p class="intro">{{ t('mainGame.vectorBoard.backlogHelp') }}</p>
+            <div v-for="entry in backlog" :key="entry.id" class="backlog-row">
+              <strong>{{ entry.name }}</strong>
+              <span class="backlog-state">{{ t(`mainGame.vectorBoard.backlogState.${entry.state}`) }}</span>
+              <AgaButton size="sm" variant="secondary" :disabled="disabled || retrying !== null" data-testid="vector-ability-retry" @click="retryAbility(entry.id)">
+                {{ retrying === entry.id ? t('mainGame.vectorBoard.retryingAbility') : t('mainGame.vectorBoard.retryAbility') }}
+              </AgaButton>
+            </div>
+          </details>
           <p v-if="retryNote" role="status" data-testid="vector-ability-retry-result">{{ t(`mainGame.vectorBoard.retryResult.${retryNote}`) }}</p>
         </section>
         <details><summary>{{ t('mainGame.vectorBoard.boardRule') }}</summary><p>{{ t('mainGame.vectorBoard.demoRule') }}</p></details>
@@ -249,6 +262,9 @@ details p { margin-top: .5rem; font-size: .8rem; }
 .backlog { display: grid; gap: .5rem; }
 .backlog-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; font-size: .85rem; }
 .backlog-state { color: var(--color-text-secondary); }
+.backlog details { display: grid; gap: .5rem; }
+.backlog-row + .backlog-row, .backlog .intro { margin-top: .5rem; }
+.new-cards { margin-left: .35rem; font-family: var(--font-mono); font-size: .62rem; font-weight: 700; line-height: 1; color: var(--color-amber-300); }
 .dimensions { display: flex; flex-wrap: wrap; gap: 1.5rem; margin: 0; }
 .dimensions dd { margin: .2rem 0 0; font-family: var(--font-mono); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }

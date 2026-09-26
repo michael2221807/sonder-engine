@@ -285,7 +285,7 @@
   "mainGame.vectorBoard.savedProgress": "已保存的级数、存量与剩余次数",
   "mainGame.vectorBoard.acceptedProgress": "这回合保存后的进度",
   "mainGame.vectorBoard.progressHelp": "这里只显示已保存的进度，试走不会改变它。级数和存量都由引擎记录。",
-  "mainGame.vectorBoard.backlogHelp": "这些已获得的条目还没有可用的能力。剧情和物品不受影响；之后的回合会自动再试，你也可以现在补生（会调用一次模型）。",
+  "mainGame.vectorBoard.backlogHelp": "这些已获得的条目（包括开启剧情动能前就有的）还没有可用的能力。剧情和物品不受影响；之后的回合会自动生成，每回合最多 8 条，每条最多自动试两个回合；你也可以现在补生（会调用一次模型）。",
   "mainGame.vectorBoard.backlogState.failed": "能力没有生成成功",
   "mainGame.vectorBoard.retryAbility": "补生能力",
   "mainGame.vectorBoard.retryingAbility": "正在补生…",
@@ -304,5 +304,10 @@
   "mainGame.vectorBoard.receiptRoute": "行程／方向已计入下方回放",
   "mainGame.vectorBoard.level": "级数",
   "mainGame.vectorBoard.stored": "存量",
-  "mainGame.vectorBoard.weather": "出发时（像天气）：{cards}"
+  "mainGame.vectorBoard.weather": "出发时（像天气）：{cards}",
+  "mainGame.vectorBoard.openHint": "剧情动能棋盘：摆卡、试走、看上回合结果",
+  "mainGame.vectorBoard.newCards": "{count} 张新卡",
+  "mainGame.vectorBoard.backlogSummary": "还没有能力的条目（{count}）",
+  "mainGame.vectorBoard.backlogState.waiting": "等待生成能力",
+  "mainGame.toast.vectorNewCards": "获得新卡：{names}（可在「棋盘」里摆上）"
 }

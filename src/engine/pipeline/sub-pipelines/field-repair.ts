@@ -126,6 +126,11 @@ export interface ExtraRepairTask {
    * Throwing withdraws the task: a request carrying nothing else is not sent.
    */
   sent?(): void;
+  /**
+   * The task text is complete on its own (it needs no game state, memory or recent narrative). When it is the
+   * only task of a request, that request carries just the task.
+   */
+  standalone?: boolean;
   settle(output?: unknown): Promise<boolean>;
 }
 /** Asked once per attempt; returns null when there is nothing to repair. */
@@ -328,14 +333,18 @@ export class FieldRepairPipeline {
     attempt: number,
     extra: ExtraRepairTask | null = null,
   ): Promise<CombinedStepResult> {
-    const chatHistory = this.loadChatHistory();
+    const alone = !fieldReport && !enrichData && !reviewData && extra?.standalone === true;
+    const chatHistory = alone ? [] : this.loadChatHistory();
     const hasChatHistory = chatHistory.length > 0;
 
     let baseMessages: AIMessage[];
     let messageSources: string[];
     let variables: Record<string, string> = {};
 
-    if (fieldReport) {
+    if (alone) {
+      baseMessages = [];
+      messageSources = [];
+    } else if (fieldReport) {
       variables = this.buildVariables(fieldReport, hasChatHistory);
       const flow = this.gamePack.promptFlows['fieldRepair'];
       if (flow) {
@@ -358,7 +367,7 @@ export class FieldRepairPipeline {
 
     // Only inject <本回合叙事> when chatHistory is empty — otherwise the latest
     // narrative is already present as the last assistant message in chatHistory.
-    if (chatHistory.length === 0) {
+    if (!alone && chatHistory.length === 0) {
       const currentNarrative = this.extractCurrentRoundNarrative();
       if (currentNarrative) {
         parts.push(
