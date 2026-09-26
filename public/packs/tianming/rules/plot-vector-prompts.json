@@ -16,12 +16,12 @@
     },
     {
       "promptId": "core",
-      "to": "状态提示",
-      "from": "系统判定 / 状态提示"
+      "to": "| 系统提示 | `〖系统提示：…〗` |",
+      "from": "| 系统判定 / 状态提示 | `〖…〗` |"
     },
     {
       "promptId": "core",
-      "to": "状态变化",
+      "to": "只用于 `〖系统提示：…〗`，叙事与心理不用",
       "from": "系统判定 / 状态变化"
     },
     {
@@ -101,12 +101,12 @@
     },
     {
       "promptId": "core",
-      "to": "Status notification",
-      "from": "System judgement / status notification"
+      "to": "| System notice | `〖System Notice: …〗` |",
+      "from": "| System judgement / status notification | `〖…〗` |"
     },
     {
       "promptId": "core",
-      "to": "status change",
+      "to": "only for `〖System Notice: …〗`, never narrative or inner thoughts",
       "from": "system judgement / status change"
     },
     {

@@ -115,7 +115,12 @@ describe('real pack judgment transition, zero network', () => {
           expect(core).not.toMatch(/\{"text":|\| `text` \|/);
           expect(core).toContain('mid_term_memory');
           expect(core).toContain('knowledge_facts');
+          expect(core).toContain(en ? 'only for `〖System Notice: …〗`' : '只用于 `〖系统提示：…〗`');
         }
+        // PO D2 (2026-09-26): with the mode on, 〖〗 is only for system notices, never a verdict or a change of state.
+        const everything = on.messages.concat(on.meta.splitStep2Messages ?? []).map(m => String(m.content)).join('\n');
+        expect(everything).not.toMatch(/`〖〗` = (系统判定|状态变化|system judgement|status change)|\| (系统判定 \/ 状态提示|状态提示|System judgement \/ status notification|Status notification) \|/);
+        expect(h.policy.mode).toContain(en ? '`〖〗` is only for `〖System Notice: …〗`' : '`〖〗` 只留给 `〖系统提示：…〗`');
         if (split) {
           expect(on.meta.splitStep2Followup).toBe(h.pack.prompts.splitGenStep2Followup.trim());
           expect(off.meta.splitStep2Followup).toBeUndefined();

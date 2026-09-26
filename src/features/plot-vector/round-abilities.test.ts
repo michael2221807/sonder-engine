@@ -99,6 +99,18 @@ describe('binding this round\'s abilities', () => {
     expect(abilityBacklog(stale, [heavier]).map(b => b.id)).toEqual(['environment:name:细雨']);
     expect(bindRoundAbilities(first, [rain], [], block([])).state.cards).toEqual([]);
   });
+  // PO D5 (2026-09-26): the environment list is rewritten every round; new wording alone keeps the card.
+  it('environment: a reworded description keeps its card, is not waiting and is not announced again', () => {
+    const first = bindRoundAbilities(initialVectorState(), [], [rain], block([cardFor('细雨', 'environment', 'return { xPush: 0.9 };')])).state;
+    const reworded = { ...rain, capability: { ...rain.capability, description: '细雨绵绵，石板路湿漉漉的' } };
+    const next = bindRoundAbilities(first, [rain], [reworded], block([]));
+    expect(next.gained).toEqual([]);
+    expect(next.state.cards.map(c => c.spec.onPass)).toEqual(['return { xPush: 0.9 };']);
+    expect(abilityBacklog(next.state, [reworded])).toEqual([]);
+    // An item's wording already worked this way; a talent or a status still takes a new card when its text changes.
+    expect(capabilityKey(reworded)).toBe(capabilityKey(rain));
+    expect(capabilityKey({ ...talk, capability: { ...talk.capability, description: '新说法' } })).not.toBe(capabilityKey(talk));
+  });
   it('an unchanged entry keeps its card, and one still in the save but not projectable keeps it too', () => {
     const first = bindRoundAbilities(initialVectorState(), [], [rain, tea], block([cardFor('细雨', 'environment'), cardFor('热茶', 'item')])).state;
     expect(idsOf(bindRoundAbilities(first, [rain, tea], [rain, tea], undefined).state)).toEqual(['environment:name:细雨', 'item:tea']);

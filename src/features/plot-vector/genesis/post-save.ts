@@ -21,21 +21,25 @@ export function stable(value: unknown): string {
   if (value && typeof value === 'object') return `{${Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([k,v]) => `${JSON.stringify(k)}:${stable(v)}`).join(',')}}`;
   return JSON.stringify(value);
 }
-/** Inventory prose is a journal, not an instruction to reroll a collected ability.
- * Functional fields (including an explicit capability revision) still invalidate it.
- * Other entry kinds keep their existing content-sensitive lifecycle. */
+/** Prose that does not change what an entry does. Inventory prose (name and description) is a journal, not an
+ * instruction to reroll a collected ability. An environment is rewritten every round, often in new words;
+ * only its name or its effect gives it a new card (2026-09-26, PO D5). Other entry kinds keep their
+ * content-sensitive lifecycle. */
+const PROSE: Partial<Record<SavedElement['kind'], readonly string[]>> = { item: ['name', 'description'], environment: ['description'] };
+
 export function capabilityKey(entry: SavedElement): string {
-  if (entry.kind !== 'item') return stable(entry);
+  const prose = PROSE[entry.kind];
+  if (!prose) return stable(entry);
   const mechanics: Record<string, unknown> = Object.fromEntries(
-    Object.entries(entry.capability).filter(([key]) => key !== 'name' && key !== 'description'));
+    Object.entries(entry.capability).filter(([key]) => !prose.includes(key)));
   // An explicit first revision is equivalent to an older save without the field.
-  if (mechanics['能力版本'] === 1) delete mechanics['能力版本'];
+  if (entry.kind === 'item' && mechanics['能力版本'] === 1) delete mechanics['能力版本'];
   return stable({ id: entry.id, kind: entry.kind, capability: mechanics });
 }
 function normalizeKnownKey(key: string): string {
   try {
     const entry: unknown = JSON.parse(key);
-    if (entry && typeof entry === 'object' && 'kind' in entry && entry.kind === 'item'
+    if (entry && typeof entry === 'object' && 'kind' in entry && typeof entry.kind === 'string' && entry.kind in PROSE
       && 'id' in entry && typeof entry.id === 'string' && 'capability' in entry
       && entry.capability && typeof entry.capability === 'object' && !Array.isArray(entry.capability))
       return capabilityKey(entry as SavedElement);
