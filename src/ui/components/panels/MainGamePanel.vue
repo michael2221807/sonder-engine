@@ -886,7 +886,7 @@ function onHealthGateContinue(): void {
 }
 
 /**
- * 「去存档管理」— keep the typed text (the composer already cleared it on send) and
+ * 「去存档管理」— keep the typed text (the composer keeps a draft until a round starts) and
  * navigate. The text rides the same pending-input slot a failed round uses, so it is
  * restored when the main panel mounts again.
  */
