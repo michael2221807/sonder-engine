@@ -22,6 +22,7 @@
 import type { BehaviorModule } from './types';
 import type { StateManager } from '../core/state-manager';
 import type { ChangeLog, CalendarConfig } from '../types';
+import type { EnginePathConfig } from '../pipeline/types';
 
 /**
  * 时间字段在状态树中的标准字段名
@@ -35,6 +36,25 @@ interface TimeFields {
   day: string;
   month: string;
   year: string;
+}
+
+/** Field names used when timeFieldFormat declares fewer than five keys. */
+const FALLBACK_FIELDS: TimeFields = { year: 'year', month: 'month', day: 'day', hour: 'hour', minute: 'minute' };
+
+/**
+ * The game clock every module reads (TimeService, EffectLifecycle), built from the engine path config so the
+ * two can never disagree on which fields exist: 60 minutes, 24 hours, 30 days, 12 months.
+ */
+export function gameCalendar(paths: Pick<EnginePathConfig, 'gameTime' | 'gameTimeFieldNames'>): CalendarConfig {
+  const f = paths.gameTimeFieldNames;
+  return {
+    minutesPerHour: 60,
+    hoursPerDay: 24,
+    daysPerMonth: 30,
+    monthsPerYear: 12,
+    timeFieldPath: paths.gameTime,
+    timeFieldFormat: { [f.year]: 'number', [f.month]: 'number', [f.day]: 'number', [f.hour]: 'number', [f.minute]: 'number' },
+  };
 }
 
 export class TimeService implements BehaviorModule {
@@ -57,11 +77,11 @@ export class TimeService implements BehaviorModule {
      */
     const keys = Object.keys(config.timeFieldFormat);
     this.fieldNames = {
-      year: keys[0] ?? 'year',
-      month: keys[1] ?? 'month',
-      day: keys[2] ?? 'day',
-      hour: keys[3] ?? 'hour',
-      minute: keys[4] ?? 'minute',
+      year: keys[0] ?? FALLBACK_FIELDS.year,
+      month: keys[1] ?? FALLBACK_FIELDS.month,
+      day: keys[2] ?? FALLBACK_FIELDS.day,
+      hour: keys[3] ?? FALLBACK_FIELDS.hour,
+      minute: keys[4] ?? FALLBACK_FIELDS.minute,
     };
   }
 
@@ -84,7 +104,28 @@ export class TimeService implements BehaviorModule {
    * 防止手动编辑存档导致的非法时间值
    */
   onGameLoad(stateManager: StateManager): void {
+    this.repairUncarriedClock(stateManager);
     this.normalizeTime(stateManager);
+  }
+
+  /**
+   * A save written while this service was wired without the hour/minute fields carries the fallback fields
+   * (`hour`, `minute`) next to the configured ones, and its real minute and hour were never carried (a minute
+   * value in the thousands). Keep the date the save shows, fold the minute and hour into range, and drop the
+   * fallback fields (2026-09-26, PO D1: the story's date stays where the player left it).
+   */
+  private repairUncarriedClock(stateManager: StateManager): void {
+    const basePath = this.config.timeFieldPath;
+    const time = stateManager.get<unknown>(basePath);
+    if (!time || typeof time !== 'object' || Array.isArray(time)) return;
+    const configured = new Set(Object.values(this.fieldNames));
+    const stray = Object.values(FALLBACK_FIELDS).filter((name) => !configured.has(name) && name in time);
+    if (stray.length === 0) return;
+    const fn = this.fieldNames;
+    const fold = (value: number, limit: number) => (limit > 0 ? ((value % limit) + limit) % limit : value);
+    this.writeTimeField(stateManager, basePath, fn.minute, fold(this.readTimeField(stateManager, basePath, fn.minute), this.config.minutesPerHour));
+    this.writeTimeField(stateManager, basePath, fn.hour, fold(this.readTimeField(stateManager, basePath, fn.hour), this.config.hoursPerDay));
+    for (const name of stray) stateManager.delete(`${basePath}.${name}`, 'system');
   }
 
   /**
@@ -99,6 +140,8 @@ export class TimeService implements BehaviorModule {
   private normalizeTime(stateManager: StateManager): void {
     const basePath = this.config.timeFieldPath;
     const fn = this.fieldNames;
+    const time = stateManager.get<unknown>(basePath);
+    if (!time || typeof time !== 'object' || Array.isArray(time)) return;
 
     const minute = this.readTimeField(stateManager, basePath, fn.minute);
     const hour = this.readTimeField(stateManager, basePath, fn.hour);
@@ -107,15 +150,18 @@ export class TimeService implements BehaviorModule {
     const year = this.readTimeField(stateManager, basePath, fn.year);
 
     const oldYear = year;
+    // Day and month count from 1 (day 30 is still this month; day 31 carries). A field the clock does not
+    // have keeps the old zero-based arithmetic, so normalizing never invents a date.
+    const carryFor = (field: string) => (field in time ? this.carryOverFromOne.bind(this) : this.carryOver.bind(this));
 
     // 分钟 → 小时
     const [normMinute, carryToHour] = this.carryOver(minute, this.config.minutesPerHour);
     // 小时 → 天
     const [normHour, carryToDay] = this.carryOver(hour + carryToHour, this.config.hoursPerDay);
     // 天 → 月
-    const [normDay, carryToMonth] = this.carryOver(day + carryToDay, this.config.daysPerMonth);
+    const [normDay, carryToMonth] = carryFor(fn.day)(day + carryToDay, this.config.daysPerMonth);
     // 月 → 年
-    const [normMonth, carryToYear] = this.carryOver(month + carryToMonth, this.config.monthsPerYear);
+    const [normMonth, carryToYear] = carryFor(fn.month)(month + carryToMonth, this.config.monthsPerYear);
     const normYear = year + carryToYear;
 
     this.writeTimeField(stateManager, basePath, fn.minute, normMinute);
@@ -142,6 +188,13 @@ export class TimeService implements BehaviorModule {
     const carry = Math.floor(value / limit);
     const remainder = value - carry * limit;
     return [remainder, carry];
+  }
+
+  /** Carry for a field counted from 1 (day, month): 1..limit stay, limit+1 → 1 with a carry, 0 → limit with a borrow. */
+  private carryOverFromOne(value: number, limit: number): [remainder: number, carry: number] {
+    if (limit <= 0) return [value, 0];
+    const carry = Math.floor((value - 1) / limit);
+    return [value - carry * limit, carry];
   }
 
   /** 从状态树读取时间子字段，缺失时默认为 0 */

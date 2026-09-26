@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { TimeService } from '@/engine/behaviors/time-service';
+import { TimeService, gameCalendar } from '@/engine/behaviors/time-service';
+import { EffectLifecycleModule } from '@/engine/behaviors/effect-lifecycle';
+import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import { createMockStateManager } from '@/engine/__test-utils__';
 import type { CalendarConfig } from '@/engine/types';
 
@@ -87,5 +89,81 @@ describe('TimeService', () => {
     // Values written back same as original — mutations exist but values unchanged
     expect(sm.get('世界.时间.分钟')).toBe(30);
     expect(sm.get('世界.时间.小时')).toBe(12);
+  });
+
+  // Day and month count from 1: the last day of a month and the last month of a year are real dates.
+  it('keeps day 30 and month 12 as they are', () => {
+    const { sm } = createMockStateManager(makeTime(1, 12, 30, 23, 59));
+    ts.onGameLoad(sm as never);
+    expect(sm.get('世界.时间')).toEqual({ 年: 1, 月: 12, 日: 30, 小时: 23, 分钟: 59 });
+    expect(sm.get('角色.基础信息.年龄')).toBe(20);
+  });
+
+  it('carries the last minute of a year into the first day of the next', () => {
+    const { sm } = createMockStateManager(makeTime(1, 12, 30, 23, 59));
+    sm.set('世界.时间.分钟', 60);
+    ts.afterCommands(sm as never, { source: 'command', timestamp: 0, changes: [{ path: '世界.时间.分钟', action: 'add', oldValue: 59, newValue: 60, timestamp: 0 }] });
+    expect(sm.get('世界.时间')).toEqual({ 年: 2, 月: 1, 日: 1, 小时: 0, 分钟: 0 });
+    expect(sm.get('角色.基础信息.年龄')).toBe(21);
+  });
+
+  it('reads a day 0 left by the old zero-based carry as the last day of the month before', () => {
+    const { sm } = createMockStateManager(makeTime(1, 3, 0, 9, 0));
+    ts.onGameLoad(sm as never);
+    expect(sm.get('世界.时间')).toEqual({ 年: 1, 月: 2, 日: 30, 小时: 9, 分钟: 0 });
+  });
+
+  it('borrows across a year: day 0 of month 1 is the last day of the year before, and the age follows', () => {
+    const { sm } = createMockStateManager(makeTime(2, 1, 0, 6, 0));
+    ts.onGameLoad(sm as never);
+    expect(sm.get('世界.时间')).toEqual({ 年: 1, 月: 12, 日: 30, 小时: 6, 分钟: 0 });
+    expect(sm.get('角色.基础信息.年龄')).toBe(19);
+  });
+
+  it('does not create a clock the save does not have', () => {
+    const { sm, mutations } = createMockStateManager({ 角色: { 基础信息: { 年龄: 20 } } });
+    ts.onGameLoad(sm as never);
+    expect(mutations).toHaveLength(0);
+    expect(sm.get('世界.时间')).toBeUndefined();
+  });
+
+  // PO D1 (2026-09-26): saves from the three-field wiring keep their date; minute and hour fold into range.
+  it('repairs a clock written without hour and minute wiring: same date, folded time, fallback fields gone', () => {
+    const { sm } = createMockStateManager({ 世界: { 时间: { 年: 1, 月: 2, 日: 3, 小时: 8, 分钟: 13830, minute: 0, hour: 0 } }, 角色: { 基础信息: { 年龄: 20 } } });
+    ts.onGameLoad(sm as never);
+    expect(sm.get('世界.时间')).toEqual({ 年: 1, 月: 2, 日: 3, 小时: 8, 分钟: 30 });
+    expect(sm.get('角色.基础信息.年龄')).toBe(20);
+    ts.onGameLoad(sm as never);   // a second load finds nothing left to repair
+    expect(sm.get('世界.时间')).toEqual({ 年: 1, 月: 2, 日: 3, 小时: 8, 分钟: 30 });
+  });
+
+  it('folds an uncarried hour too, and leaves a clock without fallback fields to the ordinary carry', () => {
+    const legacy = createMockStateManager({ 世界: { 时间: { 年: 1, 月: 2, 日: 3, 小时: 30, 分钟: -5, hour: 0 } } });
+    ts.onGameLoad(legacy.sm as never);
+    expect(legacy.sm.get('世界.时间')).toEqual({ 年: 1, 月: 2, 日: 3, 小时: 6, 分钟: 55 });
+    const current = createMockStateManager(makeTime(1, 2, 3, 8, 90));
+    ts.onGameLoad(current.sm as never);
+    expect(current.sm.get('世界.时间')).toEqual({ 年: 1, 月: 2, 日: 3, 小时: 9, 分钟: 30 });
+  });
+});
+
+// The wiring the app uses: both clock readers come from one calendar built from the engine paths.
+describe('gameCalendar', () => {
+  it('declares all five clock fields, largest first', () => {
+    expect(Object.keys(gameCalendar(DEFAULT_ENGINE_PATHS).timeFieldFormat)).toEqual(['年', '月', '日', '小时', '分钟']);
+  });
+
+  it('a status written this round survives the round end after the clock moves on', () => {
+    const calendar = gameCalendar(DEFAULT_ENGINE_PATHS);
+    const time = new TimeService(calendar);
+    const effects = new EffectLifecycleModule({ effectsPath: '角色.效果', effectSchema: { nameField: '状态名称', typeField: '类型',
+      typeValues: ['buff', 'debuff', 'neutral'], startTimeField: '生成时间', durationField: '持续时间分钟', permanentSentinel: 999999 } }, calendar);
+    const { sm } = createMockStateManager({ 世界: { 时间: { 年: 1, 月: 2, 日: 3, 小时: 22, 分钟: 0 } },
+      角色: { 效果: [{ 状态名称: '低烧', 类型: 'debuff', 生成时间: { 年: 1, 月: 2, 日: 3, 小时: 22, 分钟: 0 }, 持续时间分钟: 480 }] } });
+    sm.set('世界.时间.分钟', 90);
+    time.afterCommands(sm as never, { source: 'command', timestamp: 0, changes: [{ path: '世界.时间.分钟', action: 'add', oldValue: 0, newValue: 90, timestamp: 0 }] });
+    effects.onRoundEnd(sm as never);
+    expect(sm.get('世界.时间')).toEqual({ 年: 1, 月: 2, 日: 3, 小时: 23, 分钟: 30 });
+    expect(sm.get<unknown[]>('角色.效果')).toHaveLength(1);
   });
 });

@@ -99,7 +99,7 @@ import { migrateImageState } from './engine/image/save-migration';
 import { NpcChatPipeline } from './engine/pipeline/sub-pipelines/npc-chat';
 import { DEFAULT_ENGINE_PATHS } from './engine/pipeline/types';
 import { setBootstrapGamePack } from './engine/bootstrap-pack';
-import { TimeService } from './engine/behaviors/time-service';
+import { TimeService, gameCalendar } from './engine/behaviors/time-service';
 import { NpcDedupModule } from './engine/behaviors/npc-dedup';
 import { MemoryCompilerModule } from './engine/behaviors/memory-compiler';
 import { ComputedFieldsModule } from './engine/behaviors/computed-fields';
@@ -337,19 +337,14 @@ async function bootstrap(): Promise<void> {
 
   const behaviorRunner = new BehaviorRunner();
 
+  // One calendar for every module that reads the game clock. TimeService once got only 年/月/日, so it carried
+  // fallback `hour`/`minute` fields while the real 分钟 grew without end and EffectLifecycle (which read 分钟)
+  // expired every new status at round end (2026-09-26, PO D1).
+  const calendar = gameCalendar(DEFAULT_ENGINE_PATHS);
+
   // ── #21: 注册行为模块 ──
-  // TimeService：推进游戏内时间进位（年/月/日 归一化）
-  behaviorRunner.register(new TimeService(
-    {
-      minutesPerHour: 60,
-      hoursPerDay: 24,
-      daysPerMonth: 30,
-      monthsPerYear: 12,
-      timeFieldPath: DEFAULT_ENGINE_PATHS.gameTime,
-      timeFieldFormat: { 年: 'number', 月: 'number', 日: 'number' },
-    },
-    DEFAULT_ENGINE_PATHS.characterAge,
-  ));
+  // TimeService：推进游戏内时间进位（分钟→小时→日→月→年 归一化）
+  behaviorRunner.register(new TimeService(calendar, DEFAULT_ENGINE_PATHS.characterAge));
 
   // NpcDedupModule：社交.关系 同名 NPC 兜底融合（onRoundEnd + onGameLoad）
   // push 级守卫（relationship-merge-guard）覆盖 CommandExecutor 路径；此模块
@@ -417,17 +412,7 @@ async function bootstrap(): Promise<void> {
     // EffectLifecycle — onRoundEnd / onGameLoad 清理过期 buff/debuff
     const effectConfig = rules['effectLifecycle'] as EffectLifecycleConfig | undefined;
     if (effectConfig?.effectsPath && effectConfig.effectSchema) {
-      behaviorRunner.register(new EffectLifecycleModule(
-        effectConfig,
-        {
-          minutesPerHour: 60,
-          hoursPerDay: 24,
-          daysPerMonth: 30,
-          monthsPerYear: 12,
-          timeFieldPath: DEFAULT_ENGINE_PATHS.gameTime,
-          timeFieldFormat: { 年: 'number', 月: 'number', 日: 'number', 小时: 'number', 分钟: 'number' },
-        },
-      ));
+      behaviorRunner.register(new EffectLifecycleModule(effectConfig, calendar));
     }
 
     // ThresholdTriggers — onRoundEnd / onGameLoad 检查阈值触发事件
