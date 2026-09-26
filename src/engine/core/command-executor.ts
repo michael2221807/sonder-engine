@@ -11,8 +11,9 @@
  * 验证链（对齐 demo §24 四步验证）：
  * 1. 结构验证 — action/key 字段必须存在且合法
  * 2. 值清理 — NaN 转 0，字符串 trim
- * 3. 数值修复 — set 的值夹至 [0, MAX_NUMERIC_VALUE]；add 的增量可为负（受伤、花钱），结果不超过上限，
- *    非负值减少时最低到 0；已经为负的值（如敌意好感度）不会被拉回 0
+ * 3. 数值修复 — 字段在 state-schema 里声明了 minimum/maximum 时按声明夹取（如好感度 -100~100）；
+ *    未声明时 set 的值夹至 [0, MAX_NUMERIC_VALUE]，add 的增量可为负（受伤、花钱），结果不超过上限，
+ *    非负值减少时最低到 0，已经为负的值不会被拉回 0
  * 4. 数组容量限制 — push 时若已达 MAX_ARRAY_CAPACITY，先 pull 最旧元素
  *
  * §11.4 路径根白名单（归位 / 拒绝模式，2026-09-04 起）：
@@ -68,6 +69,37 @@ export function composePushGuards(...guards: PushDedupGuard[]): PushDedupGuard {
 /** 单字段数值写入的安全上限（防止 AI 生成极端值破坏 UI 渲染） */
 const MAX_NUMERIC_VALUE = 999_999;
 
+/** A numeric field's range as the Game Pack schema declares it (either side may be absent). */
+export interface NumericBounds { min?: number; max?: number }
+
+/** The part of a JSON-Schema node this lookup reads. */
+interface SchemaNodeLike {
+  type?: string;
+  minimum?: number;
+  maximum?: number;
+  properties?: Record<string, SchemaNodeLike>;
+  items?: SchemaNodeLike;
+}
+
+/**
+ * The declared minimum/maximum of the number field a state path points at, read from the pack's
+ * state-schema. Filtered or indexed array segments (`关系[名称=X]`, `关系[0]`, `关系.0`) step into the
+ * array's items. Returns undefined when the path is not a declared number field or declares no range.
+ */
+export function schemaNumberBounds(schema: unknown, path: string): NumericBounds | undefined {
+  let node = schema as SchemaNodeLike | undefined;
+  for (const segment of splitPathSegments(path)) {
+    if (!node) return undefined;
+    const key = segmentKey(segment);
+    if (/^\d+$/.test(key) && node.type === 'array') { node = node.items; continue; }
+    node = node.properties?.[key];
+    if (node && segment.includes('[') && node.type === 'array') node = node.items;
+  }
+  if (!node || (node.type !== 'number' && node.type !== 'integer')) return undefined;
+  if (node.minimum === undefined && node.maximum === undefined) return undefined;
+  return { min: node.minimum, max: node.maximum };
+}
+
 /** push 操作下，单个数组字段的最大容量（超出时自动淘汰最旧元素） */
 const MAX_ARRAY_CAPACITY = 200;
 
@@ -97,6 +129,8 @@ export class CommandExecutor {
      * suppress the push (treated as a no-op success, not an error).
      */
     private pushDedupGuard?: PushDedupGuard,
+    /** Declared numeric ranges from the pack schema (see schemaNumberBounds); undefined keeps the defaults. */
+    private numericBounds?: (path: string) => NumericBounds | undefined,
   ) {}
 
   /** 执行单条指令 — 返回执行结果 */
@@ -120,8 +154,9 @@ export class CommandExecutor {
       switch (cmd.action) {
         case 'set': {
           const sanitized = sanitizeValue(cmd.value);
+          const bounds = typeof sanitized === 'number' ? this.numericBounds?.(cmd.key) : undefined;
           const finalVal = typeof sanitized === 'number'
-            ? clampNumber(sanitized)
+            ? clampNumber(sanitized, bounds?.min ?? 0, bounds?.max)
             : sanitized;
           change = this.stateManager.set(cmd.key, finalVal, 'command');
           break;
@@ -131,13 +166,14 @@ export class CommandExecutor {
           // ── 步骤 2：值清理（NaN → 0） ──
           const raw = Number(cmd.value ?? 0);
           const numValue = Number.isNaN(raw) ? 0 : raw;
-          // ── 步骤 3：数值修复 — 增量可正可负；结果不超过上限，非负值最低到 0 ──
-          // An already negative value (legacy data such as a hostile NPC's affinity) keeps its floor, so a
+          // ── 步骤 3：数值修复 — 增量可正可负；结果在声明范围内，未声明时不超过上限、非负值最低到 0 ──
+          // Without a declared minimum, an already negative value (legacy data) keeps its floor, so a
           // decrease never pulls it back up to 0. Only a result that leaves the range is adjusted; an
           // ordinary add keeps its exact delta.
           const current = Number(this.stateManager.get(cmd.key) ?? 0);
           const next = current + numValue;
-          const bounded = Math.max(Math.min(0, current), Math.min(MAX_NUMERIC_VALUE, next));
+          const bounds = this.numericBounds?.(cmd.key);
+          const bounded = clampNumber(next, bounds?.min ?? Math.min(0, current), bounds?.max);
           const delta = Number.isNaN(next) || next === bounded ? numValue : bounded - current;
           change = this.stateManager.add(cmd.key, delta, 'command');
           break;
@@ -354,9 +390,9 @@ function segmentKey(segment: string): string {
 
 // ─── Helpers ───
 
-/** 将数值夹至 [0, MAX_NUMERIC_VALUE]（负值夹至 0，极端值夹至上限） */
-function clampNumber(n: number): number {
-  return Math.max(0, Math.min(MAX_NUMERIC_VALUE, n));
+/** 将数值夹至 [min, max]；默认 [0, MAX_NUMERIC_VALUE]（负值夹至 0，极端值夹至上限） */
+function clampNumber(n: number, min = 0, max = MAX_NUMERIC_VALUE): number {
+  return Math.max(min, Math.min(max, n));
 }
 
 /**

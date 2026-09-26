@@ -1075,7 +1075,7 @@ const genderSelectOptions = computed<SelectOption[]>(() => [
 
           <div class="form-group">
             <label class="form-label">{{ $t('relationship.editForm.label.affinity') }} ({{ editForm.好感度 }})</label>
-            <input v-model.number="editForm.好感度" type="range" min="0" max="100" class="form-range" />
+            <input v-model.number="editForm.好感度" type="range" min="-100" max="100" class="form-range" />
           </div>
 
           <div class="form-group">

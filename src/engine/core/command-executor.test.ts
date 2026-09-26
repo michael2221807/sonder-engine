@@ -356,3 +356,49 @@ describe('CommandExecutor · add on the real state tree', () => {
     expect(sm.get('社交.关系[名称=沈墨琛].好感度')).toBe(20);
   });
 });
+
+describe('CommandExecutor · numeric ranges declared by the pack schema', () => {
+  it('finds the declared range through filtered and indexed array segments only', async () => {
+    const { schemaNumberBounds } = await import('@/engine/core/command-executor');
+    const schema = (await import('../../../public/packs/tianming/schemas/state-schema.json')).default;
+    for (const path of ['社交.关系[名称=林晚照].好感度', '社交.关系[0].好感度', '社交.关系.0.好感度'])
+      expect(schemaNumberBounds(schema, path)).toEqual({ min: -100, max: 100 });
+    for (const path of ['角色.可变属性.体力.当前', '角色.背包.金钱.现金', '社交.关系[名称=林晚照].名称', '不存在.路径'])
+      expect(schemaNumberBounds(schema, path)).toBeUndefined();
+  });
+
+  it('an affinity may be negative and stays within -100~100 for set and add; undeclared fields keep the defaults', async () => {
+    const { StateManager } = await import('@/engine/core/state-manager');
+    const { schemaNumberBounds } = await import('@/engine/core/command-executor');
+    const schema = (await import('../../../public/packs/tianming/schemas/state-schema.json')).default;
+    const sm = new StateManager();
+    sm.loadTree({ 角色: { 背包: { 金钱: { 现金: 5 } } }, 社交: { 关系: [{ 名称: '林晚照', 好感度: 60 }, { 名称: '沈墨琛', 好感度: -35 }] } });
+    const ex = new CommandExecutor(sm, ['角色', '社交'], undefined, path => schemaNumberBounds(schema, path));
+    const affinity = (name: string) => sm.get(`社交.关系[名称=${name}].好感度`);
+    ex.execute({ action: 'add', key: '社交.关系[名称=林晚照].好感度', value: -80 });
+    expect(affinity('林晚照')).toBe(-20);
+    ex.execute({ action: 'add', key: '社交.关系[名称=沈墨琛].好感度', value: -100 });
+    expect(affinity('沈墨琛')).toBe(-100);
+    ex.execute({ action: 'add', key: '社交.关系[名称=沈墨琛].好感度', value: 300 });
+    expect(affinity('沈墨琛')).toBe(100);
+    ex.execute({ action: 'set', key: '社交.关系[名称=林晚照].好感度', value: -150 });
+    expect(affinity('林晚照')).toBe(-100);
+    ex.execute({ action: 'set', key: '社交.关系[名称=林晚照].好感度', value: -20 });
+    expect(affinity('林晚照')).toBe(-20);
+    ex.execute({ action: 'add', key: '角色.背包.金钱.现金', value: -9 });
+    expect(sm.get('角色.背包.金钱.现金')).toBe(0);
+    ex.execute({ action: 'set', key: '角色.背包.金钱.现金', value: -9 });
+    expect(sm.get('角色.背包.金钱.现金')).toBe(0);
+  });
+
+  it('the round-end schema repair keeps an affinity written inside a whole NPC object within range', async () => {
+    const { StateManager } = await import('@/engine/core/state-manager');
+    const { ValidationRepairModule } = await import('@/engine/behaviors/validation-repair');
+    const schema = (await import('../../../public/packs/tianming/schemas/state-schema.json')).default;
+    const sm = new StateManager();
+    sm.loadTree({ 社交: { 关系: [] } });
+    new CommandExecutor(sm, ['社交']).execute({ action: 'push', key: '社交.关系', value: { 名称: '仇人', 好感度: -150 } });
+    new ValidationRepairModule(schema as Record<string, unknown>).onRoundEnd(sm);
+    expect(sm.get('社交.关系[名称=仇人].好感度')).toBe(-100);
+  });
+});

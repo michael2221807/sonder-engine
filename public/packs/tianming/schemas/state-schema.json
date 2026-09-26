@@ -406,7 +406,7 @@
             "properties": {
               "名称":   { "type": "string" },
               "类型":   { "type": "string" },
-              "好感度": { "type": "number" },
+              "好感度": { "type": "number", "minimum": -100, "maximum": 100, "$comment": "可为负：敌意／仇恨；执行器与每回合校验都按此范围夹取。" },
               "位置":   { "type": "string" },
               "描述":   { "type": "string", "$comment": "一句话身份/气质概述；与 '外貌描述' 区分（外貌详细写在 '外貌描述' 里）。" },
               "外貌描述": { "type": "string", "$comment": "NPC 完整外貌（脸、发、瞳、体型、服饰基调等自由文本段）；image tokenizer / anchor extractor 主要视觉输入；world heartbeat 允许随剧情演变（衰老/伤疤/染发）。" },
