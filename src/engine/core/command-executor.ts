@@ -112,6 +112,9 @@ export class CommandExecutor {
    */
   private warnedUnknownRoots = new Set<string>();
 
+  /** Called with every batch's changeLog, whichever flow ran it (main round, sub-pipelines, the assistant). */
+  private batchObserver?: (changeLog: ChangeLog) => void;
+
   constructor(
     private stateManager: StateManager,
     /**
@@ -230,6 +233,14 @@ export class CommandExecutor {
   }
 
   /**
+   * Observe every batch after it runs. A behaviour that must hold for writes from any flow (a status written
+   * outside the main round starts on the game clock too) hooks here; the observer never fails a batch.
+   */
+  observeBatches(observer: (changeLog: ChangeLog) => void): void {
+    this.batchObserver = observer;
+  }
+
+  /**
    * 批量执行指令 — 一次 AI 回复的所有 commands
    *
    * 当前实现为"尽力执行"：单条失败不影响后续指令。
@@ -255,6 +266,10 @@ export class CommandExecutor {
     };
 
     const hasErrors = results.some((r) => !r.success);
+
+    if (changes.length > 0 && this.batchObserver) {
+      try { this.batchObserver(changeLog); } catch (err) { console.warn('[CommandExecutor] batch observer failed:', err); }
+    }
 
     if (hasErrors) {
       console.warn(

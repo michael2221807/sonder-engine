@@ -27,7 +27,7 @@
  */
 import type { BehaviorModule } from './types';
 import type { StateManager } from '../core/state-manager';
-import type { EffectLifecycleConfig, CalendarConfig } from '../types';
+import type { EffectLifecycleConfig, CalendarConfig, ChangeLog } from '../types';
 
 export class EffectLifecycleModule implements BehaviorModule {
   readonly id = 'effect-lifecycle';
@@ -46,6 +46,55 @@ export class EffectLifecycleModule implements BehaviorModule {
   onRoundEnd(stateManager: StateManager): void {
     this.deduplicateEffects(stateManager);
     this.removeExpiredEffects(stateManager);
+  }
+
+  /**
+   * A status written this round starts now on the game clock, whatever start time the model wrote. The model
+   * reckons time from the story and can drift from the clock by hours; a status it just wrote must not be
+   * expired at the same round end (2026-09-26, PO G1). Runs after TimeService, so the stamp includes this
+   * round's time advance (the batch observer stamped it once already, before the clock was normalized).
+   */
+  afterCommands(stateManager: StateManager, changeLog: ChangeLog): void {
+    this.stampWritten(stateManager, changeLog);
+  }
+
+  /**
+   * Stamp the statuses a batch wrote with the game clock. Written = pushed in the batch, or a name that was not
+   * in the list before the batch's first change to it; editing a field of an existing status does not restart
+   * it. Only the last copy of a name is stamped (the one the round-end dedup keeps). Wired to every command
+   * batch (CommandExecutor.observeBatches) so writes outside the main round are covered too.
+   */
+  stampWritten(stateManager: StateManager, changeLog: ChangeLog): void {
+    const path = this.effectConfig.effectsPath;
+    const changes = changeLog.changes.filter((c) => c.path === path);
+    if (changes.length === 0) return;
+    const effects = stateManager.get<Record<string, unknown>[]>(path);
+    if (!Array.isArray(effects) || effects.length === 0) return;
+    const now = this.currentTimeObject(stateManager);
+    if (!now) return;
+
+    const nameOf = (effect: unknown) => (effect && typeof effect === 'object'
+      ? String((effect as Record<string, unknown>)[this.effectConfig.effectSchema.nameField] ?? '').trim() : '');
+    const listOf = (value: unknown) => (Array.isArray(value) ? value : []);
+    const before = new Set(listOf(changes[0].oldValue).map(nameOf));
+    const written = new Set<string>();
+    for (const change of changes) if (change.action === 'push') written.add(nameOf(listOf(change.newValue).at(-1)));
+    for (const effect of effects) if (!before.has(nameOf(effect))) written.add(nameOf(effect));
+    written.delete('');
+    if (written.size === 0) return;
+
+    const last = new Map<string, number>();
+    effects.forEach((effect, index) => { if (written.has(nameOf(effect))) last.set(nameOf(effect), index); });
+    const startField = this.effectConfig.effectSchema.startTimeField;
+    const stamped = new Set(last.values());
+    stateManager.set(path, effects.map((effect, index) => (stamped.has(index) ? { ...effect, [startField]: { ...now } } : effect)), 'system');
+  }
+
+  /** The game clock as a start-time object: the calendar's own fields, nothing else. */
+  private currentTimeObject(stateManager: StateManager): Record<string, number> | null {
+    const time = stateManager.get<Record<string, unknown>>(this.calendarConfig.timeFieldPath);
+    if (!time || typeof time !== 'object') return null;
+    return Object.fromEntries(Object.keys(this.calendarConfig.timeFieldFormat).map((key) => [key, Number(time[key] ?? 0)]));
   }
 
   /**

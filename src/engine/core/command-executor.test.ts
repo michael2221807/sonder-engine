@@ -29,6 +29,27 @@ describe('CommandExecutor', () => {
     (eventBus as unknown as { _clear: () => void })._clear();
   });
 
+  // PO G1 (2026-09-26): a behaviour that must hold for writes from any flow observes every batch.
+  describe('batch observer', () => {
+    it('sees each batch that changed something, once, with its changeLog; a failing observer does not fail the batch', async () => {
+      const { StateManager } = await import('@/engine/core/state-manager');
+      const real = new StateManager();
+      real.loadTree({ 角色: { 属性: { 体力: 100 } } });
+      const executor = new CommandExecutor(real, ['角色']);
+      const sm = real;
+      const seen: string[][] = [];
+      executor.observeBatches((log) => { seen.push(log.changes.map((c) => c.path)); });
+      executor.executeBatch([{ action: 'set', key: '角色.名字', value: '张三' }, { action: 'add', key: '角色.属性.体力', value: -5 }]);
+      executor.executeBatch([]);
+      expect(seen).toEqual([['角色.名字', '角色.属性.体力']]);
+      executor.observeBatches(() => { throw new Error('observer broke'); });
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const result = executor.executeBatch([{ action: 'set', key: '角色.名字', value: '李四' }]);
+      expect(result.hasErrors).toBe(false);
+      expect(sm.get('角色.名字')).toBe('李四');
+    });
+  });
+
   describe('single command execution', () => {
     it('set action writes value', () => {
       const result = executor.execute({ action: 'set', key: '角色.名字', value: '张三' });

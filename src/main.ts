@@ -412,7 +412,10 @@ async function bootstrap(): Promise<void> {
     // EffectLifecycle — onRoundEnd / onGameLoad 清理过期 buff/debuff
     const effectConfig = rules['effectLifecycle'] as EffectLifecycleConfig | undefined;
     if (effectConfig?.effectsPath && effectConfig.effectSchema) {
-      behaviorRunner.register(new EffectLifecycleModule(effectConfig, calendar));
+      const effectLifecycle = new EffectLifecycleModule(effectConfig, calendar);
+      behaviorRunner.register(effectLifecycle);
+      // A status written by any flow (sub-pipelines, the assistant) starts on the game clock too (PO G1).
+      commandExecutor.observeBatches(changeLog => effectLifecycle.stampWritten(stateManager, changeLog));
     }
 
     // ThresholdTriggers — onRoundEnd / onGameLoad 检查阈值触发事件
