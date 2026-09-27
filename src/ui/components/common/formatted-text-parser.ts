@@ -10,7 +10,8 @@
  *     FormattedText 递归自调用渲染，天然支持任意嵌套且不必在此层递归。
  *
  * 行内（inline）：对每个块的文本内容按以下优先级解析——
- *   1. 〖类型:结果,...〗 判定块（最高优先级原子单位，即使包在对话引号内也先抽出）
+ *   1. 〖类型:结果,...〗 判定块（最高优先级原子单位，即使包在对话引号内也先抽出）；
+ *      首句没有冒号的 〖…〗 不是判定，去掉括号按正文解析（isSystemBracket）
  *   2. AGA 语义记号：【环境】 / `内心`（反引号） / "对话" / “对话”
  *   3. markdown 强调与链接：**粗** / __粗__ / *斜* / _斜_ / [text](url)
  *   NPC 名高亮不在此处理——它依赖运行时 props，由组件层在解析结果上二次注入。
@@ -23,6 +24,7 @@
  * - GFM 管道表格（`| … |` + `|---|` 分隔行）支持（2026-07-16 增补）。
  * - 三反引号代码块、脚注等超出「常用排版全套」范围，本模块不解析。
  */
+import { isSystemBracket } from '@/engine/core/narrative-brackets';
 
 // App doc: docs/user-guide/pages/game-main.md §3.4
 
@@ -115,14 +117,18 @@ export function parseJudgement(raw: string): JudgementData {
   return data;
 }
 
+/** A `〖…〗` range: a system line (verdict or notice) carries its parsed judgement; any other keeps its text. */
 interface JudgementSlice {
   start: number;
   end: number;
-  judgement: JudgementData;
+  judgement?: JudgementData;
+  prose?: string;
 }
 
 /**
  * 扫描所有 `〖...〗` 区间（非嵌套原子块）。未闭合的 `〖` 被忽略，留给后续解析。
+ * 判定／系统提示（首句有冒号，`isSystemBracket`）成为判定块；其余是叙事自己的强调，按正文显示、不截断
+ * （PO G2，与朗读的 stripJudgementForSpeech 同一规则）。
  */
 function findJudgementSlices(text: string): JudgementSlice[] {
   const slices: JudgementSlice[] = [];
@@ -133,7 +139,9 @@ function findJudgementSlices(text: string): JudgementSlice[] {
     const closePos = text.indexOf('〗', openPos + 1);
     if (closePos === -1) break;
     const inner = text.slice(openPos + 1, closePos);
-    slices.push({ start: openPos, end: closePos + 1, judgement: parseJudgement(inner) });
+    slices.push(isSystemBracket(inner)
+      ? { start: openPos, end: closePos + 1, judgement: parseJudgement(inner) }
+      : { start: openPos, end: closePos + 1, prose: inner });
     cursor = closePos + 1;
   }
   return slices;
@@ -395,7 +403,8 @@ export function parseInline(text: string): InlinePart[] {
   let cursor = 0;
   for (const s of slices) {
     if (s.start > cursor) parts.push(...runSegment(text.slice(cursor, s.start)));
-    parts.push({ kind: 'judgement', judgement: s.judgement });
+    if (s.judgement) parts.push({ kind: 'judgement', judgement: s.judgement });
+    else if (s.prose) parts.push(...runSegment(s.prose));
     cursor = s.end;
   }
   if (cursor < text.length) parts.push(...runSegment(text.slice(cursor)));

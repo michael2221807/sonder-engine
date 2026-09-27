@@ -18,10 +18,12 @@
  *     消灭"孤零零短段"造成的最明显卡顿。
  *   - 最多句数为硬上限(兜底延迟/停止粒度),即使短尾合并也不突破。
  */
+import { isSystemBracket } from '../core/narrative-brackets';
 
 /**
  * 剔除「判定 / 系统提示」块 — 这些是系统层信息(骰值、难度、状态变化),
  * 不属于叙事,朗读出来会打断沉浸感,故整块跳过而非去符号读内容。
+ * 首句没有冒号的 〖…〗 不是系统行,是叙事自己的强调:读出内文(isSystemBracket,与展示层共用)。
  *
  * 覆盖三种写法:
  *   1. `〖类型:结果,判定值:X,难度:Y,...〗` —— AGA 唯一合法判定格式(也含
@@ -46,6 +48,8 @@ export function stripJudgementForSpeech(raw: string): string {
   //    `〗`(即使中间又出现 `〖` 也一并吞掉,与展示层"孤立 〖 后的文本不渲染成正文"
   //    一致);找不到闭合的 `〗` 则停手,不吞后文。若改成正则 /〖[^〖〗]*〗/,
   //    孤立 `〖` 后面那段展示层不显示的文本会被朗读出来 —— 视听不一致。
+  //    只跳过判定／系统提示(首句有冒号,isSystemBracket);其余 〖…〗 是叙事自己的强调,
+  //    展示层按正文显示,这里读出内文(PO G2)。
   let out = '';
   let cursor = 0;
   while (cursor < t.length) {
@@ -53,7 +57,8 @@ export function stripJudgementForSpeech(raw: string): string {
     if (open === -1) break;
     const close = t.indexOf('〗', open + 1);
     if (close === -1) break; // 未闭合 → 后文原样保留(展示层同样忽略这个 〖)
-    out += t.slice(cursor, open);
+    const inner = t.slice(open + 1, close);
+    out += t.slice(cursor, open) + (isSystemBracket(inner) ? '' : inner);
     cursor = close + 1;
   }
   t = out + t.slice(cursor);

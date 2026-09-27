@@ -40,6 +40,15 @@ describe('stripMarkersForSpeech', () => {
 });
 
 describe('stripJudgementForSpeech (判定不配音)', () => {
+  // PO G2 (2026-09-26): the same rule as the display — a bracketed thought is read, system lines are skipped.
+  it('reads a bracketed thought and skips verdicts and system notices', () => {
+    expect(stripJudgementForSpeech('他笑了。〖那点堵着的东西，又冷又软地，翻了一下。〗〖社交:成功,判定值:16〗〖系统提示：好感度变化〗她低下头。'))
+      .toBe('他笑了。那点堵着的东西，又冷又软地，翻了一下。她低下头。');
+    // Same edges as the display: an empty bracket reads nothing; a swallowed verdict is never read.
+    expect(stripJudgementForSpeech('前〖〗后')).toBe('前后');
+    expect(stripJudgementForSpeech('A〖走丢的开头，还有更多文字 B〖行动:成功,判定值:10〗C')).toBe('AC');
+  });
+
   it('returns empty for empty input', () => {
     expect(stripJudgementForSpeech('')).toBe('');
   });

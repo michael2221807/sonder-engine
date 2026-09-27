@@ -41,6 +41,26 @@ describe('AGA markers (existing format, unchanged)', () => {
 
 // ─── Judgement blocks (atomic, byte-identical) ────────────────
 describe('judgement blocks', () => {
+  // PO G2 (2026-09-26): a 〖…〗 without a key before a colon is the narrative's own emphasis, shown in full.
+  it('a bracketed thought is shown as text in full; verdicts and system notices stay judgement parts', () => {
+    const line = '你就这么睡了过去。〖你那根一直冷冷绷着的弦,在这层被子的黑暗里,彻底松了下来。〗帘外很静。';
+    const parts = parseInline(line);
+    expect(kinds(parts)).not.toContain('judgement');
+    expect(parts.map((p) => p.text ?? '').join('')).toBe('你就这么睡了过去。你那根一直冷冷绷着的弦,在这层被子的黑暗里,彻底松了下来。帘外很静。');
+    const system = parseInline('〖系统提示：好感度变化〗她低下头。〖社交:成功,判定值:16,难度:9〗');
+    expect(system.filter((p) => p.kind === 'judgement').map((p) => [p.judgement?.type, p.judgement?.result]))
+      .toEqual([['系统提示', '好感度变化'], ['社交', '成功']]);
+    // A thought may carry the narrative's own markers; they are parsed as usual.
+    expect(kinds(parseInline('〖那点东西，`又冷又软`地，翻了一下。〗'))).toContain('psychology');
+    // Known edge, kept on the safe side: a colon in the first clause reads as a key, so it stays a chip.
+    expect(kinds(parseInline('〖她心里想：别走〗'))).toEqual(['judgement']);
+    // An empty bracket leaves nothing; an unclosed 〖 that swallows a real verdict stays hidden in a chip, never prose.
+    expect(parseInline('前〖〗后').map((p) => p.text ?? '').join('')).toBe('前后');
+    const swallowed = parseInline('A〖走丢的开头，还有更多文字 B〖行动:成功,判定值:10〗C');
+    expect(kinds(swallowed)).toContain('judgement');
+    expect(swallowed.map((p) => p.text ?? '').join('')).not.toContain('判定值');
+  });
+
   it('extracts 〖...〗 as a judgement part', () => {
     const parts = parseInline('他出手了〖战斗:成功,判定值:18,难度:12〗对方倒下。');
     const j = parts.find((p) => p.kind === 'judgement');
