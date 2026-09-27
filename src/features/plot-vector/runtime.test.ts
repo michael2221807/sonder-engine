@@ -1,10 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { BASIC_SUPPLY_IDS } from './basic-supply';
+import vectorRules from '../../../public/packs/tianming/rules/plot-vector.json';
+import { parseSupplyRules } from './supply';
 import { acceptVector, bindCard, initialVectorState, prepareVector, readVectorState, type VectorState } from './runtime';
 import { POSITIVE_EXAMPLES } from './genesis/test-fixtures';
 import { tasksAfterSave, type SavedElement } from './genesis/post-save';
 import type { NativeInput } from './native-input';
 
+const SUPPLY = parseSupplyRules(vectorRules)!;
+const BASIC_SUPPLY_IDS = SUPPLY.starter;
 const bindAll = (entries: SavedElement[], card: (i: number) => unknown) =>
   tasksAfterSave({ id: 'saved', success: true, before: [], after: entries }).map((task, i) => bindCard(task, card(i)));
 
@@ -14,17 +17,17 @@ describe('local AGA board assembly', () => {
     const cards = bindAll(entries, i => POSITIVE_EXAMPLES[i].card);
     const state: VectorState = { ...initialVectorState(), cards };
     const untouched = structuredClone(state);
-    const first = prepareVector(state, entries, 'r1');
+    const first = prepareVector(state, entries, 'r1', undefined, SUPPLY);
     expect(Object.values(first.layout.placements).filter(Boolean)).toEqual([]);
     expect(first.layout.tray).toEqual([...entries.map(e => e.id), ...BASIC_SUPPLY_IDS]);
     // The same card twice keeps the first; an unknown card and a hand card in the status cell are dropped.
     const arranged: VectorState = { ...state, layout: { placements: { '01': entries[2].id, '02': null, '03': entries[2].id,
       '04': 'removed', '06': entries[0].id }, tray: [] } };
-    const preview = prepareVector(arranged, entries, 'r1');
+    const preview = prepareVector(arranged, entries, 'r1', undefined, SUPPLY);
     expect(preview.layout.placements).toEqual({ '01': entries[2].id, '02': null, '03': null, '04': null, '05': null, '06': null });
     expect(preview.layout.tray).toEqual([...entries.slice(0, 2).map(e => e.id), ...BASIC_SUPPLY_IDS]);
     expect(state).toEqual(untouched);
-    const accepted = acceptVector(arranged, preview);
+    const accepted = acceptVector(arranged, preview, SUPPLY);
     expect(accepted.session.round).toBe(2);
     expect(accepted.growth[entries[2].id]).toMatchObject({ level: 1 }); // the diary grew one page
   });
@@ -32,8 +35,8 @@ describe('local AGA board assembly', () => {
     const entries: SavedElement[] = Array.from({ length: 3 }, (_, i) => ({ id: `${i === 2 ? 'environment' : 'effect'}:${i}`, kind: i === 2 ? 'environment' : 'effect', capability: { name: `状态${i}` } }));
     const cards = bindAll(entries, i => ({ for: `状态${i}`, type: 'status', summary: 's', onPass: 'return { drag: 1 };' }));
     const state: VectorState = { ...initialVectorState(), cards };
-    const first = prepareVector(state, entries, 'round-1');
-    const again = prepareVector(state, entries, 'round-1');
+    const first = prepareVector(state, entries, 'round-1', undefined, SUPPLY);
+    const again = prepareVector(state, entries, 'round-1', undefined, SUPPLY);
     expect(Object.values(first.layout.placements).filter(Boolean)).toHaveLength(1);
     expect(first.layout.placements['06']).toMatch(/^effect:/);
     expect(first.layout.tray).toEqual([...BASIC_SUPPLY_IDS]); expect(again.layout).toEqual(first.layout);

@@ -15,6 +15,7 @@ import { ROUND_PROBLEMS } from './round-abilities';
 import { projectSavedElements } from './saved-elements';
 import rulesJSON from '../../../public/packs/tianming/rules/plot-vector.json';
 import { parseNativeRules } from './native-input';
+import { parseSupplyRules } from './supply';
 import { parseVectorPromptPolicy } from './prompt-policy';
 import { FieldRepairPipeline } from '../../engine/pipeline/sub-pipelines/field-repair';
 import type { AIService } from '../../engine/ai/ai-service';
@@ -46,7 +47,7 @@ beforeEach(() => {
   vi.stubGlobal('window', new EventTarget());
 });
 afterEach(() => { adapters.forEach(a => a.dispose()); cleanups.forEach(fn => fn()); vi.unstubAllGlobals(); });
-function setup() {
+function setup(opts: { supply?: boolean } = {}) {
   const state = new StateManager(); state.loadTree({});
   let slot = { profileId: 'p', slotId: 's' };
   let disk: unknown;
@@ -56,7 +57,7 @@ function setup() {
     commit?.guard(); disk = structuredClone(data); commit?.committed();
   });
   const adapter = new AgaPlotVectorAdapter(state, ai, { saveGame }, () => slot,
-    parseNativeRules(rulesJSON), parseVectorPromptPolicy(promptRules, 'mode contract')); adapters.push(adapter);
+    parseNativeRules(rulesJSON), parseVectorPromptPolicy(promptRules, 'mode contract'), opts.supply ? parseSupplyRules(rulesJSON) : undefined); adapters.push(adapter);
   // Like the orchestrator: a load or rollback makes an unfinished round stale.
   let revision = 0;
   cleanups.push(eventBus.on<{ type?: string }>('engine:state-changed', e => { if (e.type === 'load' || e.type === 'rollback') revision++; }));
@@ -223,6 +224,49 @@ describe('AGA opt-in integration (zero network)', () => {
       expect(h.ai.generate).not.toHaveBeenCalled();
       expect(h.saveGame).not.toHaveBeenCalled(); // written by the round's own save, not a second one
       expect(note.seen).toEqual([expect.objectContaining({ i18nKey: 'mainGame.toast.vectorNewCards', message: '获得新卡：随身热茶' })]);
+    } finally { note.off(); }
+  });
+  // Phase 6 (PO 3A): an exhausted supply card leaves, the hand draws one, and the player hears about it after the save.
+  it('a round that uses up a supply card draws one in its place and announces it after the save', async () => {
+    const h = setup({ supply: true }); writePlotVectorControl(true);
+    h.state.set(P.plotVector, { ...initialVectorState(), session: { ...initialVectorState().session, cardStates: { 'basic:push': { stock: 1 } } },
+      layout: { placements: { '01': 'basic:push', '02': null, '03': null, '04': null, '05': null, '06': null }, tray: [] } });
+    const note = toasts();
+    const gained: string[][] = [];
+    cleanups.push(eventBus.on<{ names?: string[] }>('plotVector:cards-gained', e => { gained.push(e?.names ?? []); }));
+    try {
+      await playRound(h, 1);
+      const supply = parseSupplyRules(rulesJSON)!;
+      expect(runtimeCalls.prepare.mock.calls[0][4]).toEqual(supply);
+      expect(runtimeCalls.accept.mock.calls[0][2]).toEqual(supply);
+      const hand = vector(h).supply!.hand;
+      expect(hand.map(c => c.id)).not.toContain('basic:push');
+      expect(hand).toHaveLength(3);
+      const drawn = hand.find(c => c.id === vector(h).supply!.lastDrawn![0])!;
+      const name = supply.cards.find(c => c.id === drawn.cardId)!.name.zh;
+      const en = supply.cards.find(c => c.id === drawn.cardId)!.name.en;
+      expect(note.seen).toEqual([expect.objectContaining({ i18nKey: 'mainGame.toast.vectorSupplyDrawn', message: `补给送来新卡：${name}`,
+        i18nParams: expect.objectContaining({ names: name, namesEn: en }) })]);
+      expect(gained).toEqual([[name]]);
+    } finally { note.off(); }
+  });
+  it('a retried save of the same round draws and announces once', async () => {
+    const h = setup({ supply: true }); writePlotVectorControl(true);
+    h.state.set(P.plotVector, { ...initialVectorState(), session: { ...initialVectorState().session, cardStates: { 'basic:push': { stock: 1 } } },
+      layout: { placements: { '01': 'basic:push', '02': null, '03': null, '04': null, '05': null, '06': null }, tray: [] } });
+    const note = toasts();
+    try {
+      const c = { ...h.ctx(), roundNumber: 1 }; h.state.set(P.roundNumber, 1);
+      h.adapter.promptTransform(c);
+      const ctx = await h.adapter.prepare(c);
+      ctx.parsedResponse = { text: '正文' };
+      await h.adapter.beforeSave(ctx);
+      const hand = vector(h).supply!.hand.map(x => x.id);
+      await h.adapter.beforeSave(ctx);   // the host retries the save
+      expect(vector(h).supply!.hand.map(x => x.id)).toEqual(hand);
+      expect(vector(h).supply!.drawn).toBe(1);
+      ctx.meta.roundOwnership!.saved = true; await h.adapter.afterSave(ctx);
+      expect(note.seen.filter(t => t.i18nKey === 'mainGame.toast.vectorSupplyDrawn')).toHaveLength(1);
     } finally { note.off(); }
   });
   it('the notice waits for the save: a round that is not saved announces nothing', async () => {

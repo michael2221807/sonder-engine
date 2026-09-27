@@ -2,11 +2,384 @@
   "id": "tianming-native-v1",
   "baseVisits": 8,
   "attributes": [
-    { "key": "体质", "label": { "zh": "体质", "en": "Constitution" }, "target": "S+", "divisor": 10, "max": 20 },
-    { "key": "心性", "label": { "zh": "心性", "en": "Resolve" }, "target": "S+", "divisor": 10, "max": 20 },
-    { "key": "魅力", "label": { "zh": "魅力", "en": "Charisma" }, "target": "Y", "divisor": 5, "max": 20 },
-    { "key": "直觉", "label": { "zh": "直觉", "en": "Intuition" }, "target": "J", "divisor": 10, "max": 20 },
-    { "key": "气运", "label": { "zh": "气运", "en": "Luck" }, "target": "J", "divisor": 10, "max": 20 },
-    { "key": "悟性", "label": { "zh": "悟性", "en": "Insight" }, "target": "visits", "divisor": 5, "max": 20 }
-  ]
+    {
+      "key": "体质",
+      "label": {
+        "zh": "体质",
+        "en": "Constitution"
+      },
+      "target": "S+",
+      "divisor": 10,
+      "max": 20
+    },
+    {
+      "key": "心性",
+      "label": {
+        "zh": "心性",
+        "en": "Resolve"
+      },
+      "target": "S+",
+      "divisor": 10,
+      "max": 20
+    },
+    {
+      "key": "魅力",
+      "label": {
+        "zh": "魅力",
+        "en": "Charisma"
+      },
+      "target": "Y",
+      "divisor": 5,
+      "max": 20
+    },
+    {
+      "key": "直觉",
+      "label": {
+        "zh": "直觉",
+        "en": "Intuition"
+      },
+      "target": "J",
+      "divisor": 10,
+      "max": 20
+    },
+    {
+      "key": "气运",
+      "label": {
+        "zh": "气运",
+        "en": "Luck"
+      },
+      "target": "J",
+      "divisor": 10,
+      "max": 20
+    },
+    {
+      "key": "悟性",
+      "label": {
+        "zh": "悟性",
+        "en": "Insight"
+      },
+      "target": "visits",
+      "divisor": 5,
+      "max": 20
+    }
+  ],
+  "supply": {
+    "hand": 3,
+    "perRound": 1,
+    "tierWeights": {
+      "common": 70,
+      "uncommon": 22,
+      "rare": 7,
+      "legendary": 1
+    },
+    "usesByTier": {
+      "common": 3,
+      "uncommon": 2,
+      "rare": 1,
+      "legendary": 1
+    },
+    "starter": [
+      "basic:push",
+      "basic:talk",
+      "basic:notice"
+    ],
+    "cards": [
+      {
+        "id": "basic:push",
+        "name": {
+          "zh": "顺势",
+          "en": "Momentum"
+        },
+        "summary": {
+          "zh": "每次经过，推力 +1。",
+          "en": "Each pass: push +1."
+        },
+        "onPass": "return { push: 1 };"
+      },
+      {
+        "id": "basic:talk",
+        "name": {
+          "zh": "搭话",
+          "en": "Small talk"
+        },
+        "summary": {
+          "zh": "每次经过，人际 +1。",
+          "en": "Each pass: relations +1."
+        },
+        "onPass": "return { social: 1 };"
+      },
+      {
+        "id": "basic:notice",
+        "name": {
+          "zh": "留心",
+          "en": "Attention"
+        },
+        "summary": {
+          "zh": "每次经过，机会 +1。",
+          "en": "Each pass: chances +1."
+        },
+        "onPass": "return { chance: 1 };"
+      },
+      {
+        "id": "supply:breath",
+        "name": {
+          "zh": "喘口气",
+          "en": "Catch your breath"
+        },
+        "summary": {
+          "zh": "每次经过，阻力 −1。",
+          "en": "Each pass: resistance −1."
+        },
+        "onPass": "return { drag: -1 };"
+      },
+      {
+        "id": "supply:hello",
+        "name": {
+          "zh": "打个招呼",
+          "en": "Say hello"
+        },
+        "summary": {
+          "zh": "第一次经过时，人际 +3。",
+          "en": "First pass: relations +3."
+        },
+        "onPass": "if (ctx.pass === 1) return { social: 3 };\nreturn {};"
+      },
+      {
+        "id": "supply:jot",
+        "name": {
+          "zh": "记一笔",
+          "en": "Jot it down"
+        },
+        "summary": {
+          "zh": "第一次经过时，机会 +3。",
+          "en": "First pass: chances +3."
+        },
+        "onPass": "if (ctx.pass === 1) return { chance: 3 };\nreturn {};"
+      },
+      {
+        "id": "supply:steady",
+        "name": {
+          "zh": "稳住",
+          "en": "Hold steady"
+        },
+        "summary": {
+          "zh": "往回走时经过，推力 +2。",
+          "en": "Passed on the way back: push +2."
+        },
+        "onPass": "if (ctx.back) return { push: 2 };\nreturn {};"
+      },
+      {
+        "id": "supply:reframe",
+        "name": {
+          "zh": "换个说法",
+          "en": "Reframe"
+        },
+        "summary": {
+          "zh": "每次经过，把 1 点阻力变成人际。",
+          "en": "Each pass: turn 1 resistance into relations."
+        },
+        "onPass": "return { convert: { from: 'drag', to: 'social', amount: 1 } };"
+      },
+      {
+        "id": "supply:gamble",
+        "name": {
+          "zh": "碰碰运气",
+          "en": "Try your luck"
+        },
+        "summary": {
+          "zh": "每次经过，有一半可能机会 +2。",
+          "en": "Each pass: half the time, chances +2."
+        },
+        "onPass": "if (ctx.rng() < 0.5) return { chance: 2 };\nreturn {};"
+      },
+      {
+        "id": "supply:tea",
+        "name": {
+          "zh": "热茶",
+          "en": "Hot tea"
+        },
+        "summary": {
+          "zh": "第一次经过推力 +2，之后每次推力 +1。",
+          "en": "First pass push +2, then push +1 each pass."
+        },
+        "onPass": "return { push: ctx.pass === 1 ? 2 : 1 };"
+      },
+      {
+        "id": "supply:detour",
+        "name": {
+          "zh": "绕一步",
+          "en": "One more step"
+        },
+        "summary": {
+          "zh": "第一次经过时，多走 1 步。",
+          "en": "First pass: one more step."
+        },
+        "onPass": "if (ctx.pass === 1) return { steps: 1 };\nreturn {};"
+      },
+      {
+        "id": "supply:warmup",
+        "name": {
+          "zh": "越走越顺",
+          "en": "Warming up"
+        },
+        "summary": {
+          "zh": "推力加上这是本趟第几次经过。",
+          "en": "Push + how many times it has been passed this trip."
+        },
+        "onPass": "return { push: ctx.pass };"
+      },
+      {
+        "id": "supply:pocket",
+        "name": {
+          "zh": "攒着",
+          "en": "Save it up"
+        },
+        "summary": {
+          "zh": "每次经过存 1 点推力，存到 3 点就连本带利放出来。",
+          "en": "Each pass stores 1 push; at 3 stored it all comes back with a bonus."
+        },
+        "onPass": "if (ctx.stored >= 3) return { release: true };\nreturn { store: { from: 'push', amount: 1 } };"
+      },
+      {
+        "id": "supply:network",
+        "name": {
+          "zh": "人脉",
+          "en": "Connections"
+        },
+        "summary": {
+          "zh": "人际已有 3 点以上时人际 ×1.5，否则人际 +1。",
+          "en": "Relations ×1.5 once there are 3 or more, else relations +1."
+        },
+        "onPass": "if (ctx.social >= 3) return { xSocial: 1.5 };\nreturn { social: 1 };"
+      },
+      {
+        "id": "supply:second",
+        "name": {
+          "zh": "再看一眼",
+          "en": "Second look"
+        },
+        "summary": {
+          "zh": "第一次经过时调头，并让机会 +2。",
+          "en": "First pass: turn around, chances +2."
+        },
+        "onPass": "if (ctx.pass === 1) return { turn: true, chance: 2 };\nreturn {};"
+      },
+      {
+        "id": "supply:rhythm",
+        "name": {
+          "zh": "找到节奏",
+          "en": "Find the rhythm"
+        },
+        "summary": {
+          "zh": "每次经过推力 +2；每 2 回合充回 1 次。",
+          "en": "Each pass push +2; regains a use every 2 rounds."
+        },
+        "onPass": "return { push: 2 };",
+        "recharge": {
+          "on": "round",
+          "every": 2
+        }
+      },
+      {
+        "id": "supply:habit",
+        "name": {
+          "zh": "熟能生巧",
+          "en": "Practice"
+        },
+        "summary": {
+          "zh": "每次经过人际 +2；被经过 4 次充回 1 次。",
+          "en": "Each pass relations +2; regains a use every 4 passes."
+        },
+        "onPass": "return { social: 2 };",
+        "recharge": {
+          "on": "trigger",
+          "every": 4
+        }
+      },
+      {
+        "id": "supply:chain",
+        "name": {
+          "zh": "顺水推舟",
+          "en": "Go with the flow"
+        },
+        "summary": {
+          "zh": "让下一张触发的卡再生效一次。",
+          "en": "The next card that acts acts once more."
+        },
+        "onPass": "return { relay: { echo: true } };"
+      },
+      {
+        "id": "supply:surge",
+        "name": {
+          "zh": "一鼓作气",
+          "en": "All-out push"
+        },
+        "summary": {
+          "zh": "推力 ×2。",
+          "en": "Push ×2."
+        },
+        "onPass": "return { xPush: 2 };"
+      },
+      {
+        "id": "supply:clear",
+        "name": {
+          "zh": "拨云见日",
+          "en": "Clear skies"
+        },
+        "summary": {
+          "zh": "阻力清零。",
+          "en": "Resistance to zero."
+        },
+        "onPass": "return { drag: -ctx.drag };"
+      },
+      {
+        "id": "supply:shortcut",
+        "name": {
+          "zh": "抄近路",
+          "en": "Shortcut"
+        },
+        "summary": {
+          "zh": "第一次经过时，剩下的步数 ×1.5。",
+          "en": "First pass: remaining steps ×1.5."
+        },
+        "onPass": "if (ctx.pass === 1) return { xSteps: 1.5 };\nreturn {};"
+      },
+      {
+        "id": "supply:windfall",
+        "name": {
+          "zh": "天降良机",
+          "en": "Windfall"
+        },
+        "summary": {
+          "zh": "机会 ×2，再 +3。",
+          "en": "Chances ×2, then +3."
+        },
+        "onPass": "return { xChance: 2, chance: 3 };"
+      },
+      {
+        "id": "supply:allin",
+        "name": {
+          "zh": "孤注一掷",
+          "en": "All in"
+        },
+        "summary": {
+          "zh": "推力、人际、机会全部 ×2。",
+          "en": "Push, relations and chances all ×2."
+        },
+        "onPass": "return { xPush: 2, xSocial: 2, xChance: 2 };"
+      },
+      {
+        "id": "supply:fortune",
+        "name": {
+          "zh": "时来运转",
+          "en": "Turn of fortune"
+        },
+        "summary": {
+          "zh": "把全部阻力变成机会，并让下一张触发的卡再生效一次。",
+          "en": "Turn all resistance into chances, and the next card that acts acts once more."
+        },
+        "onPass": "return { convert: { from: 'drag', to: 'chance', amount: ctx.drag }, relay: { echo: true } };"
+      }
+    ]
+  }
 }

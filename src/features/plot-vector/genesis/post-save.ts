@@ -1,4 +1,5 @@
 import type { CardSpec } from '../contract/types';
+import type { CardRating } from '../rating';
 
 /** Where a saved entry lives: inventory, talents, status effects or environment tags. */
 export type GenesisEntryKind = 'item' | 'talent' | 'environment' | 'effect' | 'other';
@@ -58,5 +59,9 @@ export function tasksAfterSave(action: SavedAction, known: readonly string[] = [
   });
 }
 
-/** An obtained entry with its bound ability (rebuild plan §2.2), checked once when bound (§5). */
-export interface BoundCard { task: GenesisTask; spec: CardSpec }
+/**
+ * An obtained entry with its bound ability (rebuild plan §2.2), checked once when bound (§5). `rating` is the
+ * engine's strength rating (phase 6, PO 2A: recorded, not shown); cards saved before ratings existed get one
+ * when the next round is accepted.
+ */
+export interface BoundCard { task: GenesisTask; spec: CardSpec; rating?: CardRating }

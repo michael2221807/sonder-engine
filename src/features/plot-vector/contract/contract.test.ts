@@ -6,7 +6,7 @@ import { checkCardSpec, readCardSpec, validateCard, SAMPLE_VALUES } from './vali
 import { burstOf, passCard } from './pass';
 import type { CardSpec, PassValues } from './types';
 import { CARD_API } from '../genesis/generation-prompt';
-import { BASIC_SUPPLY } from '../basic-supply';
+import vectorRules from '../../../../public/packs/tianming/rules/plot-vector.json';
 
 const values = (over: Partial<PassValues> = {}): PassValues =>
   ({ push: 3, drag: 1, social: 2, chance: 4, pass: 1, step: 1, back: false, level: 0, stored: 0, ...over });
@@ -106,10 +106,12 @@ describe('a body stays inside the card domain: it can never reach or change the 
       'const 推 = ctx.push; return { push: 推 * .5 + 1e-3 };',
     ]) expect(() => compilePass(body), body).not.toThrow();
   });
-  it('every example card in the card domain text, and every basic supply card, compiles', () => {
+  it('every example card in the card domain text, and every supply card in the pack, compiles', () => {
     const examples = [...CARD_API.matchAll(/"onPass":"((?:[^"\\]|\\.)*)"/g)].map(m => JSON.parse(`"${m[1]}"`) as string);
     expect(examples.length).toBeGreaterThanOrEqual(6);
-    for (const body of [...examples, ...BASIC_SUPPLY.map(c => c.spec.onPass)]) expect(() => compilePass(body), body).not.toThrow();
+    const supply = vectorRules.supply.cards.map(c => c.onPass);
+    expect(supply.length).toBeGreaterThanOrEqual(20);
+    for (const body of [...examples, ...supply]) expect(() => compilePass(body), body).not.toThrow();
   });
 });
 

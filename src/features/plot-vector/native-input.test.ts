@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BASIC_SUPPLY_IDS } from './basic-supply';
+import { parseSupplyRules } from './supply';
 import { set } from 'lodash-es';
 import rulesJSON from '../../../public/packs/tianming/rules/plot-vector.json';
 import { DEFAULT_ENGINE_PATHS as P } from '../../engine/pipeline/types';
@@ -43,10 +43,11 @@ describe('native saved inputs', () => {
     const bound = bindCard(tasks[0], POSITIVE_EXAMPLES[0].card);
     expect(bound.spec.type).toBe('environment'); // the entry's place decides the type
     const state: VectorState = { ...initialVectorState(), cards: [bound], layout: { placements: { '01': bound.task.entry.id }, tray: [] } };
-    const prepared = prepareVector(state, before, 'r2', { ...NATIVE, payload: { 'S+': 1, 'S-': 0, Y: 0, J: 0 } });
+    const supply = parseSupplyRules(rulesJSON)!;
+    const prepared = prepareVector(state, before, 'r2', { ...NATIVE, payload: { 'S+': 1, 'S-': 0, Y: 0, J: 0 } }, supply);
     expect(Object.values(prepared.layout.placements)).not.toContain(bound.task.entry.id);
-    // The hand holds only the basic supply cards: a status/environment card is never placeable.
-    expect(prepared.layout.tray).toEqual([...BASIC_SUPPLY_IDS]);
+    // The hand holds only the supply cards: a status/environment card is never placeable.
+    expect(prepared.layout.tray).toEqual([...supply.starter]);
     expect(prepared.board.cards[0].origin).toBe('environment');
     const departure = prepared.result.trace.filter(e => e.eventType === 'effect' && e.visitId === 'departure');
     expect(departure.map(e => [e.owner?.id, e.status, e.cellId])).toEqual([[bound.task.entry.id, 'applied', undefined]]);

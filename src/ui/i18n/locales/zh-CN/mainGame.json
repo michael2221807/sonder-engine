@@ -293,7 +293,7 @@
   "mainGame.vectorBoard.retryResult.failed": "这次也没有补上，之后可以再试。",
   "mainGame.vectorBoard.retryResult.error": "现在不能补生，请等回合结束后再试。",
   "mainGame.vectorBoard.usesLeft": "剩余",
-  "mainGame.vectorBoard.basicSupply": "基础补给",
+  "mainGame.vectorBoard.basicSupply": "补给",
   "mainGame.vectorBoard.receiptPreview": "这次试走",
   "mainGame.vectorBoard.receiptAccepted": "上回合实算",
   "mainGame.vectorBoard.receiptNotTriggered": "没有触发",
@@ -309,5 +309,6 @@
   "mainGame.vectorBoard.newCards": "{count} 张新卡",
   "mainGame.vectorBoard.backlogSummary": "还没有能力的条目（{count}）",
   "mainGame.vectorBoard.backlogState.waiting": "等待生成能力",
-  "mainGame.toast.vectorNewCards": "获得新卡：{names}（可在「棋盘」里摆上）"
+  "mainGame.toast.vectorNewCards": "获得新卡：{names}（可在「棋盘」里摆上）",
+  "mainGame.toast.vectorSupplyDrawn": "补给送来新卡：{names}（可在「棋盘」里摆上）"
 }

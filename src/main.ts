@@ -118,6 +118,7 @@ import { useEngineStateStore } from './engine/stores/engine-state';
 import { AgaPlotVectorAdapter } from './features/plot-vector/aga-adapter';
 import { VectorBoardAccess } from './features/plot-vector/board-access';
 import { parseNativeRules } from './features/plot-vector/native-input';
+import { parseSupplyRules } from './features/plot-vector/supply';
 import { parseVectorPromptPolicy } from './features/plot-vector/prompt-policy';
 import type { ComputedFieldConfig, ThresholdTriggerConfig, IntegrityRule, EffectLifecycleConfig, NpcBehaviorConfig, ContentFilterConfig } from './engine/types';
 
@@ -744,12 +745,15 @@ async function bootstrap(): Promise<void> {
   // ── #1: 创建 Orchestrator，接通 pipeline:user-input → PipelineRunner ──
   let orchestrator: GameOrchestrator | null = null;
   const vectorNativeRules = parseNativeRules(pack?.rules.plotVector);
+  // The general supply pool is pack content; the engine rates and deals it (phase 6).
+  const vectorSupplyRules = parseSupplyRules(pack?.rules.plotVector);
   const vectorPromptPolicy = parseVectorPromptPolicy(pack?.rules.plotVectorPrompts, pack?.prompts.plotVectorMode);
   const plotVectorBoard = new VectorBoardAccess(stateManager, saveManager, getActiveSlot,
     () => !orchestrator || orchestrator.isBusy, vectorNativeRules,
     () => orchestrator?.onStateEditSettled(),
     // The player's ability retry runs through the round adapter (same repair and binding as Step 3).
-    (entryId) => plotVectorAdapter ? plotVectorAdapter.regenerateAbility(entryId) : Promise.reject(new Error('ability-retry-unavailable')));
+    (entryId) => plotVectorAdapter ? plotVectorAdapter.regenerateAbility(entryId) : Promise.reject(new Error('ability-retry-unavailable')),
+    vectorSupplyRules);
   if (pack) {
     orchestrator = new GameOrchestrator(
       stateManager,
@@ -781,7 +785,7 @@ async function bootstrap(): Promise<void> {
         paths: DEFAULT_ENGINE_PATHS,
         plotEvaluation: plotEvaluationPipeline,
         plotVector: plotVectorAdapter = new AgaPlotVectorAdapter(stateManager, aiService, saveManager, getActiveSlot, vectorNativeRules,
-          vectorPromptPolicy),
+          vectorPromptPolicy, vectorSupplyRules),
         stateEditInProgress: () => plotVectorBoard.isSaving,
       },
     );

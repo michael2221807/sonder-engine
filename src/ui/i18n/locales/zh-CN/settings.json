@@ -3,7 +3,7 @@
   "settings.plotVector.releaseGate": "当前仅在本地预览开放，正式版须完成代码隔离安全验收后再启用。",
   "settings.plotVector.label": "剧情动能",
   "settings.plotVector.description": "默认关闭。开启后，棋盘在每回合前给剧情一点轻微推动。新入档的物品、天赋和状态会在保存后生成能力卡，每轮最多一张，沿用主回合模型，多一次调用；环境卡随本回合的状态更新一起生成。",
-  "settings.plotVector.rollback": "关闭即可恢复原流程，保留已有卡牌；尚未保存的动能回合会取消。三张基础补给卡用一次扣一次，每回合各补 1，最多 3；卡由你在棋盘上摆放，状态和环境卡自动进入 06 格。",
+  "settings.plotVector.rollback": "关闭即可恢复原流程，保留已有卡牌；尚未保存的动能回合会取消。补给卡每用一回合扣一次，用完离手，每回合自动补一张，手里最多 3 张；卡由你在棋盘上摆放，状态卡自动进入 06 格，环境卡在出发时起作用。",
   "settings.plotVector.storageError": "设置未保存，请检查浏览器存储。",
   "settings.title": "设置",
   "settings.search.placeholder": "搜索设置…",

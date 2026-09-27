@@ -60,7 +60,7 @@ test('optional board keeps explicit choices across reload; preview and layout sa
     await expect(plotVector.fixedStatusCell).not.toContainText('微风');
     // Leave empty + the saved notebook + the three basic supply cards (marked as such).
     await expect(plotVector.cellChoice('01').locator('option')).toHaveCount(5);
-    await expect(plotVector.cellChoice('01').locator('option', { hasText: '基础补给' })).toHaveCount(3);
+    await expect(plotVector.cellChoice('01').locator('option', { hasText: '补给' })).toHaveCount(3);
     await plotVector.progress.locator('summary').click();
     await expect(plotVector.progress).toContainText('级数 0 / 50');
     await expect(plotVector.cellChoice('01')).toHaveValue('');

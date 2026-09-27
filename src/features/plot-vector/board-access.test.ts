@@ -6,6 +6,8 @@ import { VectorBoardAccess } from './board-access';
 import { initialVectorState, type VectorState } from './runtime';
 import { tasksAfterSave } from './genesis/post-save';
 import { projectSavedElements } from './saved-elements';
+import vectorRules from '../../../public/packs/tianming/rules/plot-vector.json';
+import { parseSupplyRules } from './supply';
 
 // The trip is computed in the page; a test can make an arrangement fail to compute.
 const failing = vi.hoisted(() => ({ placed: false }));
@@ -25,7 +27,7 @@ beforeEach(() => {
   writePlotVectorControl(true);
 });
 afterEach(() => { access?.dispose(); vi.unstubAllGlobals(); failing.placed = false; });
-function setup() {
+function setup(opts: { supply?: boolean } = {}) {
   const state = new StateManager(); state.loadTree({});
   state.set(P.plotVector, initialVectorState()); state.set(P.roundNumber, 7);
   let busy = false;
@@ -33,9 +35,19 @@ function setup() {
     commit?: { guard: () => void; committed: () => void }) => { commit?.guard(); commit?.committed(); });
   const settled = vi.fn(() => { expect(access.isSaving).toBe(false); });
   access = new VectorBoardAccess(state, { saveGame },
-    () => ({ profileId: 'p', slotId: 's' }), () => busy, undefined, settled);
+    () => ({ profileId: 'p', slotId: 's' }), () => busy, undefined, settled, undefined, opts.supply ? parseSupplyRules(vectorRules) : undefined);
   return { state, saveGame, settled, busy: () => { busy = true; } };
 }
+// Phase 6: the board shows the supply hand the round will use, from the pack pool.
+it('the board opens with the supply hand and previews with it', async () => {
+  setup({ supply: true });
+  const view = await access.open();
+  const supply = parseSupplyRules(vectorRules)!;
+  expect(view.prepared.layout.tray).toEqual(supply.starter);
+  expect(view.prepared.board.cards.filter(c => c.origin === 'supply').map(c => c.label.zh)).toEqual(supply.starter.map(id => supply.cards.find(c => c.id === id)!.name.zh));
+  const placed = await view.preview({ placements: { '01': supply.starter[0] }, tray: [] });
+  expect(placed.result.trace.some(e => e.owner?.id === supply.starter[0] && e.status === 'applied')).toBe(true);
+});
 it('preview uses the next round seed and layout-only save preserves every lifecycle field', async () => {
   const h = setup(), before = h.state.get<VectorState>(P.plotVector)!;
   const view = await access.open();

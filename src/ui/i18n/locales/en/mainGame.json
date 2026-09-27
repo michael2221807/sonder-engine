@@ -293,7 +293,7 @@
   "mainGame.vectorBoard.retryResult.failed": "That did not work either; you can try again later.",
   "mainGame.vectorBoard.retryResult.error": "Cannot regenerate right now; try again after the round finishes.",
   "mainGame.vectorBoard.usesLeft": "Uses left",
-  "mainGame.vectorBoard.basicSupply": "Basic supply",
+  "mainGame.vectorBoard.basicSupply": "Supply",
   "mainGame.vectorBoard.receiptPreview": "This preview",
   "mainGame.vectorBoard.receiptAccepted": "Last turn",
   "mainGame.vectorBoard.receiptNotTriggered": "did not trigger",
@@ -309,5 +309,6 @@
   "mainGame.vectorBoard.newCards": "{count} new cards",
   "mainGame.vectorBoard.backlogSummary": "Entries without an ability ({count})",
   "mainGame.vectorBoard.backlogState.waiting": "Waiting for an ability",
-  "mainGame.toast.vectorNewCards": "New cards: {names} (place them on the board)"
+  "mainGame.toast.vectorNewCards": "New cards: {names} (place them on the board)",
+  "mainGame.toast.vectorSupplyDrawn": "Supply brought a new card: {namesEn} (place it on the board)"
 }

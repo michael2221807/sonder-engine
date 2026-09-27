@@ -8,6 +8,7 @@ import { projectSavedElements } from './saved-elements';
 import type { Layout } from '../../engine/plot-vector/core/types';
 import { stable } from './genesis/post-save';
 import { prepareVector, readVectorState, type PreparedVector, type VectorState } from './runtime';
+import type { SupplyRules } from './supply';
 import { projectNativeInput, type NativeRules } from './native-input';
 import { abilityBacklog, type BacklogEntry } from './ability-backlog';
 
@@ -35,7 +36,8 @@ export class VectorBoardAccess {
     private slot: () => { profileId: string; slotId: string } | null, private busy: () => boolean,
     private nativeRules?: NativeRules,
     private onSaveSettled: () => void = () => {},
-    private regenerateAbility?: (entryId: string) => Promise<{ bound: boolean; requested: boolean }>) {
+    private regenerateAbility?: (entryId: string) => Promise<{ bound: boolean; requested: boolean }>,
+    private supplyRules?: SupplyRules) {
     this.unsubs = [subscribePlotVectorControl(() => this.invalidate()),
       eventBus.on<{ type: string }>('engine:state-changed', e => {
         if (e.type === 'load' || e.type === 'rollback') this.invalidate();
@@ -71,7 +73,7 @@ export class VectorBoardAccess {
     const preview = async (layout?: Layout): Promise<PreparedVector> => {
       guard();
       return prepareVector({ ...state, ...(layout ? { layout: cloneDeep(layout) } : {}) }, entries,
-        `${slot!.profileId}/${slot!.slotId}/${(this.state.get<number>(P.roundNumber) ?? 0) + 1}`, native);
+        `${slot!.profileId}/${slot!.slotId}/${(this.state.get<number>(P.roundNumber) ?? 0) + 1}`, native, this.supplyRules);
     };
     let prepared: PreparedVector, cleared = false;
     try { prepared = await preview(); }

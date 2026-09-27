@@ -215,7 +215,7 @@ async function retryAbility(entryId: string) {
           <summary>{{ t(last ? 'mainGame.vectorBoard.acceptedProgress' : 'mainGame.vectorBoard.savedProgress') }}</summary>
           <p v-if="!last">{{ t('mainGame.vectorBoard.progressHelp') }}</p>
           <div v-for="card in progress" :key="card.cardId" class="progress-row">
-            <strong>{{ card.name }}</strong>
+            <strong>{{ label(board?.cards.find(c => c.id === card.cardId)?.label) || card.name }}</strong>
             <span v-for="row in card.rows" :key="row.key">{{ progressLabel(row) }} {{ number(row.value) }}<span v-if="row.max !== undefined"> / {{ number(row.max) }}</span><span v-if="row.delta"> ({{ row.delta > 0 ? '+' : '' }}{{ number(row.delta) }})</span></span>
           </div>
         </details>

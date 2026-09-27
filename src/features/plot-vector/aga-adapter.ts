@@ -6,12 +6,14 @@ import type { AIMessage } from '../../engine/ai/types';
 import type { SaveManager } from '../../engine/persistence/save-manager';
 import { DEFAULT_ENGINE_PATHS as P, type PipelineContext } from '../../engine/pipeline/types';
 import type { PlotVectorRoundPort } from '../../engine/plot-vector/round-port';
+import type { LocalizedLabel } from '../../engine/plot-vector/core/types';
 import type { RoundOwnership } from '../../engine/core/round-ownership';
 import { readPlotVectorControl, subscribePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { projectSavedElements, readPath, savedEntryName } from './saved-elements';
 import { stable, capabilityKey, type BoundCard, type SavedElement } from './genesis/post-save';
 import { buildAbilityRetryMessages, parseCardReply, CARD_API } from './genesis/generation-prompt';
 import { acceptVector, bindCard, cardTypeOf, prepareVector, readVectorState, type AbilityRetry, type VectorState, type VectorTaskRow, type PreparedVector } from './runtime';
+import { supplyNames, type SupplyRules } from './supply';
 import { abilityBacklog, type BacklogEntry } from './ability-backlog';
 import { bindRoundAbilities, readAbilityBlock } from './round-abilities';
 import { projectNativeInput, type NativeRules } from './native-input';
@@ -63,6 +65,8 @@ function beforeLastUser(messages: AIMessage[], sources: string[] | undefined, ad
 interface Attempt { ctx: PipelineContext; owner: RoundOwnership; guard: () => void; controller: AbortController;
   before: SavedElement[]; state: VectorState; id: string; prepared?: PreparedVector; slot: Slot; release: () => void;
   gained: BoundCard[];
+  /** Supply cards drawn when this round was accepted (announced after it is saved). */
+  drawn: LocalizedLabel[];
 }
 /** The component failed on its own; the story goes on. Only a cancellation or slot switch stops the round. */
 function degraded(i18nKey: string, message: string, error: unknown): void {
@@ -80,7 +84,8 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
   constructor(private state: StateManager, private ai: Pick<AIService, 'generate'>,
     private saves: Pick<SaveManager, 'saveGame'>, private slot: () => Slot | null,
     private nativeRules?: NativeRules,
-    private promptPolicy?: Pick<VectorPromptPolicy, 'mode' | 'transform' | 'abilityBlock' | 'abilityRepair'>) {
+    private promptPolicy?: Pick<VectorPromptPolicy, 'mode' | 'transform' | 'abilityBlock' | 'abilityRepair'>,
+    private supplyRules?: SupplyRules) {
     this.unsubs = [subscribePlotVectorControl(() => this.cancel()),
       // The round itself notices a load or rollback through its RoundOwnership; this stops work in flight.
       eventBus.on<{type: string}>('engine:state-changed', e => {
@@ -131,14 +136,14 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       try {
         state = cloneDeep(readVectorState(this.state.get(P.plotVector)));
         before = projectSavedElements(ctx.stateSnapshot, { includeEnvironment: true }).entries;
-        prepared = prepareVector(state, before, id, projectNativeInput(ctx.stateSnapshot, this.nativeRules));
+        prepared = prepareVector(state, before, id, projectNativeInput(ctx.stateSnapshot, this.nativeRules), this.supplyRules);
       } catch (error) {
         guard();
         degraded('mainGame.toast.vectorNotComputed', '本回合剧情动能没有算出来，剧情照常进行。', error);
       }
       guard();
       // Without the saved entries of the round start, new entries cannot be told apart; skip the component.
-      if (state && before) this.attempt = { ctx, owner, controller, guard, state, id, before, prepared, slot, gained: [],
+      if (state && before) this.attempt = { ctx, owner, controller, guard, state, id, before, prepared, slot, gained: [], drawn: [],
         release: () => ctx.abortSignal?.removeEventListener('abort', abort) };
       const active = ctx.meta.plotVectorPromptMode === true;
       const mode = active ? this.promptPolicy?.mode : undefined;
@@ -181,7 +186,11 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     a.guard();
     let next = a.state;
     if (a.prepared && a.state.last?.id !== a.prepared.id) {
-      try { next = acceptVector(a.state, a.prepared); }
+      try {
+        next = acceptVector(a.state, a.prepared, this.supplyRules);
+        a.drawn = this.supplyRules && next.supply?.lastDrawn
+          ? supplyNames(this.supplyRules, next.supply, next.supply.lastDrawn) : [];
+      }
       catch (error) {
         a.guard();
         // The story and its items are saved as usual; this round's momentum and growth do not advance.
@@ -211,8 +220,11 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
   async afterSave(ctx: PipelineContext): Promise<void> {
     const a = this.attempt;
     if (!a || a.ctx.generationId !== ctx.generationId) return;
-    try { if (a.owner.saved && a.gained.length) this.announce(a.gained); }
-    finally { a.gained = []; a.release(); }
+    try {
+      if (a.owner.saved && a.gained.length) this.announce(a.gained);
+      if (a.owner.saved && a.drawn.length) this.announceSupply(a.drawn);
+    }
+    finally { a.gained = []; a.drawn = []; a.release(); }
   }
   /** One short notice per batch of new cards, and a signal for the board entry's badge (I24). */
   private announce(cards: readonly BoundCard[]): void {
@@ -220,6 +232,13 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     eventBus.emit('ui:toast', { type: 'success', i18nKey: 'mainGame.toast.vectorNewCards', i18nParams: { names: names.join('、'), count: names.length },
       message: `获得新卡：${names.join('、')}`, duration: 4000 });
     eventBus.emit('plotVector:cards-gained', { names });
+  }
+  /** Supply cards the round drew: one short notice, and the board entry's badge counts them (3A, I24). */
+  private announceSupply(names: readonly LocalizedLabel[]): void {
+    const zh = names.map(name => name.zh), en = names.map(name => name.en);
+    eventBus.emit('ui:toast', { type: 'success', i18nKey: 'mainGame.toast.vectorSupplyDrawn',
+      i18nParams: { names: zh.join('、'), namesEn: en.join(', '), count: names.length }, message: `补给送来新卡：${zh.join('、')}`, duration: 4000 });
+    eventBus.emit('plotVector:cards-gained', { names: zh });
   }
   /** Obtained entries whose ability is not usable yet (the saved entries themselves are never touched). */
   abilityBacklog(): BacklogEntry[] {
