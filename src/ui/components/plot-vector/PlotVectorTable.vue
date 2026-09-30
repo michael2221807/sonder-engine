@@ -3,10 +3,11 @@
 /**
  * The plot-vector card table (rebuild plan phase 7; PO 2026-09-27 1A 2A 3A 4A, animation A, rarity A;
  * PO 2026-09-29 both board shapes; approved demo docs/demo/plot-vector-board.html). A miniature of the board sits
- * beside the input; it opens a table from the bottom, the story still in view. Cards move by hand, a placed card
- * walks the board at once, and the arrangement saves itself in the background. Numbers stay behind the "?".
+ * beside the input; it opens a table from the bottom of the story column, the story still in view. Cards move by
+ * hand, a placed card walks the board at once, and the arrangement is kept by itself — in the game state at once,
+ * in the save file when the table closes (PO 2026-09-30 B). Numbers stay behind the "?".
  */
-import { computed, inject, nextTick, onBeforeUnmount, onUnmounted, reactive, ref, shallowRef, watch } from 'vue';
+import { computed, inject, nextTick, onBeforeUnmount, onDeactivated, onUnmounted, reactive, ref, shallowRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { cloneDeep } from 'lodash-es';
 import Tooltip from '../shared/Tooltip.vue';
@@ -115,7 +116,21 @@ const motion = !prefersReducedMotion();
 
 /** Tiers the table worked out for story cards the runtime has not rated yet (display only). */
 const provisional = shallowRef<ReadonlyMap<string, CardTier>>(new Map());
-const model = computed(() => (view.value && prepared.value ? tableModel(view.value, prepared.value, layout.value, shape.value, provisional.value) : null));
+// Card faces keep their identity while nothing on them changed, so a move re-renders only the cards it touched.
+let faces = new Map<string, { key: string; card: TableCard }>();
+function keepFaces(next: TableModel): TableModel {
+  const kept = new Map<string, { key: string; card: TableCard }>();
+  const cards: Record<string, TableCard> = {};
+  for (const [id, card] of Object.entries(next.cards)) {
+    const key = JSON.stringify(card), was = faces.get(id);
+    cards[id] = was && was.key === key ? was.card : card;
+    kept.set(id, { key, card: cards[id] });
+  }
+  faces = kept;
+  return { ...next, cards };
+}
+const model = computed(() => (view.value && prepared.value
+  ? keepFaces(tableModel(view.value, prepared.value, layout.value, shape.value, provisional.value)) : null));
 const shown = computed(() => replaying.value ?? model.value);
 const locked = computed(() => props.generating);
 const hasPlaced = computed(() => !!model.value?.cells.some(c => c.role !== 'status' && c.card));
@@ -154,7 +169,7 @@ async function load(opts: { seen?: boolean } = { seen: true }): Promise<void> {
     // Unrated story cards are worked out after the opening ceremony, so it never stutters.
     rateLater(next, arrivals && prefs.animate ? 400 + arrivals.fresh.length * 320 + 1400 : 400);
     // A saved arrangement that no longer computes was taken off: keep it that way for the next round.
-    if (next.cleared) { dirty = true; scheduleSave(0); }
+    if (next.cleared) { dirty = true; scheduleCommit(0); }
   } catch {
     view.value = undefined;
     note.value = 'openFailed';
@@ -245,6 +260,41 @@ async function celebrate(arrivals: Arrivals): Promise<void> {
   for (const id of arrivals.charged) effectLater(() => { const el = cardEl(id); if (el) chargeFull(el); }, later);
 }
 
+// ── Where the table stands: in the story column — between the sidebars and inside the game's frame, like the
+// approved demo — sliding out of that column's bottom edge, not out of the window's (PO 2026-09-30). ──
+const badgeRef = ref<InstanceType<typeof VectorBadge>>();
+const stage = reactive({ left: 0, width: 0, bottom: 0, height: 0, center: 0, column: 0, gap: 0, phone: false });
+function measureStage(): void {
+  const badge: unknown = badgeRef.value?.$el;
+  const host = badge instanceof Element ? badge.closest<HTMLElement>('.game-layout__main') : null;
+  // On a phone the table keeps the whole screen (the board and the hand must fit one screen to drag between them).
+  const phone = window.matchMedia('(max-width: 767px)').matches;
+  const r = phone || !host ? new DOMRect(0, 0, window.innerWidth, window.innerHeight) : host.getBoundingClientRect();
+  // The floating sidebars publish how much of the column's sides they cover; a column too narrow for the table
+  // lets it span the whole story area instead.
+  const css = getComputedStyle(document.documentElement);
+  const reserve = (name: string) => (phone ? 0 : Number.parseFloat(css.getPropertyValue(name)) || 0);
+  let left = reserve('--sidebar-left-reserve'), column = Math.max(0, r.width - left - reserve('--sidebar-right-reserve'));
+  if (column < 480) { left = 0; column = r.width; }
+  Object.assign(stage, { left: r.left, width: r.width, bottom: r.bottom, height: r.height, center: left + column / 2, column,
+    gap: window.innerHeight - r.bottom, phone });
+}
+// After a resize the sidebars settle their widths first: measure on the next frame.
+let stageFrame = 0;
+function remeasureStage(): void {
+  cancelAnimationFrame(stageFrame);
+  stageFrame = requestAnimationFrame(measureStage);
+}
+/** The stage spans the story area from the top of the window to the column's bottom edge, and clips below it. */
+const stageStyle = computed(() => ({ left: `${stage.left}px`, width: `${stage.width}px`, height: `${stage.bottom}px` }));
+const sheetStyle = computed(() => ({
+  left: `${stage.center}px`,
+  width: `${Math.min(980, stage.column)}px`,
+  maxHeight: `${Math.round(stage.height * (stage.phone ? 0.9 : 0.88))}px`,
+  // Only a table that reaches the bottom of the screen needs room for the phone's home bar.
+  '--vtable-safe': stage.gap < 1 ? 'env(safe-area-inset-bottom, 0px)' : '0px',
+}));
+
 // Focus moves into the table when it opens; it returns to the badge only for a keyboard user (a mouse user
 // would otherwise see the badge's hint pop up again).
 const sheet = ref<HTMLElement>();
@@ -252,6 +302,7 @@ let returnFocus: HTMLElement | null = null;
 async function openTable(event?: MouseEvent): Promise<void> {
   if (!access || !enabled.value) return;
   returnFocus = event && event.detail === 0 && event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+  measureStage();
   open.value = true;
   pointerStill = true;
   newCards.value = 0;
@@ -272,30 +323,34 @@ function close(): void {
   stopEffects();
   clearTimeout(hoverTimer);
   walk.stop();
-  void flushSave();
+  // The arrangement goes into the save file now, once, while the table slides away.
+  void persistSoon();
   if (returnFocus) returnFocus.focus({ preventScroll: true });
   else if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
   returnFocus = null;
 }
 // A round ends: the board changed under the view (uses, new cards), so read it again. A move the player made
-// just before the round began and that could not be saved in time is put back and saved now.
+// just before the round began and that could not be kept in time is put back and kept now.
 watch(() => props.generating, (now, before) => {
   if (now) { selected.value = null; detail.value = null; return; }
   if (!before) return;
   if (dirty) void restoreAfter();
   else if (open.value) void load();
+  else if (access?.hasUnsaved) void persistSoon();
 });
 async function restoreAfter(): Promise<void> {
-  const keep = cloneDeep(layout.value), keepShape = shape.value;
+  const keep = cloneDeep(layout.value), keepShape = shape.value, keepSlot = view.value ? slotOf(view.value) : null;
   await load({ seen: open.value });
   if (!view.value) return;
+  // Another save came in meanwhile: the move belonged to the old one and is not carried over.
+  if (slotOf(view.value) !== keepSlot) { dirty = false; return; }
   layout.value = keep;
   shape.value = keepShape;
   await changed();
-  if (!open.value) void flushSave();
+  if (!open.value) void persistSoon();
 }
 
-// ── Moving cards: every move walks the board and saves itself ──
+// ── Moving cards: every move walks the board and is kept by itself ──
 let changeSeq = 0;
 async function changed(opts: { walkDelay?: number } = {}): Promise<void> {
   const current = view.value;
@@ -309,13 +364,12 @@ async function changed(opts: { walkDelay?: number } = {}): Promise<void> {
   } catch (error) { if (mine === changeSeq) void recover(error); return; }
   dirty = true;
   const trip = tripWalk(prepared.value!.result);
-  if (!prefs.animate) { walk.settle(trip); scheduleSave(); return; }
-  // Saving copies the whole game state and holds the page for a moment, so it waits until the walk has settled
-  // and the shuttle never stutters. Closing the table saves at once.
-  clearTimeout(saveTimer);
+  if (!prefs.animate || !open.value) { walk.settle(trip); scheduleCommit(open.value ? 600 : 0); return; }
+  // The arrangement is kept once the walk has settled, so nothing else runs while the shuttle moves.
+  clearTimeout(commitTimer);
   if (opts.walkDelay) await new Promise(resolve => setTimeout(resolve, opts.walkDelay));
   if (mine !== changeSeq) return;
-  void walk.play(trip).then(settled => { if (mine === changeSeq) scheduleSave(settled ? 300 : 1200); });
+  void walk.play(trip).then(settled => { if (mine === changeSeq) scheduleCommit(settled ? 300 : 1200); });
 }
 function move(card: string, cell: string | null): void {
   if (locked.value || replaying.value) return;
@@ -347,51 +401,100 @@ function setShape(next: BoardShape): void {
   void changed({ walkDelay: 560 });
 }
 
-// ── Saving in the background: debounced, one at a time, the latest arrangement wins ──
-let dirty = false, saving = false, again = false;
-let saveTimer: ReturnType<typeof setTimeout> | undefined;
+// ── Keeping the arrangement (PO 2026-09-30, B): in the live game state after each walk, in the save file once,
+// when the table closes, the page is hidden, or the component goes. Writing a large save holds the page for a
+// moment, so it never follows every move. ──
+let dirty = false;
+let commitTimer: ReturnType<typeof setTimeout> | undefined;
 let savedTimer: ReturnType<typeof setTimeout> | undefined;
-function scheduleSave(ms = 600): void {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => { void flushSave(); }, ms);
+let inflight: Promise<void> | null = null;
+function scheduleCommit(ms = 600): void {
+  clearTimeout(commitTimer);
+  commitTimer = setTimeout(() => { void flushCommit(); }, ms);
 }
-async function flushSave(): Promise<void> {
-  clearTimeout(saveTimer);
+/** Keep the latest arrangement in the live state; resolves once every move made so far is kept (or failed). */
+async function flushCommit(): Promise<void> {
+  clearTimeout(commitTimer);
+  while (inflight) await inflight;
   const current = view.value;
   if (!current || !dirty) return;
-  if (saving) { again = true; return; }
-  saving = true;
   dirty = false;
-  const layoutNow = cloneDeep(layout.value), shapeNow = shape.value;
+  const run = commitNow(current, cloneDeep(layout.value), shape.value);
+  inflight = run;
+  try { await run; } finally { if (inflight === run) inflight = null; }
+}
+async function commitNow(current: BoardView, layoutNow: Layout, shapeNow: BoardShape): Promise<void> {
   try {
-    await current.save(layoutNow, shapeNow);
+    await current.commit(layoutNow, shapeNow);
     saved.value = true;
     clearTimeout(savedTimer);
     savedTimer = setTimeout(() => { saved.value = false; }, 900);
   } catch (error) {
     dirty = true;
     await recover(error);
-  } finally {
-    saving = false;
-    if (again) { again = false; void flushSave(); }
   }
 }
 /** The save changed under the view (or a round started): read it again and keep the player's arrangement. */
 async function recover(error: unknown): Promise<void> {
   const message = error instanceof Error ? error.message : '';
-  // A round began: the move stays pending and is put back and saved when the round ends (restoreAfter).
+  // Another save was loaded (or this one reloaded): the move belonged to the old tree and is dropped, never
+  // carried onto the new board.
+  if (message.includes('switched')) {
+    dirty = false;
+    if (open.value && !props.generating) await load();
+    return;
+  }
+  // A round began: the move stays pending and is put back and kept when the round ends (restoreAfter).
   if (props.generating || access?.roundRunning()) return;
-  if (message.includes('busy')) { scheduleSave(); return; }
   if (!message.includes('stale') || !access) { note.value = 'saveFailed'; return; }
   const keep = cloneDeep(layout.value), keepShape = shape.value;
-  await load();
+  await load({ seen: open.value });
   if (!view.value) return;
   layout.value = keep;
   shape.value = keepShape;
-  note.value = 'reopened';
+  if (open.value) note.value = 'reopened';
   await changed();
 }
-onBeforeUnmount(() => { clearTimeout(savedTimer); void flushSave(); });
+let persistTimer: ReturnType<typeof setTimeout> | undefined, persistTries = 0;
+/** Write the kept arrangement to the save file; tries again shortly while a write or the view must wait. */
+async function persistSoon(): Promise<void> {
+  clearTimeout(persistTimer);
+  if (!access) return;
+  await flushCommit();
+  // A move still waiting (the view is being read again) is kept first.
+  if (dirty) { retryPersist(); return; }
+  if (!access.hasUnsaved) { persistTries = 0; return; }
+  try {
+    if (await access.persist()) { persistTries = 0; return; }
+  } catch (error) {
+    persistTries = 0;
+    console.warn('[PlotVector] The arrangement could not be written to the save:', error);
+    eventBus.emit('ui:toast', { type: 'warning', i18nKey: 'mainGame.vectorTable.persistFailed', duration: 5000,
+      message: '牌桌的摆法这次没能写进存档；它仍然有效，下个回合会随回合一起保存。' });
+    return;
+  }
+  // A round or the ability retry is writing this save: it carries the arrangement; the round's end looks again.
+  retryPersist();
+}
+function retryPersist(): void {
+  // During a round the round's own save takes the arrangement along; the round's end tries again as well.
+  if (props.generating || ++persistTries > 5) { persistTries = 0; return; }
+  persistTimer = setTimeout(() => { void persistSoon(); }, 1000);
+}
+// The story panel is kept alive while another page shows (browser Back, a panel opened from elsewhere): the table,
+// which lives on the page body, must not stay floating over that page. Leaving closes it, and closing writes.
+onDeactivated(() => { if (open.value) close(); else void persistSoon(); });
+// A phone switching apps, or the tab going away: write what is kept while there is still time.
+function onPageHidden(): void { if (document.visibilityState === 'hidden') void persistSoon(); }
+document.addEventListener('visibilitychange', onPageHidden);
+window.addEventListener('pagehide', onPageHidden);
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', onPageHidden);
+  window.removeEventListener('pagehide', onPageHidden);
+  clearTimeout(savedTimer);
+  clearTimeout(persistTimer);
+  void persistSoon();
+});
 
 // ── Hands: drag, tap, long press ──
 const drag = useCardDrag({
@@ -530,10 +633,14 @@ function onKey(e: KeyboardEvent): void {
   else close();
 }
 watch(open, value => {
-  if (value) window.addEventListener('keydown', onKey);
-  else window.removeEventListener('keydown', onKey);
+  if (value) { window.addEventListener('keydown', onKey); window.addEventListener('resize', remeasureStage); }
+  else { window.removeEventListener('keydown', onKey); window.removeEventListener('resize', remeasureStage); }
 });
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKey);
+  window.removeEventListener('resize', remeasureStage);
+  cancelAnimationFrame(stageFrame);
+});
 
 const weatherLine = (id: string) => label(shown.value?.cards[id]?.line);
 const weatherPath = (id: string) => {
@@ -551,6 +658,7 @@ const ghostStyle = computed(() => {
 <template>
   <VectorBadge
     v-if="enabled && access"
+    ref="badgeRef"
     :cells="badgeCells"
     :shape="storedShape"
     :count="newCards"
@@ -567,12 +675,14 @@ const ghostStyle = computed(() => {
         @pointerup="backdrop.onPointerup"
       />
     </Transition>
+    <div class="vtable-stage" :style="stageStyle">
     <Transition name="vtable" :css="motion">
       <section
         v-if="open"
         ref="sheet"
         tabindex="-1"
         class="vtable"
+        :style="sheetStyle"
         role="dialog"
         :aria-label="t('mainGame.vectorTable.title')"
         :aria-busy="loading"
@@ -734,6 +844,7 @@ const ghostStyle = computed(() => {
         <div v-if="locked" class="vtable__lock" data-testid="vector-board-locked"><span>{{ t('mainGame.vectorTable.lock') }}</span></div>
       </section>
     </Transition>
+    </div>
     <VectorCardDetail
       v-if="open && detail && (detailCard || detailForming)"
       :key="detail.card"
@@ -766,17 +877,17 @@ const ghostStyle = computed(() => {
   z-index: var(--z-modal);
   background: color-mix(in srgb, var(--glass-overlay-bg) 60%, transparent);
 }
+.vtable-stage { position: fixed; top: 0; z-index: var(--z-modal); overflow: hidden; pointer-events: none; }
 .vtable {
-  position: fixed;
+  position: absolute;
   left: 50%;
   bottom: 0;
-  z-index: var(--z-modal);
   display: grid;
   grid-template-rows: auto auto auto auto;
-  width: min(100vw, 980px);
-  max-height: 86vh;
-  max-height: 86dvh;
-  padding: 8px 22px calc(18px + env(safe-area-inset-bottom, 0px));
+  width: min(100%, 980px);
+  max-height: 86%;
+  padding: 8px 22px calc(18px + var(--vtable-safe, 0px));
+  pointer-events: auto;
   transform: translateX(-50%);
   border-radius: 20px 20px 0 0;
   background: linear-gradient(var(--glass-bg), var(--glass-bg)), color-mix(in oklch, var(--color-bg) 74%, transparent);
@@ -946,7 +1057,7 @@ const ghostStyle = computed(() => {
 .vtable-veil-enter-from, .vtable-veil-leave-to { opacity: 0; }
 
 @media (max-width: 767px) {
-  .vtable { max-height: 90dvh; padding: 8px 14px calc(14px + env(safe-area-inset-bottom, 0px)); }
+  .vtable { padding: 8px 14px calc(14px + var(--vtable-safe, 0px)); }
   .vtable__help { right: 14px; left: 14px; justify-content: center; }
 }
 @media (prefers-reduced-motion: reduce) {

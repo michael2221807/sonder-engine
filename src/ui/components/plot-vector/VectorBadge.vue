@@ -107,18 +107,26 @@ const { t } = useI18n();
 .vbadge--epic { --vbadge-glow: var(--tier-epic); }
 .vbadge--legendary { --vbadge-glow: var(--tier-legendary); }
 .vbadge--mythic { --vbadge-glow: var(--tier-mythic); }
-.vbadge--new { animation: vbadge-breathe var(--duration-breath) var(--ease-in-out) infinite; }
-/* A legendary or mythic card waiting: the breath is quicker and brighter. */
-.vbadge--legendary.vbadge--new, .vbadge--mythic.vbadge--new { animation-duration: calc(var(--duration-breath) * 0.6); }
-.vbadge--mythic .vbadge__count { color: oklch(0.97 0.01 90); }
-@keyframes vbadge-breathe {
-  50% { border-color: color-mix(in oklch, var(--vbadge-glow) 70%, transparent); box-shadow: 0 0 16px color-mix(in oklch, var(--vbadge-glow) 40%, transparent); }
+/* New cards waiting: a glow ring breathes (only its opacity moves, so the page is not repainted every frame). */
+.vbadge::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--vbadge-glow) 70%, transparent), 0 0 16px color-mix(in oklch, var(--vbadge-glow) 40%, transparent);
 }
+.vbadge--new::after { animation: vbadge-breathe var(--duration-breath) var(--ease-in-out) infinite; }
+/* A legendary or mythic card waiting: the breath is quicker. */
+.vbadge--legendary.vbadge--new::after, .vbadge--mythic.vbadge--new::after { animation-duration: calc(var(--duration-breath) * 0.6); }
+.vbadge--mythic .vbadge__count { color: oklch(0.97 0.01 90); }
+@keyframes vbadge-breathe { 50% { opacity: 1; } }
 @media (max-width: 767px) {
   .vbadge { height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .vbadge--new { animation: none; border-color: color-mix(in oklch, var(--vbadge-glow) 70%, transparent); }
+  .vbadge--new::after { animation: none; opacity: 1; }
   .vbadge__cell { transition: none; }
 }
 </style>

@@ -109,12 +109,13 @@ onBeforeUnmount(() => { clearInterval(moteTimer); cancelAnimationFrame(leanFrame
     @pointerenter="onEnter"
     @pointerleave="onLeave"
   >
+    <i v-if="rank >= 4 || fresh" class="vcard__aura" aria-hidden="true" />
     <span class="vcard__clip" aria-hidden="true">
       <i class="vcard__sheen" />
       <i v-if="rank >= 4" class="vcard__foil" />
       <i v-if="rank >= 3" class="vcard__glare" />
     </span>
-    <i v-if="rank >= 5" class="vcard__run" aria-hidden="true" />
+    <i v-if="rank >= 5" class="vcard__run" aria-hidden="true"><i /></i>
     <i v-if="rank >= 1" class="vcard__edge" aria-hidden="true" />
     <span class="vcard__kind">{{ t(`mainGame.vectorTable.kind.${kind}`) }}</span>
     <span class="vcard__marks" aria-hidden="true">
@@ -130,7 +131,6 @@ onBeforeUnmount(() => { clearInterval(moteTimer); cancelAnimationFrame(leanFrame
 </template>
 
 <style scoped>
-@property --vcard-run { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
 .vcard {
   --tier: var(--tier-common);
   --mx: 50%;
@@ -235,27 +235,41 @@ onBeforeUnmount(() => { clearInterval(moteTimer); cancelAnimationFrame(leanFrame
 .vcard--epic:hover .vcard__glare, .vcard--legendary:hover .vcard__glare, .vcard--mythic:hover .vcard__glare { opacity: 1; }
 .vcard--epic:hover { box-shadow: 0 16px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px color-mix(in oklch, var(--tier) 45%, transparent), 0 0 26px color-mix(in oklch, var(--tier) 30%, transparent); }
 
-/* Legendary: a slow gold-leaf sheen and a breathing edge. */
-.vcard__foil { position: absolute; inset: 0; opacity: 0.45; background-size: 280% 100%; animation: vcard-foil 8s linear infinite;
-  background-image: linear-gradient(115deg, transparent 18%, color-mix(in oklch, var(--tier) 14%, transparent) 32%, transparent 46%, color-mix(in oklch, var(--tier) 9%, transparent) 66%, transparent 84%); }
-@keyframes vcard-foil { from { background-position: 0% 0; } to { background-position: 280% 0; } }
-.vcard--legendary { animation: vcard-aura 3.8s var(--ease-in-out) infinite; }
-@keyframes vcard-aura { 50% { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 0 0 1px color-mix(in oklch, var(--tier) 22%, transparent), 0 0 20px color-mix(in oklch, var(--tier) 16%, transparent); } }
-.vcard--legendary:hover { animation: none; box-shadow: 0 18px 36px rgba(0, 0, 0, 0.55), 0 0 0 1px color-mix(in oklch, var(--tier) 55%, transparent), 0 0 32px color-mix(in oklch, var(--tier) 36%, transparent); }
+/*
+ * The endless lights move only opacity or position, so the graphics card carries them and the page is not
+ * repainted every frame (a slow phone keeps its frames for the story and the shuttle).
+ */
+/* Legendary and mythic breathe, a new card glows twice: a glow layer behind the card fades in and out. */
+.vcard__aura { position: absolute; inset: 0; border-radius: inherit; z-index: -1; pointer-events: none; opacity: 0;
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--tier) 22%, transparent), 0 0 20px color-mix(in oklch, var(--tier) 16%, transparent); }
+.vcard--legendary .vcard__aura { animation: vcard-breathe 3.8s var(--ease-in-out) infinite; }
+.vcard--mythic .vcard__aura { box-shadow: 0 0 0 1px color-mix(in oklch, var(--tier) 30%, transparent), 0 0 28px color-mix(in oklch, var(--tier) 26%, transparent);
+  animation: vcard-breathe 3.2s var(--ease-in-out) infinite; }
+.vcard--fresh:not(.vcard--legendary):not(.vcard--mythic) .vcard__aura { box-shadow: 0 0 22px color-mix(in oklch, var(--color-amber-400) 45%, transparent);
+  animation: vcard-breathe 1.8s var(--ease-out) 2; }
+@keyframes vcard-breathe { 50% { opacity: 1; } }
+.vcard--legendary:hover .vcard__aura, .vcard--mythic:hover .vcard__aura { animation: none; opacity: 0; }
+
+/* Legendary: a slow gold-leaf sheen — a wide strip of two tiles sliding one tile's width, so it loops seamlessly. */
+.vcard__foil { position: absolute; top: 0; bottom: 0; left: 0; width: 560%; opacity: 0.45; will-change: transform;
+  background-image: linear-gradient(115deg, transparent 18%, color-mix(in oklch, var(--tier) 14%, transparent) 32%, transparent 46%, color-mix(in oklch, var(--tier) 9%, transparent) 66%, transparent 84%);
+  background-size: 50% 100%; background-repeat: repeat-x;
+  animation: vcard-foil 8s linear infinite; }
+@keyframes vcard-foil { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.vcard--legendary:hover { box-shadow: 0 18px 36px rgba(0, 0, 0, 0.55), 0 0 0 1px color-mix(in oklch, var(--tier) 55%, transparent), 0 0 32px color-mix(in oklch, var(--tier) 36%, transparent); }
 .vcard--legendary:hover .vcard__foil, .vcard--mythic:hover .vcard__foil { opacity: 0.95; animation-duration: 3s; }
 
-/* Mythic: a light runs round the edge; a deep aura breathes. */
-.vcard__run { position: absolute; inset: -1px; border-radius: 12px; padding: 1.5px; z-index: 3; pointer-events: none;
-  background: conic-gradient(from var(--vcard-run), transparent 0 62%, color-mix(in oklch, var(--tier) 60%, transparent) 72%, oklch(0.92 0.08 60) 78%, color-mix(in oklch, var(--tier) 60%, transparent) 84%, transparent 94%);
+/* Mythic: a light runs round the edge — a turning light seen only through a thin ring. */
+.vcard__run { position: absolute; inset: -1px; border-radius: 12px; padding: 1.5px; z-index: 3; pointer-events: none; overflow: hidden;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
-  mask-composite: exclude;
+  mask-composite: exclude; }
+.vcard__run > i { position: absolute; left: 50%; top: 50%; width: 300%; aspect-ratio: 1; translate: -50% -50%; will-change: transform;
+  background: conic-gradient(transparent 0 62%, color-mix(in oklch, var(--tier) 60%, transparent) 72%, oklch(0.92 0.08 60) 78%, color-mix(in oklch, var(--tier) 60%, transparent) 84%, transparent 94%);
   animation: vcard-run 4.5s linear infinite; }
-@keyframes vcard-run { to { --vcard-run: 360deg; } }
-.vcard--mythic { animation: vcard-aura-deep 3.2s var(--ease-in-out) infinite; }
-@keyframes vcard-aura-deep { 50% { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 0 0 1px color-mix(in oklch, var(--tier) 30%, transparent), 0 0 28px color-mix(in oklch, var(--tier) 26%, transparent); } }
-.vcard--mythic:hover { animation: none; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px color-mix(in oklch, var(--tier) 60%, transparent), 0 0 42px color-mix(in oklch, var(--tier) 42%, transparent); }
-.vcard--mythic:hover .vcard__run { animation-duration: 1.8s; }
+@keyframes vcard-run { to { rotate: 360deg; } }
+.vcard--mythic:hover { box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px color-mix(in oklch, var(--tier) 60%, transparent), 0 0 42px color-mix(in oklch, var(--tier) 42%, transparent); }
+.vcard--mythic:hover .vcard__run > i { animation-duration: 1.8s; }
 
 /* States. */
 .vcard--resting { opacity: 0.55; }
@@ -263,15 +277,13 @@ onBeforeUnmount(() => { clearInterval(moteTimer); cancelAnimationFrame(leanFrame
 .vcard--forming .vcard__line { font-style: italic; }
 .vcard--selected { --lift: -6px; box-shadow: 0 10px 22px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--color-sage-400), 0 0 18px color-mix(in oklch, var(--color-sage-400) 35%, transparent); }
 .vcard--acting { box-shadow: 0 0 0 1px var(--color-amber-400), 0 0 24px color-mix(in oklch, var(--color-amber-400) 45%, transparent); }
-.vcard--fresh:not(.vcard--legendary):not(.vcard--mythic) { animation: vcard-arrive 1.8s var(--ease-out) 2; }
 .vcard--ghost { transform: rotate(-2deg) scale(1.05); box-shadow: 0 18px 36px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--color-sage-400); animation: vcard-pick 160ms var(--ease-out); }
 /* Picked up: the card rises from the table, its shadow deepening. */
 @keyframes vcard-pick { from { transform: none; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); } }
 .vcard--lifted { opacity: 0.3; }
-@keyframes vcard-arrive { 50% { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 0 22px color-mix(in oklch, var(--color-amber-400) 45%, transparent); } }
 @media (prefers-reduced-motion: reduce) {
   .vcard, .vcard:hover { transition: none; transform: none; }
-  .vcard--fresh, .vcard--legendary, .vcard--mythic, .vcard--ghost, .vcard__foil, .vcard__run, .vcard__edge { animation: none !important; }
+  .vcard--ghost, .vcard__aura, .vcard__foil, .vcard__run > i, .vcard__edge { animation: none !important; }
   .vcard__sheen { display: none; }
 }
 </style>

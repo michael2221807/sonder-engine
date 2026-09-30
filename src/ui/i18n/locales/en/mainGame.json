@@ -281,6 +281,7 @@
   "mainGame.vectorTable.note.saveFailed": "That arrangement wasn't saved; please place it again.",
   "mainGame.vectorTable.note.reopened": "The save just changed; the board was reloaded from it.",
   "mainGame.vectorTable.note.retry": "Try again",
+  "mainGame.vectorTable.persistFailed": "The table arrangement could not be written to the save this time; it still holds and is saved with the next round.",
   "mainGame.vectorTable.helpPanel.move": "Drag a card onto a cell, or tap a card and then a cell; drag it back to your hand to take it off.",
   "mainGame.vectorTable.helpPanel.pathLine": "The shuttle leaves 01, goes cell by cell and folds back at the end; cards it passes light up.",
   "mainGame.vectorTable.helpPanel.pathRing": "The shuttle leaves 01 and keeps going round until its steps run out; cards it passes light up.",

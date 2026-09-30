@@ -281,6 +281,7 @@
   "mainGame.vectorTable.note.saveFailed": "刚才的摆法没存上，请再摆一次。",
   "mainGame.vectorTable.note.reopened": "存档刚刚变了，牌桌已按最新的存档重新摆好。",
   "mainGame.vectorTable.note.retry": "再试一次",
+  "mainGame.vectorTable.persistFailed": "牌桌的摆法这次没能写进存档；它仍然有效，下个回合会随回合一起保存。",
   "mainGame.vectorTable.helpPanel.move": "把卡拖到格子上，或者点一下卡再点格子；拖回手里就是拿下。",
   "mainGame.vectorTable.helpPanel.pathLine": "梭从 01 出发，一格一格走，走到头折回；经过的卡会亮一下。",
   "mainGame.vectorTable.helpPanel.pathRing": "梭从 01 出发，顺着圈一直走，走满步数停下；经过的卡会亮一下。",

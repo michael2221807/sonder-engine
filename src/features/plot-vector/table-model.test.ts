@@ -34,7 +34,7 @@ function viewOf(state: VectorState, layout?: VectorState['layout']): BoardView {
   const prepared = prepareVector(withLayout, entries, 'p/s/2', NATIVE, SUPPLY);
   return { state: withLayout, prepared, cleared: false, backlog: abilityBacklog(withLayout, entries),
     supply: supplyHandInfo(SUPPLY, withLayout.supply ?? initialSupply(SUPPLY)),
-    preview: async () => prepared, save: async () => {} };
+    preview: async () => prepared, commit: async () => {} };
 }
 const base: VectorState = { ...initialVectorState(), cards };
 

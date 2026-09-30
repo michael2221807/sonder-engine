@@ -58,12 +58,12 @@ async function persisted(page: Page, ids: SeedIds) {
     return (await idbAdapter.get(`save_${profileId}_${slotId}`)).系统.扩展.plotVector;
   }, ids);
 }
-/** The table saves itself in the background: wait until the disk has what the check expects. */
+/** The table writes the save when it closes: wait until the disk has what the check expects. */
 async function savedUntil(page: Page, ids: SeedIds, check: (pv: Record<string, any>) => boolean) {
   await expect.poll(async () => check(await persisted(page, ids)), { timeout: 10_000 }).toBe(true);
 }
 
-test('the table keeps the player\'s arrangement across reload; moves save themselves and never accept a round',
+test('the table keeps the player\'s arrangement across reload; moves are kept live and written when the table closes, never accepting a round',
   { tag: ['@plot-vector', '@story-d147', '@story-d148'] }, async ({ page, gameShell, plotVector }) => {
     const ids = await seedSave(page);
     await addBoardFixture(page, ids);
@@ -86,9 +86,14 @@ test('the table keeps the player\'s arrangement across reload; moves save themse
     await plotVector.hoverDetail(plotVector.handCard('item:notebook'));
     await expect(plotVector.detail).toContainText('等级 0 / 50');
     await page.mouse.move(5, 5);
-    // Tap the notebook, then cell 01: it is placed and saved without a save button.
+    // Tap the notebook, then cell 01: it is placed and kept without a save button.
     await plotVector.place('item:notebook', '01');
     await expect(plotVector.cellCard('01')).toContainText('随身日记');
+    // PO 2026-09-30 B: while the table is open the save file is not written (the move lives in the game state).
+    await expect(plotVector.board.locator('.vtable__handle--saved')).toBeAttached();
+    expect((await persisted(page, ids)).layout?.placements?.['01'] ?? null).toBeNull();
+    // Closing the table writes it once.
+    await plotVector.closeBoard();
     await savedUntil(page, ids, pv => pv.layout?.placements?.['01'] === 'item:notebook');
     const saved = await persisted(page, ids);
     expect(saved.session.round).toBe(1); expect(saved.growth).toEqual({}); expect(saved.last).toBeUndefined();
@@ -97,10 +102,30 @@ test('the table keeps the player\'s arrangement across reload; moves save themse
     // A tap on a placed card takes it back into the hand.
     await plotVector.takeOff('01');
     await expect(plotVector.cellCard('01')).toHaveCount(0);
+    await plotVector.closeBoard();
     await savedUntil(page, ids, pv => pv.layout?.placements?.['01'] === null);
     const after = await persisted(page, ids);
     expect(after.layout.tray).toEqual(['item:notebook', 'basic:push', 'basic:talk', 'basic:notice']);
     expect(after.session.round).toBe(1); expect(after.growth).toEqual({}); expect(after.last).toBeUndefined();
+  });
+
+test('leaving the story panel with the table open still writes the arrangement to its save',
+  { tag: ['@plot-vector', '@story-d148'] }, async ({ page, gameShell, plotVector }) => {
+    const ids = await seedSave(page);
+    await addBoardFixture(page, ids);
+    await enterSeededGame(page);
+    await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
+    await plotVector.openBoard();
+    await plotVector.place('item:notebook', '02');
+    await expect(plotVector.board.locator('.vtable__handle--saved')).toBeAttached();
+    // Straight to the save page without closing the table (browser Back does the same): the story panel is kept
+    // alive in the background, so the table must close itself rather than float over the save page.
+    await page.evaluate(async () => {
+      const app = (document.querySelector('#app') as { __vue_app__?: { config: { globalProperties: { $router: { push(to: string): Promise<unknown> } } } } } | null)?.__vue_app__;
+      await app?.config.globalProperties.$router.push('/game/save');
+    });
+    await expect(plotVector.board).toHaveCount(0);
+    await savedUntil(page, ids, pv => pv.layout?.placements?.['02'] === 'item:notebook');
   });
 
 test('cards move by dragging, swap on an occupied cell, and the sweep takes every card off',
@@ -127,6 +152,7 @@ test('cards move by dragging, swap on an occupied cell, and the sweep takes ever
     for (const cell of ['01', '02', '03', '04', '05']) await expect(plotVector.cellCard(cell)).toHaveCount(0);
     await expect(plotVector.weather).toContainText('微风'); // weather is not the player's to place
     await expect(plotVector.boardClear).toBeDisabled();
+    await plotVector.closeBoard();
     await savedUntil(page, ids, pv => ['01', '02', '03', '04', '05'].every(cell => pv.layout?.placements?.[cell] === null));
   });
 
@@ -140,14 +166,17 @@ test('both board shapes can be played; the chosen one is saved with the arrangem
     await expect(plotVector.shapeLine).toHaveAttribute('aria-pressed', 'true');
     await plotVector.shapeRing.click();
     await expect(plotVector.board.locator('.vtrack--ring')).toBeVisible();
-    await savedUntil(page, ids, pv => pv.shape === 'ring');
+    await expect(plotVector.board.locator('.vtable__handle--saved')).toBeAttached();
     await plotVector.closeBoard();
+    await savedUntil(page, ids, pv => pv.shape === 'ring');
     await expect(plotVector.boardOpen).toHaveClass(/vbadge--ring/);
     await page.goto('/'); await enterSeededGame(page); await plotVector.openBoard();
     await expect(plotVector.shapeRing).toHaveAttribute('aria-pressed', 'true');
     await plotVector.place('item:notebook', '03');
     await expect(plotVector.cellCard('03')).toContainText('随身日记');
     await plotVector.shapeLine.click();
+    await expect(plotVector.board.locator('.vtrack--ring')).toHaveCount(0);
+    await plotVector.closeBoard();
     await savedUntil(page, ids, pv => pv.shape === 'line' && pv.layout?.placements?.['03'] === 'item:notebook');
   });
 
