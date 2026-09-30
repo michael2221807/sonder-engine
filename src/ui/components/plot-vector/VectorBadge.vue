@@ -3,16 +3,19 @@
 /**
  * The board in miniature beside the input (phase 7): six marks in a row, or in a ring on the ring board. A cell
  * holding a card is lit, the status cell warm; it glows while new cards wait, and replays the last trip once
- * after a round (animation A).
+ * after a round (animation A). The glow takes the colour of the rarest new card (phase 7 polish).
  */
 import { useI18n } from 'vue-i18n';
 import Tooltip from '../shared/Tooltip.vue';
 import type { BoardShape } from '@/features/plot-vector/vector-board';
+import type { CardTier } from '@/features/plot-vector/rating';
 
 defineProps<{
   cells: Array<{ id: string; state: 'empty' | 'card' | 'status' }>;
   shape: BoardShape;
   count: number;
+  /** The rarest card among the new ones. */
+  tier?: CardTier;
   lit: string | null;
 }>();
 const emit = defineEmits<{ (e: 'open', event: MouseEvent): void }>();
@@ -24,7 +27,7 @@ const { t } = useI18n();
     <button
       type="button"
       class="vbadge"
-      :class="[`vbadge--${shape}`, { 'vbadge--new': count > 0 }]"
+      :class="[`vbadge--${shape}`, { 'vbadge--new': count > 0, [`vbadge--${tier}`]: count > 0 && !!tier }]"
       :aria-label="count ? `${t('mainGame.vectorTable.badge.open')} · ${t('mainGame.vectorTable.badge.newCards', { count })}` : t('mainGame.vectorTable.badge.open')"
       data-testid="vector-board-open"
       @click="emit('open', $event)"
@@ -96,17 +99,26 @@ const { t } = useI18n();
   line-height: 16px;
   text-align: center;
   color: oklch(0.2 0.02 75);
-  background: var(--color-amber-400);
+  background: var(--vbadge-glow);
 }
+.vbadge { --vbadge-glow: var(--color-amber-400); }
+.vbadge--uncommon { --vbadge-glow: var(--tier-uncommon); }
+.vbadge--rare { --vbadge-glow: var(--tier-rare); }
+.vbadge--epic { --vbadge-glow: var(--tier-epic); }
+.vbadge--legendary { --vbadge-glow: var(--tier-legendary); }
+.vbadge--mythic { --vbadge-glow: var(--tier-mythic); }
 .vbadge--new { animation: vbadge-breathe var(--duration-breath) var(--ease-in-out) infinite; }
+/* A legendary or mythic card waiting: the breath is quicker and brighter. */
+.vbadge--legendary.vbadge--new, .vbadge--mythic.vbadge--new { animation-duration: calc(var(--duration-breath) * 0.6); }
+.vbadge--mythic .vbadge__count { color: oklch(0.97 0.01 90); }
 @keyframes vbadge-breathe {
-  50% { border-color: var(--color-amber-600); box-shadow: 0 0 16px color-mix(in oklch, var(--color-amber-400) 35%, transparent); }
+  50% { border-color: color-mix(in oklch, var(--vbadge-glow) 70%, transparent); box-shadow: 0 0 16px color-mix(in oklch, var(--vbadge-glow) 40%, transparent); }
 }
 @media (max-width: 767px) {
   .vbadge { height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .vbadge--new { animation: none; border-color: var(--color-amber-600); }
+  .vbadge--new { animation: none; border-color: color-mix(in oklch, var(--vbadge-glow) 70%, transparent); }
   .vbadge__cell { transition: none; }
 }
 </style>

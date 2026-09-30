@@ -13,7 +13,8 @@ import { projectSavedElements, readPath, savedEntryName, savedSources } from './
 import { stable, capabilityKey, type BoundCard, type SavedElement } from './genesis/post-save';
 import { buildAbilityRetryMessages, parseCardReply, CARD_API } from './genesis/generation-prompt';
 import { acceptVector, bindCard, cardTypeOf, prepareVector, readVectorState, type AbilityRetry, type VectorState, type VectorTaskRow, type PreparedVector } from './runtime';
-import { supplyNames, type SupplyRules } from './supply';
+import { supplyHandInfo, supplyNames, type SupplyRules } from './supply';
+import { tierOf, type CardTier } from './rating';
 import { abilityBacklog, type BacklogEntry } from './ability-backlog';
 import { bindRoundAbilities, readAbilityBlock } from './round-abilities';
 import { projectNativeInput, type NativeRules } from './native-input';
@@ -65,8 +66,8 @@ function beforeLastUser(messages: AIMessage[], sources: string[] | undefined, ad
 interface Attempt { ctx: PipelineContext; owner: RoundOwnership; guard: () => void; controller: AbortController;
   before: SavedElement[]; state: VectorState; id: string; prepared?: PreparedVector; slot: Slot; release: () => void;
   gained: BoundCard[];
-  /** Supply cards drawn when this round was accepted (announced after it is saved). */
-  drawn: LocalizedLabel[];
+  /** Supply cards drawn when this round was accepted (announced after it is saved), with their tier. */
+  drawn: Array<{ name: LocalizedLabel; tier: CardTier }>;
 }
 /** The component failed on its own; the story goes on. Only a cancellation or slot switch stops the round. */
 function degraded(i18nKey: string, message: string, error: unknown): void {
@@ -188,8 +189,14 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     if (a.prepared && a.state.last?.id !== a.prepared.id) {
       try {
         next = acceptVector(a.state, a.prepared, this.supplyRules);
-        a.drawn = this.supplyRules && next.supply?.lastDrawn
-          ? supplyNames(this.supplyRules, next.supply, next.supply.lastDrawn) : [];
+        const rules = this.supplyRules, hand = next.supply;
+        if (rules && hand?.lastDrawn) {
+          const info = supplyHandInfo(rules, hand);
+          a.drawn = hand.lastDrawn.flatMap(id => {
+            const [name] = supplyNames(rules, hand, [id]);
+            return name && info[id] ? [{ name, tier: info[id].tier }] : [];
+          });
+        } else a.drawn = [];
       }
       catch (error) {
         a.guard();
@@ -226,19 +233,24 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     }
     finally { a.gained = []; a.drawn = []; a.release(); }
   }
-  /** One short notice per batch of new cards, and a signal for the board entry's badge (I24). */
+  /**
+   * One short notice per batch of new cards, and a signal for the board entry's badge (I24): the badge glows in
+   * the colour of the rarest new card (items and talents carry a tier; PO 2026-09-30 2A).
+   */
   private announce(cards: readonly BoundCard[]): void {
     const names = cards.map(card => String(card.task.entry.capability.name ?? card.spec.for));
+    const tiers = cards.filter(card => card.spec.type === 'item' || card.spec.type === 'talent')
+      .map(card => tierOf(card.rating)).filter((tier): tier is CardTier => !!tier);
     eventBus.emit('ui:toast', { type: 'success', i18nKey: 'mainGame.toast.vectorNewCards', i18nParams: { names: names.join('、'), count: names.length },
       message: `获得新卡：${names.join('、')}`, duration: 4000 });
-    eventBus.emit('plotVector:cards-gained', { names });
+    eventBus.emit('plotVector:cards-gained', { names, tiers });
   }
   /** Supply cards the round drew: one short notice, and the board entry's badge counts them (3A, I24). */
-  private announceSupply(names: readonly LocalizedLabel[]): void {
-    const zh = names.map(name => name.zh), en = names.map(name => name.en);
+  private announceSupply(drawn: ReadonlyArray<{ name: LocalizedLabel; tier: CardTier }>): void {
+    const zh = drawn.map(d => d.name.zh), en = drawn.map(d => d.name.en);
     eventBus.emit('ui:toast', { type: 'success', i18nKey: 'mainGame.toast.vectorSupplyDrawn',
-      i18nParams: { names: zh.join('、'), namesEn: en.join(', '), count: names.length }, message: `补给送来新卡：${zh.join('、')}`, duration: 4000 });
-    eventBus.emit('plotVector:cards-gained', { names: zh });
+      i18nParams: { names: zh.join('、'), namesEn: en.join(', '), count: drawn.length }, message: `补给送来新卡：${zh.join('、')}`, duration: 4000 });
+    eventBus.emit('plotVector:cards-gained', { names: zh, tiers: drawn.map(d => d.tier) });
   }
   /** Obtained entries whose ability is not usable yet (the saved entries themselves are never touched). */
   abilityBacklog(): BacklogEntry[] {

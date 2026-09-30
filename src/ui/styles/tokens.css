@@ -82,6 +82,18 @@
   --color-amber-600:        oklch(0.66 0.085 var(--hue-2));
 
   /* ─────────────────────────────────────────────────────────────
+     RARITY — the familiar white · green · blue · purple · orange · red
+     ladder (PO 2026-09-30), tuned to sit on warm charcoal. Only the
+     plot-vector card table uses them; each is a card's tier light.
+     ───────────────────────────────────────────────────────────── */
+  --tier-common:            oklch(0.86 0.01  90);
+  --tier-uncommon:          oklch(0.78 0.12  150);
+  --tier-rare:              oklch(0.74 0.12  245);
+  --tier-epic:              oklch(0.70 0.16  305);
+  --tier-legendary:         oklch(0.79 0.15  62);
+  --tier-mythic:            oklch(0.66 0.20  25);
+
+  /* ─────────────────────────────────────────────────────────────
      SEMANTIC — all desaturated + warm-tinted. No Tailwind defaults.
      ───────────────────────────────────────────────────────────── */
   --color-danger:           oklch(0.62 0.12  30);   /* warm rust, not red */

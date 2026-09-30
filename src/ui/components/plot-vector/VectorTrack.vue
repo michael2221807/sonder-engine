@@ -11,6 +11,7 @@ import Tooltip from '../shared/Tooltip.vue';
 import VectorCardFace from './VectorCardFace.vue';
 import { ringGeometry, RING_ORDER } from './ring-geometry';
 import { prefersReducedMotion, type WalkFloat } from './use-trip-walk';
+import { sweepAcross } from './table-effects';
 import type { PassSign, TableCard, TableCell, TripWalk } from '@/features/plot-vector/table-model';
 import type { BoardShape } from '@/features/plot-vector/vector-board';
 import type { LocalizedLabel } from '@/engine/plot-vector/core/types';
@@ -30,6 +31,8 @@ const props = defineProps<{
   dragging: boolean;
   over: DropTarget;
   fresh: ReadonlySet<string>;
+  /** The card being dragged out of its cell, left behind as a faint outline. */
+  lifting?: string | null;
 }>();
 const emit = defineEmits<{
   (e: 'cell-tap', cell: string): void;
@@ -102,33 +105,72 @@ function measureRing(): void {
   });
   ringTotal = total;
 }
+// A fading trail behind the moving shuttle: the last positions, a few frames apart.
+const trail = ref<Array<{ x: number; y: number }>>([]);
+let history: Array<{ x: number; y: number }> = [];
+function record(p: { x: number; y: number }): void {
+  shuttle.value = p;
+  history.unshift(p);
+  if (history.length > 30) history.length = 30;
+  trail.value = [3, 6, 9, 12, 15, 18, 21, 24].map(i => history[i]).filter((q): q is { x: number; y: number } => !!q);
+}
+/** The line's point for a cell: under its middle, on the rail. */
+function linePoint(cell: string): { x: number; y: number } | null {
+  const el = cellEls.get(cell);
+  return el && !narrowLine.value ? { x: el.offsetLeft + el.offsetWidth / 2, y: el.offsetTop + el.offsetHeight + 14 } : null;
+}
+function glide(ms: number, at: (k: number) => { x: number; y: number }): void {
+  const t0 = performance.now();
+  const frame = (now: number) => {
+    const k = Math.min(1, Math.max(0, now - t0) / ms);
+    record(at(1 - (1 - k) * (1 - k)));
+    if (k < 1) glideFrame = requestAnimationFrame(frame);
+  };
+  glideFrame = requestAnimationFrame(frame);
+}
 function placeShuttle(cell: string, from?: string): void {
   cancelAnimationFrame(glideFrame);
+  const still = from === undefined || from === cell || prefersReducedMotion();
   if (ring.value && ringPath) {
     const target = ringAt[cell] ?? 0;
-    const put = (l: number) => {
-      const p = ringPath!.getPointAtLength(((l % ringTotal) + ringTotal) % ringTotal);
-      shuttle.value = { x: p.x, y: p.y };
-    };
-    if (from === undefined || from === cell || prefersReducedMotion()) { put(target); return; }
-    const start = ringAt[from] ?? 0;
+    const pointAt = (l: number) => { const p = ringPath!.getPointAtLength(((l % ringTotal) + ringTotal) % ringTotal); return { x: p.x, y: p.y }; };
+    if (still) { shuttle.value = pointAt(target); return; }
+    const start = ringAt[from!] ?? 0;
     // Forward round the loop, or backward when the shuttle was turned.
     let end = target;
     if (props.back) { if (end > start) end -= ringTotal; } else if (end < start) end += ringTotal;
-    const t0 = performance.now(), ms = 170;
-    const frame = (now: number) => {
-      const k = Math.min(1, (now - t0) / ms);
-      put(start + (end - start) * (1 - (1 - k) * (1 - k)));
-      if (k < 1) glideFrame = requestAnimationFrame(frame);
-    };
-    glideFrame = requestAnimationFrame(frame);
+    glide(170, k => pointAt(start + (end - start) * k));
     return;
   }
-  const el = cellEls.get(cell);
-  if (!el || narrowLine.value) { shuttle.value = null; return; }
-  shuttle.value = { x: el.offsetLeft + el.offsetWidth / 2, y: el.offsetTop + el.offsetHeight + 14 };
+  const to = linePoint(cell);
+  if (!to) { shuttle.value = null; return; }
+  const a = from !== undefined ? linePoint(from) : null;
+  if (still || !a) { shuttle.value = to; return; }
+  glide(170, k => ({ x: a.x + (to.x - a.x) * k, y: a.y + (to.y - a.y) * k }));
 }
 watch(() => props.at, (cell, from) => placeShuttle(cell, from));
+// The walk has settled: the trail fades away and the three leanings settle into place.
+watch(() => props.passing, (cell, before) => {
+  if (cell !== null || before === null) return;
+  history = [];
+  trail.value = [];
+  if (props.tendency) settleMeters();
+});
+function settleMeters(): void {
+  if (prefersReducedMotion() || !root.value) return;
+  root.value.querySelectorAll<HTMLElement>('.vtrack__meter').forEach((el, i) => {
+    el.animate([{ transform: 'scaleY(1)' }, { transform: 'scaleY(2.2)', offset: 0.35 }, { transform: 'scaleY(1)' }],
+      { duration: 560, delay: 120 + i * 90, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
+  });
+}
+// A card the shuttle passes and that acts catches a sweep of light in the shuttle's direction.
+watch(() => props.passing, cell => {
+  if (!cell) return;
+  const card = props.cells.find(c => c.id === cell)?.card;
+  if (!card || !props.acting.has(card)) return;
+  const el = cellEls.get(cell)?.querySelector<HTMLElement>('.vcard');
+  if (el) sweepAcross(el, props.back);
+});
 watch([ring, narrowLine, width], async () => { await nextTick(); measureRing(); placeShuttle(props.at); });
 onBeforeUnmount(() => cancelAnimationFrame(glideFrame));
 
@@ -152,12 +194,28 @@ watch(() => props.shape, async () => {
   for (const [id, el] of cellEls) {
     const a = start.get(id), b = el.getBoundingClientRect();
     if (!a) continue;
-    el.animate([{ transform: `translate(${a.left - b.left}px, ${a.top - b.top}px)` }, { transform: 'none' }],
-      { duration: 520, delay: i++ * 18, easing: ease, fill: 'backwards' });
+    el.animate(arcFrames(a.left - b.left, a.top - b.top), { duration: 560, delay: i++ * 18, easing: ease, fill: 'backwards' });
   }
   root.value.animate([{ height: `${startHeight}px` }, { height: `${root.value.offsetHeight}px` }], { duration: 520, easing: ease });
-  root.value.querySelector('.vtrack__rail')?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 700, delay: 200, easing: ease, fill: 'backwards' });
+  // The track is drawn like one stroke of ink: round the ring from 01, or along the line from the left.
+  if (ringPath && ringTotal > 0) {
+    ringPath.style.strokeDasharray = `${ringTotal}`;
+    ringPath.animate([{ strokeDashoffset: ringTotal }, { strokeDashoffset: 0 }], { duration: 1100, delay: 180, easing: ease, fill: 'backwards' })
+      .finished.then(() => { if (ringPath) ringPath.style.strokeDasharray = ''; }).catch(() => {});
+  } else if (!ring.value && !narrowLine.value) {
+    try {
+      root.value.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { pseudoElement: '::before', duration: 800, delay: 180, easing: ease, fill: 'backwards' });
+    } catch { /* this browser cannot animate the rail: it simply appears */ }
+  }
 }, { flush: 'post' });
+/** A cell's way from its old place to its new one, bowed into a gentle arc (a fifth of the distance to one side). */
+function arcFrames(dx: number, dy: number): Keyframe[] {
+  const BOW = 0.2, STEPS = 10;
+  return Array.from({ length: STEPS + 1 }, (_, s) => {
+    const k = s / STEPS, off = Math.sin(Math.PI * k) * BOW;
+    return { transform: `translate(${(1 - k) * dx - off * dy}px, ${(1 - k) * dy + off * dx}px)`, offset: k };
+  });
+}
 
 const trackStyle = computed(() => (ring.value ? { height: `${ring.value.height}px` } : undefined));
 const hubStyle = computed(() => (ring.value ? { top: `${ring.value.hubTop}px` } : undefined));
@@ -220,6 +278,8 @@ const bar = (value: number, bipolar: boolean) => {
         :acting="acting.has(cell.card)"
         :fresh="fresh.has(cell.card)"
         :selected="selected === cell.card"
+        :lifted="lifting === cell.card"
+        :data-card="cell.card"
         class="vcell__card"
         :class="{ 'vcell__card--auto': cell.role === 'status' }"
         @pointerdown="cell.role !== 'status' && emit('card-down', $event, cell.card, cell.id)"
@@ -228,6 +288,7 @@ const bar = (value: number, bipolar: boolean) => {
       />
       <span v-for="f in floats.filter(x => x.cell === cell.id)" :key="f.id" class="vcell__float" aria-hidden="true">{{ SIGNS[f.sign] }}</span>
     </div>
+    <span v-for="(p, i) in trail" :key="`t${i}`" class="vtrack__trail" :style="{ left: `${p.x}px`, top: `${p.y}px`, opacity: 0.34 - i * 0.04, transform: `scale(${1 - i * 0.09})` }" aria-hidden="true" />
     <span v-if="shuttle" class="vtrack__shuttle" :style="{ left: `${shuttle.x}px`, top: `${shuttle.y}px` }" aria-hidden="true" />
     <div class="vtrack__hub" :style="hubStyle" role="img" :aria-label="t('mainGame.vectorTable.tendency.label')">
       <div class="vtrack__tend">
@@ -257,6 +318,7 @@ const bar = (value: number, bipolar: boolean) => {
 /* The line's rail, under the cells: the shuttle rides it. */
 .vtrack--line:not(.vtrack--narrow)::before {
   content: '';
+  transform-origin: left center;
   position: absolute;
   left: 4%;
   right: 4%;
@@ -336,10 +398,19 @@ const bar = (value: number, bipolar: boolean) => {
   border-radius: 50%;
   background: var(--color-amber-300);
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-amber-400) 25%, transparent), 0 0 18px var(--color-amber-400);
-  transition: left 200ms var(--ease-out), top 200ms var(--ease-out);
   pointer-events: none;
 }
-.vtrack--ring .vtrack__shuttle { transition: none; }
+.vtrack__trail {
+  position: absolute;
+  z-index: 2;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%;
+  background: var(--color-amber-400);
+  box-shadow: 0 0 8px var(--color-amber-400);
+  pointer-events: none;
+}
 
 .vtrack__hub {
   grid-column: 1 / -1;

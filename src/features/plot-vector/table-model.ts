@@ -8,7 +8,7 @@ import { availableUses, stateOf } from '../../engine/plot-vector/core/card-state
 import type { CardDef, Layout, LocalizedLabel, RunDone } from '../../engine/plot-vector/core/types';
 import type { BoardView } from './board-access';
 import type { PreparedVector } from './runtime';
-import { tierOf, type CardTier } from './rating';
+import { rateCard, ratingPlaceOf, tierOf, type CardTier } from './rating';
 import type { BoardShape } from './vector-board';
 
 export type TableCardKind = 'item' | 'talent' | 'status' | 'environment' | 'supply';
@@ -55,8 +55,25 @@ const kindOf = (card: CardDef): TableCardKind =>
 const roleOf = (id: string, kind: string): CellRole =>
   id === STATUS_CELL ? 'status' : kind === 'resonance' ? 'resonance' : kind === 'converter' ? 'converter' : 'effect';
 
-/** Every card the prepared board knows, with its face and marks. */
-export function tableCards(view: BoardView, prepared: PreparedVector): Record<string, TableCard> {
+/**
+ * Story items and talents saved with no current rating (bound before six tiers, or before ratings): the runtime
+ * rates them a few per round, so until then the table works their tier out itself, one card at a time
+ * (`rateStoryCard`). The rating is deterministic, so the table shows what the runtime will later record.
+ */
+export function unratedStoryCards(view: BoardView): string[] {
+  return view.state.cards.filter(c => (c.spec.type === 'item' || c.spec.type === 'talent') && !tierOf(c.rating)).map(c => c.task.entry.id);
+}
+/** One story card's tier, for display (about 40 ms: both board shapes). */
+export function rateStoryCard(view: BoardView, id: string): CardTier | undefined {
+  const card = view.state.cards.find(c => c.task.entry.id === id);
+  return card ? tierOf(rateCard(card.spec, ratingPlaceOf(card.spec.type))) : undefined;
+}
+
+/**
+ * Every card the prepared board knows, with its face and marks. `tiers` holds the tiers the table worked out for
+ * story cards not rated yet (display only).
+ */
+export function tableCards(view: BoardView, prepared: PreparedVector, tiers?: ReadonlyMap<string, CardTier>): Record<string, TableCard> {
   const states = view.state.session.cardStates;
   const progress = new Map((prepared.progress ?? []).map(p => [p.cardId, p.rows]));
   const ratings = new Map(view.state.cards.map(c => [c.task.entry.id, c.rating]));
@@ -66,7 +83,7 @@ export function tableCards(view: BoardView, prepared: PreparedVector): Record<st
     const supply = view.supply[def.id];
     const left = def.usage ? availableUses(def, stateOf(def, states)) : undefined;
     const kind = kindOf(def);
-    const tier = supply?.tier ?? (kind === 'item' || kind === 'talent' ? tierOf(ratings.get(def.id)) : undefined);
+    const tier = supply?.tier ?? (kind === 'item' || kind === 'talent' ? tierOf(ratings.get(def.id)) ?? tiers?.get(def.id) : undefined);
     const card: TableCard = {
       id: def.id, kind, name: def.label,
       ...(def.summary ? { line: def.summary } : {}),
@@ -86,8 +103,8 @@ export function tableCards(view: BoardView, prepared: PreparedVector): Record<st
  * The table for the player's current arrangement. `layout` is what the player sees now (their last move),
  * `prepared` the most recent computed trip; a card the player may place is one the prepared trip offered.
  */
-export function tableModel(view: BoardView, prepared: PreparedVector, layout: Layout, shape: BoardShape): TableModel {
-  const cards = tableCards(view, prepared);
+export function tableModel(view: BoardView, prepared: PreparedVector, layout: Layout, shape: BoardShape, tiers?: ReadonlyMap<string, CardTier>): TableModel {
+  const cards = tableCards(view, prepared, tiers);
   const offered = new Set([...prepared.layout.tray, ...Object.entries(prepared.layout.placements)
     .filter(([cell, id]) => cell !== STATUS_CELL && id).map(([, id]) => id as string)]);
   const cells: TableCell[] = prepared.board.cells.map(cell => {

@@ -2,7 +2,8 @@
 // App doc: docs/user-guide/pages/game-main.md · Plot-vector card table
 /**
  * The round's push in two words beside the round counter (PO 3A, charter I27): worked out by the engine from
- * the packet the model read, never written by the model. Shown only for the round the board shaped.
+ * the packet the model read, never written by the model. Shown only for the round the board shaped. It lands
+ * like a stamp when a new round's push appears (phase 7 polish).
  */
 import { computed, onUnmounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -60,11 +61,16 @@ const text = computed(() => {
 }
 .vimpulse--against, .vimpulse--hard { color: var(--color-amber-300); background: color-mix(in oklch, var(--color-amber-400) 10%, transparent); }
 .vimpulse--even { color: var(--color-text-secondary); background: color-mix(in oklch, var(--color-text-secondary) 8%, transparent); }
-.vimpulse-enter-active { transition: opacity var(--duration-slow) var(--ease-out), transform var(--duration-slow) var(--ease-out); }
-.vimpulse-enter-from { opacity: 0; transform: scale(0.96); }
+.vimpulse-enter-active { animation: vimpulse-stamp 520ms var(--ease-out); }
+@keyframes vimpulse-stamp {
+  0% { opacity: 0; transform: scale(1.18); clip-path: circle(0% at 50% 50%); }
+  45% { opacity: 1; transform: scale(0.98); clip-path: circle(90% at 50% 50%); }
+  100% { opacity: 1; transform: scale(1); clip-path: circle(120% at 50% 50%); }
+}
 .vimpulse-leave-active { transition: opacity var(--duration-fast) var(--ease-out); }
 .vimpulse-leave-to { opacity: 0; }
 @media (prefers-reduced-motion: reduce) {
-  .vimpulse-enter-active, .vimpulse-leave-active { transition: none; }
+  .vimpulse-enter-active { animation: none; }
+  .vimpulse-leave-active { transition: none; }
 }
 </style>

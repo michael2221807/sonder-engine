@@ -134,9 +134,12 @@ const receiptText = computed(() => {
 .vdetail__dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--color-sage-400); }
 .vdetail__dots i.spent { background: oklch(0.3 0.006 95); }
 .vdetail__level i { width: 6px; height: 6px; border-radius: 1px; background: var(--color-amber-300); transform: rotate(45deg); }
-.vdetail__tier--uncommon { color: var(--color-sage-300); }
-.vdetail__tier--rare { color: var(--color-amber-300); }
-.vdetail__tier--legendary { color: oklch(0.86 0.11 85); }
+.vdetail__tier--common { color: var(--tier-common); }
+.vdetail__tier--uncommon { color: var(--tier-uncommon); }
+.vdetail__tier--rare { color: var(--tier-rare); }
+.vdetail__tier--epic { color: var(--tier-epic); }
+.vdetail__tier--legendary { color: var(--tier-legendary); }
+.vdetail__tier--mythic { color: var(--tier-mythic); text-shadow: 0 0 10px color-mix(in oklch, var(--tier-mythic) 50%, transparent); }
 .vdetail__exact {
   display: grid;
   gap: 2px;

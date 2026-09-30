@@ -27,7 +27,10 @@ import type { VectorBoardAccess, BoardView } from '@/features/plot-vector/board-
 import { readVectorState, type PreparedVector } from '@/features/plot-vector/runtime';
 import { readBoardShape, type BoardShape } from '@/features/plot-vector/vector-board';
 import { SIX_CELL_RING_ID } from '@/features/plot-vector/default-board';
-import { arrange, sweep, tableModel, tripWalk, type TableModel } from '@/features/plot-vector/table-model';
+import { arrange, rateStoryCard, sweep, tableModel, tripWalk, unratedStoryCards, type TableCard, type TableCardKind, type TableModel } from '@/features/plot-vector/table-model';
+import { RATING_VERSION, type CardTier } from '@/features/plot-vector/rating';
+import { chargeFull, dealIn, dissolve, levelUp, settle, tierRank, topTier } from './table-effects';
+import { weatherIcon, WEATHER_PATHS } from './weather-icon';
 import { cardTripReceipt } from '@/features/plot-vector/card-trip-receipt';
 
 const props = defineProps<{ generating: boolean }>();
@@ -46,13 +49,38 @@ function readPrefs(): { animate: boolean; exact: boolean } {
 }
 const prefs = reactive(readPrefs());
 watch(prefs, value => { try { localStorage.setItem(PREFS_KEY, JSON.stringify(value)); } catch { /* storage unavailable */ } });
+/** What the player saw of each card the last time the table was open (per save, this device only). */
+interface SeenCard { kind: TableCardKind; name: LocalizedLabel; line?: LocalizedLabel; tier?: CardTier; level?: number; resting?: boolean }
 const seenKey = (slot: string) => `aga:plotVector:seen:${slot}`;
-function readSeen(slot: string): Set<string> | null {
-  try { const raw = localStorage.getItem(seenKey(slot)); return raw ? new Set(JSON.parse(raw) as string[]) : null; } catch { return null; }
+function readSeen(slot: string): Record<string, Partial<SeenCard>> | null {
+  try {
+    const raw = localStorage.getItem(seenKey(slot));
+    if (!raw) return null;
+    const data = JSON.parse(raw) as unknown;
+    // An older record kept only the ids.
+    if (Array.isArray(data)) return Object.fromEntries(data.filter((id): id is string => typeof id === 'string').map(id => [id, {}]));
+    const cards = data && typeof data === 'object' ? (data as { cards?: unknown }).cards : undefined;
+    return cards && typeof cards === 'object' ? cards as Record<string, Partial<SeenCard>> : null;
+  } catch { return null; }
 }
-function writeSeen(slot: string, ids: Iterable<string>): void {
-  try { localStorage.setItem(seenKey(slot), JSON.stringify([...ids])); } catch { /* storage unavailable */ }
+function writeSeen(slot: string, cards: Record<string, SeenCard>): void {
+  try { localStorage.setItem(seenKey(slot), JSON.stringify({ v: 2, cards })); } catch { /* storage unavailable */ }
 }
+/**
+ * Tiers the table worked out for story cards the runtime has not rated yet, kept on this device so a slow phone
+ * works each one out once, not on every visit (the runtime's own rating replaces them as rounds go by).
+ */
+const tiersKey = (slot: string) => `aga:plotVector:tiers:${slot}`;
+function readTierCache(slot: string): Map<string, CardTier> {
+  try {
+    const data = JSON.parse(localStorage.getItem(tiersKey(slot)) ?? 'null') as { v?: unknown; tiers?: Record<string, CardTier> } | null;
+    return data?.v === RATING_VERSION && data.tiers ? new Map(Object.entries(data.tiers)) : new Map();
+  } catch { return new Map(); }
+}
+function writeTierCache(slot: string, tiers: ReadonlyMap<string, CardTier>): void {
+  try { localStorage.setItem(tiersKey(slot), JSON.stringify({ v: RATING_VERSION, tiers: Object.fromEntries(tiers) })); } catch { /* storage unavailable */ }
+}
+const slotOf = (next: BoardView) => next.prepared.id.split('/').slice(0, 2).join('/');
 
 // ── The closed badge reads the saved board straight from the state (no copy of the tree). ──
 const { useValue } = useGameState();
@@ -60,7 +88,12 @@ const stored = useValue<unknown>(P.plotVector);
 const storedState = computed(() => (stored.value ? readVectorState(stored.value) : null));
 const storedShape = computed<BoardShape>(() => readBoardShape(storedState.value?.shape));
 const newCards = ref(0);
-onUnmounted(eventBus.on<{ names?: string[] }>('plotVector:cards-gained', e => { newCards.value += e?.names?.length ?? 1; }));
+/** The rarest card gained since the table was last opened: the badge glows in its colour. */
+const newTier = ref<CardTier>();
+onUnmounted(eventBus.on<{ names?: string[]; tiers?: CardTier[] }>('plotVector:cards-gained', e => {
+  newCards.value += e?.names?.length ?? 1;
+  newTier.value = topTier([newTier.value, ...(e?.tiers ?? [])]);
+}));
 const badgeLit = ref<string | null>(null);
 
 // ── The table ──
@@ -80,7 +113,9 @@ const walk = useTripWalk();
 /** With reduced motion the table simply appears and goes: no sliding classes at all. */
 const motion = !prefersReducedMotion();
 
-const model = computed(() => (view.value && prepared.value ? tableModel(view.value, prepared.value, layout.value, shape.value) : null));
+/** Tiers the table worked out for story cards the runtime has not rated yet (display only). */
+const provisional = shallowRef<ReadonlyMap<string, CardTier>>(new Map());
+const model = computed(() => (view.value && prepared.value ? tableModel(view.value, prepared.value, layout.value, shape.value, provisional.value) : null));
 const shown = computed(() => replaying.value ?? model.value);
 const locked = computed(() => props.generating);
 const hasPlaced = computed(() => !!model.value?.cells.some(c => c.role !== 'status' && c.card));
@@ -111,9 +146,13 @@ async function load(opts: { seen?: boolean } = { seen: true }): Promise<void> {
     layout.value = cloneDeep(next.prepared.layout);
     shape.value = readBoardShape(next.state.shape);
     note.value = next.cleared ? 'cleared' : null;
+    provisional.value = readTierCache(slotOf(next));
     // Only a table the player looks at marks its cards as seen.
-    if (opts.seen) markFresh(next);
+    const arrivals = opts.seen ? markSeen(next) : null;
+    if (arrivals) void celebrate(arrivals);
     walk.settle(tripWalk(next.prepared.result));
+    // Unrated story cards are worked out after the opening ceremony, so it never stutters.
+    rateLater(next, arrivals && prefs.animate ? 400 + arrivals.fresh.length * 320 + 1400 : 400);
     // A saved arrangement that no longer computes was taken off: keep it that way for the next round.
     if (next.cleared) { dirty = true; scheduleSave(0); }
   } catch {
@@ -121,12 +160,89 @@ async function load(opts: { seen?: boolean } = { seen: true }): Promise<void> {
     note.value = 'openFailed';
   } finally { loading.value = false; }
 }
-function markFresh(next: BoardView): void {
-  const slot = next.prepared.id.split('/').slice(0, 2).join('/');
-  const ids = [...next.prepared.board.cards.map(c => c.id), ...next.backlog.map(b => b.id)];
-  const seen = readSeen(slot);
-  fresh.value = new Set(seen ? ids.filter(id => !seen.has(id)) : []);
-  writeSeen(slot, ids);
+/** Rate the unrated story cards after the table is shown, one per pause, so opening never waits on them. */
+let rateRun = 0;
+function rateLater(next: BoardView, startMs: number): void {
+  const run = ++rateRun;
+  const ids = unratedStoryCards(next).filter(id => !provisional.value.has(id));
+  const step = () => {
+    const id = ids.shift();
+    if (!id || run !== rateRun || view.value !== next) return;
+    const tier = rateStoryCard(next, id);
+    if (tier) {
+      provisional.value = new Map([...provisional.value, [id, tier]]);
+      writeTierCache(slotOf(next), provisional.value);
+    }
+    effectLater(step, 60);
+  };
+  effectLater(step, startMs);
+}
+// Every delayed effect of an opening (ratings, growth and recharge glows) stops when the table closes or goes.
+let effectTimers: Array<ReturnType<typeof setTimeout>> = [];
+let celebrateRun = 0;
+function effectLater(fn: () => void, ms: number): void {
+  const id = setTimeout(() => { effectTimers = effectTimers.filter(t => t !== id); fn(); }, ms);
+  effectTimers.push(id);
+}
+function stopEffects(): void {
+  rateRun++;
+  celebrateRun++;
+  for (const id of effectTimers) clearTimeout(id);
+  effectTimers = [];
+}
+onBeforeUnmount(stopEffects);
+interface Arrivals { fresh: string[]; leveled: string[]; charged: string[]; departed: TableCard[] }
+/** Compare with what the player saw last time: new cards, growth, recharge, and supply cards that were used up. */
+function markSeen(next: BoardView): Arrivals {
+  const slot = slotOf(next);
+  const now = tableModel(next, next.prepared, next.prepared.layout, readBoardShape(next.state.shape), provisional.value);
+  const before = readSeen(slot);
+  const record: Record<string, SeenCard> = {};
+  for (const card of Object.values(now.cards)) {
+    record[card.id] = { kind: card.kind, name: card.name, ...(card.line ? { line: card.line } : {}), ...(card.tier ? { tier: card.tier } : {}),
+      ...(card.level ? { level: card.level.value } : {}), ...(card.resting ? { resting: true } : {}) };
+  }
+  for (const f of now.forming) record[f.id] = { kind: f.kind, name: { zh: f.name, en: f.name } };
+  writeSeen(slot, record);
+  const arrivals: Arrivals = { fresh: [], leveled: [], charged: [], departed: [] };
+  if (!before) { fresh.value = new Set(); return arrivals; }
+  for (const [id, card] of Object.entries(record)) {
+    const was = before[id];
+    if (!was) { arrivals.fresh.push(id); continue; }
+    if (was.level !== undefined && (card.level ?? 0) > was.level) arrivals.leveled.push(id);
+    if (was.resting && !card.resting) arrivals.charged.push(id);
+  }
+  for (const [id, was] of Object.entries(before)) {
+    if (record[id] || was.kind !== 'supply' || !was.name) continue;
+    arrivals.departed.push({ id, kind: 'supply', name: was.name, ...(was.line ? { line: was.line } : {}), ...(was.tier ? { tier: was.tier } : {}), resting: false });
+  }
+  fresh.value = new Set(arrivals.fresh);
+  return arrivals;
+}
+/** Supply cards used up since the last look, shown once more at the end of the hand as they drift away. */
+const departing = ref<TableCard[]>([]);
+const dim = ref<HTMLElement>();
+const cardEl = (id: string) => sheet.value?.querySelector<HTMLElement>(`[data-card="${CSS.escape(id)}"]`) ?? null;
+/** On opening: the cards that left dissolve, new cards are dealt in (rarest last), grown and recharged ones glow. */
+async function celebrate(arrivals: Arrivals): Promise<void> {
+  if (!prefs.animate || prefersReducedMotion() || !open.value) return;
+  const mine = ++celebrateRun;
+  departing.value = arrivals.departed;
+  await nextTick();
+  if (mine !== celebrateRun) return;
+  for (const card of arrivals.departed) {
+    const el = cardEl(`leave:${card.id}`);
+    const gone = () => { departing.value = departing.value.filter(c => c.id !== card.id); };
+    if (el) void dissolve(el).then(gone); else gone();
+  }
+  const order = [...arrivals.fresh].sort((a, b) => (tierRank(shown.value?.cards[a]?.tier) - tierRank(shown.value?.cards[b]?.tier)));
+  order.forEach((id, i) => {
+    const el = cardEl(id);
+    if (el) void dealIn(el, shown.value?.cards[id]?.tier, sheet.value ?? null, dim.value ?? null, 250 + i * 320);
+  });
+  const later = 250 + order.length * 320;
+  for (const id of arrivals.leveled) effectLater(() => { const el = cardEl(id); if (el) levelUp(el); }, later);
+  for (const id of arrivals.charged) effectLater(() => { const el = cardEl(id); if (el) chargeFull(el); }, later);
 }
 
 // Focus moves into the table when it opens; it returns to the badge only for a keyboard user (a mouse user
@@ -137,7 +253,9 @@ async function openTable(event?: MouseEvent): Promise<void> {
   if (!access || !enabled.value) return;
   returnFocus = event && event.detail === 0 && event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
   open.value = true;
+  pointerStill = true;
   newCards.value = 0;
+  newTier.value = undefined;
   helpOpen.value = false;
   await nextTick();
   sheet.value?.focus({ preventScroll: true });
@@ -150,6 +268,8 @@ function close(): void {
   detail.value = null;
   helpOpen.value = false;
   replaying.value = null;
+  departing.value = [];
+  stopEffects();
   clearTimeout(hoverTimer);
   walk.stop();
   void flushSave();
@@ -188,11 +308,14 @@ async function changed(opts: { walkDelay?: number } = {}): Promise<void> {
     prepared.value = next;
   } catch (error) { if (mine === changeSeq) void recover(error); return; }
   dirty = true;
-  scheduleSave();
   const trip = tripWalk(prepared.value!.result);
-  if (!prefs.animate) { walk.settle(trip); return; }
+  if (!prefs.animate) { walk.settle(trip); scheduleSave(); return; }
+  // Saving copies the whole game state and holds the page for a moment, so it waits until the walk has settled
+  // and the shuttle never stutters. Closing the table saves at once.
+  clearTimeout(saveTimer);
   if (opts.walkDelay) await new Promise(resolve => setTimeout(resolve, opts.walkDelay));
-  if (mine === changeSeq) void walk.play(trip);
+  if (mine !== changeSeq) return;
+  void walk.play(trip).then(settled => { if (mine === changeSeq) scheduleSave(settled ? 300 : 1200); });
 }
 function move(card: string, cell: string | null): void {
   if (locked.value || replaying.value) return;
@@ -200,6 +323,13 @@ function move(card: string, cell: string | null): void {
   if (next === layout.value) return;
   layout.value = next;
   if (fresh.value.has(card)) fresh.value = new Set([...fresh.value].filter(id => id !== card));
+  if (cell) {
+    const tier = model.value?.cards[card]?.tier;
+    void nextTick(() => {
+      const el = sheet.value?.querySelector<HTMLElement>(`.vcell[data-cell="${cell}"] [data-card="${CSS.escape(card)}"]`);
+      if (el) settle(el, tier);
+    });
+  }
   void changed();
 }
 function sweepAll(): void {
@@ -274,12 +404,15 @@ const drag = useCardDrag({
     move(card, to);
   },
   onTap: (card, from, el) => {
+    clearTimeout(hoverTimer);
     if (from !== 'hand') { move(card, null); return; }
     if (!canPlace(card)) { showDetail(card, el); return; }
     selected.value = selected.value === card ? null : card;
   },
   onLongPress: (card, el) => showDetail(card, el),
 });
+// A drag that begins (also after a long press lifted the card with its details) puts the details away.
+watch(() => !!drag.drag.value, dragging => { if (dragging) { clearTimeout(hoverTimer); detail.value = null; } });
 function tapCell(cell: string): void {
   const target = shown.value?.cells.find(c => c.id === cell);
   if (!target || target.role === 'status') return;
@@ -301,16 +434,32 @@ function keyHandCard(card: string, el: HTMLElement): void {
 const detail = ref<{ card: string; anchor: DOMRect } | null>(null);
 let hoverTimer: ReturnType<typeof setTimeout> | undefined, overDetail = false;
 let quietCard: string | null = null;
+/**
+ * The table opens under a pointer that has not moved: cards dealt beneath it must not pop their details on
+ * their own. Hover details wait for the pointer to move; keyboard focus shows them at once.
+ */
+let pointerStill = true;
+function onSheetMove(e: PointerEvent): void {
+  if (!pointerStill || !(e.movementX || e.movementY)) return;
+  pointerStill = false;
+  // Already over a card: its details come up as if the pointer had just entered it.
+  const el = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-card]') : null;
+  const id = el?.dataset.card;
+  if (el && id && !id.startsWith('leave:')) cardEnter(id, el);
+}
 function detailEnter(): void { overDetail = true; }
 function detailLeave(): void { overDetail = false; detail.value = null; }
 function showDetail(card: string, el: HTMLElement): void {
   clearTimeout(hoverTimer);
+  // The card moved away (taken off the board, dealt again) before its details came up.
+  if (!el.isConnected) return;
   retryNote.value = null;
   detail.value = { card, anchor: el.getBoundingClientRect() };
 }
 function cardEnter(card: string, el: HTMLElement): void {
   clearTimeout(hoverTimer);
   if (drag.drag.value || card === quietCard) return;
+  if (pointerStill && document.activeElement !== el) return;
   hoverTimer = setTimeout(() => { if (!drag.drag.value) showDetail(card, el); }, 800);
 }
 function cardLeave(card?: string): void {
@@ -344,7 +493,7 @@ function replayLast(): void {
   if (!last || !current || locked.value || replaying.value) return;
   const lastShape: BoardShape = last.board.id === SIX_CELL_RING_ID ? 'ring' : 'line';
   const pseudo = { ...last, prompt: '', growth: {} } as PreparedVector;
-  replaying.value = tableModel(current, pseudo, last.layout, lastShape);
+  replaying.value = tableModel(current, pseudo, last.layout, lastShape, provisional.value);
   selected.value = null;
   const shownReplay = replaying.value;
   void walk.play(tripWalk(last.result)).then(() => {
@@ -387,6 +536,16 @@ watch(open, value => {
 onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
 
 const weatherLine = (id: string) => label(shown.value?.cards[id]?.line);
+const weatherPath = (id: string) => {
+  const card = shown.value?.cards[id];
+  return WEATHER_PATHS[weatherIcon(card?.name.zh, card?.name.en, card?.story?.zh, card?.story?.en)];
+};
+/** While dragging, the card floats under the mouse, or above the finger on a touch screen. */
+const ghostStyle = computed(() => {
+  const d = drag.drag.value;
+  if (!d) return undefined;
+  return { transform: `translate3d(${d.x - 66}px, ${d.pointerType === 'mouse' ? d.y - 50 : d.y - 130}px, 0)` };
+});
 </script>
 
 <template>
@@ -395,6 +554,7 @@ const weatherLine = (id: string) => label(shown.value?.cards[id]?.line);
     :cells="badgeCells"
     :shape="storedShape"
     :count="newCards"
+    :tier="newTier"
     :lit="badgeLit"
     @open="openTable"
   />
@@ -417,6 +577,7 @@ const weatherLine = (id: string) => label(shown.value?.cards[id]?.line);
         :aria-label="t('mainGame.vectorTable.title')"
         :aria-busy="loading"
         data-testid="vector-board"
+        @pointermove.passive="onSheetMove"
         @scroll.passive="detail = null"
       >
         <button
@@ -433,7 +594,7 @@ const weatherLine = (id: string) => label(shown.value?.cards[id]?.line);
           <div class="vtable__weather" data-testid="vector-weather">
             <Tooltip v-for="id in shown?.weather ?? []" :key="id" :text="weatherLine(id)" fixed>
               <span class="vtable__chip" :class="{ 'vtable__chip--acting': walk.acting.value.has(id) }">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.2 9.1 4.5 4.5 0 0 0 7 18Z" /></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path :d="weatherPath(id)" /></svg>
                 {{ label(shown?.cards[id]?.name) }}
               </span>
             </Tooltip>
@@ -484,6 +645,7 @@ const weatherLine = (id: string) => label(shown.value?.cards[id]?.line);
             :dragging="!!drag.drag.value"
             :over="drag.drag.value?.over ?? null"
             :fresh="fresh"
+            :lifting="drag.drag.value?.card ?? null"
             @cell-tap="tapCell"
             @cell-key="keyCell"
             @card-down="(e, card, cell) => drag.start(e, card, cell)"
@@ -515,6 +677,7 @@ const weatherLine = (id: string) => label(shown.value?.cards[id]?.line);
               :card="shown!.cards[id]"
               :selected="selected === id"
               :fresh="fresh.has(id)"
+              :lifted="drag.drag.value?.card === id"
               :data-card="id"
               role="button"
               tabindex="0"
@@ -545,7 +708,15 @@ const weatherLine = (id: string) => label(shown.value?.cards[id]?.line);
               @blur="cardLeave(f.id)"
               @keydown.enter.prevent="showDetail(f.id, $event.currentTarget as HTMLElement)"
             />
-            <div v-if="shown && !shown.hand.length && !shown.forming.length" class="vtable__empty">{{ t('mainGame.vectorTable.handEmpty') }}</div>
+            <VectorCardFace
+              v-for="c in departing"
+              :key="`leave:${c.id}`"
+              class="vtable__card vtable__card--leaving"
+              :card="c"
+              :data-card="`leave:${c.id}`"
+              aria-hidden="true"
+            />
+            <div v-if="shown && !shown.hand.length && !shown.forming.length && !departing.length" class="vtable__empty">{{ t('mainGame.vectorTable.handEmpty') }}</div>
           </div>
         </div>
 
@@ -559,6 +730,7 @@ const weatherLine = (id: string) => label(shown.value?.cards[id]?.line);
             @update:animate="prefs.animate = $event"
           />
         </div>
+        <div ref="dim" class="vtable__dim" aria-hidden="true" />
         <div v-if="locked" class="vtable__lock" data-testid="vector-board-locked"><span>{{ t('mainGame.vectorTable.lock') }}</span></div>
       </section>
     </Transition>
@@ -579,7 +751,7 @@ const weatherLine = (id: string) => label(shown.value?.cards[id]?.line);
     <div
       v-if="drag.drag.value && shown?.cards[drag.drag.value.card]"
       class="vtable__ghost"
-      :style="{ left: `${drag.drag.value.x - 66}px`, top: `${drag.drag.value.y - 50}px` }"
+      :style="ghostStyle"
       aria-hidden="true"
     >
       <VectorCardFace :card="shown.cards[drag.drag.value.card]" ghost />
@@ -737,7 +909,8 @@ const weatherLine = (id: string) => label(shown.value?.cards[id]?.line);
 }
 .vtable__hand--over { background: color-mix(in oklch, var(--color-sage-400) 7%, transparent); }
 .vtable__card { flex: none; width: 132px; height: 100px; scroll-snap-align: start; cursor: grab; touch-action: pan-x; }
-.vtable__card:hover { transform: translateY(-2px); }
+.vtable__card--leaving { pointer-events: none; }
+.vtable__dim { position: absolute; inset: 0; z-index: 4; border-radius: inherit; background: rgba(0, 0, 0, 0.45); opacity: 0; pointer-events: none; }
 .vtable__card:focus-visible { outline: 2px solid var(--color-sage-400); outline-offset: 2px; }
 .vtable__empty {
   display: grid;
@@ -765,7 +938,7 @@ const weatherLine = (id: string) => label(shown.value?.cards[id]?.line);
 }
 .vtable__lock span::after { content: ''; display: inline-block; width: 1.2em; text-align: left; animation: vtable-dots 1.4s steps(4) infinite; }
 @keyframes vtable-dots { 0% { content: ''; } 25% { content: '·'; } 50% { content: '··'; } 75% { content: '···'; } }
-.vtable__ghost { position: fixed; z-index: var(--z-floating); width: 132px; height: 100px; pointer-events: none; }
+.vtable__ghost { position: fixed; top: 0; left: 0; z-index: var(--z-floating); width: 132px; height: 100px; pointer-events: none; will-change: transform; }
 
 .vtable-enter-active, .vtable-leave-active { transition: transform var(--duration-open) var(--ease-out); }
 .vtable-enter-from, .vtable-leave-to { transform: translate(-50%, 104%); }

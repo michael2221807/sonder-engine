@@ -10,7 +10,7 @@ import { tasksAfterSave, type SavedElement } from './genesis/post-save';
 import { abilityBacklog } from './ability-backlog';
 import type { BoardView } from './board-access';
 import type { NativeInput } from './native-input';
-import { arrange, sweep, tableModel, tripWalk } from './table-model';
+import { arrange, rateStoryCard, sweep, tableModel, tripWalk, unratedStoryCards } from './table-model';
 import { tierOf } from './rating';
 
 const SUPPLY = parseSupplyRules(vectorRules)!;
@@ -65,6 +65,20 @@ describe('the table', () => {
     expect(model.cells[0].card).toBe('item:tea');
     expect(model.hand).toEqual([...SUPPLY.starter, 'supply:habit#1']);
     expect(model.cards['supply:habit#1']).toMatchObject({ resting: true, uses: { left: 0 }, charge: { progress: 2, every: 4, on: 'trigger' } });
+  });
+  it('a story card saved before six tiers shows the tier the runtime will record, worked out by the table', () => {
+    // Saved with an old rating: no tier on the table until it is rated again.
+    const old: VectorState = { ...base, cards: base.cards.map(c => ({ ...c, rating: c.rating && { ...c.rating, version: 1 } })) };
+    const view = viewOf(old);
+    expect(unratedStoryCards(view)).toEqual(['item:tea']);
+    expect(tableModel(view, view.prepared, view.prepared.layout, 'line').cards['item:tea'].tier).toBeUndefined();
+    const tier = rateStoryCard(view, 'item:tea');
+    expect(tier).toBe(tierOf(cards.find(c => c.task.entry.id === 'item:tea')!.rating));
+    const model = tableModel(view, view.prepared, view.prepared.layout, 'line', new Map([['item:tea', tier!]]));
+    expect(model.cards['item:tea'].tier).toBe(tier);
+    // A current rating always wins over the table's own; statuses never get one.
+    expect(unratedStoryCards(viewOf(base))).toEqual([]);
+    expect(tableModel(view, view.prepared, view.prepared.layout, 'line', new Map([['effect:name:发烧', 'mythic']])).cards['effect:name:发烧'].tier).toBeUndefined();
   });
 });
 
