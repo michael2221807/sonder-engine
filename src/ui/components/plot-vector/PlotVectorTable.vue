@@ -20,6 +20,7 @@ import { prefersReducedMotion, useTripWalk } from './use-trip-walk';
 import { useCardDrag, type DropTarget } from './use-card-drag';
 import { useBackdropClose } from '@/ui/composables/useBackdropClose';
 import { useGameState } from '@/ui/composables/useGameState';
+import { COMPOSER_ANCHOR } from '@/ui/composables/useComposerAnchor';
 import { eventBus } from '@/engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS as P } from '@/engine/pipeline/types';
 import { readPlotVectorControl, subscribePlotVectorControl } from '@/engine/plot-vector/feature-control';
@@ -260,40 +261,93 @@ async function celebrate(arrivals: Arrivals): Promise<void> {
   for (const id of arrivals.charged) effectLater(() => { const el = cardEl(id); if (el) chargeFull(el); }, later);
 }
 
-// ── Where the table stands: in the story column — between the sidebars and inside the game's frame, like the
-// approved demo — sliding out of that column's bottom edge, not out of the window's (PO 2026-09-30). ──
+// ── Where the table stands (PO 2026-09-30 A, demo docs/demo/plot-vector-table-float.html): floating above the
+// input row with a gap, centred in the story column between the sidebars, all corners round; it grows out of the
+// badge and shrinks back into it. The input row stays in view and a press on it hands the caret back. A small
+// phone has no room above its input, so there the table covers it, still floating clear of the screen's edges. ──
+const composer = inject(COMPOSER_ANCHOR, null);
 const badgeRef = ref<InstanceType<typeof VectorBadge>>();
-const stage = reactive({ left: 0, width: 0, bottom: 0, height: 0, center: 0, column: 0, gap: 0, phone: false });
-function measureStage(): void {
+const GAP = 14, PHONE_GAP = 10, EDGE = 8, MAX_WIDTH = 980, PHONE_ROOM = 600;
+const float = reactive({ left: 0, width: 0, bottom: 0, maxHeight: 0, originX: 0, originY: 0, cover: false,
+  hole: null as { left: number; top: number; right: number; bottom: number } | null });
+function measureFloat(): void {
   const badge: unknown = badgeRef.value?.$el;
+  const badgeBox = badge instanceof Element ? badge.getBoundingClientRect() : null;
   const host = badge instanceof Element ? badge.closest<HTMLElement>('.game-layout__main') : null;
-  // On a phone the table keeps the whole screen (the board and the hand must fit one screen to drag between them).
+  const vw = window.innerWidth, vh = window.innerHeight;
   const phone = window.matchMedia('(max-width: 767px)').matches;
-  const r = phone || !host ? new DOMRect(0, 0, window.innerWidth, window.innerHeight) : host.getBoundingClientRect();
+  const main = host?.getBoundingClientRect() ?? new DOMRect(0, 0, vw, vh);
+  const row = composer?.row.value?.getBoundingClientRect() ?? null;
   // The floating sidebars publish how much of the column's sides they cover; a column too narrow for the table
   // lets it span the whole story area instead.
   const css = getComputedStyle(document.documentElement);
   const reserve = (name: string) => (phone ? 0 : Number.parseFloat(css.getPropertyValue(name)) || 0);
-  let left = reserve('--sidebar-left-reserve'), column = Math.max(0, r.width - left - reserve('--sidebar-right-reserve'));
-  if (column < 480) { left = 0; column = r.width; }
-  Object.assign(stage, { left: r.left, width: r.width, bottom: r.bottom, height: r.height, center: left + column / 2, column,
-    gap: window.innerHeight - r.bottom, phone });
+  let colLeft = reserve('--sidebar-left-reserve'), column = Math.max(0, main.width - colLeft - reserve('--sidebar-right-reserve'));
+  if (column < 480) { colLeft = 0; column = main.width; }
+  const side = phone ? PHONE_GAP : 0, gap = phone ? PHONE_GAP : GAP, top = main.top + EDGE;
+  const rowTop = row?.top ?? main.bottom;
+  const room = rowTop - gap - top;
+  const cover = phone && room < PHONE_ROOM;
+  const width = cover ? vw - EDGE * 2 : Math.min(MAX_WIDTH, column - side * 2);
+  const left = cover ? EDGE : main.left + colLeft + (column - width) / 2;
+  const bottom = cover ? EDGE : vh - (rowTop - gap);
+  Object.assign(float, {
+    left, width, bottom, cover,
+    maxHeight: Math.max(240, cover ? vh - EDGE - top : room),
+    // It grows out of the badge (the middle of the badge, measured from the table's bottom-left corner).
+    originX: badgeBox ? badgeBox.left + badgeBox.width / 2 - left : width * 0.9,
+    originY: badgeBox ? badgeBox.top + badgeBox.height / 2 - (vh - bottom) : 30,
+    // The input row stays clear of the veil, a little larger than the row itself.
+    hole: !cover && row ? { left: row.left - 6, top: row.top - 6, right: row.right + 6, bottom: row.bottom + 6 } : null,
+  });
 }
 // After a resize the sidebars settle their widths first: measure on the next frame.
-let stageFrame = 0;
-function remeasureStage(): void {
-  cancelAnimationFrame(stageFrame);
-  stageFrame = requestAnimationFrame(measureStage);
+let floatFrame = 0;
+function remeasureFloat(): void {
+  cancelAnimationFrame(floatFrame);
+  floatFrame = requestAnimationFrame(measureFloat);
 }
-/** The stage spans the story area from the top of the window to the column's bottom edge, and clips below it. */
-const stageStyle = computed(() => ({ left: `${stage.left}px`, width: `${stage.width}px`, height: `${stage.bottom}px` }));
 const sheetStyle = computed(() => ({
-  left: `${stage.center}px`,
-  width: `${Math.min(980, stage.column)}px`,
-  maxHeight: `${Math.round(stage.height * (stage.phone ? 0.9 : 0.88))}px`,
-  // Only a table that reaches the bottom of the screen needs room for the phone's home bar.
-  '--vtable-safe': stage.gap < 1 ? 'env(safe-area-inset-bottom, 0px)' : '0px',
+  left: `${float.left}px`,
+  width: `${float.width}px`,
+  bottom: float.cover ? `calc(${float.bottom}px + env(safe-area-inset-bottom, 0px))` : `${float.bottom}px`,
+  maxHeight: `${float.maxHeight}px`,
+  transformOrigin: `${Math.round(float.originX)}px calc(100% + ${Math.round(float.originY)}px)`,
 }));
+/**
+ * The veil dims everything but the input row, which stays as it is: a polygon round the screen that cuts in along a
+ * zero-width slit and traces the row the other way round, which leaves the row out (polygon() works everywhere).
+ */
+const veilStyle = computed(() => {
+  const h = float.hole;
+  if (!h) return undefined;
+  const w = window.innerWidth, v = window.innerHeight;
+  const pts = [[0, 0], [w, 0], [w, v], [0, v], [0, h.top], [h.left, h.top], [h.left, h.bottom], [h.right, h.bottom], [h.right, h.top], [0, h.top]];
+  return { clipPath: `polygon(${pts.map(([x, y]) => `${Math.round(x)}px ${Math.round(y)}px`).join(', ')})` };
+});
+const holeStyle = computed(() => {
+  const h = float.hole;
+  return h ? { left: `${h.left}px`, top: `${h.top}px`, width: `${h.right - h.left}px`, height: `${h.bottom - h.top}px` } : undefined;
+});
+/** A press on the input row while the table is open: the table goes; a press on the input also puts the caret there. */
+function closeToInput(event: PointerEvent): void {
+  const input = composer?.input.value?.getBoundingClientRect();
+  const onInput = !!input && event.clientX >= input.left && event.clientX <= input.right && event.clientY >= input.top && event.clientY <= input.bottom;
+  close({ keepFocus: onInput });
+  if (onInput) composer?.focusInput();
+}
+// Keyboard focus reaching the input row (Tab past the table) closes the table as a press there would; the row may
+// also grow while the table is open (a long draft), so it is measured again whenever its size changes.
+function onFocusIn(event: FocusEvent): void {
+  const row = composer?.row.value;
+  if (open.value && row && event.target instanceof Node && row.contains(event.target)) close({ keepFocus: true });
+}
+let rowWatch: ResizeObserver | undefined;
+
+// ── Saving the arrangement holds the page for a moment on a large save: the badge says so first (PO 2026-09-30). ──
+const saveNote = ref<'saving' | 'saved' | null>(null);
+let saveNoteTimer: ReturnType<typeof setTimeout> | undefined;
+const nextPaint = () => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
 // Focus moves into the table when it opens; it returns to the badge only for a keyboard user (a mouse user
 // would otherwise see the badge's hint pop up again).
@@ -302,7 +356,7 @@ let returnFocus: HTMLElement | null = null;
 async function openTable(event?: MouseEvent): Promise<void> {
   if (!access || !enabled.value) return;
   returnFocus = event && event.detail === 0 && event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
-  measureStage();
+  measureFloat();
   open.value = true;
   pointerStill = true;
   newCards.value = 0;
@@ -312,8 +366,10 @@ async function openTable(event?: MouseEvent): Promise<void> {
   sheet.value?.focus({ preventScroll: true });
   if (!props.generating) await load();
 }
-function close(): void {
+/** `keepFocus`: focus has already gone where the player wants it (the input); leave it there. */
+function close(opts?: { keepFocus?: boolean } | Event): void {
   if (!open.value) return;
+  const keepFocus = !!opts && !(opts instanceof Event) && opts.keepFocus === true;
   open.value = false;
   selected.value = null;
   detail.value = null;
@@ -325,6 +381,7 @@ function close(): void {
   walk.stop();
   // The arrangement goes into the save file now, once, while the table slides away.
   void persistSoon();
+  if (keepFocus) { returnFocus = null; return; }
   if (returnFocus) returnFocus.focus({ preventScroll: true });
   else if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
   returnFocus = null;
@@ -464,9 +521,22 @@ async function persistSoon(): Promise<void> {
   // A move still waiting (the view is being read again) is kept first.
   if (dirty) { retryPersist(); return; }
   if (!access.hasUnsaved) { persistTries = 0; return; }
+  // One write at a time shows the note (the access queues the writes themselves).
+  if (saveNote.value === 'saving') { retryPersist(); return; }
+  // The note is painted before the write holds the page, and its light keeps moving meanwhile.
+  clearTimeout(saveNoteTimer);
+  saveNote.value = 'saving';
+  await nextPaint();
   try {
-    if (await access.persist()) { persistTries = 0; return; }
+    if (await access.persist()) {
+      persistTries = 0;
+      saveNote.value = 'saved';
+      saveNoteTimer = setTimeout(() => { saveNote.value = null; }, 1100);
+      return;
+    }
+    saveNote.value = null;
   } catch (error) {
+    saveNote.value = null;
     persistTries = 0;
     console.warn('[PlotVector] The arrangement could not be written to the save:', error);
     eventBus.emit('ui:toast', { type: 'warning', i18nKey: 'mainGame.vectorTable.persistFailed', duration: 5000,
@@ -633,13 +703,27 @@ function onKey(e: KeyboardEvent): void {
   else close();
 }
 watch(open, value => {
-  if (value) { window.addEventListener('keydown', onKey); window.addEventListener('resize', remeasureStage); }
-  else { window.removeEventListener('keydown', onKey); window.removeEventListener('resize', remeasureStage); }
+  if (value) {
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('resize', remeasureFloat);
+    document.addEventListener('focusin', onFocusIn);
+    const row = composer?.row.value;
+    if (row && typeof ResizeObserver === 'function') { rowWatch = new ResizeObserver(remeasureFloat); rowWatch.observe(row); }
+  } else {
+    window.removeEventListener('keydown', onKey);
+    window.removeEventListener('resize', remeasureFloat);
+    document.removeEventListener('focusin', onFocusIn);
+    rowWatch?.disconnect();
+    rowWatch = undefined;
+  }
 });
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKey);
-  window.removeEventListener('resize', remeasureStage);
-  cancelAnimationFrame(stageFrame);
+  window.removeEventListener('resize', remeasureFloat);
+  document.removeEventListener('focusin', onFocusIn);
+  rowWatch?.disconnect();
+  cancelAnimationFrame(floatFrame);
+  clearTimeout(saveNoteTimer);
 });
 
 const weatherLine = (id: string) => label(shown.value?.cards[id]?.line);
@@ -664,6 +748,8 @@ const ghostStyle = computed(() => {
     :count="newCards"
     :tier="newTier"
     :lit="badgeLit"
+    :active="open"
+    :saving="saveNote"
     @open="openTable"
   />
   <Teleport to="body">
@@ -671,11 +757,13 @@ const ghostStyle = computed(() => {
       <div
         v-if="open"
         class="vtable-veil"
+        :style="veilStyle"
         @pointerdown="backdrop.onPointerdown"
         @pointerup="backdrop.onPointerup"
       />
     </Transition>
-    <div class="vtable-stage" :style="stageStyle">
+    <div v-if="open && float.hole" class="vtable-catcher" :style="holeStyle" aria-hidden="true" data-testid="vector-input-catcher" @pointerdown.prevent="closeToInput" />
+    <div class="vtable-stage">
     <Transition name="vtable" :css="motion">
       <section
         v-if="open"
@@ -877,23 +965,20 @@ const ghostStyle = computed(() => {
   z-index: var(--z-modal);
   background: color-mix(in srgb, var(--glass-overlay-bg) 60%, transparent);
 }
-.vtable-stage { position: fixed; top: 0; z-index: var(--z-modal); overflow: hidden; pointer-events: none; }
+.vtable-stage { position: fixed; inset: 0; z-index: var(--z-modal); pointer-events: none; }
+/* Over the input row, which the veil leaves clear: a press there closes the table and focuses the input. */
+.vtable-catcher { position: fixed; z-index: var(--z-modal); cursor: text; }
 .vtable {
   position: absolute;
-  left: 50%;
-  bottom: 0;
   display: grid;
   grid-template-rows: auto auto auto auto;
-  width: min(100%, 980px);
-  max-height: 86%;
-  padding: 8px 22px calc(18px + var(--vtable-safe, 0px));
+  padding: 8px 22px 18px;
   pointer-events: auto;
-  transform: translateX(-50%);
-  border-radius: 20px 20px 0 0;
-  background: linear-gradient(var(--glass-bg), var(--glass-bg)), color-mix(in oklch, var(--color-bg) 74%, transparent);
+  border-radius: 20px;
+  background: linear-gradient(var(--glass-bg), var(--glass-bg)), color-mix(in oklch, var(--color-bg) 78%, transparent);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  box-shadow: var(--glass-shadow);
+  box-shadow: var(--glass-shadow), 0 24px 60px rgba(0, 0, 0, 0.45);
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
@@ -1051,13 +1136,15 @@ const ghostStyle = computed(() => {
 @keyframes vtable-dots { 0% { content: ''; } 25% { content: '·'; } 50% { content: '··'; } 75% { content: '···'; } }
 .vtable__ghost { position: fixed; top: 0; left: 0; z-index: var(--z-floating); width: 132px; height: 100px; pointer-events: none; will-change: transform; }
 
-.vtable-enter-active, .vtable-leave-active { transition: transform var(--duration-open) var(--ease-out); }
-.vtable-enter-from, .vtable-leave-to { transform: translate(-50%, 104%); }
+/* It grows out of the badge (transform-origin is set to the badge) and shrinks back into it. */
+.vtable-enter-active { transition: opacity 320ms var(--ease-out), transform 460ms var(--ease-out); }
+.vtable-leave-active { transition: opacity 240ms var(--ease-out), transform 300ms var(--ease-out); }
+.vtable-enter-from, .vtable-leave-to { opacity: 0; transform: translateY(14px) scale(0.93); }
 .vtable-veil-enter-active, .vtable-veil-leave-active { transition: opacity var(--duration-open) var(--ease-out); }
 .vtable-veil-enter-from, .vtable-veil-leave-to { opacity: 0; }
 
 @media (max-width: 767px) {
-  .vtable { padding: 8px 14px calc(14px + var(--vtable-safe, 0px)); }
+  .vtable { padding: 8px 14px 14px; }
   .vtable__help { right: 14px; left: 14px; justify-content: center; }
 }
 @media (prefers-reduced-motion: reduce) {

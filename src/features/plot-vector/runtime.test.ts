@@ -30,7 +30,7 @@ describe('local AGA board assembly', () => {
     const accepted = acceptVector(arranged, preview, SUPPLY);
     expect(accepted.session.round).toBe(2);
     expect(accepted.growth[entries[2].id]).toMatchObject({ level: 1 }); // the diary grew one page
-  });
+  }, 15_000); // binds and rates every example card (about 1.5 s alone; slower under a full parallel run)
   it('places at most one status in its fixed slot; statuses and environment never enter the tray', () => {
     const entries: SavedElement[] = Array.from({ length: 3 }, (_, i) => ({ id: `${i === 2 ? 'environment' : 'effect'}:${i}`, kind: i === 2 ? 'environment' : 'effect', capability: { name: `状态${i}` } }));
     const cards = bindAll(entries, i => ({ for: `状态${i}`, type: 'status', summary: 's', onPass: 'return { drag: 1 };' }));

@@ -92,8 +92,9 @@ test('the table keeps the player\'s arrangement across reload; moves are kept li
     // PO 2026-09-30 B: while the table is open the save file is not written (the move lives in the game state).
     await expect(plotVector.board.locator('.vtable__handle--saved')).toBeAttached();
     expect((await persisted(page, ids)).layout?.placements?.['01'] ?? null).toBeNull();
-    // Closing the table writes it once.
+    // Closing the table writes it once, and the badge says so (PO 2026-09-30).
     await plotVector.closeBoard();
+    await expect(page.getByTestId('vector-save-note')).toContainText('已保存');
     await savedUntil(page, ids, pv => pv.layout?.placements?.['01'] === 'item:notebook');
     const saved = await persisted(page, ids);
     expect(saved.session.round).toBe(1); expect(saved.growth).toEqual({}); expect(saved.last).toBeUndefined();
@@ -126,6 +127,45 @@ test('leaving the story panel with the table open still writes the arrangement t
     });
     await expect(plotVector.board).toHaveCount(0);
     await savedUntil(page, ids, pv => pv.layout?.placements?.['02'] === 'item:notebook');
+  });
+
+test('the table floats above the input row, which stays in view: a press on it closes the table and focuses the input',
+  { tag: ['@plot-vector', '@story-d148'] }, async ({ page, gameShell, plotVector }) => {
+    const ids = await seedSave(page);
+    await addBoardFixture(page, ids);
+    await enterSeededGame(page);
+    await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
+    await plotVector.openBoard();
+    const catcher = page.getByTestId('vector-input-catcher');
+    // A small phone has no room above its input: there the table covers it (still clear of the screen's edges).
+    const covered = (await catcher.count()) === 0;
+    const table = await plotVector.board.boundingBox();
+    const input = await page.locator('textarea.message-input').boundingBox();
+    if (covered) {
+      expect(table!.y + table!.height).toBeLessThan(page.viewportSize()!.height);
+      return;
+    }
+    // PO 2026-09-30 A: not on the bottom edge, above the input row with a gap.
+    expect(table!.y + table!.height).toBeLessThanOrEqual(input!.y - 8);
+    await plotVector.place('item:notebook', '01');
+    await expect(plotVector.board.locator('.vtable__handle--saved')).toBeAttached();
+    // A press where the input shows (it lies under the catcher; on a phone the row's buttons wrap below it).
+    await page.mouse.click(input!.x + 40, input!.y + input!.height / 2);
+    await expect(plotVector.board).toHaveCount(0);
+    await expect(page.locator('textarea.message-input')).toBeFocused();
+    await savedUntil(page, ids, pv => pv.layout?.placements?.['01'] === 'item:notebook');
+    // A press on the badge (also in that row) only closes the table; the caret is not moved.
+    await page.locator('textarea.message-input').blur();
+    await plotVector.openBoard();
+    const badge = await plotVector.boardOpen.boundingBox();
+    await page.mouse.click(badge!.x + badge!.width / 2, badge!.y + badge!.height / 2);
+    await expect(plotVector.board).toHaveCount(0);
+    await expect(page.locator('textarea.message-input')).not.toBeFocused();
+    // Keyboard focus reaching the input closes the table and stays in the input.
+    await plotVector.openBoard();
+    await page.locator('textarea.message-input').focus();
+    await expect(plotVector.board).toHaveCount(0);
+    await expect(page.locator('textarea.message-input')).toBeFocused();
   });
 
 test('cards move by dragging, swap on an occupied cell, and the sweep takes every card off',

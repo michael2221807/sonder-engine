@@ -247,6 +247,8 @@
   "mainGame.vectorTable.badge.open": "Open the board",
   "mainGame.vectorTable.badge.hint": "The board: place cards, and the next round gets a gentle push",
   "mainGame.vectorTable.badge.newCards": "{count} new cards",
+  "mainGame.vectorTable.badge.saving": "Saving",
+  "mainGame.vectorTable.badge.saved": "Saved",
   "mainGame.vectorTable.title": "The board",
   "mainGame.vectorTable.close": "Put the board away",
   "mainGame.vectorTable.shape.label": "Board shape",

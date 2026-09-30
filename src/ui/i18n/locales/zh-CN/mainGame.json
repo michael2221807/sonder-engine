@@ -247,6 +247,8 @@
   "mainGame.vectorTable.badge.open": "打开棋盘",
   "mainGame.vectorTable.badge.hint": "棋盘：摆好卡，下一回合故事会被轻轻推一下",
   "mainGame.vectorTable.badge.newCards": "{count} 张新卡",
+  "mainGame.vectorTable.badge.saving": "保存中",
+  "mainGame.vectorTable.badge.saved": "已保存",
   "mainGame.vectorTable.title": "棋盘",
   "mainGame.vectorTable.close": "收起牌桌",
   "mainGame.vectorTable.shape.label": "棋盘形状",

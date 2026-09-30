@@ -1,12 +1,13 @@
 <script setup lang="ts">
 // App doc: docs/user-guide/pages/game-main.md §3.7 (输入区) · §3.16 (工具抽屉 + 名字速插)
-import { computed, nextTick, onBeforeUnmount, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, provide, ref } from 'vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import MicInputButton from '@/ui/components/shared/MicInputButton.vue';
 import SettingTagButton from '@/ui/components/shared/SettingTagButton.vue';
 import NameInserterButton from '@/ui/components/shared/NameInserterButton.vue';
 import { eventBus } from '@/engine/core/event-bus';
 import { scanSettingTags, SETTING_QUALITY_WARN_CHARS } from '@/engine/prompt/setting-tag-scanner';
+import { COMPOSER_ANCHOR } from '@/ui/composables/useComposerAnchor';
 
 const ACTION_OPTIONS_COLLAPSED_KEY = 'aga_action_options_collapsed';
 const TOOLS_OPEN_KEY = 'aga_composer_tools_open';
@@ -31,6 +32,9 @@ const textareaRef = ref<HTMLTextAreaElement | null>(null);
 /** Passed to NameInserterButton so its panel opens above the WHOLE input area
     (on a phone the keys sit on a second row below the textarea). */
 const inputAreaRef = ref<HTMLElement | null>(null);
+/** The row with the input: the plot-vector table floats above it and hands the caret back to it. */
+const inputRowRef = ref<HTMLElement | null>(null);
+provide(COMPOSER_ANCHOR, { row: inputRowRef, input: textareaRef, focusInput: () => textareaRef.value?.focus() });
 // 语音录音/听写期间置 textarea 为 readonly，防止并发键入被识别文本覆盖（MicInputButton
 // 的插入锚点在录音开始时快照）；readonly 不改变外观、保留焦点，程序化 v-model 更新照常。
 const micRecording = ref(false);
@@ -207,7 +211,7 @@ defineExpose({
       {{ $t('mainGame.composer.cancelLabel') }}
     </button>
 
-    <div :class="['input-row', { 'input-row--recording': micRecording }]">
+    <div ref="inputRowRef" :class="['input-row', { 'input-row--recording': micRecording }]">
       <textarea
         ref="textareaRef"
         v-model="userInput"
