@@ -209,6 +209,16 @@ export function settleSupply(rules: SupplyRules, supply: SupplyState, states: Ca
   return { supply: { hand, drawn, ...(lastDrawn.length ? { lastDrawn } : {}) }, states: next };
 }
 
+/** What the table shows of a hand card: its pool card, its tier and, for a card that recharges, how far it is. */
+export interface SupplyCardInfo { cardId: string; tier: CardTier; recharge?: RechargeSpec & { progress: number } }
+export function supplyHandInfo(rules: SupplyRules, supply: SupplyState): Record<string, SupplyCardInfo> {
+  const ratings = supplyRatings(rules);
+  return Object.fromEntries(inHand(rules, supply).map(({ held, card }) => [held.id, {
+    cardId: card.id, tier: ratings.get(card.id)?.tier ?? 'common',
+    ...(card.recharge ? { recharge: { ...card.recharge, progress: held.recharge ?? 0 } } : {}),
+  }]));
+}
+
 /** Display names of hand instances (for the notice after a draw). */
 export function supplyNames(rules: SupplyRules, supply: SupplyState, ids: readonly string[]): LocalizedLabel[] {
   return ids.flatMap(id => {

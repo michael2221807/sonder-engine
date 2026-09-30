@@ -9,7 +9,7 @@ import type { PlotVectorRoundPort } from '../../engine/plot-vector/round-port';
 import type { LocalizedLabel } from '../../engine/plot-vector/core/types';
 import type { RoundOwnership } from '../../engine/core/round-ownership';
 import { readPlotVectorControl, subscribePlotVectorControl } from '../../engine/plot-vector/feature-control';
-import { projectSavedElements, readPath, savedEntryName } from './saved-elements';
+import { projectSavedElements, readPath, savedEntryName, savedSources } from './saved-elements';
 import { stable, capabilityKey, type BoundCard, type SavedElement } from './genesis/post-save';
 import { buildAbilityRetryMessages, parseCardReply, CARD_API } from './genesis/generation-prompt';
 import { acceptVector, bindCard, cardTypeOf, prepareVector, readVectorState, type AbilityRetry, type VectorState, type VectorTaskRow, type PreparedVector } from './runtime';
@@ -199,7 +199,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     }
     a.guard();
     try {
-      const snapshot = this.state.toSnapshot();
+      const snapshot = savedSources(path => this.state.get(path));
       const after = projectSavedElements(snapshot, { includeEnvironment: true }).entries;
       const policy = this.promptPolicy?.abilityBlock;
       const raw = policy && ctx.meta.plotVectorPromptMode ? ctx.parsedResponse?.sidecars?.[policy.tag] : undefined;
@@ -244,7 +244,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
   abilityBacklog(): BacklogEntry[] {
     const raw = this.state.get(P.plotVector);
     if (!raw) return [];
-    return abilityBacklog(readVectorState(raw), projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries);
+    return abilityBacklog(readVectorState(raw), projectSavedElements(savedSources(path => this.state.get(path)), { includeEnvironment: true }).entries);
   }
   /** Stops a repair whose save, feature epoch or loaded state changed underneath it. */
   private repairGuard(label: string): () => void {
@@ -328,7 +328,7 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
     try {
       guard();
       const state = cloneDeep(readVectorState(this.state.get(P.plotVector)));
-      const entry = abilityBacklog(state, projectSavedElements(this.state.toSnapshot(), { includeEnvironment: true }).entries)
+      const entry = abilityBacklog(state, projectSavedElements(savedSources(path => this.state.get(path)), { includeEnvironment: true }).entries)
         .find(b => b.id === entryId);
       if (!entry) throw new Error('这一条目前没有需要补生的能力');
       const row = rowOf(state, entry);
@@ -392,10 +392,13 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
   private async persistState(slot: Slot, state: VectorState, guard: () => void): Promise<void> {
     guard();
     const previous = cloneDeep(this.state.get<VectorState>(P.plotVector));
-    this.state.set(P.plotVector, cloneDeep(state));
+    // set() copies the value into the tree itself.
+    this.state.set(P.plotVector, state);
     let committed = false;
     try {
-      await this.saves.saveGame(slot.profileId, slot.slotId, this.state.toSnapshot(), undefined, { guard, committed: () => { committed = true; } });
+      // The live tree with this branch set; saveGame copies it before its first await.
+      // Its own copy: the caller goes on updating `state` after this write.
+      await this.saves.saveGame(slot.profileId, slot.slotId, this.state.snapshotWith(P.plotVector, cloneDeep(state)), undefined, { guard, committed: () => { committed = true; } });
     } catch (error) {
       if (!committed) this.state.set(P.plotVector, previous);
       throw error;

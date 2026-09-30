@@ -291,6 +291,8 @@ defineExpose({
           </button>
         </Tooltip>
 
+        <!-- Optional plot-vector board badge (phase 7): the host decides whether one is shown. -->
+        <slot name="board" />
         <MicInputButton
           v-model="userInput"
           :textarea="textareaRef"

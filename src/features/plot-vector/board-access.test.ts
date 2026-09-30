@@ -67,6 +67,15 @@ it('preview uses the next round seed and layout-only save preserves every lifecy
   h.state.set(P.roundNumber, 9);
   await expect(view.save(moved)).rejects.toThrow('stale');
 });
+it('tells the table when a round is running, so a refused save waits for the round instead of being lost', async () => {
+  const h = setup();
+  expect(access.roundRunning()).toBe(false);
+  const view = await access.open();
+  h.busy();
+  expect(access.roundRunning()).toBe(true);
+  await expect(view.save(view.prepared.layout)).rejects.toThrow('stale');
+  expect(h.saveGame).not.toHaveBeenCalled();
+});
 it('tries the other board shape without saving it, and saves the shape with the arrangement', async () => {
   const h = setup();
   const view = await access.open();

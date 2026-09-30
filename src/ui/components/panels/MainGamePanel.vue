@@ -77,7 +77,8 @@ import EnvironmentChips from '@/ui/components/panels/EnvironmentChips.vue';
 import FestivalChip from '@/ui/components/panels/FestivalChip.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import VoiceQuickSwitch from '@/ui/components/panels/VoiceQuickSwitch.vue';
-import PlotVectorBoardEntry from '@/ui/components/panels/PlotVectorBoardEntry.vue';
+import PlotVectorTable from '@/ui/components/plot-vector/PlotVectorTable.vue';
+import RoundImpulseChip from '@/ui/components/plot-vector/RoundImpulseChip.vue';
 import type { TtsService } from '@/engine/tts/tts-service';
 import type { TtsStateEvent, TtsCacheEvent } from '@/engine/tts/types';
 import {
@@ -1206,6 +1207,7 @@ watch(
     <div class="status-bar">
       <div class="status-bar__left">
         <span class="round-counter">{{ roundDisplay }}</span>
+        <RoundImpulseChip />
         <WeatherBadge :weather="weather" />
         <EnvironmentChips :tags="environmentTags" />
         <!-- Plot Threads: focus-thread gauges (honours 设置→剧情导向→主面板显示度量值 + per-gauge flag) -->
@@ -1242,7 +1244,6 @@ watch(
         <!-- 配音快速切换 (2026-07-20) — chip → popover: 切音色/方言 + 自动配音开关 -->
         <VoiceQuickSwitch v-if="ttsReady" :speaking="ttsState.status !== 'idle'" />
         <FestivalChip :festival="festival" />
-        <PlotVectorBoardEntry v-if="!isWorldBuilding" :generating="isGenerating" />
         <span v-if="isGenerating" class="status-generating">
           {{ $t('mainGame.status.aiThinking') }}
         </span>
@@ -1578,7 +1579,9 @@ watch(
       @copy-option="copyText"
       @cancel-generation="cancelGeneration"
       @request-rollback="showRollbackConfirm = true"
-    />
+    >
+      <template #board><PlotVectorTable :generating="isGenerating" /></template>
+    </GameComposer>
     <!-- Story 9 (JOURNEY-2 fix): writing-mode replacement for the hidden composer.
          Explains why the input is gone and offers a one-click path to the guide, so a user
          who resumes / navigates back to the main panel in worldBuilding mode is not stranded. -->

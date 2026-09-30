@@ -1,13 +1,13 @@
-import { cloneDeep, set } from 'lodash-es';
+import { cloneDeep } from 'lodash-es';
 import type { StateManager } from '../../engine/core/state-manager';
 import type { SaveManager } from '../../engine/persistence/save-manager';
 import { eventBus } from '../../engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS as P } from '../../engine/pipeline/types';
 import { readPlotVectorControl, subscribePlotVectorControl } from '../../engine/plot-vector/feature-control';
-import { projectSavedElements } from './saved-elements';
+import { projectSavedElements, savedSources } from './saved-elements';
 import type { Layout } from '../../engine/plot-vector/core/types';
 import { prepareVector, readVectorState, type PreparedVector, type VectorState } from './runtime';
-import type { SupplyRules } from './supply';
+import { initialSupply, supplyHandInfo, type SupplyCardInfo, type SupplyRules } from './supply';
 import { projectNativeInput, type NativeRules } from './native-input';
 import { abilityBacklog, type BacklogEntry } from './ability-backlog';
 import type { BoardShape } from './vector-board';
@@ -19,14 +19,13 @@ export interface BoardView {
   backlog: BacklogEntry[];
   /** The saved arrangement could not be computed; the board opened with every card taken off (not saved yet). */
   cleared: boolean;
+  /** Supply hand cards by instance id: tier and recharge (empty without a supply pool). */
+  supply: Record<string, SupplyCardInfo>;
   /** Trip for an arrangement; `shape` tries the other board shape without saving it. */
   preview(layout: Layout, shape?: BoardShape): Promise<PreparedVector>;
   /** Saves the arrangement, and the board shape when given (kept for the next rounds). */
   save(layout: Layout, shape?: BoardShape): Promise<void>;
 }
-
-/** The only parts of the tree the board reads (the whole tree can be many megabytes). */
-const BOARD_SOURCES = [P.inventoryItems, P.talents, P.statusEffects, P.environmentTags, P.characterAttributes];
 
 /**
  * Optional UI port. No acceptance hooks, no writes before IDB commit. Its only model call is the player's
@@ -50,6 +49,8 @@ export class VectorBoardAccess {
       eventBus.on('engine:state-changed', () => { this.changes++; })];
   }
   private invalidate() { this.revision++; }
+  /** A round is running: the table cannot save now and keeps the player's move until the round ends. */
+  roundRunning(): boolean { return this.busy(); }
   /** The player's retry for one entry's ability. Refused while a round, a save or another retry runs. */
   async regenerate(entryId: string): Promise<{ bound: boolean; requested: boolean }> {
     if (!this.regenerateAbility) throw new Error('ability-retry-unavailable');
@@ -66,11 +67,8 @@ export class VectorBoardAccess {
     const slot = this.slot(), control = readPlotVectorControl(), revision = this.revision;
     let seen = this.changes;
     let state: VectorState = cloneDeep(readVectorState(this.state.get(P.plotVector)));
-    const sources: Record<string, unknown> = {};
-    for (const path of BOARD_SOURCES) {
-      const value = this.state.get(path);
-      if (value !== undefined) set(sources, path, cloneDeep(value));
-    }
+    // Only the branches the board reads (the whole tree can be many megabytes).
+    const sources = savedSources(path => this.state.get(path));
     const entries = projectSavedElements(sources, { includeEnvironment: true }).entries;
     const native = projectNativeInput(sources, this.nativeRules);
     const guard = () => {
@@ -96,7 +94,8 @@ export class VectorBoardAccess {
       prepared = await preview({ placements: {}, tray: [] });
       cleared = true;
     }
-    return { state, prepared, cleared, backlog: abilityBacklog(state, entries), preview, save: async (layout, shape) => {
+    const supply = this.supplyRules ? supplyHandInfo(this.supplyRules, state.supply ?? initialSupply(this.supplyRules)) : {};
+    return { state, prepared, cleared, supply, backlog: abilityBacklog(state, entries), preview, save: async (layout, shape) => {
       guard();
       if (this.writing) throw new Error('board-save-busy');
       this.writing = true;
@@ -123,8 +122,9 @@ export class VectorBoardAccess {
           },
         });
       } catch (error) {
-        // A metadata failure after the atomic data write must not undo the layout.
+        // A metadata failure after the atomic data write must not undo the layout; it is still reported.
         if (!committed || !applied) throw error;
+        console.warn('[PlotVector] The arrangement was saved but the slot details were not updated:', error);
       } finally { this.writing = false; this.onSaveSettled(); }
     } };
   }

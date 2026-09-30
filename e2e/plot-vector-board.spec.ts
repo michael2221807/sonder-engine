@@ -3,6 +3,12 @@ import type { Page } from '@playwright/test';
 import type { SeedIds } from './fixtures/seed-save';
 import { VECTOR_NOTEBOOK_ITEM } from './fixtures/seed-tree';
 
+// The table's motion is checked by eye; these tests check what it does, so they run without it
+// (the product then shows the table at once, with no sliding).
+test.beforeEach(async ({ page }) => { await page.emulateMedia({ reducedMotion: 'reduce' }); });
+// Each test seeds a save, reloads it and waits for background saves.
+test.slow();
+
 async function addBoardFixture(page: Page, ids: SeedIds, accept = false, store = false) {
     // Handwritten deterministic cards in the contract format, never a fabricated model/story response.
     await page.evaluate(async ({ profileId, slotId, accept, store, notebook }) => {
@@ -34,17 +40,30 @@ async function addBoardFixture(page: Page, ids: SeedIds, accept = false, store =
         if (store) component = { ...component, layout: { placements: { '01': 'item:notebook' }, tray: [] } };
         const { projectNativeInput, parseNativeRules } = await load('/src/features/plot-vector/native-input.ts');
         const rules = parseNativeRules(await (await fetch('/packs/tianming/rules/plot-vector.json')).json());
+        // Named like a real round of this save, so the round title shows its impulse.
+        const round = state.get(P.roundNumber) ?? 0;
         const prepared = prepareVector(component, projectSavedElements(state.toSnapshot(), { includeEnvironment: true }).entries,
-          'fixture-accepted', projectNativeInput(state.toSnapshot(), rules));
+          `${profileId}/${slotId}/${round}`, projectNativeInput(state.toSnapshot(), rules));
         component = acceptVector(component, prepared);
       }
       state.set(P.plotVector, component);
       await idbAdapter.set(key, state.toSnapshot());
     }, { ...ids, accept, store, notebook: VECTOR_NOTEBOOK_ITEM });
 }
+/** The board state as written to disk. */
+async function persisted(page: Page, ids: SeedIds) {
+  return page.evaluate(async ({ profileId, slotId }) => {
+    const path = '/src/engine/persistence/idb-adapter.ts';
+    const { idbAdapter } = await import(/* @vite-ignore */ path);
+    return (await idbAdapter.get(`save_${profileId}_${slotId}`)).系统.扩展.plotVector;
+  }, ids);
+}
+/** The table saves itself in the background: wait until the disk has what the check expects. */
+async function savedUntil(page: Page, ids: SeedIds, check: (pv: Record<string, any>) => boolean) {
+  await expect.poll(async () => check(await persisted(page, ids)), { timeout: 10_000 }).toBe(true);
+}
 
-
-test('optional board keeps explicit choices across reload; preview and layout save never accept a round',
+test('the table keeps the player\'s arrangement across reload; moves save themselves and never accept a round',
   { tag: ['@plot-vector', '@story-d147', '@story-d148'] }, async ({ page, gameShell, plotVector }) => {
     const ids = await seedSave(page);
     await addBoardFixture(page, ids);
@@ -52,49 +71,39 @@ test('optional board keeps explicit choices across reload; preview and layout sa
     await expect(plotVector.boardOpen).toHaveCount(0);
     await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
     await plotVector.openBoard();
-    await expect(plotVector.nativeInput.locator('summary')).toHaveText('出发时：推力 2 · 人际 2 · 机会 2 · 走 11 格');
-    await plotVector.nativeInput.locator('summary').click();
-    await expect(plotVector.nativeInput).toContainText('悟性 · 15 → 行程 +3');
-    // The environment acts like weather at each departure; it takes no cell.
-    await expect(plotVector.weather).toContainText('微风（出发时推力 +1。）');
+    // The environment is weather above the board; it takes no cell.
+    await expect(plotVector.weather).toContainText('微风');
     await expect(plotVector.fixedStatusCell).not.toContainText('微风');
-    // Leave empty + the saved notebook + the three basic supply cards (marked as such).
-    await expect(plotVector.cellChoice('01').locator('option')).toHaveCount(5);
-    await expect(plotVector.cellChoice('01').locator('option', { hasText: '补给' })).toHaveCount(3);
-    await plotVector.progress.locator('summary').click();
-    await expect(plotVector.progress).toContainText('级数 0 / 50');
-    await expect(plotVector.cellChoice('01')).toHaveValue('');
-    await plotVector.chooseCard('01', 'item:notebook');
-    await plotVector.boardPreview.click();
-    await expect(plotVector.boardPreview).toBeEnabled();
-    await expect(plotVector.progress).toContainText('级数 0 / 50');
-    await plotVector.replay.focus(); await plotVector.replay.press('Home'); await plotVector.replay.press('ArrowRight');
-    await expect(plotVector.board.getByText('这一步触发：随身日记')).toBeVisible();
-    const previewState = await page.evaluate(async () => {
-      const path = '/src/engine/stores/engine-state.ts';
-      const { useEngineStateStore } = await import(/* @vite-ignore */ path);
-      return useEngineStateStore().tree.系统.扩展.plotVector;
-    });
-    expect(previewState.layout).toBeUndefined();
-    expect(previewState.session.round).toBe(1); expect(previewState.growth).toEqual({});
-    await plotVector.boardSave.click();
-    await expect(plotVector.board.getByRole('status')).toHaveText('摆法已保存，下个回合自动沿用。');
-    await expect(plotVector.cellChoice('01')).toHaveValue('item:notebook');
+    // The hand: the saved notebook and the three supply cards, marked as supply.
+    expect(await plotVector.handIds.evaluateAll(els => els.map(e => e.getAttribute('data-card')))).toEqual(['item:notebook', 'basic:push', 'basic:talk', 'basic:notice']);
+    await expect(plotVector.handCard('basic:push')).toContainText('补给');
+    // Exact numbers only behind the "?" (PO 2A).
+    await expect(plotVector.nativeInput).toHaveCount(0);
+    await plotVector.showExact();
+    await expect(plotVector.nativeInput).toContainText('出发：推力 2 · 阻力 0 · 人际 2 · 机会 2 · 走 11 格');
+    await expect(plotVector.nativeInput).toContainText('悟性 15 → 步数 +3');
+    await page.getByTestId('vector-help-toggle').click();
+    await plotVector.hoverDetail(plotVector.handCard('item:notebook'));
+    await expect(plotVector.detail).toContainText('等级 0 / 50');
+    await page.mouse.move(5, 5);
+    // Tap the notebook, then cell 01: it is placed and saved without a save button.
+    await plotVector.place('item:notebook', '01');
+    await expect(plotVector.cellCard('01')).toContainText('随身日记');
+    await savedUntil(page, ids, pv => pv.layout?.placements?.['01'] === 'item:notebook');
+    const saved = await persisted(page, ids);
+    expect(saved.session.round).toBe(1); expect(saved.growth).toEqual({}); expect(saved.last).toBeUndefined();
     await page.goto('/'); await enterSeededGame(page); await plotVector.openBoard();
-    await expect(plotVector.cellChoice('01')).toHaveValue('item:notebook');
-    await plotVector.chooseCard('01', ''); await plotVector.boardSave.click();
-    await expect(plotVector.board.getByRole('status')).toHaveText('摆法已保存，下个回合自动沿用。');
-    const persisted = await page.evaluate(async ({ profileId, slotId }) => {
-      const path = '/src/engine/persistence/idb-adapter.ts';
-      const { idbAdapter } = await import(/* @vite-ignore */ path);
-      return (await idbAdapter.get(`save_${profileId}_${slotId}`)).系统.扩展.plotVector;
-    }, ids);
-    expect(persisted.layout.placements['01']).toBeNull(); expect(persisted.layout.tray).toEqual(['item:notebook', 'basic:push', 'basic:talk', 'basic:notice']);
-    expect(persisted.session.round).toBe(1); expect(persisted.growth).toEqual({}); expect(persisted.last).toBeUndefined();
-
+    await expect(plotVector.cellCard('01')).toContainText('随身日记');
+    // A tap on a placed card takes it back into the hand.
+    await plotVector.takeOff('01');
+    await expect(plotVector.cellCard('01')).toHaveCount(0);
+    await savedUntil(page, ids, pv => pv.layout?.placements?.['01'] === null);
+    const after = await persisted(page, ids);
+    expect(after.layout.tray).toEqual(['item:notebook', 'basic:push', 'basic:talk', 'basic:notice']);
+    expect(after.session.round).toBe(1); expect(after.growth).toEqual({}); expect(after.last).toBeUndefined();
   });
 
-test('clearing the board takes every chosen card off and saves an empty arrangement',
+test('cards move by dragging, swap on an occupied cell, and the sweep takes every card off',
   { tag: ['@plot-vector', '@story-d148'] }, async ({ page, gameShell, plotVector }) => {
     const ids = await seedSave(page);
     await addBoardFixture(page, ids);
@@ -102,57 +111,87 @@ test('clearing the board takes every chosen card off and saves an empty arrangem
     await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
     await plotVector.openBoard();
     await expect(plotVector.boardClear).toBeDisabled();
-    await plotVector.chooseCard('01', 'item:notebook');
-    await plotVector.chooseCard('02', 'basic:push');
+    await plotVector.drag('item:notebook', '01');
+    await plotVector.drag('basic:push', '02');
+    await expect(plotVector.cellCard('01')).toContainText('随身日记');
+    await expect(plotVector.cellCard('02')).toContainText('顺势');
+    // Onto an occupied cell: the two swap.
+    const from = await plotVector.cellCard('02').boundingBox(), to = await plotVector.cell('01').boundingBox();
+    await page.mouse.move(from!.x + 40, from!.y + 40); await page.mouse.down();
+    await page.mouse.move(from!.x + 50, from!.y + 20, { steps: 3 });
+    await page.mouse.move(to!.x + to!.width / 2, to!.y + to!.height / 2, { steps: 8 }); await page.mouse.up();
+    await expect(plotVector.cellCard('01')).toContainText('顺势');
+    await expect(plotVector.cellCard('02')).toContainText('随身日记');
     await expect(plotVector.boardClear).toBeEnabled();
     await plotVector.boardClear.click();
-    for (const cell of ['01', '02', '03', '04', '05']) await expect(plotVector.cellChoice(cell)).toHaveValue('');
+    for (const cell of ['01', '02', '03', '04', '05']) await expect(plotVector.cellCard(cell)).toHaveCount(0);
     await expect(plotVector.weather).toContainText('微风'); // weather is not the player's to place
     await expect(plotVector.boardClear).toBeDisabled();
-    await plotVector.boardSave.click();
-    await expect(plotVector.board.getByRole('status')).toHaveText('摆法已保存，下个回合自动沿用。');
-    const persisted = await page.evaluate(async ({ profileId, slotId }) => {
-      const path = '/src/engine/persistence/idb-adapter.ts';
-      const { idbAdapter } = await import(/* @vite-ignore */ path);
-      return (await idbAdapter.get(`save_${profileId}_${slotId}`)).系统.扩展.plotVector.layout.placements;
-    }, ids);
-    expect(['01', '02', '03', '04', '05'].map(cell => persisted[cell])).toEqual([null, null, null, null, null]);
+    await savedUntil(page, ids, pv => ['01', '02', '03', '04', '05'].every(cell => pv.layout?.placements?.[cell] === null));
   });
 
-test('optional board fits a narrow viewport and renders English with its bottom controls reachable',
+test('both board shapes can be played; the chosen one is saved with the arrangement',
+  { tag: ['@plot-vector', '@story-d148'] }, async ({ page, gameShell, plotVector }) => {
+    const ids = await seedSave(page);
+    await addBoardFixture(page, ids);
+    await enterSeededGame(page);
+    await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
+    await plotVector.openBoard();
+    await expect(plotVector.shapeLine).toHaveAttribute('aria-pressed', 'true');
+    await plotVector.shapeRing.click();
+    await expect(plotVector.board.locator('.vtrack--ring')).toBeVisible();
+    await savedUntil(page, ids, pv => pv.shape === 'ring');
+    await plotVector.closeBoard();
+    await expect(plotVector.boardOpen).toHaveClass(/vbadge--ring/);
+    await page.goto('/'); await enterSeededGame(page); await plotVector.openBoard();
+    await expect(plotVector.shapeRing).toHaveAttribute('aria-pressed', 'true');
+    await plotVector.place('item:notebook', '03');
+    await expect(plotVector.cellCard('03')).toContainText('随身日记');
+    await plotVector.shapeLine.click();
+    await savedUntil(page, ids, pv => pv.shape === 'line' && pv.layout?.placements?.['03'] === 'item:notebook');
+  });
+
+test('the table fits a narrow viewport and renders English',
   { tag: ['@plot-vector', '@story-d147', '@story-d148'] }, async ({ page, gameShell, plotVector }, testInfo) => {
     await seedSave(page); await enterSeededGame(page);
     await gameShell.goTab('settings'); await plotVector.toggleFeature();
     await plotVector.switchToEnglishAndResume();
     await plotVector.openBoard();
-    await expect(plotVector.nativeInput.locator('summary')).toContainText('Starting: push');
-    await expect(plotVector.cellChoice('01')).toBeVisible();
-    await plotVector.nativeInput.locator('summary').click();
+    await plotVector.showExact();
+    await expect(plotVector.nativeInput).toContainText('Start: push');
     await expect(plotVector.nativeInput).toContainText('Insight');
+    await page.getByTestId('vector-help-toggle').click();
+    await expect(plotVector.handCard('basic:push')).toContainText('Supply');
     if (testInfo.repeatEachIndex === 0) await page.screenshot({ path: 'e2e/screenshots/plot-vector-board.png' });
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(plotVector.boardPreview).toHaveText('Preview trip');
-    await expect(plotVector.cellChoice('01')).toBeVisible();
+    await expect(plotVector.cell('01')).toBeVisible();
     expect(await plotVector.board.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
     await plotVector.fixedStatusCell.scrollIntoViewIfNeeded();
     await expect(plotVector.fixedStatusCell).toBeInViewport();
-    await plotVector.boardPreview.click();
-    await expect(plotVector.boardPreview).toBeEnabled();
+    await plotVector.place('basic:push', '01');
+    await expect(plotVector.cellCard('01')).toContainText('Momentum');
+    await plotVector.shapeRing.click();
+    expect(await plotVector.board.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
     if (testInfo.repeatEachIndex === 0) await page.screenshot({ path: 'e2e/screenshots/plot-vector-board-mobile-en.png' });
   });
 
-
-test('accepted board progress survives disk reload without accepting it again',
+test('an accepted round: its impulse beside the round title, its growth in the card, its trip to replay',
   { tag: ['@plot-vector', '@story-d148'] }, async ({ page, gameShell, plotVector }, testInfo) => {
     const ids = await seedSave(page);
     // Real runtime acceptance of a handwritten fixture, not a fabricated story turn.
     await addBoardFixture(page, ids, true);
     await enterSeededGame(page);
     await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
-    await plotVector.openBoard(); await plotVector.showLast();
-    await expect(plotVector.nativeInput.locator('summary')).toContainText('走 11 格');
-    await plotVector.progress.locator('summary').click();
-    await expect(plotVector.progress).toContainText('级数 1 / 50 (+1)');
+    await expect(plotVector.impulse).toBeVisible();
+    await expect(plotVector.impulse).toHaveText(/^(顺势|平稳|稍有阻力|阻力重重)( · (人际易通|机会易现))?$/);
+    await plotVector.openBoard();
+    await expect(plotVector.replay).toBeEnabled();
+    await plotVector.showExact();
+    await page.getByTestId('vector-help-toggle').click();
+    await plotVector.hoverDetail(plotVector.handCard('item:notebook'));
+    await expect(plotVector.detail).toContainText('等级 1 / 50');
+    await page.mouse.move(5, 5);
+    await plotVector.replay.click();
     if (testInfo.repeatEachIndex === 0) await page.screenshot({ path: 'e2e/screenshots/plot-vector-progress.png' });
   });
 
@@ -171,9 +210,12 @@ test('the store of a card is the engine balance after disk reload',
       if (await close.isVisible()) await close.click();
     };
     await dismissStorageNotice();
-    await plotVector.openBoard(); await plotVector.showLast();
-    await expect(plotVector.board.locator('[data-cell="01"] .progress')).toContainText('存量 3 / 30 (+3)');
+    await plotVector.openBoard();
+    await expect(plotVector.cellCard('01').locator('.vcard__stored')).toBeVisible();
+    const stored = async () => (await persisted(page, ids)).session.carriedAccounts;
+    const before = await stored();
     await page.goto('/'); await enterSeededGame(page); await dismissStorageNotice();
-    await plotVector.openBoard(); await plotVector.showLast();
-    await expect(plotVector.board.locator('[data-cell="01"] .progress')).toContainText('存量 3 / 30 (+3)');
+    await plotVector.openBoard();
+    await expect(plotVector.cellCard('01').locator('.vcard__stored')).toBeVisible();
+    expect(await stored()).toEqual(before);
   });
