@@ -8,7 +8,7 @@ import { availableUses, stateOf } from '../../engine/plot-vector/core/card-state
 import type { CardDef, Layout, LocalizedLabel, RunDone } from '../../engine/plot-vector/core/types';
 import type { BoardView } from './board-access';
 import type { PreparedVector } from './runtime';
-import type { CardTier } from './rating';
+import { tierOf, type CardTier } from './rating';
 import type { BoardShape } from './vector-board';
 
 export type TableCardKind = 'item' | 'talent' | 'status' | 'environment' | 'supply';
@@ -20,7 +20,10 @@ export interface TableCard {
   line?: LocalizedLabel;
   /** The entry's own text in the story. */
   story?: LocalizedLabel;
-  /** Supply cards only: drives the rarity light (PO 2A). */
+  /**
+   * The rarity light: supply cards by the pool rating, and story items and talents by their own rating (PO
+   * 2026-09-30, 2A). Statuses and environments show none.
+   */
   tier?: CardTier;
   uses?: { left: number; max: number };
   level?: { value: number; max?: number };
@@ -56,16 +59,19 @@ const roleOf = (id: string, kind: string): CellRole =>
 export function tableCards(view: BoardView, prepared: PreparedVector): Record<string, TableCard> {
   const states = view.state.session.cardStates;
   const progress = new Map((prepared.progress ?? []).map(p => [p.cardId, p.rows]));
+  const ratings = new Map(view.state.cards.map(c => [c.task.entry.id, c.rating]));
   return Object.fromEntries(prepared.board.cards.map(def => {
     const rows = progress.get(def.id) ?? [];
     const level = rows.find(r => r.key === 'level'), stored = rows.find(r => r.key === 'stored');
     const supply = view.supply[def.id];
     const left = def.usage ? availableUses(def, stateOf(def, states)) : undefined;
+    const kind = kindOf(def);
+    const tier = supply?.tier ?? (kind === 'item' || kind === 'talent' ? tierOf(ratings.get(def.id)) : undefined);
     const card: TableCard = {
-      id: def.id, kind: kindOf(def), name: def.label,
+      id: def.id, kind, name: def.label,
       ...(def.summary ? { line: def.summary } : {}),
       ...(def.originalText ? { story: def.originalText } : {}),
-      ...(supply ? { tier: supply.tier } : {}),
+      ...(tier ? { tier } : {}),
       ...(def.usage && left !== undefined ? { uses: { left, max: def.usage.maxStock } } : {}),
       ...(level ? { level: { value: level.value, ...(level.max !== undefined ? { max: level.max } : {}) } } : {}),
       ...(stored && stored.value > 0 ? { stored: stored.value } : {}),

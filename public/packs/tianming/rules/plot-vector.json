@@ -67,16 +67,20 @@
     "hand": 3,
     "perRound": 1,
     "tierWeights": {
-      "common": 70,
-      "uncommon": 22,
-      "rare": 7,
-      "legendary": 1
+      "common": 48,
+      "uncommon": 26,
+      "rare": 15,
+      "epic": 7,
+      "legendary": 3,
+      "mythic": 1
     },
     "usesByTier": {
       "common": 3,
       "uncommon": 2,
-      "rare": 1,
-      "legendary": 1
+      "rare": 2,
+      "epic": 1,
+      "legendary": 1,
+      "mythic": 1
     },
     "starter": [
       "basic:push",
@@ -379,6 +383,42 @@
           "en": "Turn all resistance into chances, and the next card that acts acts once more."
         },
         "onPass": "return { convert: { from: 'drag', to: 'chance', amount: ctx.drag }, relay: { echo: true } };"
+      },
+      {
+        "id": "supply:crowd",
+        "name": {
+          "zh": "众望所归",
+          "en": "Everyone's Choice"
+        },
+        "summary": {
+          "zh": "人际 ×2，再 +1。",
+          "en": "People ×2, then +1."
+        },
+        "onPass": "return { xSocial: 2, social: 1 };"
+      },
+      {
+        "id": "supply:tailwind",
+        "name": {
+          "zh": "乘风而起",
+          "en": "Tailwind"
+        },
+        "summary": {
+          "zh": "推力 ×2，人际和机会各 +2。",
+          "en": "Push ×2; people and chances +2 each."
+        },
+        "onPass": "return { xPush: 2, social: 2, chance: 2 };"
+      },
+      {
+        "id": "supply:turnaround",
+        "name": {
+          "zh": "否极泰来",
+          "en": "After the Storm"
+        },
+        "summary": {
+          "zh": "全部阻力化作机会，机会再 +3。",
+          "en": "All drag turns into chances, then chances +3."
+        },
+        "onPass": "return { convert: { from: 'drag', to: 'chance', amount: ctx.drag }, chance: 3 };"
       }
     ]
   }

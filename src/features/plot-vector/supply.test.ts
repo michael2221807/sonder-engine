@@ -1,6 +1,6 @@
 /**
  * General supply through the product runtime (the same prepare/accept the round runs; phase 6, PO 1C 2A 3A 4A
- * 5A): the pack pool is rated into four tiers, the opening hand is the pack's starter, a placed card spends one
+ * 5A): the pack pool is rated into six tiers, the opening hand is the pack's starter, a placed card spends one
  * use per accepted round, an exhausted card leaves and the hand draws one card while it has room, strong cards
  * are one-shot, recharge cards wait for their next use, and older saves keep their counts.
  */
@@ -29,14 +29,14 @@ describe('the pack pool', () => {
     expect(parseSupplyRules({ supply: { ...vectorRules.supply, hand: 0 } })).toBeUndefined();
     expect(parseSupplyRules({})).toBeUndefined();
   });
-  it('is rated into all four tiers; strong cards are one-shot and uses follow the tier (4A)', () => {
+  it('is rated into all six tiers; strong cards are one-shot and uses follow the tier (4A, PO 2026-09-30 1A)', () => {
     const ratings = supplyRatings(SUPPLY);
     const tiers = new Set([...ratings.values()].map(r => r.tier));
     expect([...CARD_TIERS].every(t => tiers.has(t))).toBe(true);
     for (const card of SUPPLY.cards) {
       const tier = ratings.get(card.id)!.tier;
       expect(usesOf(SUPPLY, card.id)).toBe(SUPPLY.usesByTier[tier]);
-      if (tier === 'rare' || tier === 'legendary') expect(usesOf(SUPPLY, card.id)).toBe(1);
+      if (tier === 'epic' || tier === 'legendary' || tier === 'mythic') expect(usesOf(SUPPLY, card.id)).toBe(1);
     }
   });
   it('can be rated ahead in slices; the rated pool is then reused as it is', () => {
@@ -53,7 +53,7 @@ describe('the pack pool', () => {
   it('draws are reproducible and follow the tier weights (3A)', () => {
     expect(drawSupplyCard(SUPPLY, 'seed-1')?.id).toBe(drawSupplyCard(SUPPLY, 'seed-1')?.id);
     const ratings = supplyRatings(SUPPLY);
-    const counts: Record<CardTier, number> = { common: 0, uncommon: 0, rare: 0, legendary: 0 };
+    const counts: Record<CardTier, number> = { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0, mythic: 0 };
     const n = 4000;
     for (let i = 0; i < n; i++) counts[ratings.get(drawSupplyCard(SUPPLY, `s${i}`)!.id)!.tier]++;
     const total = Object.values(SUPPLY.tierWeights).reduce((a, b) => a + b, 0);

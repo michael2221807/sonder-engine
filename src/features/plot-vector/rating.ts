@@ -11,8 +11,12 @@ import { TripCards, storeAccount, type TripCard } from './contract/trip';
 import type { CardSpec } from './contract/types';
 import { BOARD_SHAPES, VECTOR_RUN_OPTIONS, vectorBaseBoard, type BoardShape } from './vector-board';
 
-export type CardTier = 'common' | 'uncommon' | 'rare' | 'legendary';
-export const CARD_TIERS: readonly CardTier[] = ['common', 'uncommon', 'rare', 'legendary'];
+/**
+ * Six tiers, lowest first (PO 2026-09-30, 1A): 普通 white, 优良 green, 稀有 blue, 史诗 purple, 传说 orange,
+ * 神话 red — the familiar ladder, so a rare find reads at a glance. The UI supplies names and colours.
+ */
+export type CardTier = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
+export const CARD_TIERS: readonly CardTier[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
 
 /** Where the card acts: a cell the player fills, the status cell, or at departure (environment). */
 export type RatingPlace = 'placed' | 'status' | 'departs';
@@ -28,25 +32,34 @@ export interface CardRating {
 }
 
 /**
- * 1: the line board only. 2: the mean of both board shapes, since the player can play on either
- * (PO 2026-09-29), with thresholds calibrated on that mean.
+ * 1: the line board only, four tiers. 2: the mean of both board shapes (PO 2026-09-29), four tiers.
+ * 3: the same measurement as 2, six tiers (PO 2026-09-30).
  */
-export const RATING_VERSION = 2;
+export const RATING_VERSION = 3;
 export function ratingIsCurrent(rating: CardRating | undefined): boolean { return rating?.version === RATING_VERSION; }
+/**
+ * The tier to show for a stored rating. Ratings from version 2 on measure the same way, so their tier follows the
+ * current thresholds straight away; a line-only rating (version 1) shows none until it is measured again.
+ */
+export function tierOf(rating: CardRating | undefined): CardTier | undefined {
+  return rating && rating.version >= 2 && Number.isFinite(rating.ratio) ? tierForRatio(rating.ratio) : undefined;
+}
 
 /**
- * Tier boundaries on the ratio: at or above `uncommon` is uncommon, and so on. Calibrated on 63 cards — the 24
- * pack supply cards and 39 story cards the real model wrote in the phase 5 runs — at the 40th, 75th and 95th
- * percentile, the same cut points the Balatro lab uses for its stock jokers
- * (docs/research/plot-vector-phase6-calibration-2026-09-27.md). Version 2 (2026-09-29) measures on both board
- * shapes: 1.29 / 2.28 / 6.28 on the line alone became 1.28 / 2.21 / 6.44. Agent-set, to be tuned with the PO (I25).
+ * Tier boundaries on the ratio: at or above `uncommon` is uncommon, and so on. Calibrated on the same 63 cards as
+ * before — the 24 pack supply cards and 39 story cards the real model wrote in the phase 5 runs — measured on both
+ * board shapes. Six tiers (2026-09-30) cut at the 35th, 60th, 80th, 92nd and 98th percentile, so each step up is
+ * rarer than the one below (docs/research/plot-vector-phase6-calibration-2026-09-27.md). Agent-set, to be tuned
+ * with the PO (I25; PO 2026-09-30: tune after playtesting).
  */
-export const TIER_THRESHOLDS: Readonly<Record<Exclude<CardTier, 'common'>, number>> = { uncommon: 1.28, rare: 2.21, legendary: 6.44 };
+export const TIER_THRESHOLDS: Readonly<Record<Exclude<CardTier, 'common'>, number>> =
+  { uncommon: 1.27, rare: 1.76, epic: 2.56, legendary: 5.16, mythic: 8.05 };
 
 export function tierForRatio(ratio: number): CardTier {
-  if (ratio >= TIER_THRESHOLDS.legendary) return 'legendary';
-  if (ratio >= TIER_THRESHOLDS.rare) return 'rare';
-  if (ratio >= TIER_THRESHOLDS.uncommon) return 'uncommon';
+  for (let i = CARD_TIERS.length - 1; i > 0; i--) {
+    const tier = CARD_TIERS[i] as Exclude<CardTier, 'common'>;
+    if (ratio >= TIER_THRESHOLDS[tier]) return tier;
+  }
   return 'common';
 }
 

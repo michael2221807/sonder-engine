@@ -1,10 +1,10 @@
 /**
  * Card rating (phase 6, PO 2A; charter C1): strength measured on the board against the same trips without the
- * card, in units of one push per pass; four tiers; every bound story card carries its rating (recorded, not
+ * card, in units of one push per pass; six tiers (PO 2026-09-30); every bound story card carries its rating (recorded, not
  * shown), and cards saved before ratings existed get one when the next round is accepted.
  */
 import { describe, expect, it } from 'vitest';
-import { rateCard, ratingIsCurrent, ratingPlaceOf, RATING_VERSION, tierForRatio, TIER_THRESHOLDS } from './rating';
+import { CARD_TIERS, rateCard, ratingIsCurrent, ratingPlaceOf, RATING_VERSION, tierForRatio, tierOf, TIER_THRESHOLDS } from './rating';
 import { acceptVector, bindCard, initialVectorState, prepareVector, RATE_PER_ROUND, type VectorState } from './runtime';
 import { tasksAfterSave, type SavedElement } from './genesis/post-save';
 import type { CardSpec } from './contract/types';
@@ -23,11 +23,14 @@ describe('rating a card', () => {
     const all = rateCard(card('return { xPush: 2, xSocial: 2, xChance: 2 };'));
     expect(three).toBeGreaterThan(one);
     expect(all.ratio).toBeGreaterThan(three);
-    expect(all.tier).toBe('legendary');
+    expect(all.tier).toBe('mythic');
     expect(tierForRatio(TIER_THRESHOLDS.uncommon - 0.01)).toBe('common');
-    expect(tierForRatio(TIER_THRESHOLDS.uncommon)).toBe('uncommon');
-    expect(tierForRatio(TIER_THRESHOLDS.rare)).toBe('rare');
-    expect(tierForRatio(TIER_THRESHOLDS.legendary)).toBe('legendary');
+    // Each threshold starts its tier, and the thresholds climb with the tiers.
+    for (const tier of CARD_TIERS.slice(1) as Array<keyof typeof TIER_THRESHOLDS>) {
+      expect(tierForRatio(TIER_THRESHOLDS[tier])).toBe(tier);
+      expect(tierForRatio(TIER_THRESHOLDS[tier] - 0.001)).toBe(CARD_TIERS[CARD_TIERS.indexOf(tier) - 1]);
+    }
+    expect(CARD_TIERS).toEqual(['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic']);
   });
   it('a card that never acts rates near zero and counts as common; a status and an environment are rated where they act', () => {
     // An occupied cell changes the board a little on its own, so a silent card is near zero, not exactly zero.
@@ -55,6 +58,12 @@ describe('rated on both board shapes (version 2)', () => {
     expect(ratingIsCurrent(back)).toBe(true);
     expect(ratingIsCurrent({ ...back, version: 1 })).toBe(false);
     expect(ratingIsCurrent(undefined)).toBe(false);
+  });
+  it('a rating from the two-shape method shows its tier by the current thresholds at once; a line-only one shows none', () => {
+    const r = rateCard(card('return { xSocial: 2, social: 1 };'));
+    expect(tierOf({ ...r, version: 2, tier: 'rare' })).toBe(tierForRatio(r.ratio));
+    expect(tierOf({ ...r, version: 1 })).toBeUndefined();
+    expect(tierOf(undefined)).toBeUndefined();
   });
 });
 

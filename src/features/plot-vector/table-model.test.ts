@@ -11,6 +11,7 @@ import { abilityBacklog } from './ability-backlog';
 import type { BoardView } from './board-access';
 import type { NativeInput } from './native-input';
 import { arrange, sweep, tableModel, tripWalk } from './table-model';
+import { tierOf } from './rating';
 
 const SUPPLY = parseSupplyRules(vectorRules)!;
 const NATIVE: NativeInput = { ruleId: 't', payload: { 'S+': 2, 'S-': 0, Y: 1, J: 1 }, visitBudget: 10, contributions: [] };
@@ -49,7 +50,11 @@ describe('the table', () => {
     const push = model.cards['basic:push'];
     expect(push).toMatchObject({ kind: 'supply', tier: 'common', uses: { left: 3, max: 3 }, resting: false });
     expect(model.cards['item:tea']).toMatchObject({ kind: 'item', name: { zh: '热茶' }, line: { zh: '每次经过推力 +1。' }, story: { zh: '一壶暖手的热茶' } });
-    expect(model.cards['item:tea'].tier).toBeUndefined(); // rarity is shown for supply cards only
+    // Story items and talents show their own rating's tier (PO 2A); statuses and environments show none.
+    expect(model.cards['item:tea'].tier).toBe(tierOf(cards.find(c => c.task.entry.id === 'item:tea')!.rating));
+    expect(model.cards['item:tea'].tier).toBeDefined();
+    expect(model.cards['effect:name:发烧'].tier).toBeUndefined();
+    expect(model.cards['environment:name:细雨'].tier).toBeUndefined();
   });
   it('a card placed leaves the hand; a recharging supply card with no use left rests at the end, not placeable', () => {
     const drawn = { hand: [...initialSupply(SUPPLY).hand, { id: 'supply:habit#1', cardId: 'supply:habit', recharge: 2 }], drawn: 1 };
