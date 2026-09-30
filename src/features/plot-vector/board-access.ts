@@ -10,6 +10,7 @@ import { prepareVector, readVectorState, type PreparedVector, type VectorState }
 import type { SupplyRules } from './supply';
 import { projectNativeInput, type NativeRules } from './native-input';
 import { abilityBacklog, type BacklogEntry } from './ability-backlog';
+import type { BoardShape } from './vector-board';
 
 export interface BoardView {
   state: VectorState;
@@ -18,8 +19,10 @@ export interface BoardView {
   backlog: BacklogEntry[];
   /** The saved arrangement could not be computed; the board opened with every card taken off (not saved yet). */
   cleared: boolean;
-  preview(layout: Layout): Promise<PreparedVector>;
-  save(layout: Layout): Promise<void>;
+  /** Trip for an arrangement; `shape` tries the other board shape without saving it. */
+  preview(layout: Layout, shape?: BoardShape): Promise<PreparedVector>;
+  /** Saves the arrangement, and the board shape when given (kept for the next rounds). */
+  save(layout: Layout, shape?: BoardShape): Promise<void>;
 }
 
 /** The only parts of the tree the board reads (the whole tree can be many megabytes). */
@@ -78,9 +81,9 @@ export class VectorBoardAccess {
     };
     guard();
     // Computed in the page, synchronously (rebuild plan §4).
-    const preview = async (layout?: Layout): Promise<PreparedVector> => {
+    const preview = async (layout?: Layout, shape?: BoardShape): Promise<PreparedVector> => {
       guard();
-      return prepareVector({ ...state, ...(layout ? { layout: cloneDeep(layout) } : {}) }, entries,
+      return prepareVector({ ...state, ...(layout ? { layout: cloneDeep(layout) } : {}), ...(shape ? { shape } : {}) }, entries,
         `${slot!.profileId}/${slot!.slotId}/${(this.state.get<number>(P.roundNumber) ?? 0) + 1}`, native, this.supplyRules);
     };
     let prepared: PreparedVector, cleared = false;
@@ -93,15 +96,15 @@ export class VectorBoardAccess {
       prepared = await preview({ placements: {}, tray: [] });
       cleared = true;
     }
-    return { state, prepared, cleared, backlog: abilityBacklog(state, entries), preview, save: async layout => {
+    return { state, prepared, cleared, backlog: abilityBacklog(state, entries), preview, save: async (layout, shape) => {
       guard();
       if (this.writing) throw new Error('board-save-busy');
       this.writing = true;
       let committed = false, applied = false;
       try {
-        const normalized = await preview(layout);
+        const normalized = await preview(layout, shape);
         guard();
-        const next = { ...state, layout: normalized.layout };
+        const next = { ...state, layout: normalized.layout, ...(shape ? { shape } : {}) };
         // Nothing changed since the view was current, so the live tree is what it was computed from;
         // saveGame copies this before its first await.
         const data = this.state.snapshotWith(P.plotVector, next);

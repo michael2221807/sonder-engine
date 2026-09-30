@@ -1,4 +1,4 @@
-import { VECTOR_RUN_OPTIONS, vectorBaseBoard } from './vector-board';
+import { VECTOR_RUN_OPTIONS, readBoardShape, vectorBaseBoard, type BoardShape } from './vector-board';
 import { compileBoard } from '../../engine/plot-vector/core/policies';
 import { run } from '../../engine/plot-vector/core/runner';
 import { commitRun, createSession, type VectorSession } from '../../engine/plot-vector/core/session';
@@ -9,7 +9,7 @@ import { buildNarrativeInputV2 } from './decoder/narrative-input-v2';
 import { projectNativeInput, type NativeInput } from './native-input';
 import { readCardProgress, readSupplyProgress, type CardProgress } from './card-progress';
 import { clampSupplyStates, initialSupply, placeableSupply, readSupplyState, settleSupply, supplyCardDefs, supplyTripCards, type SupplyRules, type SupplyState } from './supply';
-import { rateCard, ratingPlaceOf } from './rating';
+import { rateCard, ratingIsCurrent, ratingPlaceOf } from './rating';
 import { TripCards, storeAccount, type TripCard } from './contract/trip';
 import { growAtRound, initialGrowth, readGrowth } from './contract/growth';
 import { validateCard } from './contract/validate';
@@ -51,6 +51,8 @@ export interface VectorState {
   growth: Record<string, GrowthState>;
   /** The general supply hand (phase 6); absent in older saves, which start from the pack's opening hand. */
   supply?: SupplyState;
+  /** The board shape the player chose (PO 2026-09-29); absent in older saves, which play on the line. */
+  shape?: BoardShape;
   layout?: Layout;
   last?: { id: string; board: CompiledBoard; result: RunDone; layout: Layout; starting?: NativeInput; progress?: CardProgress[] };
 }
@@ -78,9 +80,9 @@ export function readVectorState(raw: unknown): VectorState {
   // Rows only record failures; a row saved as bound by an earlier build is dropped.
   const tasks = state.tasks.filter(row => row && typeof row === 'object' && row.task?.entry && (row as { status?: unknown }).status !== 'bound');
   const supply = readSupplyState(state.supply);
-  const { supply: _raw, ...rest } = state as VectorState;
+  const { supply: _raw, shape: _shape, ...rest } = state as VectorState;
   return { ...rest, tasks, growth: Object.fromEntries(Object.entries(state.growth ?? {}).map(([id, g]) => [id, readGrowth(g)])),
-    ...(supply ? { supply } : {}) };
+    ...(supply ? { supply } : {}), ...(state.shape !== undefined ? { shape: readBoardShape(state.shape) } : {}) };
 }
 
 /** The narrative strength every AGA vector round uses (the board and run options live in vector-board.ts). */
@@ -149,7 +151,7 @@ export function prepareVector(state: VectorState, entries: readonly SavedElement
   placements['06'] = status.length ? status[seed % status.length].task.entry.id : null;
   const layout: Layout = { placements, tray: placeable.filter(card => !used.has(card)) };
   const starting = native ?? projectNativeInput(undefined);
-  const board = compileBoard({ ...vectorBaseBoard(), startPayload: starting.payload, cards: [...bound.map(cardDefOf), ...supply] });
+  const board = compileBoard({ ...vectorBaseBoard(readBoardShape(state.shape)), startPayload: starting.payload, cards: [...bound.map(cardDefOf), ...supply] });
   const tripCards: TripCard[] = [
     ...bound.map(card => ({ id: card.task.entry.id, spec: card.spec, departs: card.task.entry.kind === 'environment' })),
     ...(supplyRules && hand ? supplyTripCards(supplyRules, hand) : []),
@@ -164,7 +166,7 @@ export function prepareVector(state: VectorState, entries: readonly SavedElement
     prompt: narrativePromptFor(starting, layout, result.vectorPacket, departed) };
 }
 
-/** Unrated older cards rated per accepted round (a rating takes about 20 ms). */
+/** Unrated older cards rated per accepted round (a rating takes about 40 ms: both board shapes). */
 export const RATE_PER_ROUND = 4;
 /**
  * Accept a prepared trip with its round: commit the session (uses are deducted), settle the supply hand
@@ -190,9 +192,11 @@ export function acceptVector(state: VectorState, prepared: PreparedVector, suppl
     growth[id] = growAtRound(card.spec.growth, growth[id] ?? initialGrowth(), placed.has(id) || card.task.entry.kind === 'environment');
   }
   const active = state.cards.filter(card => onBoard.has(card.task.entry.id));
-  // Cards saved before ratings existed are rated a few per round, so an old save never stalls one round on it.
+  // Cards saved before ratings existed, or rated by an older method, are rated a few per round, so an old save
+  // never stalls one round on it.
   let toRate = RATE_PER_ROUND;
-  const cards = state.cards.map(card => (card.rating || toRate-- <= 0 ? card : { ...card, rating: rateCard(card.spec, ratingPlaceOf(card.spec.type)) }));
+  const cards = state.cards.map(card => (ratingIsCurrent(card.rating) || toRate-- <= 0 ? card
+    : { ...card, rating: rateCard(card.spec, ratingPlaceOf(card.spec.type)) }));
   const previousUses = state.session.cardStates ?? {};
   return { ...state, cards, session, growth, layout: prepared.layout, ...(settled ? { supply: settled.supply } : {}),
     last: { id: prepared.id, board: prepared.board, result: prepared.result, layout: prepared.layout, starting: prepared.starting,

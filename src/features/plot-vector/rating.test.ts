@@ -4,7 +4,7 @@
  * shown), and cards saved before ratings existed get one when the next round is accepted.
  */
 import { describe, expect, it } from 'vitest';
-import { rateCard, ratingPlaceOf, tierForRatio, TIER_THRESHOLDS } from './rating';
+import { rateCard, ratingIsCurrent, ratingPlaceOf, RATING_VERSION, tierForRatio, TIER_THRESHOLDS } from './rating';
 import { acceptVector, bindCard, initialVectorState, prepareVector, RATE_PER_ROUND, type VectorState } from './runtime';
 import { tasksAfterSave, type SavedElement } from './genesis/post-save';
 import type { CardSpec } from './contract/types';
@@ -44,6 +44,20 @@ describe('rating a card', () => {
   });
 });
 
+describe('rated on both board shapes (version 2)', () => {
+  it('a card that acts only going back sits below one that always acts, and is current', () => {
+    const back = rateCard(card('if (ctx.back) return { push: 2 };\nreturn {};'));
+    const always = rateCard(card('return { push: 2 };'));
+    // On a ring the shuttle only goes back when turned, so a going-back card is weaker than one that always acts.
+    expect(back.ratio).toBeGreaterThan(0.1);
+    expect(back.ratio).toBeLessThan(always.ratio);
+    expect(back.version).toBe(RATING_VERSION);
+    expect(ratingIsCurrent(back)).toBe(true);
+    expect(ratingIsCurrent({ ...back, version: 1 })).toBe(false);
+    expect(ratingIsCurrent(undefined)).toBe(false);
+  });
+});
+
 describe('story cards carry their rating (recorded, not shown)', () => {
   const entry: SavedElement = { id: 'item:tea', kind: 'item', capability: { name: '热茶', description: '一杯热茶' } };
   const task = tasksAfterSave({ id: 'r', success: true, before: [], after: [entry] })[0];
@@ -62,6 +76,13 @@ describe('story cards carry their rating (recorded, not shown)', () => {
     expect(state.cards.filter(c => c.rating)).toHaveLength(RATE_PER_ROUND);
     state = acceptVector(state, prepareVector(state, entries, 'r2'));
     expect(state.cards.every(c => c.rating)).toBe(true);
+  });
+  it('a card rated by the older line-only method is rated again when the next round is accepted', () => {
+    const bound = bindCard(task, card('return { push: 2 };'));
+    const old = { ...bound, rating: { ...bound.rating!, ratio: 9, tier: 'legendary' as const, version: 1 } };
+    const state: VectorState = { ...initialVectorState(), cards: [old] };
+    const accepted = acceptVector(state, prepareVector(state, [entry], 'r1'));
+    expect(accepted.cards[0].rating).toEqual(rateCard(old.spec, 'placed'));
   });
   it('a card saved before ratings existed is rated when the next round is accepted', () => {
     const { rating: _dropped, ...old } = bindCard(task, card('return { push: 2 };'));

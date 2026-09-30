@@ -76,6 +76,29 @@ describe('the stored vector state', () => {
   });
 });
 
+describe('two board shapes (PO 2026-09-29: both can be played)', () => {
+  const native: NativeInput = { ruleId: 'test', payload: { 'S+': 2, 'S-': 0, Y: 1, J: 1 }, visitBudget: 10, contributions: [] };
+  const path = (shape?: 'line' | 'ring') => prepareVector({ ...initialVectorState(), ...(shape ? { shape } : {}) }, [], `r-${shape}`, native)
+    .result.trace.filter(e => e.eventType === 'visit').map(e => e.cellId);
+  it('a line folds back at its end, a ring keeps going round; a save without a shape plays on the line', () => {
+    expect(path('line')).toEqual(['01', '02', '03', '04', '05', '06', '05', '04', '03', '02']);
+    expect(path('ring')).toEqual(['01', '02', '03', '04', '05', '06', '01', '02', '03', '04']);
+    expect(path()).toEqual(path('line'));
+  });
+  it('the shape is kept when stored, and anything else reads as the line', () => {
+    const base = initialVectorState();
+    expect(readVectorState(JSON.parse(JSON.stringify({ ...base, shape: 'ring' }))).shape).toBe('ring');
+    expect(readVectorState(JSON.parse(JSON.stringify({ ...base, shape: 'spiral' }))).shape).toBe('line');
+    expect('shape' in readVectorState(JSON.parse(JSON.stringify(base)))).toBe(false);
+  });
+  it('a round accepted on the ring keeps the ring for the next round', () => {
+    const state: VectorState = { ...initialVectorState(), shape: 'ring' };
+    const accepted = acceptVector(state, prepareVector(state, [], 'r1', native));
+    expect(accepted.shape).toBe('ring');
+    expect(accepted.last!.result.trace.filter(e => e.eventType === 'visit').map(e => e.cellId)[6]).toBe('01');
+  });
+});
+
 describe('step-buying cards stop at the trip limit instead of failing the round', () => {
   // Each card is valid alone; together on one board they buy past the 60-step safety ceiling.
   const stepCard = (id: string): { entry: SavedElement; card: unknown } => ({

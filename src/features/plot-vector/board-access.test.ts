@@ -67,6 +67,20 @@ it('preview uses the next round seed and layout-only save preserves every lifecy
   h.state.set(P.roundNumber, 9);
   await expect(view.save(moved)).rejects.toThrow('stale');
 });
+it('tries the other board shape without saving it, and saves the shape with the arrangement', async () => {
+  const h = setup();
+  const view = await access.open();
+  const visits = (p: { result: { trace: Array<{ eventType: string; cellId?: string }> } }) => p.result.trace.filter(e => e.eventType === 'visit').map(e => e.cellId);
+  const ring = await view.preview(view.prepared.layout, 'ring');
+  expect(visits(ring).slice(5, 8)).toEqual(['06', '01', '02']);
+  expect(h.state.get<VectorState>(P.plotVector)?.shape).toBeUndefined();
+  await view.save(view.prepared.layout, 'ring');
+  expect(h.state.get<VectorState>(P.plotVector)?.shape).toBe('ring');
+  // The view is current after its own save and now plays on the ring.
+  expect(visits(await view.preview(view.prepared.layout)).slice(5, 8)).toEqual(['06', '01', '02']);
+  await view.save(view.prepared.layout, 'line');
+  expect(h.state.get<VectorState>(P.plotVector)?.shape).toBe('line');
+});
 it('writes the live tree with only the board state replaced, reading only the entries it needs', async () => {
   const h = setup();
   h.state.set('记忆.很大', Array.from({ length: 50 }, (_, i) => ({ i })));

@@ -173,6 +173,14 @@ describe('real pack judgment transition, zero network', () => {
     }
   });
 
+  it('the mode text never mentions the old verdict it replaced, and keeps the story free of annotation lines (I27)', () => {
+    // Naming the retired verdict made the model write a placeholder line ("判定跳过…") where one used to be.
+    for (const pack of packs) {
+      expect(pack.prompts.plotVectorMode).not.toMatch(/判定|算分|scoring procedure|verdict formats|rerun/);
+      expect(pack.prompts.plotVectorMode).toMatch(/正文只写故事本身|The narrative is only the story/);
+    }
+  });
+
   it('leaves the inventory and money lines of the pack untouched', () => {
     for (const pack of packs) {
       const policy = parseVectorPromptPolicy(rules, pack.prompts.plotVectorMode)!;

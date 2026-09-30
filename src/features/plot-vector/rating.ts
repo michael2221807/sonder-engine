@@ -9,7 +9,7 @@ import { run } from '../../engine/plot-vector/core/runner';
 import type { CardDef, ChannelId, Layout } from '../../engine/plot-vector/core/types';
 import { TripCards, storeAccount, type TripCard } from './contract/trip';
 import type { CardSpec } from './contract/types';
-import { VECTOR_RUN_OPTIONS, vectorBaseBoard } from './vector-board';
+import { BOARD_SHAPES, VECTOR_RUN_OPTIONS, vectorBaseBoard, type BoardShape } from './vector-board';
 
 export type CardTier = 'common' | 'uncommon' | 'rare' | 'legendary';
 export const CARD_TIERS: readonly CardTier[] = ['common', 'uncommon', 'rare', 'legendary'];
@@ -23,16 +23,25 @@ export interface CardRating {
   tier: CardTier;
   /** Share of the rating trips in which the card acted at all. */
   triggerRate: number;
-  version: 1;
+  /** How the rating was measured; a rating from an older method is measured again (see RATING_VERSION). */
+  version: number;
 }
 
 /**
- * Tier boundaries on the ratio: at or above `uncommon` is uncommon, and so on. Calibrated 2026-09-27 on 63
- * cards — the 24 pack supply cards and 39 story cards the real model wrote in the phase 5 runs — at the 40th,
- * 75th and 95th percentile, the same cut points the Balatro lab uses for its stock jokers
- * (docs/research/plot-vector-phase6-calibration-2026-09-27.md). Agent-set, to be tuned with the PO (I25).
+ * 1: the line board only. 2: the mean of both board shapes, since the player can play on either
+ * (PO 2026-09-29), with thresholds calibrated on that mean.
  */
-export const TIER_THRESHOLDS: Readonly<Record<Exclude<CardTier, 'common'>, number>> = { uncommon: 1.29, rare: 2.28, legendary: 6.28 };
+export const RATING_VERSION = 2;
+export function ratingIsCurrent(rating: CardRating | undefined): boolean { return rating?.version === RATING_VERSION; }
+
+/**
+ * Tier boundaries on the ratio: at or above `uncommon` is uncommon, and so on. Calibrated on 63 cards — the 24
+ * pack supply cards and 39 story cards the real model wrote in the phase 5 runs — at the 40th, 75th and 95th
+ * percentile, the same cut points the Balatro lab uses for its stock jokers
+ * (docs/research/plot-vector-phase6-calibration-2026-09-27.md). Version 2 (2026-09-29) measures on both board
+ * shapes: 1.29 / 2.28 / 6.28 on the line alone became 1.28 / 2.21 / 6.44. Agent-set, to be tuned with the PO (I25).
+ */
+export const TIER_THRESHOLDS: Readonly<Record<Exclude<CardTier, 'common'>, number>> = { uncommon: 1.28, rare: 2.21, legendary: 6.44 };
 
 export function tierForRatio(ratio: number): CardTier {
   if (ratio >= TIER_THRESHOLDS.legendary) return 'legendary';
@@ -65,7 +74,7 @@ function cardDef(id: string): CardDef {
 }
 
 /** Final shuttle of one trip, or null when the trip could not be run. */
-function shuttleOf(spec: CardSpec | null, place: RatingPlace, cell: string | null, payload: Record<ChannelId, number>, budget: number, busy: boolean, seed: string) {
+function shuttleOf(shape: BoardShape, spec: CardSpec | null, place: RatingPlace, cell: string | null, payload: Record<ChannelId, number>, budget: number, busy: boolean, seed: string) {
   const placements: Record<string, string | null> = Object.fromEntries([...CELLS, '06'].map(c => [c, null]));
   const trip: TripCard[] = [];
   const defs: CardDef[] = [];
@@ -81,7 +90,7 @@ function shuttleOf(spec: CardSpec | null, place: RatingPlace, cell: string | nul
     if (cell) placements[cell] = RATED;
   }
   const layout: Layout = { placements, tray: [] };
-  const board = compileBoard({ ...vectorBaseBoard(), startPayload: payload, cards: defs });
+  const board = compileBoard({ ...vectorBaseBoard(shape), startPayload: payload, cards: defs });
   const result = run(board, { id: seed, round: 0, seed, layout, options: VECTOR_RUN_OPTIONS, cardStates: {}, carriedAccounts: {}, visitBudget: budget },
     { cards: new TripCards(trip, {}, seed) });
   // Relays and departures act without a shuttle operation of their own, so "acted" reads the trace.
@@ -90,13 +99,16 @@ function shuttleOf(spec: CardSpec | null, place: RatingPlace, cell: string | nul
     : null;
 }
 
-/** Mean absolute change of the four channels the card causes, and how often it acted, over the rating trips. */
+/**
+ * Mean absolute change of the four channels the card causes, and how often it acted, over the rating trips on
+ * both board shapes (the same trips on each, so the mean weighs the two shapes equally).
+ */
 function measure(spec: CardSpec, place: RatingPlace): { impact: number; triggerRate: number } {
   let impact = 0, acted = 0, trips = 0;
-  for (const cell of PLACES[place]) for (const [p, payload] of PAYLOADS.entries()) for (const budget of BUDGETS) for (const busy of [false, true]) {
+  for (const shape of BOARD_SHAPES) for (const cell of PLACES[place]) for (const [p, payload] of PAYLOADS.entries()) for (const budget of BUDGETS) for (const busy of [false, true]) {
     const seed = `rate:${cell ?? 'depart'}:${p}:${budget}:${busy ? 'busy' : 'empty'}`;
-    const without = shuttleOf(null, place, cell, payload, budget, busy, seed);
-    const withCard = shuttleOf(spec, place, cell, payload, budget, busy, seed);
+    const without = shuttleOf(shape, null, place, cell, payload, budget, busy, seed);
+    const withCard = shuttleOf(shape, spec, place, cell, payload, budget, busy, seed);
     trips++;
     if (!without || !withCard) continue;
     impact += CHANNELS.reduce((sum, ch) => sum + Math.abs((withCard.shuttle[ch] ?? 0) - (without.shuttle[ch] ?? 0)), 0);
@@ -116,7 +128,7 @@ function unit(): number {
 export function rateCard(spec: CardSpec, place: RatingPlace = 'placed'): CardRating {
   const { impact, triggerRate } = measure(spec, place);
   const ratio = Math.round((impact / unit()) * 100) / 100;
-  return { ratio, tier: tierForRatio(ratio), triggerRate: Math.round(triggerRate * 100) / 100, version: 1 };
+  return { ratio, tier: tierForRatio(ratio), triggerRate: Math.round(triggerRate * 100) / 100, version: RATING_VERSION };
 }
 
 /** Where a card of this type acts, for rating it. */
