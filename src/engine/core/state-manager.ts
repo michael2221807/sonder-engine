@@ -361,6 +361,31 @@ export class StateManager {
   }
 
   /**
+   * The tree as plain data with one plain dot-path replaced, sharing every other branch with the live tree
+   * instead of copying it. For a writer that copies before it yields (SaveManager.saveGame clones first), so
+   * saving one small branch of a large tree costs one copy instead of three. Never keep or mutate the result.
+   * Filter segments and paths through arrays are not supported.
+   */
+  snapshotWith(path: StatePath, value: unknown): Record<string, unknown> {
+    if (hasFilterSyntax(path)) throw new Error(`snapshotWith does not take filter paths: "${path}"`);
+    const keys = path.split('.');
+    const root = toRaw(this.state) as Record<string, unknown>;
+    const out: Record<string, unknown> = { ...root };
+    let from: unknown = root;
+    let to = out;
+    for (const key of keys.slice(0, -1)) {
+      const child = from && typeof from === 'object' ? (from as Record<string, unknown>)[key] : undefined;
+      if (Array.isArray(child)) throw new Error(`snapshotWith cannot pass through an array at "${key}" in "${path}"`);
+      const copy: Record<string, unknown> = child && typeof child === 'object' ? { ...(toRaw(child) as Record<string, unknown>) } : {};
+      to[key] = copy;
+      to = copy;
+      from = child;
+    }
+    to[keys[keys.length - 1]] = value;
+    return out;
+  }
+
+  /**
    * 将状态树回滚到快照 — Rollback 功能使用
    *
    * 与 loadTree 的区别：不重置 loaded 标志，也不重置变更历史，

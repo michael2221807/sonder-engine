@@ -58,7 +58,25 @@ it('preview uses the next round seed and layout-only save preserves every lifecy
   expect(h.saveGame).toHaveBeenCalledTimes(1);
   expect(h.settled).toHaveBeenCalledTimes(1);
   expect(h.state.get(P.plotVector)).toEqual({ ...before, layout: view.prepared.layout });
-  await expect(view.save(view.prepared.layout)).rejects.toThrow('stale');
+  // The view's own save keeps it current: the player goes on arranging and saving without reopening.
+  const moved = { placements: { ...view.prepared.layout.placements }, tray: view.prepared.layout.tray };
+  await view.save(moved);
+  expect(h.saveGame).toHaveBeenCalledTimes(2);
+  expect(await view.preview(moved)).toBeTruthy();
+  // A change from anywhere else still makes it stale.
+  h.state.set(P.roundNumber, 9);
+  await expect(view.save(moved)).rejects.toThrow('stale');
+});
+it('writes the live tree with only the board state replaced, reading only the entries it needs', async () => {
+  const h = setup();
+  h.state.set('记忆.很大', Array.from({ length: 50 }, (_, i) => ({ i })));
+  h.state.set(P.inventoryItems, { tea: { 名称: '茶', 数量: 1 } });
+  const view = await access.open();
+  await view.save(view.prepared.layout);
+  const written = h.saveGame.mock.calls[0][2] as Record<string, unknown>;
+  const live = h.state.toSnapshot();
+  expect(written).toEqual(live);
+  expect((written as { 记忆: unknown }).记忆).toEqual(live.记忆);
 });
 it.each(['busy', 'load', 'changed', 'off'] as const)('rejects a stale draft after %s without saving', async reason => {
   const h = setup(), view = await access.open();

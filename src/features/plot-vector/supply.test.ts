@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import vectorRules from '../../../public/packs/tianming/rules/plot-vector.json';
 import { acceptVector, initialVectorState, prepareVector, readVectorState, type PreparedVector, type VectorState } from './runtime';
-import { drawSupplyCard, parseSupplyRules, supplyRatings, usesOf, type SupplyRules } from './supply';
+import { drawSupplyCard, parseSupplyRules, supplyRatings, usesOf, warmSupplyRatings, type SupplyRules } from './supply';
 import { CARD_TIERS, type CardTier } from './rating';
 import type { NativeInput } from './native-input';
 
@@ -38,6 +38,17 @@ describe('the pack pool', () => {
       expect(usesOf(SUPPLY, card.id)).toBe(SUPPLY.usesByTier[tier]);
       if (tier === 'rare' || tier === 'legendary') expect(usesOf(SUPPLY, card.id)).toBe(1);
     }
+  });
+  it('can be rated ahead in slices; the rated pool is then reused as it is', () => {
+    const fresh = parseSupplyRules(vectorRules)!;
+    const queue: Array<() => void> = [];
+    warmSupplyRatings(fresh, slice => { queue.push(slice); });
+    let slices = 0;
+    while (queue.length) { queue.shift()!(); slices++; }
+    expect(slices).toBe(fresh.cards.length + 1); // one card per slice, then a last slice that finds nothing left
+    const warmed = supplyRatings(fresh);
+    expect(warmed.size).toBe(fresh.cards.length);
+    expect(new Map(warmed)).toEqual(new Map(supplyRatings(SUPPLY)));
   });
   it('draws are reproducible and follow the tier weights (3A)', () => {
     expect(drawSupplyCard(SUPPLY, 'seed-1')?.id).toBe(drawSupplyCard(SUPPLY, 'seed-1')?.id);

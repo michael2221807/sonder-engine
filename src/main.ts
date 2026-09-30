@@ -118,7 +118,7 @@ import { useEngineStateStore } from './engine/stores/engine-state';
 import { AgaPlotVectorAdapter } from './features/plot-vector/aga-adapter';
 import { VectorBoardAccess } from './features/plot-vector/board-access';
 import { parseNativeRules } from './features/plot-vector/native-input';
-import { parseSupplyRules } from './features/plot-vector/supply';
+import { parseSupplyRules, warmSupplyRatings } from './features/plot-vector/supply';
 import { parseVectorPromptPolicy } from './features/plot-vector/prompt-policy';
 import type { ComputedFieldConfig, ThresholdTriggerConfig, IntegrityRule, EffectLifecycleConfig, NpcBehaviorConfig, ContentFilterConfig } from './engine/types';
 
@@ -747,6 +747,11 @@ async function bootstrap(): Promise<void> {
   const vectorNativeRules = parseNativeRules(pack?.rules.plotVector);
   // The general supply pool is pack content; the engine rates and deals it (phase 6).
   const vectorSupplyRules = parseSupplyRules(pack?.rules.plotVector);
+  // Rate the pool while the page is idle, so the first board opening or round does not wait for it.
+  if (vectorSupplyRules) warmSupplyRatings(vectorSupplyRules, slice => {
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(() => slice(), { timeout: 5000 });
+    else setTimeout(slice, 50);
+  });
   const vectorPromptPolicy = parseVectorPromptPolicy(pack?.rules.plotVectorPrompts, pack?.prompts.plotVectorMode);
   const plotVectorBoard = new VectorBoardAccess(stateManager, saveManager, getActiveSlot,
     () => !orchestrator || orchestrator.isBusy, vectorNativeRules,
@@ -988,15 +993,16 @@ async function bootstrap(): Promise<void> {
   // Load world books when a game profile becomes active (fixes: first round with empty books)
   const engineState = useEngineStateStore();
   let lastWorldBookPid: string | null = null;
-  engineState.$subscribe(async () => {
-    const pid = engineState.activeProfileId;
+  // Watch only the profile id: `$subscribe` deep-watches the whole store state, which holds the game tree,
+  // so every state change walked the entire tree (0.6 s per write on a large save).
+  watch(() => engineState.activeProfileId, async (pid) => {
     if (!pid || pid === lastWorldBookPid) return;
     lastWorldBookPid = pid;
     try {
       const loadedBooks = await worldBookStorage.loadWorldBooks(pid);
       eventBus.emit('worldbook:updated', loadedBooks.filter((b) => b.enabled !== false));
     } catch { /* best-effort */ }
-  });
+  }, { immediate: true });
 }
 
 bootstrap().catch(console.error);

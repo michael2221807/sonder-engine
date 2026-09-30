@@ -6,7 +6,6 @@ import { DEFAULT_ENGINE_PATHS as P } from '../../engine/pipeline/types';
 import { readPlotVectorControl, subscribePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { projectSavedElements } from './saved-elements';
 import type { Layout } from '../../engine/plot-vector/core/types';
-import { stable } from './genesis/post-save';
 import { prepareVector, readVectorState, type PreparedVector, type VectorState } from './runtime';
 import type { SupplyRules } from './supply';
 import { projectNativeInput, type NativeRules } from './native-input';
@@ -23,12 +22,18 @@ export interface BoardView {
   save(layout: Layout): Promise<void>;
 }
 
+/** The only parts of the tree the board reads (the whole tree can be many megabytes). */
+const BOARD_SOURCES = [P.inventoryItems, P.talents, P.statusEffects, P.environmentTags, P.characterAttributes];
+
 /**
  * Optional UI port. No acceptance hooks, no writes before IDB commit. Its only model call is the player's
  * explicit ability retry, delegated to the round adapter and run like a board save (no round can start).
+ * A view is current while nothing else changed the state since it was opened or since its own last save:
+ * every state write emits `engine:state-changed`, so counting those replaces comparing whole-tree copies.
  */
 export class VectorBoardAccess {
   private revision = 0;
+  private changes = 0;
   private writing = false;
   get isSaving(): boolean { return this.writing; }
   private unsubs: Array<() => void>;
@@ -39,9 +44,7 @@ export class VectorBoardAccess {
     private regenerateAbility?: (entryId: string) => Promise<{ bound: boolean; requested: boolean }>,
     private supplyRules?: SupplyRules) {
     this.unsubs = [subscribePlotVectorControl(() => this.invalidate()),
-      eventBus.on<{ type: string }>('engine:state-changed', e => {
-        if (e.type === 'load' || e.type === 'rollback') this.invalidate();
-      })];
+      eventBus.on('engine:state-changed', () => { this.changes++; })];
   }
   private invalidate() { this.revision++; }
   /** The player's retry for one entry's ability. Refused while a round, a save or another retry runs. */
@@ -58,14 +61,19 @@ export class VectorBoardAccess {
   dispose() { this.invalidate(); this.unsubs.forEach(fn => fn()); }
   async open(): Promise<BoardView> {
     const slot = this.slot(), control = readPlotVectorControl(), revision = this.revision;
-    const snapshot = this.state.toSnapshot(), fingerprint = stable(snapshot);
-    const state: VectorState = cloneDeep(readVectorState(this.state.get(P.plotVector)));
-    const entries = projectSavedElements(snapshot, { includeEnvironment: true }).entries;
-    const native = projectNativeInput(snapshot, this.nativeRules);
+    let seen = this.changes;
+    let state: VectorState = cloneDeep(readVectorState(this.state.get(P.plotVector)));
+    const sources: Record<string, unknown> = {};
+    for (const path of BOARD_SOURCES) {
+      const value = this.state.get(path);
+      if (value !== undefined) set(sources, path, cloneDeep(value));
+    }
+    const entries = projectSavedElements(sources, { includeEnvironment: true }).entries;
+    const native = projectNativeInput(sources, this.nativeRules);
     const guard = () => {
-      const live = readPlotVectorControl();
+      const live = readPlotVectorControl(), now = this.slot();
       if (!slot || this.busy() || !live.enabled || control.epoch !== live.epoch || revision !== this.revision
-        || stable(this.slot()) !== stable(slot) || stable(this.state.toSnapshot()) !== fingerprint)
+        || now?.profileId !== slot.profileId || now?.slotId !== slot.slotId || this.changes !== seen)
         throw new Error('board-view-stale');
     };
     guard();
@@ -94,8 +102,9 @@ export class VectorBoardAccess {
         const normalized = await preview(layout);
         guard();
         const next = { ...state, layout: normalized.layout };
-        const data = cloneDeep(snapshot);
-        set(data, P.plotVector, next);
+        // Nothing changed since the view was current, so the live tree is what it was computed from;
+        // saveGame copies this before its first await.
+        const data = this.state.snapshotWith(P.plotVector, next);
         await this.saves.saveGame(slot!.profileId, slot!.slotId, data, undefined, {
           guard,
           committed: () => {
@@ -104,8 +113,10 @@ export class VectorBoardAccess {
             // this old slot's layout into the newly active in-memory tree.
             guard();
             this.state.set(P.plotVector, next);
+            // The view's own write keeps it current: the player goes on arranging without reopening.
+            state = next;
+            seen = this.changes;
             applied = true;
-            this.invalidate();
           },
         });
       } catch (error) {

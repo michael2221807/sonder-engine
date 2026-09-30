@@ -76,10 +76,29 @@ export function parseSupplyRules(value: unknown): SupplyRules | undefined {
 
 /** Every pool card with its rating, computed once per rules object (the rating is deterministic). */
 const ratedPools = new WeakMap<SupplyRules, Map<string, CardRating>>();
-export function supplyRatings(rules: SupplyRules): ReadonlyMap<string, CardRating> {
+function ratedPool(rules: SupplyRules): Map<string, CardRating> {
   let rated = ratedPools.get(rules);
-  if (!rated) { rated = new Map(rules.cards.map(card => [card.id, rateCard(card.spec)])); ratedPools.set(rules, rated); }
+  if (!rated) { rated = new Map(); ratedPools.set(rules, rated); }
   return rated;
+}
+export function supplyRatings(rules: SupplyRules): ReadonlyMap<string, CardRating> {
+  const rated = ratedPool(rules);
+  for (const card of rules.cards) if (!rated.has(card.id)) rated.set(card.id, rateCard(card.spec));
+  return rated;
+}
+/**
+ * Rate the pool one card per scheduled slice (the page passes an idle callback), so the first board opening
+ * or round after a load does not pay for the whole pool at once. Cards already rated are skipped.
+ */
+export function warmSupplyRatings(rules: SupplyRules, schedule: (slice: () => void) => void): void {
+  const rated = ratedPool(rules);
+  const next = () => {
+    const card = rules.cards.find(c => !rated.has(c.id));
+    if (!card) return;
+    rated.set(card.id, rateCard(card.spec));
+    schedule(next);
+  };
+  schedule(next);
 }
 /** Uses a supply card holds: set by its tier (4A). */
 export function usesOf(rules: SupplyRules, cardId: string): number {
