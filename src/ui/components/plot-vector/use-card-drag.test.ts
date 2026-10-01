@@ -19,6 +19,98 @@ function pointer(type: string, x: number, y: number): Event {
 }
 const down = (x = 0, y = 0) => ({ pointerId: 1, clientX: x, clientY: y, button: 0, pointerType: 'mouse', currentTarget: {} }) as unknown as PointerEvent;
 
+/** A touchmove the panel's listener sees: where the finger is, and whether it may still be stopped. */
+const touchMove = (x: number, y: number, cancelable = true, more: Array<{ clientX: number; clientY: number }> = []) =>
+  ({ touches: [...more, { clientX: x, clientY: y }], cancelable, preventDefault: vi.fn() }) as unknown as TouchEvent & { preventDefault: ReturnType<typeof vi.fn> };
+const touchDown = (x = 0, y = 0) => ({ ...down(x, y), pointerType: 'touch' }) as unknown as PointerEvent;
+
+describe('a touch drag is not taken by a scroll (PO 2026-10-01: iOS, ring board)', () => {
+  it('holds the page still for a card in a cell, and for a hand card moved up or down; sideways the hand scrolls', () => {
+    const { start, touchMove: held } = useCardDrag({ canDrag: () => true, onDrop: vi.fn(), onTap: vi.fn(), onLongPress: vi.fn() });
+    start(touchDown(100, 300), 'a', '02');
+    let ev = touchMove(103, 301);
+    held(ev);
+    expect(ev.preventDefault).toHaveBeenCalled();
+    win.dispatchEvent(pointer('pointercancel', 0, 0));
+    start(touchDown(100, 600), 'b', 'hand');
+    ev = touchMove(102, 590);
+    held(ev);
+    expect(ev.preventDefault).toHaveBeenCalled();
+    win.dispatchEvent(pointer('pointercancel', 0, 0));
+    start(touchDown(100, 600), 'b', 'hand');
+    ev = touchMove(130, 602);
+    held(ev);
+    expect(ev.preventDefault).not.toHaveBeenCalled();
+    win.dispatchEvent(pointer('pointercancel', 0, 0));
+  });
+  it('a finger going sideways on a hand card scrolls the hand: no drag, no tap, the page not held; a mouse still drags sideways', () => {
+    const onDrop = vi.fn(), onTap = vi.fn();
+    const { start, drag, touchMove: held } = useCardDrag({ canDrag: () => true, onDrop, onTap, onLongPress: vi.fn() });
+    start(touchDown(100, 600), 'b', 'hand');
+    win.dispatchEvent(Object.assign(pointer('pointermove', 110, 601), { pointerType: 'touch' }));
+    expect(drag.value).toBeNull();
+    const ev = touchMove(118, 602);
+    held(ev);
+    expect(ev.preventDefault).not.toHaveBeenCalled();
+    win.dispatchEvent(pointer('pointerup', 118, 602));
+    expect(onTap).not.toHaveBeenCalled();
+    expect(onDrop).not.toHaveBeenCalled();
+    start(down(100, 600), 'b', 'hand');
+    win.dispatchEvent(pointer('pointermove', 130, 600));
+    expect(drag.value).toMatchObject({ card: 'b' });
+    win.dispatchEvent(pointer('pointercancel', 0, 0));
+  });
+  it('a card being carried keeps the page still whatever the direction; nothing is held without a gesture or once the browser scrolls', () => {
+    const { start, touchMove: held } = useCardDrag({ canDrag: () => true, onDrop: vi.fn(), onTap: vi.fn(), onLongPress: vi.fn() });
+    const idle = touchMove(0, 50);
+    held(idle);
+    expect(idle.preventDefault).not.toHaveBeenCalled();
+    start(touchDown(100, 600), 'b', 'hand');
+    win.dispatchEvent(Object.assign(pointer('pointermove', 100, 560), { pointerType: 'touch' }));
+    const sideways = touchMove(160, 560);
+    held(sideways);
+    expect(sideways.preventDefault).toHaveBeenCalled();
+    const late = touchMove(100, 500, false);
+    held(late);
+    expect(late.preventDefault).not.toHaveBeenCalled();
+    win.dispatchEvent(pointer('pointerup', 160, 560));
+    const after = touchMove(100, 500);
+    held(after);
+    expect(after.preventDefault).not.toHaveBeenCalled();
+  });
+  it('a card that cannot move lets the page scroll, from the first pixel on', () => {
+    const { start, touchMove: held } = useCardDrag({ canDrag: () => false, onDrop: vi.fn(), onTap: vi.fn(), onLongPress: vi.fn() });
+    start(touchDown(100, 300), 'resting', '02');
+    const first = touchMove(100, 298);
+    held(first);
+    expect(first.preventDefault).not.toHaveBeenCalled();
+    win.dispatchEvent(Object.assign(pointer('pointermove', 100, 260), { pointerType: 'touch' }));
+    const ev = touchMove(100, 250);
+    held(ev);
+    expect(ev.preventDefault).not.toHaveBeenCalled();
+    win.dispatchEvent(pointer('pointercancel', 0, 0));
+  });
+  it('a hand card with a pixel or two of jitter is not held yet: a sideways flick that starts that way still scrolls the hand', () => {
+    const { start, touchMove: held } = useCardDrag({ canDrag: () => true, onDrop: vi.fn(), onTap: vi.fn(), onLongPress: vi.fn() });
+    start(touchDown(100, 600), 'b', 'hand');
+    for (const [x, y] of [[100, 601], [101, 602], [100, 599]]) {
+      const ev = touchMove(x, y);
+      held(ev);
+      expect(ev.preventDefault).not.toHaveBeenCalled();
+    }
+    win.dispatchEvent(pointer('pointercancel', 0, 0));
+  });
+  it('with a second finger down, the direction is read from the finger nearest the pointer', () => {
+    const { start, touchMove: held } = useCardDrag({ canDrag: () => true, onDrop: vi.fn(), onTap: vi.fn(), onLongPress: vi.fn() });
+    start(touchDown(100, 600), 'b', 'hand');
+    // The other finger sits far away and still; the dragging one goes up.
+    const ev = touchMove(101, 585, true, [{ clientX: 300, clientY: 200 }]);
+    held(ev);
+    expect(ev.preventDefault).toHaveBeenCalled();
+    win.dispatchEvent(pointer('pointercancel', 0, 0));
+  });
+});
+
 describe('moving cards by hand', () => {
   it('a drag onto a cell drops the card there', () => {
     const onDrop = vi.fn(), onTap = vi.fn();
@@ -100,9 +192,10 @@ describe('moving cards by hand', () => {
     vi.stubGlobal('navigator', { vibrate });
     const onDrop = vi.fn();
     const { start } = useCardDrag({ canDrag: () => true, onDrop, onTap: vi.fn(), onLongPress: vi.fn() });
+    // A finger picks a hand card up by moving it up (sideways would scroll the hand).
     start({ ...down(), pointerType: 'touch' } as unknown as PointerEvent, 'a', 'hand');
-    win.dispatchEvent(Object.assign(pointer('pointermove', 20, 0), { pointerType: 'touch' }));
-    win.dispatchEvent(Object.assign(pointer('pointerup', 20, 0), { pointerType: 'touch' }));
+    win.dispatchEvent(Object.assign(pointer('pointermove', 4, -20), { pointerType: 'touch' }));
+    win.dispatchEvent(Object.assign(pointer('pointerup', 4, -20), { pointerType: 'touch' }));
     expect(onDrop).toHaveBeenCalledWith('a', 'hand', '03');
     expect(vibrate).toHaveBeenCalledWith(8);
   });

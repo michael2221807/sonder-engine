@@ -845,6 +845,7 @@ const ghostStyle = computed(() => {
         :aria-busy="loading"
         data-testid="vector-board"
         @pointermove.passive="onSheetMove"
+        @touchmove="drag.touchMove"
         @scroll.passive="detail = null"
       >
         <button

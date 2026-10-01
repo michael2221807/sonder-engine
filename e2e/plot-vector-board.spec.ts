@@ -415,3 +415,69 @@ test('a round start plays its trip in a ribbon above the input, the badge walkin
     await page.waitForTimeout(300);
     await expect(plotVector.opening).toHaveCount(0);
   });
+
+test('on a phone with the ring board a card is carried by touch, and the table holds the page still under it',
+  { tag: ['@plot-vector', '@story-pv-1001'] }, async ({ page, gameShell, plotVector }, testInfo) => {
+    // PO 2026-10-01: on an iPhone the ring board's drag snapped back — iOS scrolled the (taller) table and cancelled
+    // the drag. Chromium honours touch-action, so it cannot reproduce that; this checks the touch drag on the ring
+    // and that the table's touchmove listener holds the page once a card is carried (the iOS fix). The iPhone itself
+    // is the PO's check.
+    test.skip(!testInfo.project.use.hasTouch, 'touch drags are a phone gesture');
+    const ids = await seedSave(page);
+    await addBoardFixture(page, ids);
+    await enterSeededGame(page);
+    await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
+    await plotVector.openBoard();
+    await plotVector.shapeRing.click();
+    await expect(plotVector.board.locator('.vtrack--ring')).toBeVisible();
+    // Real touch events: the browser decides whether a touch scrolls, which mouse events never ask.
+    const cdp = await page.context().newCDPSession(page);
+    await page.evaluate(() => {
+      const w = window as unknown as { __moves: Array<{ held: boolean; far: number }>; __from: { x: number; y: number } };
+      w.__moves = [];
+      window.addEventListener('touchstart', e => { w.__from = { x: e.touches[0].clientX, y: e.touches[0].clientY }; w.__moves = []; }, true);
+      window.addEventListener('touchmove', e => {
+        const t = e.touches[0];
+        w.__moves.push({ held: e.defaultPrevented, far: Math.hypot(t.clientX - w.__from.x, t.clientY - w.__from.y) });
+      });
+    });
+    const touchDrag = async (from: { x: number; y: number }, to: { x: number; y: number }) => {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] });
+      for (let i = 1; i <= 12; i++) {
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: from.x + (to.x - from.x) * i / 12, y: from.y + (to.y - from.y) * i / 12 }] });
+      }
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    };
+    const centre = async (loc: ReturnType<Page['locator']>) => { const b = (await loc.boundingBox())!; return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; };
+    /** Moves past the drag threshold (6 px) were all held: the card was carried, the page did not scroll. */
+    const heldOnceCarried = async () => {
+      const moves = await page.evaluate(() => (window as unknown as { __moves: Array<{ held: boolean; far: number }> }).__moves);
+      const carried = moves.filter(m => m.far >= 8);
+      expect(carried.length).toBeGreaterThan(0);
+      expect(carried.every(m => m.held)).toBe(true);
+    };
+    // From the hand up into a cell that is on screen together with the hand.
+    await plotVector.handCard('item:notebook').scrollIntoViewIfNeeded();
+    const viewport = page.viewportSize()!;
+    let target = '';
+    for (const id of ['05', '04', '03', '02', '01']) {
+      const b = await plotVector.cell(id).boundingBox();
+      if (b && b.y >= 0 && b.y + b.height <= viewport.height) { target = id; break; }
+    }
+    expect(target).not.toBe('');
+    await touchDrag(await centre(plotVector.handCard('item:notebook')), await centre(plotVector.cell(target)));
+    await expect(plotVector.cellCard(target)).toContainText('随身日记');
+    await heldOnceCarried();
+    // From that cell to another one on screen.
+    let other = '';
+    for (const id of ['01', '02', '03', '04', '05']) {
+      if (id === target) continue;
+      const b = await plotVector.cell(id).boundingBox();
+      if (b && b.y >= 0 && b.y + b.height <= viewport.height) { other = id; break; }
+    }
+    expect(other).not.toBe('');
+    await touchDrag(await centre(plotVector.cellCard(target)), await centre(plotVector.cell(other)));
+    await expect(plotVector.cellCard(other)).toContainText('随身日记');
+    await expect(plotVector.cellCard(target)).toHaveCount(0);
+    await heldOnceCarried();
+  });
