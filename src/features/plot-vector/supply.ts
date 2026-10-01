@@ -10,7 +10,7 @@ import { availableUses, grantConsumable, stateOf } from '../../engine/plot-vecto
 import { storeAccount, type TripCard } from './contract/trip';
 import { validateCard } from './contract/validate';
 import type { CardSpec } from './contract/types';
-import { CARD_TIERS, rateCard, type CardRating, type CardTier } from './rating';
+import { CARD_TIERS, rateCard, type CardRating, type CardTier, type EffectProfile } from './rating';
 
 /** When a supply card regains a use: every `every` accepted rounds, or every `every` passes it acted on. */
 export interface RechargeSpec { on: 'round' | 'trigger'; every: number }
@@ -209,14 +209,21 @@ export function settleSupply(rules: SupplyRules, supply: SupplyState, states: Ca
   return { supply: { hand, drawn, ...(lastDrawn.length ? { lastDrawn } : {}) }, states: next };
 }
 
-/** What the table shows of a hand card: its pool card, its tier and, for a card that recharges, how far it is. */
-export interface SupplyCardInfo { cardId: string; tier: CardTier; recharge?: RechargeSpec & { progress: number } }
+/**
+ * What the table shows of a hand card: its pool card, its tier, what it does (its measured profile) and, for a
+ * card that recharges, how far it is.
+ */
+export interface SupplyCardInfo { cardId: string; tier: CardTier; profile?: EffectProfile; recharge?: RechargeSpec & { progress: number } }
 export function supplyHandInfo(rules: SupplyRules, supply: SupplyState): Record<string, SupplyCardInfo> {
   const ratings = supplyRatings(rules);
-  return Object.fromEntries(inHand(rules, supply).map(({ held, card }) => [held.id, {
-    cardId: card.id, tier: ratings.get(card.id)?.tier ?? 'common',
-    ...(card.recharge ? { recharge: { ...card.recharge, progress: held.recharge ?? 0 } } : {}),
-  }]));
+  return Object.fromEntries(inHand(rules, supply).map(({ held, card }) => {
+    const rating = ratings.get(card.id);
+    const info: SupplyCardInfo = {
+      cardId: card.id, tier: rating?.tier ?? 'common', ...(rating?.profile ? { profile: rating.profile } : {}),
+      ...(card.recharge ? { recharge: { ...card.recharge, progress: held.recharge ?? 0 } } : {}),
+    };
+    return [held.id, info];
+  }));
 }
 
 /** Display names of hand instances (for the notice after a draw). */

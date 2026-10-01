@@ -94,6 +94,17 @@
   --tier-mythic:            oklch(0.66 0.20  25);
 
   /* ─────────────────────────────────────────────────────────────
+     CHANNELS — the four quantities a trip carries (PO 2026-10-01).
+     The card marks, the detail bubbles, the "?" legend and the
+     three tendency bars wear the same colour for the same thing:
+     ↑ toward 顺 (push), ↓ toward 逆 (drag), ◇ relations, ✦ chances.
+     ───────────────────────────────────────────────────────────── */
+  --ch-push:                var(--color-sage-300);
+  --ch-drag:                oklch(0.66 0.12  30);
+  --ch-social:              oklch(0.80 0.08  200);
+  --ch-chance:              var(--color-amber-300);
+
+  /* ─────────────────────────────────────────────────────────────
      SEMANTIC — all desaturated + warm-tinted. No Tailwind defaults.
      ───────────────────────────────────────────────────────────── */
   --color-danger:           oklch(0.62 0.12  30);   /* warm rust, not red */

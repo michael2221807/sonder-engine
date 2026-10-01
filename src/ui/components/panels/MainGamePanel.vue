@@ -1524,7 +1524,8 @@ watch(
             <span class="elapsed-time">{{ (generationElapsedMs / 1000).toFixed(1) }}s</span>
             <span v-if="streamingText.length > 0" class="char-count">· {{ streamingText.length }}字</span>
           </div>
-          <div class="typing-indicator" :aria-label="$t('mainGame.typing.ariaLabel')">
+          <!-- data-story-writing: the plot-vector round opening sends its light here (PO 2026-10-01). -->
+          <div class="typing-indicator" :aria-label="$t('mainGame.typing.ariaLabel')" data-story-writing>
             <span class="typing-dot" />
             <span class="typing-dot" />
             <span class="typing-dot" />

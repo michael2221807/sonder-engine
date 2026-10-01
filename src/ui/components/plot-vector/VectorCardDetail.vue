@@ -1,15 +1,20 @@
 <script setup lang="ts">
 // App doc: docs/user-guide/pages/game-main.md · Plot-vector card table
 /**
- * A card's details (phase 7): hover 0.8 s or long-press. The story text, what is left, how it grew, its rarity;
- * exact numbers only when the player turned them on (PO 2A). An entry whose ability is still forming offers
- * its retry here and nowhere else (4A).
+ * A card's details (phase 7; PO 2026-10-01, demo docs/demo/plot-vector-effect-and-start.html): hover 0.8 s or
+ * long-press. Effect — the model's sentence and the marks the engine measured; Growth — how it grows and what a
+ * level does, one sentence with bubbles; Origin — the entry's own text; then what is left, and with exact numbers
+ * what it brought this trip. Every explanation comes from the engine and a fixed glossary, never from the model's
+ * wording. An entry whose ability is still forming offers its retry here and nowhere else (4A).
  */
 import { computed, nextTick, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { FormingCard, TableCard } from '@/features/plot-vector/table-model';
 import type { CardTripReceipt } from '@/features/plot-vector/card-trip-receipt';
 import type { LocalizedLabel } from '@/engine/plot-vector/core/types';
+import Tooltip from '../shared/Tooltip.vue';
+import VectorTok from './VectorTok.vue';
+import { useCardWords } from './card-words';
 
 const props = defineProps<{
   card?: TableCard;
@@ -27,34 +32,33 @@ const number = (value: number) => new Intl.NumberFormat(locale.value, { maximumF
 
 const el = ref<HTMLElement>();
 const pos = ref({ left: 0, top: 0 });
+/**
+ * Hidden until placed: measured at the corner first, it would otherwise sit for a frame over whatever is there —
+ * on a phone the first cell — catch the pointer, and close as soon as it moves away (2026-10-01).
+ */
+const placed = ref(false);
 onMounted(async () => {
   await nextTick();
-  const w = el.value?.offsetWidth ?? 280, h = el.value?.offsetHeight ?? 160, m = 12;
+  const w = el.value?.offsetWidth ?? 300, h = el.value?.offsetHeight ?? 160, m = 12;
   const left = Math.max(m, Math.min(window.innerWidth - w - m, props.anchor.left + props.anchor.width / 2 - w / 2));
   const above = props.anchor.top - h - 10;
-  pos.value = { left, top: above >= m ? above : Math.min(window.innerHeight - h - m, props.anchor.bottom + 10) };
+  pos.value = { left, top: above >= m ? above : Math.max(m, Math.min(window.innerHeight - h - m, props.anchor.bottom + 10)) };
+  placed.value = true;
 });
 
+const words = useCardWords(() => props.exact);
+const effects = computed(() => (props.card ? words.value.effects(props.card.effects) : []));
+const growth = computed(() => {
+  const g = props.card?.growth;
+  return g ? { rule: words.value.growth(g), ...words.value.level(g) } : null;
+});
+const trip = computed(() => (props.exact && props.receipt ? words.value.trip(props.receipt) : undefined));
 const uses = computed(() => props.card?.uses);
 const chargeLeft = computed(() => {
   const c = props.card;
   return c?.resting && c.charge ? Math.max(1, c.charge.every - c.charge.progress) : null;
 });
-const receiptText = computed(() => {
-  const r = props.receipt;
-  if (!r) return '';
-  if (!r.activations) return t('mainGame.vectorTable.exact.receiptNone');
-  const names: Record<string, string> = { 'S+': 'push', 'S-': 'drag', Y: 'relations', J: 'chances' };
-  const parts = [t('mainGame.vectorTable.exact.receipt', { count: r.activations })];
-  for (const [channel, change] of Object.entries(r.shuttleChanges)) {
-    if (Math.abs(change) < 1e-9 || !names[channel]) continue;
-    parts.push(`${t(`mainGame.vectorTable.channel.${names[channel]}`)} ${change > 0 ? '+' : '−'}${number(Math.abs(change))}`);
-  }
-  if (r.stored > 1e-9) parts.push(t('mainGame.vectorTable.exact.stored', { amount: number(r.stored) }));
-  if (r.released > 1e-9) parts.push(t('mainGame.vectorTable.exact.released', { amount: number(r.released) }));
-  if (r.otherEffects.includes('route')) parts.push(t('mainGame.vectorTable.exact.route'));
-  return parts.join(' · ');
-});
+const hasStatus = computed(() => !!props.card && (!!uses.value || chargeLeft.value !== null || !!props.card.stored));
 </script>
 
 <template>
@@ -64,39 +68,61 @@ const receiptText = computed(() => {
       class="vdetail"
       role="dialog"
       :aria-label="card ? label(card.name) : forming?.name"
-      :style="{ left: `${pos.left}px`, top: `${pos.top}px` }"
+      :style="{ left: `${pos.left}px`, top: `${pos.top}px`, visibility: placed ? 'visible' : 'hidden' }"
       data-testid="vector-card-detail"
       @pointerenter="emit('enter')"
       @pointerleave="emit('leave')"
     >
-      <h3 class="vdetail__name">{{ card ? label(card.name) : forming?.name }}</h3>
+      <h3 class="vdetail__name">
+        {{ card ? label(card.name) : forming?.name }}
+        <span v-if="card?.tier" class="vdetail__tier" :class="`vdetail__tier--${card.tier}`">{{ t(`mainGame.vectorTable.tier.${card.tier}`) }}</span>
+      </h3>
       <template v-if="card">
-        <p v-if="card.line" class="vdetail__line">{{ label(card.line) }}</p>
-        <p v-if="card.story" class="vdetail__story">{{ label(card.story) }}</p>
-        <dl class="vdetail__rows">
-          <div v-if="card.tier"><dt>{{ t('mainGame.vectorTable.detail.tier') }}</dt><dd :class="`vdetail__tier--${card.tier}`">{{ t(`mainGame.vectorTable.tier.${card.tier}`) }}</dd></div>
-          <div v-if="uses && uses.max <= 5">
-            <dt>{{ t('mainGame.vectorTable.detail.uses') }}</dt>
-            <dd class="vdetail__dots" aria-hidden="true"><i v-for="i in uses.max" :key="i" :class="{ spent: i > uses.left }" /></dd>
+        <section class="vdetail__block" data-testid="vector-card-effects">
+          <span class="vdetail__label">{{ t('mainGame.vectorTable.fx.label') }}</span>
+          <p v-if="card.line" class="vdetail__say">{{ label(card.line) }}</p>
+          <div v-if="effects.length" class="vdetail__toks"><VectorTok v-for="(tok, i) in effects" :key="i" :tok="tok" /></div>
+        </section>
+        <section v-if="growth" class="vdetail__block" data-testid="vector-card-growth">
+          <div class="vdetail__grow-head">
+            <span class="vdetail__label">{{ t('mainGame.vectorTable.grow.label') }}</span>
+            <VectorTok :tok="growth.tok" />
+            <Tooltip class="vdetail__prog-wrap" :text="growth.next">
+              <span class="vdetail__prog" :style="{ '--w': `${Math.round(growth.fill * 100)}%` }"><i /></span>
+            </Tooltip>
           </div>
-          <div v-if="chargeLeft !== null && card.charge">
-            <dt />
-            <dd>{{ t(card.charge.on === 'round' ? 'mainGame.vectorTable.detail.chargeRound' : 'mainGame.vectorTable.detail.chargeTrigger', { n: chargeLeft }) }}</dd>
-          </div>
-          <div v-if="card.level && card.level.value > 0">
-            <dt>{{ t('mainGame.vectorTable.detail.level') }}</dt>
-            <dd class="vdetail__level" aria-hidden="true"><i v-for="i in Math.min(5, card.level.value)" :key="i" /></dd>
-          </div>
-          <div v-if="card.stored"><dt>{{ t('mainGame.vectorTable.detail.stored') }}</dt><dd /></div>
-        </dl>
-        <p v-if="exact" class="vdetail__exact" data-testid="vector-card-exact">
-          <span v-if="uses">{{ t('mainGame.vectorTable.exact.uses', { left: uses.left, max: uses.max }) }}</span>
-          <span v-if="card.level">{{ card.level.max !== undefined ? t('mainGame.vectorTable.exact.levelMax', { value: card.level.value, max: card.level.max }) : t('mainGame.vectorTable.exact.level', { value: card.level.value }) }}</span>
-          <span v-if="receiptText">{{ receiptText }}</span>
-        </p>
+          <p class="vdetail__rule">
+            <template v-for="(seg, i) in growth.rule" :key="i">
+              <span v-if="'text' in seg">{{ seg.text }}</span>
+              <VectorTok v-else :tok="seg.tok" />
+            </template>
+          </p>
+        </section>
+        <section v-if="card.story" class="vdetail__block">
+          <span class="vdetail__label">{{ t('mainGame.vectorTable.story.label') }}</span>
+          <p class="vdetail__story">{{ label(card.story) }}</p>
+        </section>
+        <div v-if="hasStatus" class="vdetail__status">
+          <span v-if="uses && uses.max <= 5">
+            {{ t('mainGame.vectorTable.detail.uses') }}
+            <span class="vdetail__dots" aria-hidden="true"><i v-for="i in uses.max" :key="i" :class="{ spent: i > uses.left }" /></span>
+            <span v-if="exact" class="vdetail__tab" data-testid="vector-card-exact">{{ uses.left }}/{{ uses.max }}</span>
+          </span>
+          <span v-else-if="uses && exact" data-testid="vector-card-exact">{{ t('mainGame.vectorTable.exact.uses', { left: uses.left, max: uses.max }) }}</span>
+          <span v-if="chargeLeft !== null && card.charge">{{ t(card.charge.on === 'round' ? 'mainGame.vectorTable.detail.chargeRound' : 'mainGame.vectorTable.detail.chargeTrigger', { n: chargeLeft }) }}</span>
+          <span v-if="card.stored">
+            {{ t('mainGame.vectorTable.detail.stored') }}
+            <span v-if="exact" class="vdetail__tab">{{ number(card.stored) }}</span>
+          </span>
+        </div>
+        <section v-if="trip !== undefined" class="vdetail__trip" data-testid="vector-card-trip">
+          <span class="vdetail__label">{{ t('mainGame.vectorTable.trip.label') }}</span>
+          <div v-if="trip && trip.length" class="vdetail__toks"><VectorTok v-for="(tok, i) in trip" :key="i" :tok="tok" /></div>
+          <p v-else class="vdetail__quiet">{{ t('mainGame.vectorTable.trip.none') }}</p>
+        </section>
       </template>
       <template v-else-if="forming">
-        <p class="vdetail__line">{{ t(forming.failed ? 'mainGame.vectorTable.detail.formingFailed' : 'mainGame.vectorTable.detail.forming') }}</p>
+        <p class="vdetail__say">{{ t(forming.failed ? 'mainGame.vectorTable.detail.formingFailed' : 'mainGame.vectorTable.detail.forming') }}</p>
         <button type="button" class="vdetail__retry" :disabled="retrying" data-testid="vector-ability-retry" @click="emit('retry')">
           {{ retrying ? t('mainGame.vectorTable.detail.retrying') : t('mainGame.vectorTable.detail.retry') }}
         </button>
@@ -110,45 +136,57 @@ const receiptText = computed(() => {
 .vdetail {
   position: fixed;
   z-index: var(--z-floating);
-  width: 280px;
-  padding: 14px 16px;
+  width: 300px;
+  max-width: calc(100vw - 24px);
+  padding: 14px 16px 12px;
   border-radius: 14px;
   background: color-mix(in oklch, var(--color-surface-elevated) 92%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.07);
   font-size: 13px;
-  line-height: 1.65;
+  line-height: 1.6;
   color: var(--color-text-secondary);
   animation: vdetail-in var(--duration-normal) var(--ease-out);
 }
 @keyframes vdetail-in { from { opacity: 0; transform: translateY(6px); } }
-.vdetail__name { margin: 0 0 6px; font-family: var(--font-serif-cjk); font-size: 16px; font-weight: 600; color: var(--color-text); }
-.vdetail__line { margin: 0; }
-.vdetail__story { margin: 6px 0 0; font-family: var(--font-serif-cjk); font-size: 12.5px; color: var(--color-text-muted); }
-.vdetail__rows { margin: 8px 0 0; display: grid; gap: 2px; }
-.vdetail__rows div { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; }
-.vdetail__rows dt { color: var(--color-text-muted); }
-.vdetail__rows dd { margin: 0; }
-.vdetail__dots, .vdetail__level { display: inline-flex; align-items: center; gap: 4px; }
-.vdetail__dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--color-sage-400); }
-.vdetail__dots i.spent { background: oklch(0.3 0.006 95); }
-.vdetail__level i { width: 6px; height: 6px; border-radius: 1px; background: var(--color-amber-300); transform: rotate(45deg); }
+.vdetail__name { display: flex; align-items: baseline; gap: 8px; margin: 0 0 8px; font-family: var(--font-serif-cjk); font-size: 16px; font-weight: 600; color: var(--color-text); }
+.vdetail__tier { font-family: var(--font-sans); font-size: 11px; font-weight: 400; letter-spacing: 0.08em; }
 .vdetail__tier--common { color: var(--tier-common); }
 .vdetail__tier--uncommon { color: var(--tier-uncommon); }
 .vdetail__tier--rare { color: var(--tier-rare); }
 .vdetail__tier--epic { color: var(--tier-epic); }
 .vdetail__tier--legendary { color: var(--tier-legendary); }
 .vdetail__tier--mythic { color: var(--tier-mythic); text-shadow: 0 0 10px color-mix(in oklch, var(--tier-mythic) 50%, transparent); }
-.vdetail__exact {
-  display: grid;
-  gap: 2px;
-  margin: 8px 0 0;
-  padding-top: 8px;
+.vdetail__block { margin: 0 0 10px; }
+.vdetail__label { display: block; margin-bottom: 4px; font-size: 10.5px; letter-spacing: 0.14em; color: var(--color-text-muted); }
+.vdetail__say { margin: 0 0 6px; color: var(--color-text); }
+.vdetail__toks { display: flex; flex-wrap: wrap; gap: 2px 4px; margin-left: -2px; }
+.vdetail__grow-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.vdetail__grow-head .vdetail__label { margin: 0; }
+.vdetail__prog-wrap { flex: 1; }
+.vdetail__prog { display: block; width: 100%; height: 3px; border-radius: 2px; background: oklch(0.24 0.006 95); overflow: hidden; }
+.vdetail__prog i { display: block; height: 100%; width: var(--w); border-radius: 2px; background: var(--ch-chance); transition: width var(--duration-slow) var(--ease-out); }
+.vdetail__rule { margin: 0; line-height: 1.85; }
+.vdetail__story { margin: 0; font-family: var(--font-serif-cjk); font-size: 12.5px; line-height: 1.75; color: var(--color-text-muted); }
+.vdetail__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding-top: 9px;
+  margin-top: 4px;
   border-top: 1px solid color-mix(in oklch, var(--color-border) 70%, transparent);
   font-size: 12px;
-  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
 }
+.vdetail__status > span { display: inline-flex; align-items: center; gap: 5px; }
+.vdetail__dots { display: inline-flex; align-items: center; gap: 3px; }
+.vdetail__dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--color-sage-400); }
+.vdetail__dots i.spent { background: oklch(0.3 0.006 95); }
+.vdetail__tab { font-variant-numeric: tabular-nums; font-size: 11px; color: var(--color-text-muted); }
+.vdetail__trip { margin-top: 10px; padding-top: 9px; border-top: 1px solid color-mix(in oklch, var(--color-border) 70%, transparent); }
+.vdetail__quiet { margin: 0; font-size: 12px; color: var(--color-text-muted); }
 .vdetail__retry {
   margin-top: 10px;
   padding: 6px 12px;
@@ -164,5 +202,5 @@ const receiptText = computed(() => {
 .vdetail__retry:disabled { opacity: 0.6; cursor: default; }
 .vdetail__retry:focus-visible { outline: 2px solid var(--color-sage-400); outline-offset: 2px; }
 .vdetail__note { margin: 6px 0 0; font-size: 12px; }
-@media (prefers-reduced-motion: reduce) { .vdetail { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .vdetail { animation: none; } .vdetail__prog i { transition: none; } }
 </style>

@@ -1,14 +1,21 @@
 <script setup lang="ts">
 // App doc: docs/user-guide/pages/game-main.md · Plot-vector card table
 /**
- * The "?" on the table (phase 7): how it works in a few lines, the starting force the attributes give (as dots),
- * and the two switches — exact numbers (PO 2A: only here) and the automatic walk (animation A, can be turned off).
+ * The "?" on the table (phase 7; PO 2026-10-01, demo docs/demo/plot-vector-effect-and-start.html): how it works in a
+ * few lines, the legend of marks the cards and the bars share, the starting force the attributes give as four
+ * gauges, and the two switches — exact numbers (PO 2A: only here) and the automatic walk (animation A). With exact
+ * numbers the gauges carry their values, the steps show as a row of ticks and each attribute's share is a ledger
+ * line.
  */
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { NativeInput } from '@/features/plot-vector/native-input';
 import type { BoardShape } from '@/features/plot-vector/vector-board';
 import type { LocalizedLabel } from '@/engine/plot-vector/core/types';
+import { EFFECT_MARKS } from '@/features/plot-vector/card-describe';
+import { CHANNEL_KEY, CHANNEL_MARK, CHANNEL_OF_ID, ID_OF_CHANNEL, MARK_COLOR, MARK_GLYPH } from './effect-marks';
+import VectorTok from './VectorTok.vue';
+import type { Tok } from './card-words';
 
 const props = defineProps<{ starting?: NativeInput; shape: BoardShape; exact: boolean; animate: boolean }>();
 const emit = defineEmits<{ (e: 'update:exact', value: boolean): void; (e: 'update:animate', value: boolean): void }>();
@@ -16,20 +23,28 @@ const { t, locale } = useI18n();
 const label = (value?: LocalizedLabel) => value ? (locale.value === 'en' ? value.en : value.zh) : '';
 const number = (value: number) => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 2 }).format(value);
 
-/** 0–3 dots: how strong a starting force is, without the number. */
-const level = (value: number) => (value <= 0 ? 0 : value < 1.5 ? 1 : value < 3 ? 2 : 3);
-const forces = computed(() => {
+const legend = computed<Tok[]>(() => EFFECT_MARKS.map(mark => ({
+  mark, color: MARK_COLOR[mark], label: t(`mainGame.vectorTable.fx.mark.${mark}`), tip: t(`mainGame.vectorTable.fx.means.${mark}`),
+})));
+
+/** The four starting forces as gauges on one scale (at least 4, so a small force reads small). */
+const gauges = computed(() => {
   const p = props.starting?.payload ?? {};
-  return [
-    { key: 'push', dots: level(p['S+'] ?? 0) },
-    { key: 'relations', dots: level(p.Y ?? 0) },
-    { key: 'chances', dots: level(p.J ?? 0) },
-  ];
+  const rows = (['push', 'drag', 'social', 'chance'] as const).map(ch => ({ ch, mark: CHANNEL_MARK[ch], value: Math.max(0, p[ID_OF_CHANNEL[ch]] ?? 0) }));
+  const scale = Math.max(4, ...rows.map(r => r.value));
+  return rows.map(r => ({ ...r, width: `${Math.round((r.value / scale) * 100)}%` }));
 });
-const target = (value: string) => {
-  const key = ({ 'S+': 'push', 'S-': 'drag', Y: 'relations', J: 'chances', visits: 'steps' } as Record<string, string>)[value];
-  return key ? t(`mainGame.vectorTable.channel.${key}`) : value;
-};
+const steps = computed(() => props.starting?.visitBudget ?? 0);
+const ledger = computed(() => (props.starting?.contributions ?? []).map(row => {
+  const ch = CHANNEL_OF_ID[row.target];
+  return {
+    source: label(row.label),
+    value: row.value === null ? t('mainGame.vectorTable.exact.missing') : number(row.value),
+    mark: ch ? CHANNEL_MARK[ch] : undefined,
+    target: ch ? t(`mainGame.vectorTable.channel.${CHANNEL_KEY[ch]}`) : t('mainGame.vectorTable.channel.steps'),
+    gain: `+${number(row.amount)}`,
+  };
+}));
 </script>
 
 <template>
@@ -43,22 +58,33 @@ const target = (value: string) => {
       <li>{{ t('mainGame.vectorTable.helpPanel.keep') }}</li>
       <li>{{ t('mainGame.vectorTable.helpPanel.shape') }}</li>
     </ul>
-    <div class="vhelp__row">
-      <span>{{ t('mainGame.vectorTable.helpPanel.start') }}</span>
-      <span class="vhelp__forces">
-        <span v-for="f in forces" :key="f.key" class="vhelp__force">
-          <em>{{ t(`mainGame.vectorTable.channel.${f.key}`) }}</em>
-          <i v-for="i in 3" :key="i" :class="{ on: i <= f.dots }" aria-hidden="true" />
-        </span>
-      </span>
+
+    <h4 class="vhelp__head">{{ t('mainGame.vectorTable.legend.title') }}</h4>
+    <div class="vhelp__legend" data-testid="vector-legend"><VectorTok v-for="tok in legend" :key="tok.mark" :tok="tok" fixed /></div>
+
+    <h4 class="vhelp__head">{{ t('mainGame.vectorTable.legend.start') }}</h4>
+    <div class="vhelp__gauges" data-testid="vector-start">
+      <div v-for="g in gauges" :key="g.ch" class="vhelp__gauge" :style="{ '--c': MARK_COLOR[g.mark] }">
+        <span class="vhelp__gname"><b>{{ MARK_GLYPH[g.mark] }}</b>{{ t(`mainGame.vectorTable.channel.${CHANNEL_KEY[g.ch]}`) }}</span>
+        <span class="vhelp__bar"><i :style="{ width: g.width }" /></span>
+        <span v-if="exact" class="vhelp__n">{{ number(g.value) }}</span>
+      </div>
+      <div v-if="exact && starting" class="vhelp__gauge vhelp__steps" data-testid="vector-native">
+        <span class="vhelp__gname">{{ t('mainGame.vectorTable.channel.steps') }}</span>
+        <span class="vhelp__ticks" aria-hidden="true"><i v-for="i in Math.min(steps, 24)" :key="i" /></span>
+        <span class="vhelp__n">{{ steps }}</span>
+      </div>
     </div>
-    <div v-if="exact && starting" class="vhelp__exact" data-testid="vector-native">
-      <p>{{ t('mainGame.vectorTable.exact.start', { push: number(starting.payload['S+'] ?? 0), drag: number(starting.payload['S-'] ?? 0), relations: number(starting.payload.Y ?? 0), chances: number(starting.payload.J ?? 0), steps: starting.visitBudget }) }}</p>
-      <p v-for="(row, i) in starting.contributions" :key="i">
-        {{ t('mainGame.vectorTable.exact.contribution', { label: label(row.label), value: row.value === null ? t('mainGame.vectorTable.exact.missing') : number(row.value), target: target(row.target), amount: number(row.amount) }) }}
-      </p>
+    <div v-if="exact && ledger.length" class="vhelp__ledger" data-testid="vector-ledger">
+      <span class="vhelp__ledger-title">{{ t('mainGame.vectorTable.legend.ledger') }}</span>
+      <div v-for="(row, i) in ledger" :key="i" class="vhelp__line" :style="row.mark ? { '--c': MARK_COLOR[row.mark] } : undefined">
+        <span class="vhelp__src">{{ row.source }}<span class="vhelp__tab">{{ row.value }}</span></span>
+        <span class="vhelp__to">→ <b v-if="row.mark">{{ MARK_GLYPH[row.mark] }}</b> {{ row.target }}</span>
+        <span class="vhelp__gain">{{ row.gain }}</span>
+      </div>
     </div>
-    <div class="vhelp__toggle">
+
+    <div class="vhelp__toggle vhelp__toggle--first">
       <span>{{ t('mainGame.vectorTable.helpPanel.exact') }}</span>
       <button type="button" :aria-pressed="exact" data-testid="vector-exact-toggle" @click="emit('update:exact', !exact)">
         {{ exact ? t('mainGame.vectorTable.helpPanel.on') : t('mainGame.vectorTable.helpPanel.off') }}
@@ -96,15 +122,27 @@ const target = (value: string) => {
 .vhelp__title { margin: 0 0 6px; font-family: var(--font-serif-cjk); font-size: 16px; font-weight: 600; color: var(--color-text); }
 .vhelp__list { margin: 0 0 10px; padding-left: 18px; }
 .vhelp__list li { margin: 3px 0; }
-.vhelp__row, .vhelp__toggle { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px; }
-.vhelp__forces { display: inline-flex; gap: 10px; }
-.vhelp__force { display: inline-flex; align-items: center; gap: 3px; }
-.vhelp__force em { font-style: normal; color: var(--color-text-muted); margin-right: 2px; }
-.vhelp__force i { width: 5px; height: 5px; border-radius: 50%; background: oklch(0.3 0.006 95); }
-.vhelp__force i.on { background: var(--color-sage-400); }
-.vhelp__exact { margin-top: 8px; padding-top: 8px; border-top: 1px solid color-mix(in oklch, var(--color-border) 70%, transparent); font-size: 12px; font-variant-numeric: tabular-nums; }
-.vhelp__exact p { margin: 0; }
-.vhelp__toggle { margin-top: 8px; }
+.vhelp__head { margin: 12px 0 6px; font-size: 10.5px; font-weight: 400; letter-spacing: 0.14em; color: var(--color-text-muted); }
+.vhelp__legend { display: flex; flex-wrap: wrap; gap: 2px 4px; margin-left: -2px; }
+.vhelp__gauges { display: grid; gap: 7px; }
+.vhelp__gauge { display: grid; grid-template-columns: minmax(58px, auto) 1fr 30px; align-items: center; gap: 8px; font-size: 12px; }
+.vhelp__gname { color: var(--color-text-muted); white-space: nowrap; }
+.vhelp__gname b { margin-right: 4px; font-weight: 400; color: var(--c); }
+.vhelp__bar { height: 5px; border-radius: 3px; background: oklch(0.24 0.006 95); overflow: hidden; }
+.vhelp__bar i { display: block; height: 100%; border-radius: 3px; background: var(--c); opacity: 0.85; transition: width var(--duration-slow) var(--ease-out); }
+.vhelp__n { text-align: right; font-variant-numeric: tabular-nums; color: var(--color-text-secondary); }
+.vhelp__ticks { display: flex; flex-wrap: wrap; gap: 3px; }
+.vhelp__ticks i { width: 5px; height: 9px; border-radius: 2px; background: color-mix(in oklch, var(--color-sage-400) 60%, transparent); }
+.vhelp__ledger { display: grid; gap: 4px; margin-top: 10px; padding-top: 9px; border-top: 1px solid color-mix(in oklch, var(--color-border) 70%, transparent); font-size: 12px; }
+.vhelp__ledger-title { font-size: 10.5px; letter-spacing: 0.14em; color: var(--color-text-muted); }
+.vhelp__line { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; }
+.vhelp__src { color: var(--color-text-secondary); }
+.vhelp__tab { margin-left: 4px; font-variant-numeric: tabular-nums; font-size: 11px; color: var(--color-text-muted); }
+.vhelp__to { color: var(--color-text-muted); }
+.vhelp__to b { font-weight: 400; color: var(--c); }
+.vhelp__gain { min-width: 32px; text-align: right; font-variant-numeric: tabular-nums; color: var(--color-text-secondary); }
+.vhelp__toggle { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 12.5px; }
+.vhelp__toggle--first { margin-top: 14px; }
 .vhelp__toggle button {
   min-width: 42px;
   padding: 4px 10px;
@@ -119,5 +157,5 @@ const target = (value: string) => {
 }
 .vhelp__toggle button[aria-pressed='true'] { background: color-mix(in oklch, var(--color-sage-400) 22%, transparent); color: var(--color-sage-300); }
 .vhelp__toggle button:focus-visible { outline: 2px solid var(--color-sage-400); outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { .vhelp { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .vhelp { animation: none; } .vhelp__bar i { transition: none; } }
 </style>

@@ -13,7 +13,8 @@ import { projectSavedElements, readPath, savedEntryName, savedSources } from './
 import { stable, capabilityKey, type BoundCard, type SavedElement } from './genesis/post-save';
 import { buildAbilityRetryMessages, parseCardReply, CARD_API } from './genesis/generation-prompt';
 import { acceptVector, bindCard, cardTypeOf, prepareVector, readVectorState, type AbilityRetry, type VectorState, type VectorTaskRow, type PreparedVector } from './runtime';
-import { supplyHandInfo, supplyNames, type SupplyRules } from './supply';
+import { initialSupply, supplyHandInfo, supplyNames, type SupplyRules } from './supply';
+import { roundOpening } from './table-model';
 import { tierOf, type CardTier } from './rating';
 import { abilityBacklog, type BacklogEntry } from './ability-backlog';
 import { bindRoundAbilities, readAbilityBlock } from './round-abilities';
@@ -143,6 +144,14 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
         degraded('mainGame.toast.vectorNotComputed', '本回合剧情动能没有算出来，剧情照常进行。', error);
       }
       guard();
+      // The round's opening plays this trip in miniature above the input (PO 2026-10-01 C). Display only: a
+      // failure here never touches the round.
+      if (state && prepared) {
+        try {
+          const supply = this.supplyRules ? supplyHandInfo(this.supplyRules, state.supply ?? initialSupply(this.supplyRules)) : {};
+          eventBus.emit('plotVector:round-started', roundOpening(state, prepared, supply));
+        } catch (error) { console.warn('[PlotVector] The round opening could not be prepared:', error); }
+      }
       // Without the saved entries of the round start, new entries cannot be told apart; skip the component.
       if (state && before) this.attempt = { ctx, owner, controller, guard, state, id, before, prepared, slot, gained: [], drawn: [],
         release: () => ctx.abortSignal?.removeEventListener('abort', abort) };

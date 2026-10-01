@@ -6,6 +6,7 @@ import { ResponseParser } from '../../engine/ai/response-parser';
 import { DEFAULT_ENGINE_PATHS as P, type PipelineContext } from '../../engine/pipeline/types';
 import { AgaPlotVectorAdapter, REPAIR_BATCH } from './aga-adapter';
 import { eventBus } from '../../engine/core/event-bus';
+import type { RoundOpening } from './table-model';
 import { bindCard, initialVectorState, prepareVector, type VectorState } from './runtime';
 import { writePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { POSITIVE_EXAMPLES } from './genesis/test-fixtures';
@@ -225,6 +226,28 @@ describe('AGA opt-in integration (zero network)', () => {
       expect(h.saveGame).not.toHaveBeenCalled(); // written by the round's own save, not a second one
       expect(note.seen).toEqual([expect.objectContaining({ i18nKey: 'mainGame.toast.vectorNewCards', message: '获得新卡：随身热茶' })]);
     } finally { note.off(); }
+  });
+  // PO 2026-10-01 C: the round's opening plays the trip the round just worked out, before the story is written.
+  it('a round start sends its opening: the cells with their cards, the walk, the tendency; nothing when the feature is off', async () => {
+    const h = setup({ supply: true });
+    h.state.set(P.plotVector, { ...initialVectorState(),
+      layout: { placements: { '01': 'basic:push', '02': null, '03': null, '04': null, '05': null, '06': null }, tray: [] } });
+    const openings: RoundOpening[] = [];
+    cleanups.push(eventBus.on<RoundOpening>('plotVector:round-started', e => { openings.push(e); }));
+    writePlotVectorControl(false);
+    await h.adapter.prepare(h.ctx());
+    expect(openings).toEqual([]);
+    writePlotVectorControl(true);
+    const c = h.ctx();
+    h.adapter.promptTransform(c);
+    await h.adapter.prepare(c);
+    expect(openings).toHaveLength(1);
+    const [opening] = openings;
+    expect(opening.id).toBe('p/s/1');
+    expect(opening.shape).toBe('line');
+    expect(opening.cells[0]).toMatchObject({ id: '01', status: false, card: { name: { zh: '顺势' }, tier: 'common' } });
+    expect(opening.walk.steps[0]).toMatchObject({ cell: '01', acted: [{ card: 'basic:push', sign: 'push' }] });
+    expect(opening.walk.tendency.s).toBeGreaterThan(0);
   });
   // Phase 6 (PO 3A): an exhausted supply card leaves, the hand draws one, and the player hears about it after the save.
   it('a round that uses up a supply card draws one in its place and announces it after the save', async () => {

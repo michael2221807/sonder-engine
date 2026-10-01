@@ -22,6 +22,14 @@ export class PlotVectorPage {
   get note() { return this.page.getByTestId('vector-board-note'); }
   get detail() { return this.page.getByTestId('vector-card-detail'); }
   get nativeInput() { return this.page.getByTestId('vector-native'); }
+  /** The "?" panel's starting force: four gauges, then the steps when exact numbers are on. */
+  get startGauges() { return this.page.getByTestId('vector-start').locator('.vhelp__gauge'); }
+  get ledger() { return this.page.getByTestId('vector-ledger'); }
+  /** The ribbon that plays a round's trip when the round starts (PO 2026-10-01). */
+  get opening() { return this.page.getByTestId('vector-opening'); }
+  marks(id: string) { return this.handCard(id).getByTestId('vector-card-marks'); }
+  /** A hint (the shared Tooltip) showing now. */
+  tooltip(text: string | RegExp) { return this.page.getByRole('tooltip').filter({ hasText: text }); }
   get impulse() { return this.page.getByTestId('vector-impulse'); }
   async openBoard() {
     await this.boardOpen.click();

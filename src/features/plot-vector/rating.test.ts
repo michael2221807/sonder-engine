@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { CARD_TIERS, rateCard, ratingIsCurrent, ratingPlaceOf, RATING_VERSION, tierForRatio, tierOf, TIER_THRESHOLDS } from './rating';
-import { acceptVector, bindCard, initialVectorState, prepareVector, RATE_PER_ROUND, type VectorState } from './runtime';
+import { acceptVector, bindCard, initialVectorState, prepareVector, RATE_PER_ROUND, readVectorState, type VectorState } from './runtime';
 import { tasksAfterSave, type SavedElement } from './genesis/post-save';
 import type { CardSpec } from './contract/types';
 
@@ -67,6 +67,50 @@ describe('rated on both board shapes (version 2)', () => {
   });
 });
 
+describe('what a card does (the effect profile, version 4)', () => {
+  const profile = (onPass: string) => rateCard(card(onPass)).profile!;
+  it("counts the card's own change, in units of the unit card, not what the cells make of it", () => {
+    expect(profile('return { push: 1 };').perTrip).toEqual({ push: 1, drag: 0, social: 0, chance: 0 });
+    expect(profile('return { social: 2 };').perTrip.social).toBeCloseTo(2, 1);
+    expect(profile('return { drag: -1 };').perTrip.drag).toBeLessThan(0);
+    const turned = profile('return { convert: { from: "drag", to: "social", amount: 1 } };').perTrip;
+    expect(turned.drag).toBeLessThan(0);
+    expect(turned.social).toBeGreaterThan(0);
+    expect(profile('return { push: 2 };')).toEqual(profile('return { push: 2 };'));
+  });
+  it("per act it is in the shuttle's own units", () => {
+    expect(profile('if (ctx.pass === 1) return { chance: 3 };\nreturn {};').perAct.chance).toBeGreaterThan(2.5);
+  });
+  it('a turn or a step change marks the route; storing and releasing mark the store and move nothing on their own', () => {
+    expect(profile('return { turn: true };')).toMatchObject({ route: true, store: false, perTrip: { push: 0, drag: 0, social: 0, chance: 0 } });
+    expect(profile('return { steps: 1 };').route).toBe(true);
+    const pocket = profile('if (ctx.stored >= 3) return { release: true };\nreturn { store: { from: "push", amount: 1 } };');
+    expect(pocket).toMatchObject({ store: true, route: false });
+    expect(pocket.perTrip.push).toBeGreaterThanOrEqual(0);
+  });
+  it("a relay acts through the next card, so it shows the trip's change with it", () => {
+    const relay = profile('return { relay: { echo: true } };');
+    expect(relay.perAct).toEqual({ push: 0, drag: 0, social: 0, chance: 0 });
+    expect(relay.perTrip.push).toBeGreaterThan(0);
+  });
+  it('a relay that turns or steps the next card changes the route; a relay that stores is shown by the trip\'s change', () => {
+    expect(profile('return { relay: { turn: true } };').route).toBe(true);
+    expect(profile('return { relay: { steps: 2 } };').route).toBe(true);
+    const keeper = profile('if (ctx.stored >= 2) return { relay: { release: true } };\nreturn { relay: { store: { from: "push", amount: 1 } } };');
+    expect(keeper.store).toBe(true);
+    // A card of its own with a relay: the trip's change, not only its own part.
+    const both = profile('return { push: 1, relay: { echo: true } };');
+    expect(both.perTrip.push).toBeGreaterThan(profile('return { push: 1 };').perTrip.push * 0.9);
+    expect(both.perAct.push).toBeGreaterThan(0.9);
+  });
+  it('a rating from before version 4 has no profile and is not current', () => {
+    const r = rateCard(card('return { push: 1 };'));
+    expect(r.version).toBe(4);
+    const { profile: _dropped, ...old } = r;
+    expect(ratingIsCurrent({ ...old, version: 3 })).toBe(false);
+  });
+});
+
 describe('story cards carry their rating (recorded, not shown)', () => {
   const entry: SavedElement = { id: 'item:tea', kind: 'item', capability: { name: '热茶', description: '一杯热茶' } };
   const task = tasksAfterSave({ id: 'r', success: true, before: [], after: [entry] })[0];
@@ -75,6 +119,13 @@ describe('story cards carry their rating (recorded, not shown)', () => {
     expect(bound.rating).toEqual(rateCard(bound.spec, 'placed'));
     const status = bindCard({ ...task, entry: { ...entry, id: 'effect:name:发烧', kind: 'effect' } }, card('return { drag: 2 };', 'status'));
     expect(status.rating).toEqual(rateCard(status.spec, 'status'));
+  });
+  it('the rating with its effect profile is kept through the save as written (no re-rating after a reload)', () => {
+    const bound = bindCard(task, card('return { push: 2, social: 1 };'));
+    const saved = readVectorState(JSON.parse(JSON.stringify({ ...initialVectorState(), cards: [bound] })));
+    expect(saved.cards[0].rating).toEqual(bound.rating);
+    expect(saved.cards[0].rating?.profile?.perTrip.push).toBeGreaterThan(0);
+    expect(ratingIsCurrent(saved.cards[0].rating)).toBe(true);
   });
   it('an old save with many unrated cards is rated a few per round, never all in one round', () => {
     const entries: SavedElement[] = Array.from({ length: RATE_PER_ROUND + 2 }, (_, i) => ({ id: `item:${i}`, kind: 'item', capability: { name: `物${i}`, description: '' } }));

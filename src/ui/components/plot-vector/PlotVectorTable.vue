@@ -7,7 +7,7 @@
  * hand, a placed card walks the board at once, and the arrangement is kept by itself — in the game state at once,
  * in the save file when the table closes (PO 2026-09-30 B). Numbers stay behind the "?".
  */
-import { computed, inject, nextTick, onBeforeUnmount, onDeactivated, onUnmounted, reactive, ref, shallowRef, watch } from 'vue';
+import { computed, inject, nextTick, onActivated, onBeforeUnmount, onDeactivated, onUnmounted, reactive, ref, shallowRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { cloneDeep } from 'lodash-es';
 import Tooltip from '../shared/Tooltip.vue';
@@ -16,6 +16,7 @@ import VectorTrack from './VectorTrack.vue';
 import VectorCardFace from './VectorCardFace.vue';
 import VectorCardDetail from './VectorCardDetail.vue';
 import VectorHelpPanel from './VectorHelpPanel.vue';
+import VectorOpening from './VectorOpening.vue';
 import { prefersReducedMotion, useTripWalk } from './use-trip-walk';
 import { useCardDrag, type DropTarget } from './use-card-drag';
 import { useBackdropClose } from '@/ui/composables/useBackdropClose';
@@ -29,8 +30,8 @@ import type { VectorBoardAccess, BoardView } from '@/features/plot-vector/board-
 import { readVectorState, type PreparedVector } from '@/features/plot-vector/runtime';
 import { readBoardShape, type BoardShape } from '@/features/plot-vector/vector-board';
 import { SIX_CELL_RING_ID } from '@/features/plot-vector/default-board';
-import { arrange, rateStoryCard, sweep, tableModel, tripWalk, unratedStoryCards, type TableCard, type TableCardKind, type TableModel } from '@/features/plot-vector/table-model';
-import { RATING_VERSION, type CardTier } from '@/features/plot-vector/rating';
+import { arrange, rateStoryCard, sweep, tableModel, tripWalk, unratedStoryCards, type RoundOpening, type TableCard, type TableCardKind, type TableModel } from '@/features/plot-vector/table-model';
+import { RATING_VERSION, readRating, type CardRating, type CardTier } from '@/features/plot-vector/rating';
 import { chargeFull, dealIn, dissolve, levelUp, settle, tierRank, topTier } from './table-effects';
 import { weatherIcon, WEATHER_PATHS } from './weather-icon';
 import { cardTripReceipt } from '@/features/plot-vector/card-trip-receipt';
@@ -69,18 +70,30 @@ function writeSeen(slot: string, cards: Record<string, SeenCard>): void {
   try { localStorage.setItem(seenKey(slot), JSON.stringify({ v: 2, cards })); } catch { /* storage unavailable */ }
 }
 /**
- * Tiers the table worked out for story cards the runtime has not rated yet, kept on this device so a slow phone
- * works each one out once, not on every visit (the runtime's own rating replaces them as rounds go by).
+ * Ratings the table worked out for story cards the runtime has not rated yet (their tier and what they do), kept
+ * on this device so a slow phone works each one out once, not on every visit (the runtime's own rating replaces
+ * them as rounds go by). The older tiers-only record is dropped.
  */
-const tiersKey = (slot: string) => `aga:plotVector:tiers:${slot}`;
-function readTierCache(slot: string): Map<string, CardTier> {
+const ratingsKey = (slot: string) => `aga:plotVector:ratings:${slot}`;
+/** The tiers-only record an earlier build kept, dropped once per slot. */
+const droppedTierCache = new Set<string>();
+function dropTierCache(slot: string): void {
+  if (droppedTierCache.has(slot)) return;
+  droppedTierCache.add(slot);
+  try { localStorage.removeItem(`aga:plotVector:tiers:${slot}`); } catch { /* storage unavailable */ }
+}
+function readRatingCache(slot: string): Map<string, CardRating> {
   try {
-    const data = JSON.parse(localStorage.getItem(tiersKey(slot)) ?? 'null') as { v?: unknown; tiers?: Record<string, CardTier> } | null;
-    return data?.v === RATING_VERSION && data.tiers ? new Map(Object.entries(data.tiers)) : new Map();
+    const data = JSON.parse(localStorage.getItem(ratingsKey(slot)) ?? 'null') as { v?: unknown; ratings?: unknown } | null;
+    if (data?.v !== RATING_VERSION || !data.ratings || typeof data.ratings !== 'object') return new Map();
+    return new Map(Object.entries(data.ratings as Record<string, unknown>).flatMap(([id, raw]) => {
+      const rating = readRating(raw);
+      return rating ? [[id, rating] as const] : [];
+    }));
   } catch { return new Map(); }
 }
-function writeTierCache(slot: string, tiers: ReadonlyMap<string, CardTier>): void {
-  try { localStorage.setItem(tiersKey(slot), JSON.stringify({ v: RATING_VERSION, tiers: Object.fromEntries(tiers) })); } catch { /* storage unavailable */ }
+function writeRatingCache(slot: string, ratings: ReadonlyMap<string, CardRating>): void {
+  try { localStorage.setItem(ratingsKey(slot), JSON.stringify({ v: RATING_VERSION, ratings: Object.fromEntries(ratings) })); } catch { /* storage unavailable */ }
 }
 const slotOf = (next: BoardView) => next.prepared.id.split('/').slice(0, 2).join('/');
 
@@ -115,8 +128,8 @@ const walk = useTripWalk();
 /** With reduced motion the table simply appears and goes: no sliding classes at all. */
 const motion = !prefersReducedMotion();
 
-/** Tiers the table worked out for story cards the runtime has not rated yet (display only). */
-const provisional = shallowRef<ReadonlyMap<string, CardTier>>(new Map());
+/** Ratings the table worked out for story cards the runtime has not rated yet (display only). */
+const provisional = shallowRef<ReadonlyMap<string, CardRating>>(new Map());
 // Card faces keep their identity while nothing on them changed, so a move re-renders only the cards it touched.
 let faces = new Map<string, { key: string; card: TableCard }>();
 function keepFaces(next: TableModel): TableModel {
@@ -149,7 +162,7 @@ const badgeCells = computed(() => {
 
 onUnmounted(subscribePlotVectorControl(() => {
   enabled.value = readPlotVectorControl().enabled;
-  if (!enabled.value) close();
+  if (!enabled.value) { close(); opening.value = null; badgeLit.value = null; }
 }));
 
 async function load(opts: { seen?: boolean } = { seen: true }): Promise<void> {
@@ -162,7 +175,10 @@ async function load(opts: { seen?: boolean } = { seen: true }): Promise<void> {
     layout.value = cloneDeep(next.prepared.layout);
     shape.value = readBoardShape(next.state.shape);
     note.value = next.cleared ? 'cleared' : null;
-    provisional.value = readTierCache(slotOf(next));
+    dropTierCache(slotOf(next));
+    // Only cards still waiting for the runtime's rating keep theirs; the next write leaves the rest out.
+    const waiting = new Set(unratedStoryCards(next));
+    provisional.value = new Map([...readRatingCache(slotOf(next))].filter(([id]) => waiting.has(id)));
     // Only a table the player looks at marks its cards as seen.
     const arrivals = opts.seen ? markSeen(next) : null;
     if (arrivals) void celebrate(arrivals);
@@ -184,10 +200,10 @@ function rateLater(next: BoardView, startMs: number): void {
   const step = () => {
     const id = ids.shift();
     if (!id || run !== rateRun || view.value !== next) return;
-    const tier = rateStoryCard(next, id);
-    if (tier) {
-      provisional.value = new Map([...provisional.value, [id, tier]]);
-      writeTierCache(slotOf(next), provisional.value);
+    const rating = rateStoryCard(next, id);
+    if (rating) {
+      provisional.value = new Map([...provisional.value, [id, rating]]);
+      writeRatingCache(slotOf(next), provisional.value);
     }
     effectLater(step, 60);
   };
@@ -230,7 +246,7 @@ function markSeen(next: BoardView): Arrivals {
   }
   for (const [id, was] of Object.entries(before)) {
     if (record[id] || was.kind !== 'supply' || !was.name) continue;
-    arrivals.departed.push({ id, kind: 'supply', name: was.name, ...(was.line ? { line: was.line } : {}), ...(was.tier ? { tier: was.tier } : {}), resting: false });
+    arrivals.departed.push({ id, kind: 'supply', name: was.name, ...(was.line ? { line: was.line } : {}), ...(was.tier ? { tier: was.tier } : {}), effects: [], resting: false });
   }
   fresh.value = new Set(arrivals.fresh);
   return arrivals;
@@ -357,6 +373,9 @@ async function openTable(event?: MouseEvent): Promise<void> {
   if (!access || !enabled.value) return;
   returnFocus = event && event.detail === 0 && event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
   measureFloat();
+  // Opening the table puts a playing round opening away (it would otherwise come back when the table closes).
+  opening.value = null;
+  badgeLit.value = null;
   open.value = true;
   pointerStill = true;
   newCards.value = 0;
@@ -553,7 +572,7 @@ function retryPersist(): void {
 }
 // The story panel is kept alive while another page shows (browser Back, a panel opened from elsewhere): the table,
 // which lives on the page body, must not stay floating over that page. Leaving closes it, and closing writes.
-onDeactivated(() => { if (open.value) close(); else void persistSoon(); });
+onDeactivated(() => { panelActive = false; opening.value = null; badgeLit.value = null; if (open.value) close(); else void persistSoon(); });
 // A phone switching apps, or the tab going away: write what is kept while there is still time.
 function onPageHidden(): void { if (document.visibilityState === 'hidden') void persistSoon(); }
 document.addEventListener('visibilitychange', onPageHidden);
@@ -636,11 +655,18 @@ function showDetail(card: string, el: HTMLElement): void {
   retryNote.value = null;
   detail.value = { card, anchor: el.getBoundingClientRect() };
 }
+const canHover = () => typeof window.matchMedia === 'function' && window.matchMedia('(hover: hover)').matches;
 function cardEnter(card: string, el: HTMLElement): void {
   clearTimeout(hoverTimer);
   if (drag.drag.value || card === quietCard) return;
   if (pointerStill && document.activeElement !== el) return;
-  hoverTimer = setTimeout(() => { if (!drag.drag.value) showDetail(card, el); }, 800);
+  hoverTimer = setTimeout(() => {
+    if (drag.drag.value) return;
+    // Over the card's marks their own hint speaks first; the details wait until the pointer leaves them. (A touch
+    // screen keeps :hover after a tap and shows no hint, so there the details come as usual.)
+    if (canHover() && el.querySelector('.vcard__fx:hover')) { cardEnter(card, el); return; }
+    showDetail(card, el);
+  }, 800);
 }
 function cardLeave(card?: string): void {
   clearTimeout(hoverTimer);
@@ -649,7 +675,13 @@ function cardLeave(card?: string): void {
 }
 const detailCard = computed(() => (detail.value && shown.value ? shown.value.cards[detail.value.card] : undefined));
 const detailForming = computed(() => (detail.value && shown.value ? shown.value.forming.find(f => f.id === detail.value!.card) : undefined));
-const detailReceipt = computed(() => (detail.value && prepared.value && detailCard.value ? cardTripReceipt(prepared.value.result.trace, detail.value.card) : null));
+/** What the card brought this trip — only for a card that took part (on the board, or weather at departure). */
+const detailReceipt = computed(() => {
+  const id = detail.value?.card, model = shown.value;
+  if (!id || !prepared.value || !detailCard.value || !model) return null;
+  const onTrip = model.cells.some(c => c.card === id) || model.weather.includes(id);
+  return onTrip ? cardTripReceipt(prepared.value.result.trace, id) : null;
+});
 onBeforeUnmount(() => clearTimeout(hoverTimer));
 
 // ── The player's retry for an entry whose ability is still forming (4A) ──
@@ -682,20 +714,50 @@ function replayLast(): void {
     if (prepared.value) walk.settle(tripWalk(prepared.value.result));
   });
 }
-// After a round, the badge walks the trip once (animation A).
-const lastId = computed(() => storedState.value?.last?.id);
-watch(lastId, (id, before) => {
-  if (!id || !before || id === before || !prefs.animate || open.value) return;
-  const last = storedState.value?.last;
-  if (!last) return;
-  const steps = tripWalk(last.result).steps.map(s => s.cell);
-  let i = 0;
-  const tick = () => {
-    badgeLit.value = i < steps.length ? steps[i++] : null;
-    if (badgeLit.value) setTimeout(tick, 150);
+// ── The round's opening (PO 2026-10-01 C): when a round starts, its trip plays in a ribbon above the input and the
+// badge walks the same cells at the same moments (PO A — this replaces the badge's walk after the round). ──
+/** The opening playing now; `seq` tells two openings of the same round apart (a retried round has the same id). */
+const opening = shallowRef<{ seq: number; data: RoundOpening } | null>(null);
+let openingSeq = 0;
+/** The story panel is kept alive while another page shows: a round starting then plays no opening over that page. */
+let panelActive = true;
+onActivated(() => { panelActive = true; });
+const openingPlace = ref({ left: 0, width: 0, bottom: 0, badgeX: 0 });
+function measureOpening(): void {
+  measureFloat();
+  const row = composer?.row.value?.getBoundingClientRect();
+  const badge: unknown = badgeRef.value?.$el;
+  const badgeBox = badge instanceof Element ? badge.getBoundingClientRect() : null;
+  const gap = window.matchMedia('(max-width: 767px)').matches ? PHONE_GAP : GAP;
+  // Always above the input row, also on a small phone where the table itself covers it.
+  openingPlace.value = {
+    left: float.left, width: float.width,
+    bottom: row ? window.innerHeight - (row.top - gap) : float.bottom,
+    badgeX: badgeBox ? badgeBox.left + badgeBox.width / 2 : float.left + float.width * 0.9,
   };
-  setTimeout(tick, 400);
+}
+onUnmounted(eventBus.on<RoundOpening>('plotVector:round-started', next => {
+  // The table open over the input already shows the trip; a switched-off board shows nothing.
+  if (!next || !enabled.value || open.value || !access || !panelActive) return;
+  measureOpening();
+  opening.value = { seq: ++openingSeq, data: next };
+}));
+function openingDone(): void {
+  opening.value = null;
+  badgeLit.value = null;
+}
+// While it plays it stays above the input row, which may change size (the draft clears after sending).
+let openingWatch: ResizeObserver | undefined;
+watch(opening, value => {
+  openingWatch?.disconnect();
+  openingWatch = undefined;
+  window.removeEventListener('resize', measureOpening);
+  if (!value) return;
+  window.addEventListener('resize', measureOpening);
+  const row = composer?.row.value;
+  if (row && typeof ResizeObserver === 'function') { openingWatch = new ResizeObserver(() => measureOpening()); openingWatch.observe(row); }
 });
+onBeforeUnmount(() => { openingWatch?.disconnect(); window.removeEventListener('resize', measureOpening); });
 
 // ── Closing: the handle (tap or pull down), Esc, or a press on the dimmed story ──
 const backdrop = useBackdropClose(close);
@@ -851,6 +913,7 @@ const ghostStyle = computed(() => {
             :over="drag.drag.value?.over ?? null"
             :fresh="fresh"
             :lifting="drag.drag.value?.card ?? null"
+            :quiet="detail?.card ?? null"
             @cell-tap="tapCell"
             @cell-key="keyCell"
             @card-down="(e, card, cell) => drag.start(e, card, cell)"
@@ -883,6 +946,7 @@ const ghostStyle = computed(() => {
               :selected="selected === id"
               :fresh="fresh.has(id)"
               :lifted="drag.drag.value?.card === id"
+              :quiet-marks="detail?.card === id"
               :data-card="id"
               role="button"
               tabindex="0"
@@ -940,6 +1004,15 @@ const ghostStyle = computed(() => {
       </section>
     </Transition>
     </div>
+    <VectorOpening
+      v-if="opening && !open && enabled"
+      :key="opening.seq"
+      :opening="opening.data"
+      :place="openingPlace"
+      :walk="prefs.animate"
+      @step="badgeLit = $event"
+      @done="openingDone"
+    />
     <VectorCardDetail
       v-if="open && detail && (detailCard || detailForming)"
       :key="detail.card"
@@ -1098,11 +1171,15 @@ const ghostStyle = computed(() => {
 .vtable__retry { margin-left: 8px; padding: 2px 10px; border: 0; border-radius: 999px; background: color-mix(in oklch, var(--color-sage-400) 16%, transparent); color: var(--color-sage-300); font: inherit; cursor: pointer; }
 .vtable__hand-wrap { display: grid; min-width: 0; }
 .vtable__hand-label { padding: 6px 2px; font-size: 11px; letter-spacing: 0.1em; color: var(--color-text-muted); }
+/* A strip that scrolls sideways clips up and down as well, which cut the glow of rare cards in the hand: the
+   strip keeps room for that glow inside itself and gives it back with negative margins (PO 2026-10-01). */
 .vtable__hand {
   display: flex;
   gap: 12px;
-  min-height: 118px;
-  padding: 8px 2px 10px;
+  min-height: 146px;
+  padding: 22px 14px 24px;
+  margin: -14px -12px;
+  scroll-padding-inline: 14px;
   overflow-x: auto;
   scroll-snap-type: x proximity;
   border-radius: 12px;
@@ -1110,7 +1187,7 @@ const ghostStyle = computed(() => {
   scrollbar-width: thin;
   scrollbar-color: oklch(0.3 0.006 95) transparent;
 }
-.vtable__hand--over { background: color-mix(in oklch, var(--color-sage-400) 7%, transparent); }
+.vtable__hand--over { background: color-mix(in oklch, var(--color-sage-400) 7%, transparent) content-box; }
 .vtable__card { flex: none; width: 132px; height: 100px; scroll-snap-align: start; cursor: grab; touch-action: pan-x; }
 .vtable__card--leaving { pointer-events: none; }
 .vtable__dim { position: absolute; inset: 0; z-index: 4; border-radius: inherit; background: rgba(0, 0, 0, 0.45); opacity: 0; pointer-events: none; }

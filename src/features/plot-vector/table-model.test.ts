@@ -11,7 +11,7 @@ import { abilityBacklog } from './ability-backlog';
 import type { BoardView } from './board-access';
 import type { NativeInput } from './native-input';
 import { arrange, rateStoryCard, sweep, tableModel, tripWalk, unratedStoryCards } from './table-model';
-import { tierOf } from './rating';
+import { rateCard, tierOf } from './rating';
 
 const SUPPLY = parseSupplyRules(vectorRules)!;
 const NATIVE: NativeInput = { ruleId: 't', payload: { 'S+': 2, 'S-': 0, Y: 1, J: 1 }, visitBudget: 10, contributions: [] };
@@ -56,6 +56,27 @@ describe('the table', () => {
     expect(model.cards['effect:name:发烧'].tier).toBeUndefined();
     expect(model.cards['environment:name:细雨'].tier).toBeUndefined();
   });
+  it('every card says what it does, from the engine: story cards by their rating, supply cards by the pool rating', () => {
+    const view = viewOf(base);
+    const model = tableModel(view, view.prepared, view.prepared.layout, 'line');
+    const marks = (id: string) => model.cards[id].effects.map(e => `${e.mark}${e.strength}`);
+    expect(marks('item:tea')).toEqual(['up1']);
+    // A status leans the other way; an environment acts at departure and is described all the same.
+    expect(marks('effect:name:发烧')).toEqual(['down1']);
+    // It acts once a trip, at departure, so its +2 is about what a basic card adds over a whole trip.
+    expect(marks('environment:name:细雨')).toEqual(['chance1']);
+    expect(marks('basic:talk')).toEqual(['social1']);
+    expect(model.cards['item:tea'].growth).toBeUndefined();
+  });
+  it('a growing card shows how it grows and where it stands', () => {
+    const growing = bindCard(tasksAfterSave({ id: 'g', success: true, before: [], after: [entries[0]] })[0],
+      { for: '热茶', type: 'item', summary: '越用越暖。', onPass: 'return { push: 1 };', growth: { on: 'trigger', every: 2, max: 4, add: { push: 1 } } });
+    const state: VectorState = { ...base, cards: [growing, ...cards.slice(1)], growth: { 'item:tea': { level: 1, progress: 1, pendingBursts: 0 } } };
+    const view = viewOf(state);
+    expect(tableModel(view, view.prepared, view.prepared.layout, 'line').cards['item:tea'].growth).toMatchObject({
+      on: 'trigger', every: 2, max: 4, level: 1, progress: 1, toNext: 1, add: [{ kind: 'amount', channel: 'push', value: 1 }], readsLevel: false,
+    });
+  });
   it('a card placed leaves the hand; a recharging supply card with no use left rests at the end, not placeable', () => {
     const drawn = { hand: [...initialSupply(SUPPLY).hand, { id: 'supply:habit#1', cardId: 'supply:habit', recharge: 2 }], drawn: 1 };
     const state: VectorState = { ...base, supply: drawn, session: { ...base.session, cardStates: { 'supply:habit#1': { stock: 0 } } } };
@@ -67,18 +88,31 @@ describe('the table', () => {
     expect(model.cards['supply:habit#1']).toMatchObject({ resting: true, uses: { left: 0 }, charge: { progress: 2, every: 4, on: 'trigger' } });
   });
   it('a story card saved before six tiers shows the tier the runtime will record, worked out by the table', () => {
-    // Saved with an old rating: no tier on the table until it is rated again.
-    const old: VectorState = { ...base, cards: base.cards.map(c => ({ ...c, rating: c.rating && { ...c.rating, version: 1 } })) };
+    // Saved with a line-only rating: no tier and no marks on the table until it is rated again.
+    const old: VectorState = { ...base, cards: base.cards.map(c => ({ ...c, rating: c.rating && { ...c.rating, version: 1, profile: undefined } })) };
     const view = viewOf(old);
-    expect(unratedStoryCards(view)).toEqual(['item:tea']);
+    expect(unratedStoryCards(view)).toEqual(['item:tea', 'effect:name:发烧', 'environment:name:细雨']);
+    expect(tableModel(view, view.prepared, view.prepared.layout, 'line').cards['item:tea']).toMatchObject({ effects: [] });
     expect(tableModel(view, view.prepared, view.prepared.layout, 'line').cards['item:tea'].tier).toBeUndefined();
-    const tier = rateStoryCard(view, 'item:tea');
-    expect(tier).toBe(tierOf(cards.find(c => c.task.entry.id === 'item:tea')!.rating));
-    const model = tableModel(view, view.prepared, view.prepared.layout, 'line', new Map([['item:tea', tier!]]));
-    expect(model.cards['item:tea'].tier).toBe(tier);
-    // A current rating always wins over the table's own; statuses never get one.
+    const rating = rateStoryCard(view, 'item:tea')!;
+    expect(rating).toEqual(cards.find(c => c.task.entry.id === 'item:tea')!.rating);
+    const model = tableModel(view, view.prepared, view.prepared.layout, 'line', new Map([['item:tea', rating]]));
+    expect(model.cards['item:tea'].tier).toBe(tierOf(rating));
+    expect(model.cards['item:tea'].effects.map(e => e.mark)).toEqual(['up']);
+    // A current rating always wins over the table's own; statuses never get a tier.
     expect(unratedStoryCards(viewOf(base))).toEqual([]);
-    expect(tableModel(view, view.prepared, view.prepared.layout, 'line', new Map([['effect:name:发烧', 'mythic']])).cards['effect:name:发烧'].tier).toBeUndefined();
+    const strong = rateCard({ for: 'x', type: 'item', summary: 's', onPass: 'return { xChance: 2, chance: 3 };' });
+    const current = viewOf(base);
+    expect(tableModel(current, current.prepared, current.prepared.layout, 'line', new Map([['item:tea', strong]])).cards['item:tea'].effects.map(e => e.mark)).toEqual(['up']);
+    expect(tableModel(view, view.prepared, view.prepared.layout, 'line', new Map([['effect:name:发烧', strong]])).cards['effect:name:发烧'].tier).toBeUndefined();
+  });
+  it('a rating from the device cache is read only when it is a current one', async () => {
+    const { readRating } = await import('./rating');
+    const good = rateCard({ for: 'x', type: 'item', summary: 's', onPass: 'return { push: 1 };' });
+    expect(readRating(JSON.parse(JSON.stringify(good)))).toEqual(good);
+    expect(readRating({ ...good, version: 3 })).toBeUndefined();
+    expect(readRating({ ...good, profile: { ...good.profile, perTrip: { push: 'x' } } })).toBeUndefined();
+    expect(readRating('mythic')).toBeUndefined();
   });
 });
 

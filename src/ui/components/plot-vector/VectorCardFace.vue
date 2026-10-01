@@ -6,14 +6,19 @@
  * light along the top edge, and the rarer the card the richer it feels: fine and rare cards catch a sheen on
  * hover; from epic up the card tilts toward the pointer with a light that follows it; legendary cards carry a
  * slow gold-leaf sheen and give off motes; a mythic card has a light running round its edge and embers rising.
- * A card whose ability is still forming is shown faded and cannot be placed (4A).
+ * A card whose ability is still forming is shown faded and cannot be placed (4A). Beside the kind sit the marks of
+ * what the card does, measured by the engine (PO 2026-10-01): the same glyphs and colours as the tendency bars;
+ * hovering them names them.
  */
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { FormingCard, TableCard } from '@/features/plot-vector/table-model';
 import type { LocalizedLabel } from '@/engine/plot-vector/core/types';
+import Tooltip from '../shared/Tooltip.vue';
 import { motes, tierRank } from './table-effects';
 import { prefersReducedMotion } from './use-trip-walk';
+import { MARK_COLOR, MARK_GLYPH } from './effect-marks';
+import { useCardWords } from './card-words';
 
 const props = defineProps<{
   card?: TableCard;
@@ -27,6 +32,8 @@ const props = defineProps<{
   ghost?: boolean;
   /** The card being dragged, left behind as a faint outline. */
   lifted?: boolean;
+  /** Its details are showing: the marks' own hint keeps quiet so the two do not overlap. */
+  quietMarks?: boolean;
 }>();
 const { t, locale } = useI18n();
 const label = (value?: LocalizedLabel) => value ? (locale.value === 'en' ? value.en : value.zh) : '';
@@ -42,6 +49,9 @@ const dots = computed(() => {
   return Array.from({ length: uses.max }, (_, i) => i < uses.left);
 });
 const diamonds = computed(() => Math.min(3, props.card?.level?.value ?? 0));
+const fx = computed(() => props.card?.effects ?? []);
+const words = useCardWords(() => false);
+const fxTip = computed(() => (fx.value.length ? words.value.faceTip(fx.value) : ''));
 const charge = computed(() => {
   const c = props.card;
   return c?.resting && c.charge ? Math.min(1, c.charge.progress / c.charge.every) : null;
@@ -117,7 +127,15 @@ onBeforeUnmount(() => { clearInterval(moteTimer); cancelAnimationFrame(leanFrame
     </span>
     <i v-if="rank >= 5" class="vcard__run" aria-hidden="true"><i /></i>
     <i v-if="rank >= 1" class="vcard__edge" aria-hidden="true" />
-    <span class="vcard__kind">{{ t(`mainGame.vectorTable.kind.${kind}`) }}</span>
+    <span class="vcard__kind">
+      {{ t(`mainGame.vectorTable.kind.${kind}`) }}
+      <!-- Not a control: `interactive` only keeps the hint from adding a tab stop inside the card. -->
+      <Tooltip v-if="fx.length && !ghost" class="vcard__fx" :text="fxTip" interactive fixed :disabled="quietMarks || lifted" data-testid="vector-card-marks">
+        <span class="vcard__fx-in" aria-hidden="true">
+          <i v-for="(e, i) in fx" :key="i" :style="{ color: MARK_COLOR[e.mark] }">{{ e.less ? '−' : '' }}{{ MARK_GLYPH[e.mark] }}</i>
+        </span>
+      </Tooltip>
+    </span>
     <span class="vcard__marks" aria-hidden="true">
       <i v-for="(full, i) in dots" :key="`d${i}`" class="vcard__dot" :class="{ 'vcard__dot--spent': !full }" />
       <i v-if="charge !== null" class="vcard__charge" :style="{ '--p': `${Math.round(charge * 100)}%` }" />
@@ -165,7 +183,10 @@ onBeforeUnmount(() => { clearInterval(moteTimer); cancelAnimationFrame(leanFrame
 .vcard--uncommon:where(:not(.vcard--ghost, .vcard--resting, .vcard--lifted, .vcard--selected)):hover, .vcard--rare:where(:not(.vcard--ghost, .vcard--resting, .vcard--lifted, .vcard--selected)):hover { --lift: -4px; }
 .vcard__clip { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; z-index: 0; }
 .vcard__kind, .vcard__marks, .vcard__name, .vcard__line, .vcard__fresh { z-index: 2; }
-.vcard__kind { position: absolute; top: 6px; left: 10px; font-size: 10px; letter-spacing: 0.06em; color: var(--color-text-muted); }
+.vcard__kind { position: absolute; top: 6px; left: 10px; display: inline-flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: 0.06em; color: var(--color-text-muted); }
+.vcard__fx { cursor: default; }
+.vcard__fx-in { display: inline-flex; align-items: center; gap: 4px; }
+.vcard__fx-in i { font-style: normal; font-size: 11px; line-height: 1; letter-spacing: 0; }
 .vcard__marks { position: absolute; top: 7px; right: 9px; display: flex; align-items: center; gap: 3px; }
 .vcard__dot { width: 5px; height: 5px; border-radius: 50%; background: var(--color-sage-400); }
 .vcard__dot--spent { background: oklch(0.3 0.006 95); }

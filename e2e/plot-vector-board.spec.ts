@@ -80,11 +80,12 @@ test('the table keeps the player\'s arrangement across reload; moves are kept li
     // Exact numbers only behind the "?" (PO 2A).
     await expect(plotVector.nativeInput).toHaveCount(0);
     await plotVector.showExact();
-    await expect(plotVector.nativeInput).toContainText('出发：推力 2 · 阻力 0 · 人际 2 · 机会 2 · 走 11 格');
-    await expect(plotVector.nativeInput).toContainText('悟性 15 → 步数 +3');
+    // PO 2026-10-01: the starting force as four gauges with their numbers, the steps as ticks, the attributes a ledger.
+    expect((await plotVector.startGauges.allTextContents()).map(text => text.replace(/\s+/g, ''))).toEqual(['↑推力2', '↓阻力0', '◇人际2', '✦机会2', '步数11']);
+    await expect(plotVector.ledger).toContainText(/悟性\s*15\s*→\s*步数\s*\+3/);
     await page.getByTestId('vector-help-toggle').click();
     await plotVector.hoverDetail(plotVector.handCard('item:notebook'));
-    await expect(plotVector.detail).toContainText('等级 0 / 50');
+    await expect(plotVector.detail.getByTestId('vector-card-growth')).toContainText('0 / 50 级');
     await page.mouse.move(5, 5);
     // Tap the notebook, then cell 01: it is placed and kept without a save button.
     await plotVector.place('item:notebook', '01');
@@ -236,8 +237,9 @@ test('the table fits a narrow viewport and renders English',
     await plotVector.switchToEnglishAndResume();
     await plotVector.openBoard();
     await plotVector.showExact();
-    await expect(plotVector.nativeInput).toContainText('Start: push');
-    await expect(plotVector.nativeInput).toContainText('Insight');
+    await expect(plotVector.startGauges.first()).toContainText('push');
+    await expect(plotVector.ledger).toContainText('Insight');
+    await expect(page.getByTestId('vector-legend')).toContainText('Toward ease');
     await page.getByTestId('vector-help-toggle').click();
     await expect(plotVector.handCard('basic:push')).toContainText('Supply');
     if (testInfo.repeatEachIndex === 0) await page.screenshot({ path: 'e2e/screenshots/plot-vector-board.png' });
@@ -267,7 +269,7 @@ test('an accepted round: its impulse beside the round title, its growth in the c
     await plotVector.showExact();
     await page.getByTestId('vector-help-toggle').click();
     await plotVector.hoverDetail(plotVector.handCard('item:notebook'));
-    await expect(plotVector.detail).toContainText('等级 1 / 50');
+    await expect(plotVector.detail.getByTestId('vector-card-growth')).toContainText('1 / 50 级');
     await page.mouse.move(5, 5);
     await plotVector.replay.click();
     if (testInfo.repeatEachIndex === 0) await page.screenshot({ path: 'e2e/screenshots/plot-vector-progress.png' });
@@ -296,4 +298,120 @@ test('the store of a card is the engine balance after disk reload',
     await plotVector.openBoard();
     await expect(plotVector.cellCard('01').locator('.vcard__stored')).toBeVisible();
     expect(await stored()).toEqual(before);
+  });
+
+test('a card says what it does: marks on its face, the effect, how it grows, and the same marks on the bars and in the legend',
+  { tag: ['@plot-vector', '@story-pv-1001'] }, async ({ page, gameShell, plotVector }, testInfo) => {
+    // A touch screen has no hover, so the shared Tooltip never shows there (CLAUDE.md §8.1); the hints are desktop-only.
+    const hover = !testInfo.project.use.hasTouch;
+    const ids = await seedSave(page);
+    await addBoardFixture(page, ids);
+    await enterSeededGame(page);
+    await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
+    await plotVector.openBoard();
+    // PO 2026-10-01: the engine's marks beside the kind, by the direction of the bars.
+    await expect(plotVector.marks('basic:push')).toHaveText('↑');
+    await expect(plotVector.marks('basic:talk')).toHaveText('◇');
+    await expect(plotVector.marks('item:notebook')).toHaveText('✦');
+    const hub = plotVector.board.locator('.vtrack__hub');
+    for (const end of ['↓ 逆', '顺 ↑', '◇ 人际', '✦ 机会']) await expect(hub).toContainText(end);
+    // Hovering the marks names them, and the card's details wait while the pointer is on them.
+    await plotVector.marks('basic:push').hover();
+    if (hover) {
+      await expect(plotVector.tooltip('这张卡：↑ 往顺')).toBeVisible();
+      await page.waitForTimeout(1200);
+      await expect(plotVector.detail).toHaveCount(0);
+    }
+    await page.mouse.move(5, 5);
+    // The detail: the model's sentence, the measured mark with its strength, no growth for a card that does not grow.
+    await plotVector.hoverDetail(plotVector.handCard('basic:push').locator('.vcard__name'));
+    const effects = plotVector.detail.getByTestId('vector-card-effects');
+    await expect(effects).toContainText('效果');
+    await expect(effects.getByTestId('vector-tok')).toHaveText('↑往顺');
+    await expect(plotVector.detail.getByTestId('vector-card-growth')).toHaveCount(0);
+    await effects.getByTestId('vector-tok').hover();
+    if (hover) await expect(plotVector.tooltip('往顺：推力更多或阻力更少')).toContainText('亮一条');
+    await page.mouse.move(5, 5);
+    // A growing card: its level, the line to the next, and its rule in one sentence from the engine's glossary.
+    await plotVector.hoverDetail(plotVector.handCard('item:notebook').locator('.vcard__name'));
+    const growth = plotVector.detail.getByTestId('vector-card-growth');
+    await expect(growth).toContainText('0 级');
+    await expect(growth).toContainText('每过 1 回合升一级，最多 50 级。它自己的规则里也用到了等级，升级后效果会跟着变。');
+    await expect(plotVector.detail).toContainText('来历');
+    await growth.locator('.vdetail__prog').hover();
+    if (hover) await expect(plotVector.tooltip('再过 1 回合升到 1 级')).toBeVisible();
+    await page.mouse.move(5, 5);
+    // Exact numbers sit in the bubbles; what this trip brought is its own row; no pass counts anywhere.
+    await plotVector.showExact();
+    await expect(page.getByTestId('vector-legend').getByTestId('vector-tok')).toHaveText(['↑往顺', '↓往逆', '◇人际', '✦机会', '↻改路线', '▣存放']);
+    await page.getByTestId('vector-help-toggle').click();
+    await plotVector.hoverDetail(plotVector.handCard('basic:push').locator('.vcard__name'));
+    await expect(plotVector.detail.getByTestId('vector-card-effects').getByTestId('vector-tok')).toContainText(/推力 \+[\d.]+／次/);
+    await expect(plotVector.detail).toContainText('3/3');
+    // A card in the hand took no part in the trip: no trip row for it.
+    await expect(plotVector.detail.getByTestId('vector-card-trip')).toHaveCount(0);
+    await page.mouse.move(5, 5);
+    // On the board it did: what it brought this trip, in bubbles; no pass counts anywhere.
+    await plotVector.place('basic:push', '01');
+    await expect(plotVector.cellCard('01')).toContainText('顺势');
+    // The trip with it is worked out and kept (the handle lights) before its details are read.
+    await expect(plotVector.board.locator('.vtable__handle--saved')).toBeAttached();
+    await plotVector.hoverDetail(plotVector.cellCard('01').locator('.vcard__name'));
+    const trip = plotVector.detail.getByTestId('vector-card-trip');
+    await expect(trip).toContainText('这一趟带来');
+    await expect(trip.getByTestId('vector-tok').first()).toContainText(/推力\+[\d.]+/);
+    await expect(plotVector.detail).not.toContainText('触发');
+  });
+
+/** The round start as the adapter sends it: this save's trip worked out by the runtime, through the app's own bus. */
+async function startRound(page: Page, ids: SeedIds) {
+  await page.evaluate(async ({ profileId, slotId }) => {
+    const load = (p: string) => import(/* @vite-ignore */ p);
+    const own = performance.getEntriesByType('resource').map(e => e.name).find(name => name.includes('/src/engine/core/event-bus.ts'));
+    const { eventBus } = await load(own ?? '/src/engine/core/event-bus.ts');
+    const { idbAdapter } = await load('/src/engine/persistence/idb-adapter.ts');
+    const { StateManager } = await load('/src/engine/core/state-manager.ts');
+    const { DEFAULT_ENGINE_PATHS: P } = await load('/src/engine/pipeline/types.ts');
+    const { projectSavedElements } = await load('/src/features/plot-vector/saved-elements.ts');
+    const { readVectorState, prepareVector } = await load('/src/features/plot-vector/runtime.ts');
+    const { projectNativeInput, parseNativeRules } = await load('/src/features/plot-vector/native-input.ts');
+    const { roundOpening } = await load('/src/features/plot-vector/table-model.ts');
+    const state = new StateManager();
+    state.loadTree(await idbAdapter.get(`save_${profileId}_${slotId}`));
+    const component = { ...readVectorState(state.get(P.plotVector)), layout: { placements: { '01': 'item:notebook', '02': null, '03': null, '04': null, '05': null, '06': null }, tray: [] } };
+    const rules = parseNativeRules(await (await fetch('/packs/tianming/rules/plot-vector.json')).json());
+    const prepared = prepareVector(component, projectSavedElements(state.toSnapshot(), { includeEnvironment: true }).entries,
+      `${profileId}/${slotId}/9`, projectNativeInput(state.toSnapshot(), rules));
+    eventBus.emit('plotVector:round-started', roundOpening(component, prepared));
+  }, ids);
+}
+
+test('a round start plays its trip in a ribbon above the input, the badge walking with it; a press puts it away',
+  { tag: ['@plot-vector', '@story-pv-1001'] }, async ({ page, gameShell, plotVector }) => {
+    const ids = await seedSave(page);
+    await addBoardFixture(page, ids);
+    await enterSeededGame(page);
+    await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
+    // Reduced motion: only the result, in the bars' marks and colours; it floats above the input row.
+    await startRound(page, ids);
+    await expect(plotVector.opening).toHaveClass(/vopen--in/);
+    const result = page.getByTestId('vector-opening-result');
+    for (const end of ['↓ 逆', '顺 ↑', '◇ 人际', '✦ 机会']) await expect(result).toContainText(end);
+    const ribbon = await plotVector.opening.boundingBox(), input = await page.locator('textarea.message-input').boundingBox();
+    expect(ribbon!.y + ribbon!.height).toBeLessThanOrEqual(input!.y);
+    await plotVector.opening.click();
+    await expect(plotVector.opening).toHaveCount(0);
+    // With motion: the shuttle walks the miniature board and the badge lights the same cells; then it goes by itself.
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await startRound(page, ids);
+    await expect(plotVector.opening).toBeVisible();
+    await expect(plotVector.boardOpen.locator('.vbadge__cell--lit')).toHaveCount(1, { timeout: 3000 });
+    await expect(result).toBeVisible({ timeout: 5000 });
+    await expect(plotVector.opening).toHaveCount(0, { timeout: 8000 });
+    await expect(plotVector.boardOpen.locator('.vbadge__cell--lit')).toHaveCount(0);
+    // While the table is open over the input, the round start shows no ribbon.
+    await plotVector.openBoard();
+    await startRound(page, ids);
+    await page.waitForTimeout(300);
+    await expect(plotVector.opening).toHaveCount(0);
   });

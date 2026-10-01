@@ -12,6 +12,7 @@ import VectorCardFace from './VectorCardFace.vue';
 import { ringGeometry, RING_ORDER } from './ring-geometry';
 import { prefersReducedMotion, type WalkFloat } from './use-trip-walk';
 import { sweepAcross } from './table-effects';
+import { MARK_COLOR, MARK_GLYPH, SIGN_MARK } from './effect-marks';
 import type { PassSign, TableCard, TableCell, TripWalk } from '@/features/plot-vector/table-model';
 import type { BoardShape } from '@/features/plot-vector/vector-board';
 import type { LocalizedLabel } from '@/engine/plot-vector/core/types';
@@ -33,6 +34,8 @@ const props = defineProps<{
   fresh: ReadonlySet<string>;
   /** The card being dragged out of its cell, left behind as a faint outline. */
   lifting?: string | null;
+  /** The card whose details are showing: its marks keep their own hint quiet. */
+  quiet?: string | null;
 }>();
 const emit = defineEmits<{
   (e: 'cell-tap', cell: string): void;
@@ -76,7 +79,9 @@ function cellLabel(cell: TableCell): string {
   const card = cell.card ? props.cards[cell.card] : undefined;
   return card ? t('mainGame.vectorTable.cell.placed', { cell: cell.id, name: label(card.name) }) : t('mainGame.vectorTable.cell.empty', { cell: cell.id });
 }
-const SIGNS: Record<PassSign, string> = { push: '↑', drag: '↓', social: '◇', chance: '✦', route: '↻', store: '▣' };
+/** A pass's sign floats up in the same glyph and colour as the card marks and the bars (PO 2026-10-01). */
+const signGlyph = (sign: PassSign) => MARK_GLYPH[SIGN_MARK[sign]];
+const signColor = (sign: PassSign) => MARK_COLOR[SIGN_MARK[sign]];
 
 // ── The shuttle ─────────────────────────────────────────────────────
 const shuttle = ref<{ x: number; y: number } | null>(null);
@@ -222,7 +227,7 @@ const hubStyle = computed(() => (ring.value ? { top: `${ring.value.hubTop}px` } 
 const bar = (value: number, bipolar: boolean) => {
   const v = Math.max(bipolar ? -1 : 0, Math.min(1, value));
   if (!bipolar) return { width: `${v * 100}%` };
-  return { left: v >= 0 ? '50%' : `${50 + v * 50}%`, width: `${Math.abs(v) * 50}%`, background: v >= 0 ? 'var(--color-sage-400)' : 'var(--color-danger)' };
+  return { left: v >= 0 ? '50%' : `${50 + v * 50}%`, width: `${Math.abs(v) * 50}%`, background: v >= 0 ? MARK_COLOR.up : MARK_COLOR.down };
 };
 </script>
 
@@ -279,6 +284,7 @@ const bar = (value: number, bipolar: boolean) => {
         :fresh="fresh.has(cell.card)"
         :selected="selected === cell.card"
         :lifted="lifting === cell.card"
+        :quiet-marks="quiet === cell.card"
         :data-card="cell.card"
         class="vcell__card"
         :class="{ 'vcell__card--auto': cell.role === 'status' }"
@@ -286,22 +292,26 @@ const bar = (value: number, bipolar: boolean) => {
         @pointerenter="emit('card-enter', cell.card, $event.currentTarget as HTMLElement)"
         @pointerleave="emit('card-leave', cell.card)"
       />
-      <span v-for="f in floats.filter(x => x.cell === cell.id)" :key="f.id" class="vcell__float" aria-hidden="true">{{ SIGNS[f.sign] }}</span>
+      <span v-for="f in floats.filter(x => x.cell === cell.id)" :key="f.id" class="vcell__float" :style="{ color: signColor(f.sign) }" aria-hidden="true">{{ signGlyph(f.sign) }}</span>
     </div>
     <span v-for="(p, i) in trail" :key="`t${i}`" class="vtrack__trail" :style="{ left: `${p.x}px`, top: `${p.y}px`, opacity: 0.34 - i * 0.04, transform: `scale(${1 - i * 0.09})` }" aria-hidden="true" />
     <span v-if="shuttle" class="vtrack__shuttle" :style="{ left: `${shuttle.x}px`, top: `${shuttle.y}px` }" aria-hidden="true" />
     <div class="vtrack__hub" :style="hubStyle" role="img" :aria-label="t('mainGame.vectorTable.tendency.label')">
+      <!-- The same marks and colours as the cards: ↑ toward 顺, ↓ toward 逆, ◇ relations, ✦ chances. -->
       <div class="vtrack__tend">
         <div class="vtrack__meter vtrack__meter--bipolar"><i :style="tendency ? bar(tendency.s, true) : { width: 0 }" /></div>
-        <span>{{ t('mainGame.vectorTable.tendency.s') }}</span>
+        <span class="vtrack__ends">
+          <span :style="{ color: MARK_COLOR.down }">{{ MARK_GLYPH.down }} {{ t('mainGame.vectorTable.legend.strain') }}</span>
+          <span :style="{ color: MARK_COLOR.up }">{{ t('mainGame.vectorTable.legend.ease') }} {{ MARK_GLYPH.up }}</span>
+        </span>
       </div>
-      <div class="vtrack__tend">
+      <div class="vtrack__tend" :style="{ '--fill': MARK_COLOR.social }">
         <div class="vtrack__meter"><i :style="tendency ? bar(tendency.y, false) : { width: 0 }" /></div>
-        <span>{{ t('mainGame.vectorTable.tendency.y') }}</span>
+        <span :style="{ color: MARK_COLOR.social }">{{ MARK_GLYPH.social }} {{ t('mainGame.vectorTable.tendency.y') }}</span>
       </div>
-      <div class="vtrack__tend">
+      <div class="vtrack__tend" :style="{ '--fill': MARK_COLOR.chance }">
         <div class="vtrack__meter"><i :style="tendency ? bar(tendency.j, false) : { width: 0 }" /></div>
-        <span>{{ t('mainGame.vectorTable.tendency.j') }}</span>
+        <span :style="{ color: MARK_COLOR.chance }">{{ MARK_GLYPH.chance }} {{ t('mainGame.vectorTable.tendency.j') }}</span>
       </div>
     </div>
   </div>
@@ -433,9 +443,10 @@ const bar = (value: number, bipolar: boolean) => {
   bottom: 0;
   left: 0;
   border-radius: 3px;
-  background: var(--color-sage-400);
+  background: var(--fill, var(--ch-push));
   transition: left var(--duration-slow) var(--ease-out), width var(--duration-slow) var(--ease-out), background var(--duration-slow) var(--ease-out);
 }
+.vtrack__ends { display: flex; justify-content: space-between; width: 100%; gap: 8px; }
 .vtrack__meter--bipolar::after {
   content: '';
   position: absolute;

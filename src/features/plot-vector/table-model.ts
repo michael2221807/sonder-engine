@@ -7,8 +7,12 @@ import { SHUTTLE_ACCOUNT } from '../../engine/plot-vector/core/runner';
 import { availableUses, stateOf } from '../../engine/plot-vector/core/card-state';
 import type { CardDef, Layout, LocalizedLabel, RunDone } from '../../engine/plot-vector/core/types';
 import type { BoardView } from './board-access';
-import type { PreparedVector } from './runtime';
-import { rateCard, ratingPlaceOf, tierOf, type CardTier } from './rating';
+import type { PreparedVector, VectorState } from './runtime';
+import { impulseOf, type RoundImpulse } from './round-impulse';
+import type { SupplyCardInfo } from './supply';
+import { SIX_CELL_RING_ID } from './default-board';
+import { rateCard, ratingIsCurrent, ratingPlaceOf, tierOf, type CardRating, type CardTier } from './rating';
+import { effectMarks, growthView, type CardEffect, type GrowthView } from './card-describe';
 import type { BoardShape } from './vector-board';
 
 export type TableCardKind = 'item' | 'talent' | 'status' | 'environment' | 'supply';
@@ -25,6 +29,10 @@ export interface TableCard {
    * 2026-09-30, 2A). Statuses and environments show none.
    */
   tier?: CardTier;
+  /** What the card does, measured by the engine (PO 2026-10-01); empty until it is rated. */
+  effects: CardEffect[];
+  /** How a growing card grows and where it stands. */
+  growth?: GrowthView;
   uses?: { left: number; max: number };
   level?: { value: number; max?: number };
   stored?: number;
@@ -56,39 +64,48 @@ const roleOf = (id: string, kind: string): CellRole =>
   id === STATUS_CELL ? 'status' : kind === 'resonance' ? 'resonance' : kind === 'converter' ? 'converter' : 'effect';
 
 /**
- * Story items and talents saved with no current rating (bound before six tiers, or before ratings): the runtime
- * rates them a few per round, so until then the table works their tier out itself, one card at a time
+ * Story cards saved with no current rating (bound before the effect profile, six tiers or ratings): the runtime
+ * rates them a few per round, so until then the table works the rating out itself, one card at a time
  * (`rateStoryCard`). The rating is deterministic, so the table shows what the runtime will later record.
  */
 export function unratedStoryCards(view: BoardView): string[] {
-  return view.state.cards.filter(c => (c.spec.type === 'item' || c.spec.type === 'talent') && !tierOf(c.rating)).map(c => c.task.entry.id);
+  return view.state.cards.filter(c => !ratingIsCurrent(c.rating)).map(c => c.task.entry.id);
 }
-/** One story card's tier, for display (about 40 ms: both board shapes). */
-export function rateStoryCard(view: BoardView, id: string): CardTier | undefined {
+/** One story card's rating, for display (about 40 ms: both board shapes). */
+export function rateStoryCard(view: BoardView, id: string): CardRating | undefined {
   const card = view.state.cards.find(c => c.task.entry.id === id);
-  return card ? tierOf(rateCard(card.spec, ratingPlaceOf(card.spec.type))) : undefined;
+  return card ? rateCard(card.spec, ratingPlaceOf(card.spec.type)) : undefined;
 }
 
 /**
- * Every card the prepared board knows, with its face and marks. `tiers` holds the tiers the table worked out for
- * story cards not rated yet (display only).
+ * Every card the prepared board knows, with its face and marks. `worked` holds the ratings the table worked out
+ * for story cards not rated yet (display only); a current saved rating wins over it.
  */
-export function tableCards(view: BoardView, prepared: PreparedVector, tiers?: ReadonlyMap<string, CardTier>): Record<string, TableCard> {
+export function tableCards(view: BoardView, prepared: PreparedVector, worked?: ReadonlyMap<string, CardRating>): Record<string, TableCard> {
   const states = view.state.session.cardStates;
   const progress = new Map((prepared.progress ?? []).map(p => [p.cardId, p.rows]));
-  const ratings = new Map(view.state.cards.map(c => [c.task.entry.id, c.rating]));
+  const story = new Map(view.state.cards.map(c => [c.task.entry.id, c]));
+  const ratingOf = (id: string): CardRating | undefined => {
+    const saved = story.get(id)?.rating;
+    return ratingIsCurrent(saved) ? saved : worked?.get(id) ?? saved;
+  };
   return Object.fromEntries(prepared.board.cards.map(def => {
     const rows = progress.get(def.id) ?? [];
     const level = rows.find(r => r.key === 'level'), stored = rows.find(r => r.key === 'stored');
     const supply = view.supply[def.id];
     const left = def.usage ? availableUses(def, stateOf(def, states)) : undefined;
     const kind = kindOf(def);
-    const tier = supply?.tier ?? (kind === 'item' || kind === 'talent' ? tierOf(ratings.get(def.id)) ?? tiers?.get(def.id) : undefined);
+    const rating = supply ? undefined : ratingOf(def.id);
+    const tier = supply?.tier ?? (kind === 'item' || kind === 'talent' ? tierOf(rating) : undefined);
+    const bound = story.get(def.id);
+    const growth = bound ? growthView(bound.spec, view.state.growth[def.id]) : undefined;
     const card: TableCard = {
       id: def.id, kind, name: def.label,
       ...(def.summary ? { line: def.summary } : {}),
       ...(def.originalText ? { story: def.originalText } : {}),
       ...(tier ? { tier } : {}),
+      effects: effectMarks(supply ? supply.profile : rating?.profile),
+      ...(growth ? { growth } : {}),
       ...(def.usage && left !== undefined ? { uses: { left, max: def.usage.maxStock } } : {}),
       ...(level ? { level: { value: level.value, ...(level.max !== undefined ? { max: level.max } : {}) } } : {}),
       ...(stored && stored.value > 0 ? { stored: stored.value } : {}),
@@ -103,8 +120,8 @@ export function tableCards(view: BoardView, prepared: PreparedVector, tiers?: Re
  * The table for the player's current arrangement. `layout` is what the player sees now (their last move),
  * `prepared` the most recent computed trip; a card the player may place is one the prepared trip offered.
  */
-export function tableModel(view: BoardView, prepared: PreparedVector, layout: Layout, shape: BoardShape, tiers?: ReadonlyMap<string, CardTier>): TableModel {
-  const cards = tableCards(view, prepared, tiers);
+export function tableModel(view: BoardView, prepared: PreparedVector, layout: Layout, shape: BoardShape, worked?: ReadonlyMap<string, CardRating>): TableModel {
+  const cards = tableCards(view, prepared, worked);
   const offered = new Set([...prepared.layout.tray, ...Object.entries(prepared.layout.placements)
     .filter(([cell, id]) => cell !== STATUS_CELL && id).map(([, id]) => id as string)]);
   const cells: TableCell[] = prepared.board.cells.map(cell => {
@@ -192,4 +209,40 @@ export function tripWalk(result: RunDone): TripWalk {
   }
   const d = result.vectorPacket.dimensions;
   return { departure, steps, tendency: { s: d.S ?? 0, y: d.Y ?? 0, j: d.J ?? 0 } };
+}
+
+/**
+ * The round's opening (PO 2026-10-01 C; demo docs/demo/plot-vector-effect-and-start.html): when a round starts, the
+ * trip the engine just worked out is played in miniature above the input — the cells with their cards, the steps
+ * with the signs of the cards that acted — and then where it leaned and the round's push in two words. Pure: the
+ * adapter sends it when it prepares the round; the UI supplies the words.
+ */
+export interface OpeningCell { id: string; status: boolean; card?: { name: LocalizedLabel; tier?: CardTier } }
+export interface RoundOpening {
+  /** The trip's id (slot and round). */
+  id: string;
+  shape: BoardShape;
+  cells: OpeningCell[];
+  walk: TripWalk;
+  /** The push the story is given, when it is given one (the same rule as the chip beside the round title). */
+  impulse: RoundImpulse | null;
+}
+export function roundOpening(state: VectorState, prepared: PreparedVector, supply: Readonly<Record<string, SupplyCardInfo>> = {}): RoundOpening {
+  const defs = new Map(prepared.board.cards.map(c => [c.id, c]));
+  const ratings = new Map(state.cards.map(c => [c.task.entry.id, c.rating]));
+  const cells: OpeningCell[] = prepared.board.cells.map(cell => {
+    const id = prepared.layout.placements[cell.id];
+    const def = id ? defs.get(id) : undefined;
+    if (!def || !id) return { id: cell.id, status: cell.id === STATUS_CELL };
+    const kind = kindOf(def);
+    const tier = supply[id]?.tier ?? (kind === 'item' || kind === 'talent' ? tierOf(ratings.get(id)) : undefined);
+    return { id: cell.id, status: cell.id === STATUS_CELL, card: { name: def.label, ...(tier ? { tier } : {}) } };
+  });
+  return {
+    id: prepared.id,
+    shape: prepared.board.id === SIX_CELL_RING_ID ? 'ring' : 'line',
+    cells,
+    walk: tripWalk(prepared.result),
+    impulse: prepared.prompt ? impulseOf(prepared.result.vectorPacket) : null,
+  };
 }
