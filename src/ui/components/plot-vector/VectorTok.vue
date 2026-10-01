@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// App doc: docs/user-guide/pages/game-main.md · Plot-vector card table
+// App doc: docs/user-guide/pages/game-main.md §3.18.5 · Plot-vector card table
 /**
  * A keyword in a small bubble (PO 2026-10-01): its mark and colour, its name, up to three strength strokes and,
  * with exact numbers, its number. Hovering 0.8 s explains it in one sentence (the shared Tooltip).

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// App doc: docs/user-guide/pages/game-main.md · Plot-vector card table
+// App doc: docs/user-guide/pages/game-main.md §3.18.2 · Plot-vector card table
 /**
  * The plot-vector card table (rebuild plan phase 7; PO 2026-09-27 1A 2A 3A 4A, animation A, rarity A;
  * PO 2026-09-29 both board shapes; approved demo docs/demo/plot-vector-board.html). A miniature of the board sits

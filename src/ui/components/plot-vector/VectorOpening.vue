@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// App doc: docs/user-guide/pages/game-main.md · Plot-vector card table
+// App doc: docs/user-guide/pages/game-main.md §3.18.8 · Plot-vector card table
 /**
  * The round's opening (PO 2026-10-01 C; demo docs/demo/plot-vector-effect-and-start.html): a glass ribbon rises out
  * of the badge above the input, plays this round's trip in miniature (about 1.4 s: the shuttle with its trail, the

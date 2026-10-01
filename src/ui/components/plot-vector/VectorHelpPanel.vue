@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// App doc: docs/user-guide/pages/game-main.md · Plot-vector card table
+// App doc: docs/user-guide/pages/game-main.md §3.18.6 · Plot-vector card table
 /**
  * The "?" on the table (phase 7; PO 2026-10-01, demo docs/demo/plot-vector-effect-and-start.html): how it works in a
  * few lines, the legend of marks the cards and the bars share, the starting force the attributes give as four

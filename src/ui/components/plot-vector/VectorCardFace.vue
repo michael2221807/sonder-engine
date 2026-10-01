@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// App doc: docs/user-guide/pages/game-main.md · Plot-vector card table
+// App doc: docs/user-guide/pages/game-main.md §3.18.4 · Plot-vector card table
 /**
  * One card's face (phase 7): the name and one sentence; everything else is a mark, never a number (PO 2A) —
  * dots for uses left, diamonds for growth, a ring for recharge. The tier (PO 2026-09-30: six, white to red) is a

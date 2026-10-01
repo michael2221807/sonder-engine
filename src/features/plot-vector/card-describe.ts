@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-main.md §3.18.7 · Marks and colours (§3.18.5 growth sentence)
 /**
  * What a card does and how it grows, as structured data the table turns into words (PO 2026-10-01; demo
  * docs/demo/plot-vector-effect-and-start.html). Everything here comes from the engine: the effect marks from the

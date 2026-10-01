@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-main.md §3.18.7 · Marks and colours
 /**
  * The one vocabulary of marks the table speaks (PO 2026-10-01): card faces, the detail bubbles, the "?" legend,
  * the shuttle's floating signs, the three tendency bars and the round opening wear the same glyph and colour for

@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-main.md §3.18.5 · Card details
 /**
  * Words for what a card does and how it grows (PO 2026-10-01; demo docs/demo/plot-vector-effect-and-start.html).
  * The sentences are fixed templates from the i18n glossary; what fills them is engine data — the measured marks,

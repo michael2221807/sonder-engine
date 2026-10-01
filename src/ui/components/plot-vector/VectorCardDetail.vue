@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// App doc: docs/user-guide/pages/game-main.md · Plot-vector card table
+// App doc: docs/user-guide/pages/game-main.md §3.18.5 · Plot-vector card table
 /**
  * A card's details (phase 7; PO 2026-10-01, demo docs/demo/plot-vector-effect-and-start.html): hover 0.8 s or
  * long-press. Effect — the model's sentence and the marks the engine measured; Growth — how it grows and what a

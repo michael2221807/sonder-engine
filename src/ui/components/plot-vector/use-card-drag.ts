@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-main.md §3.18.3 · Moving cards
 /**
  * Cards move by hand (phase 7): drag a card onto a cell, back to the hand, or onto another card to swap; a tap
  * picks a card up and a second tap on a cell puts it down (phones). A long press on touch lifts the card with a

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-// App doc: docs/user-guide/pages/game-main.md · Plot-vector card table
+// App doc: docs/user-guide/pages/game-main.md §3.18.1 · Plot-vector card table
 /**
  * The board in miniature beside the input (phase 7): six marks in a row, or in a ring on the ring board. A cell
- * holding a card is lit, the status cell warm; it glows while new cards wait, and replays the last trip once
- * after a round (animation A). The glow takes the colour of the rarest new card (phase 7 polish). While the table
+ * holding a card is lit, the status cell warm; it glows while new cards wait, and walks the round's trip cell by
+ * cell together with the round opening (PO 2026-10-01 A). The glow takes the colour of the rarest new card. While the table
  * is open it holds a quiet light (the table grew out of it); while the arrangement is written to the save a light
  * runs along its cells under a small "saving" note (PO 2026-09-30) — only opacity and rotation move, so both keep
  * moving while the write holds the page.

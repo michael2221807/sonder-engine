@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// App doc: docs/user-guide/pages/game-main.md · Plot-vector card table
+// App doc: docs/user-guide/pages/game-main.md §3.18.2 · Plot-vector card table
 /**
  * The six cells and the shuttle (phase 7). A line lays the cells in a row (two rows on a narrow screen, still one
  * road: 01 02 03 / 06 05 04); a ring sets them around a loop with the shuttle riding a track just outside them.

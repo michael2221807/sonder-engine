@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// App doc: docs/user-guide/pages/game-main.md · Plot-vector card table
+// App doc: docs/user-guide/pages/game-main.md §3.18.9 · Plot-vector card table
 /**
  * The round's push in two words beside the round counter (PO 3A, charter I27): worked out by the engine from
  * the packet the model read, never written by the model. Shown only for the round the board shaped. It lands
