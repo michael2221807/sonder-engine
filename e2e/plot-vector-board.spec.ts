@@ -176,10 +176,19 @@ test('cards move by dragging, swap on an occupied cell, and the sweep takes ever
     await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
     await plotVector.openBoard();
     await expect(plotVector.boardClear).toBeDisabled();
+    // A card picked up by a tap, then a drag instead (PO 2026-10-01): the drag wins and nothing stays held.
+    // (A card in view without scrolling the hand, so the drag below still finds the first card.)
+    await plotVector.handCard('basic:push').click();
+    await expect(plotVector.board.locator('.vcard--selected')).toHaveCount(1);
     await plotVector.drag('item:notebook', '01');
+    await expect(plotVector.board.locator('.vcard--selected')).toHaveCount(0);
+    await expect(plotVector.board.locator('.vcell--hint')).toHaveCount(0);
     await plotVector.drag('basic:push', '02');
     await expect(plotVector.cellCard('01')).toContainText('随身日记');
     await expect(plotVector.cellCard('02')).toContainText('顺势');
+    // A later tap on an empty cell moves nothing.
+    await plotVector.cell('03').click();
+    await expect(plotVector.cellCard('03')).toHaveCount(0);
     // Onto an occupied cell: the two swap.
     const from = await plotVector.cellCard('02').boundingBox(), to = await plotVector.cell('01').boundingBox();
     await page.mouse.move(from!.x + 40, from!.y + 40); await page.mouse.down();

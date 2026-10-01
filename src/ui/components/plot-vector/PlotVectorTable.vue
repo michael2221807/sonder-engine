@@ -585,7 +585,14 @@ const drag = useCardDrag({
   onLongPress: (card, el) => showDetail(card, el),
 });
 // A drag that begins (also after a long press lifted the card with its details) puts the details away.
-watch(() => !!drag.drag.value, dragging => { if (dragging) { clearTimeout(hoverTimer); detail.value = null; } });
+// A drag also replaces a card picked up by a tap: otherwise that card stays held after the drop, the cells keep
+// inviting it, and the next tap on any cell moves it (PO 2026-10-01).
+watch(() => !!drag.drag.value, dragging => {
+  if (!dragging) return;
+  clearTimeout(hoverTimer);
+  detail.value = null;
+  selected.value = null;
+});
 function tapCell(cell: string): void {
   const target = shown.value?.cells.find(c => c.id === cell);
   if (!target || target.role === 'status') return;
