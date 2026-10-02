@@ -87,11 +87,13 @@ test('the table keeps the player\'s arrangement across reload; moves are kept li
     await plotVector.hoverDetail(plotVector.handCard('item:notebook'));
     await expect(plotVector.detail.getByTestId('vector-card-growth')).toContainText('0 / 50 级');
     await page.mouse.move(5, 5);
-    // Tap the notebook, then cell 01: it is placed and kept without a save button.
+    // Tap the notebook, then cell 01: it is placed and kept without a save button, and the handle lights once.
+    await plotVector.watchHandleLight();
     await plotVector.place('item:notebook', '01');
     await expect(plotVector.cellCard('01')).toContainText('随身日记');
+    await plotVector.handleLit();
     // PO 2026-09-30 B: while the table is open the save file is not written (the move lives in the game state).
-    await expect(plotVector.board.locator('.vtable__handle--saved')).toBeAttached();
+    await plotVector.kept(board => board?.layout?.placements?.['01'] === 'item:notebook');
     expect((await persisted(page, ids)).layout?.placements?.['01'] ?? null).toBeNull();
     // Closing the table writes it once, and the badge says so (PO 2026-09-30).
     await plotVector.closeBoard();
@@ -119,7 +121,7 @@ test('leaving the story panel with the table open still writes the arrangement t
     await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
     await plotVector.openBoard();
     await plotVector.place('item:notebook', '02');
-    await expect(plotVector.board.locator('.vtable__handle--saved')).toBeAttached();
+    await plotVector.kept(board => board?.layout?.placements?.['02'] === 'item:notebook');
     // Straight to the save page without closing the table (browser Back does the same): the story panel is kept
     // alive in the background, so the table must close itself rather than float over the save page.
     await page.evaluate(async () => {
@@ -149,7 +151,7 @@ test('the table floats above the input row, which stays in view: a press on it c
     // PO 2026-09-30 A: not on the bottom edge, above the input row with a gap.
     expect(table!.y + table!.height).toBeLessThanOrEqual(input!.y - 8);
     await plotVector.place('item:notebook', '01');
-    await expect(plotVector.board.locator('.vtable__handle--saved')).toBeAttached();
+    await plotVector.kept(board => board?.layout?.placements?.['01'] === 'item:notebook');
     // A press where the input shows (it lies under the catcher; on a phone the row's buttons wrap below it).
     await page.mouse.click(input!.x + 40, input!.y + input!.height / 2);
     await expect(plotVector.board).toHaveCount(0);
@@ -216,7 +218,7 @@ test('both board shapes can be played; the chosen one is saved with the arrangem
     await expect(plotVector.shapeLine).toHaveAttribute('aria-pressed', 'true');
     await plotVector.shapeRing.click();
     await expect(plotVector.board.locator('.vtrack--ring')).toBeVisible();
-    await expect(plotVector.board.locator('.vtable__handle--saved')).toBeAttached();
+    await plotVector.kept(board => board?.shape === 'ring');
     await plotVector.closeBoard();
     await savedUntil(page, ids, pv => pv.shape === 'ring');
     await expect(plotVector.boardOpen).toHaveClass(/vbadge--ring/);
@@ -354,8 +356,8 @@ test('a card says what it does: marks on its face, the effect, how it grows, and
     // On the board it did: what it brought this trip, in bubbles; no pass counts anywhere.
     await plotVector.place('basic:push', '01');
     await expect(plotVector.cellCard('01')).toContainText('顺势');
-    // The trip with it is worked out and kept (the handle lights) before its details are read.
-    await expect(plotVector.board.locator('.vtable__handle--saved')).toBeAttached();
+    // The trip with it is worked out and kept before its details are read.
+    await plotVector.kept(board => board?.layout?.placements?.['01'] === 'basic:push');
     await plotVector.hoverDetail(plotVector.cellCard('01').locator('.vcard__name'));
     const trip = plotVector.detail.getByTestId('vector-card-trip');
     await expect(trip).toContainText('这一趟带来');

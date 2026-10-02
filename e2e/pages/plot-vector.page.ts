@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 /** The plot-vector card table (phase 7): a badge beside the input opens a table from the bottom. */
 export class PlotVectorPage {
   constructor(private page: Page) {}
@@ -31,6 +31,38 @@ export class PlotVectorPage {
   /** A hint (the shared Tooltip) showing now. */
   tooltip(text: string | RegExp) { return this.page.getByRole('tooltip').filter({ hasText: text }); }
   get impulse() { return this.page.getByTestId('vector-impulse'); }
+  /**
+   * The board as the live game holds it (what the next round uses), read from the app's state store. A kept move
+   * shows here at once and stays, unlike the handle's light, which lasts 0.9 s and a busy run can miss (P6).
+   */
+  async liveBoard(): Promise<{ shape?: string; layout?: { placements?: Record<string, string | null> } } | null> {
+    return this.page.evaluate(() => {
+      type App = { config: { globalProperties: { $pinia: { _s: Map<string, { tree: Record<string, unknown> }> } } } };
+      const app = (document.querySelector('#app') as { __vue_app__?: App } | null)?.__vue_app__;
+      const tree = app?.config.globalProperties.$pinia._s.get('engineState')?.tree as { 系统?: { 扩展?: { plotVector?: unknown } } } | undefined;
+      return JSON.parse(JSON.stringify(tree?.系统?.扩展?.plotVector ?? null));
+    });
+  }
+  /** Waits until the live game keeps what `check` expects. */
+  async kept(check: (board: Awaited<ReturnType<PlotVectorPage['liveBoard']>>) => boolean) {
+    await expect.poll(async () => check(await this.liveBoard()), { timeout: 10_000 }).toBe(true);
+  }
+  /** Starts watching the table's handle for its "kept" light before an action, so a later check cannot miss it. */
+  async watchHandleLight() {
+    await this.page.evaluate(() => {
+      const w = window as unknown as { __handleLit?: boolean; __handleWatch?: MutationObserver };
+      w.__handleLit = false;
+      w.__handleWatch?.disconnect();
+      const handle = document.querySelector('.vtable__handle');
+      if (!handle) return;
+      w.__handleWatch = new MutationObserver(() => { if (handle.classList.contains('vtable__handle--saved')) w.__handleLit = true; });
+      w.__handleWatch.observe(handle, { attributes: true, attributeFilter: ['class'] });
+    });
+  }
+  /** The handle lit at least once since `watchHandleLight`. */
+  async handleLit() {
+    await expect.poll(() => this.page.evaluate(() => (window as unknown as { __handleLit?: boolean }).__handleLit === true), { timeout: 10_000 }).toBe(true);
+  }
   async openBoard() {
     await this.boardOpen.click();
     await this.board.locator('.vtrack').waitFor({ state: 'visible' });
