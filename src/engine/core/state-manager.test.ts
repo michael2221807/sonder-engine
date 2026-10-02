@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { toRaw } from 'vue';
+import { isProxy, toRaw } from 'vue';
 
 // Mock eventBus to isolate from real singleton
 vi.mock('@/engine/core/event-bus', () => {
@@ -161,6 +161,23 @@ describe('StateManager', () => {
       expect(out.big).toEqual(raw.big);
       expect(out.big).toBe(toRaw((sm.getTree() as unknown as { big: object }).big));
       expect(JSON.stringify(out)).toBe(JSON.stringify({ ...raw, sys: { ...(raw.sys as object), ext: { board: { layout: 'new' }, other: { keep: true } } } }));
+    });
+
+    // P1 存档写入提速: the database takes these as they are, and it cannot clone a reactive proxy.
+    it('snapshotWith of a value read through the state, and liveTree, hold no proxy: the browser can clone them', () => {
+      sm.set('sys.ext.board', { layout: { a: [1, 2] } }, 'system');
+      sm.set('story.text', '正文', 'system');
+      const board = sm.get('sys.ext.board');
+      expect(isProxy(board)).toBe(true);
+      const out = sm.snapshotWith('sys.ext.board', board) as { sys: { ext: { board: unknown } } };
+      expect(isProxy(out.sys.ext.board)).toBe(false);
+      expect(structuredClone(out)).toEqual({ sys: { ext: { board: { layout: { a: [1, 2] } } } }, story: { text: '正文' } });
+      const live = sm.liveTree();
+      expect(isProxy(live)).toBe(false);
+      expect(structuredClone(live)).toEqual(sm.toSnapshot());
+      // Not a copy: the next change shows in it (a writer must take it at once).
+      sm.set('story.text', '改了', 'system');
+      expect((live.story as { text: string }).text).toBe('改了');
     });
 
     it('snapshotWith creates a missing path and refuses filters and arrays on the way', () => {

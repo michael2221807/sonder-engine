@@ -17,6 +17,7 @@
  */
 import { idbAdapter } from './idb-adapter';
 import { eventBus } from '../core/event-bus';
+import type { SaveReplacedEvent } from '../types/event-bus';
 import type { ProfileManager } from './profile-manager';
 import type { SaveManager } from './save-manager';
 import type { ConfigStore } from '../core/config-system';
@@ -583,6 +584,8 @@ export class BackupService {
     /* ── 1. 捕获当前状态快照，供失败时回滚 ── */
     const snapshot = await this.captureCurrentState();
 
+    // Every save is about to be replaced, its rollback included: nothing else writes a save meanwhile (§13.1).
+    eventBus.emit('engine:save-replaced', { phase: 'begin' } satisfies SaveReplacedEvent);
     try {
       /* ── 2. 擦除本地数据（图片缓存不在此清，见 restoreImageAssets） ── */
       await this.wipeAll();
@@ -638,6 +641,8 @@ export class BackupService {
         );
       }
       throw new Error(`导入失败，本地数据已回滚：${extractErrorMessage(err)}`);
+    } finally {
+      eventBus.emit('engine:save-replaced', { phase: 'end' } satisfies SaveReplacedEvent);
     }
   }
 
@@ -658,6 +663,14 @@ export class BackupService {
       errors: [],
     };
 
+    // The bundle's saves are about to be written over (§13.1).
+    const touched = new Set([...Object.keys(bundle.profiles ?? {}), ...Object.keys(bundle.saves ?? {}).map(key => parseCompositeKey(key).profileId)]);
+    for (const profileId of touched) eventBus.emit('engine:save-replaced', { profileId, phase: 'begin' } satisfies SaveReplacedEvent);
+    try { await this.mergeProfiles(bundle, report); }
+    finally { for (const profileId of touched) eventBus.emit('engine:save-replaced', { profileId, phase: 'end' } satisfies SaveReplacedEvent); }
+  }
+
+  private async mergeProfiles(bundle: BackupBundle, report: ImportReport): Promise<void> {
     try {
       await this.restoreProfiles(bundle.profiles);
       report.profiles = true;
@@ -747,6 +760,8 @@ export class BackupService {
     /* ── 1. 档案级快照（仅该档案） ── */
     const snapshot = await this.captureProfileState(profileId);
 
+    // This profile's saves are about to be replaced or removed, its rollback included (§13.1).
+    eventBus.emit('engine:save-replaced', { profileId, phase: 'begin' } satisfies SaveReplacedEvent);
     try {
       /* ── 2. 删除"本地有、来包无"的存档槽（真替换语义） ── */
       const localProfile = this.profileManager.getProfile(profileId);
@@ -812,6 +827,8 @@ export class BackupService {
         );
       }
       throw new Error(`档案导入失败，该档案已回滚：${extractErrorMessage(err)}`);
+    } finally {
+      eventBus.emit('engine:save-replaced', { profileId, phase: 'end' } satisfies SaveReplacedEvent);
     }
 
     /* ── 6. 图片：merge-then-protected-prune（放最后，与全替换同策略：任何前序
@@ -1752,7 +1769,8 @@ export class BackupService {
     for (const [compositeKey, data] of Object.entries(savesData)) {
       const { profileId, slotId } = parseCompositeKey(compositeKey);
       const idbKey = `save_${profileId}_${slotId}`;
-      await idbAdapter.set(idbKey, structuredClone(data));
+      // The bundle's data is the import's own; the adapter writes it as it is now (no copy needed, §13.1).
+      await idbAdapter.set(idbKey, data);
     }
   }
 

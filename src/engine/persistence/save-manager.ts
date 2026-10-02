@@ -9,11 +9,12 @@
  * 对应 STEP-03 M1.6。
  * 参照 demo: indexedDBManager.ts 中的 save/load 逻辑。
  */
-import { cloneDeep, get as _get } from 'lodash-es';
+import { get as _get } from 'lodash-es';
 import { idbAdapter } from './idb-adapter';
 import type { GameStateTree, SaveSlotMeta } from '../types';
 import type { ProfileManager } from './profile-manager';
 import { eventBus } from '../core/event-bus';
+import type { SaveReplacedEvent } from '../types/event-bus';
 import { migrationRegistry, compareVersions } from './migration-registry';
 import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 
@@ -62,25 +63,25 @@ export class SaveManager {
     meta?: Partial<SaveSlotMeta>,
     commit?: { guard: () => void; committed: () => void },
   ): Promise<void> {
-    const data = cloneDeep(stateTree);
     const key = saveKey(profileId, slotId);
-    // A round save rechecks inside the write that it still belongs to the active slot (switching saves mid-round).
-    if (commit) {
-      await idbAdapter.setGuarded(key, data, commit.guard);
-      commit.committed();
-    } else {
-      await idbAdapter.set(key, data);
-    }
-
-    // 5.3: 自动从状态树提取展示字段
-    const jsonStr = JSON.stringify(data);
-    const saveSize = jsonStr.length;
-
+    // 5.3: 自动从状态树提取展示字段 — read before the write starts, from the same tree it writes.
+    const saveSize = JSON.stringify(stateTree).length;
     // 安全读取 角色.可变属性.地位.名称（多层可选链）
-    const root = data as Record<string, unknown>;
+    const root = stateTree as Record<string, unknown>;
     const charAttrs = (root['角色'] as Record<string, unknown> | undefined)?.['可变属性'] as Record<string, unknown> | undefined;
     const statusObj = charAttrs?.['地位'] as Record<string, unknown> | undefined;
     const characterStatus = typeof statusObj?.['名称'] === 'string' ? statusObj['名称'] : undefined;
+    const roundNumber = readRoundNumber(stateTree);
+
+    // No copy here: the adapter writes the tree as it is at this call (the browser copies it into the database),
+    // so a caller may hand over the live tree (P1 存档写入提速, docs/design/plot-vector-rebuild-plan.md §13.1).
+    // A round save rechecks inside the write that it still belongs to the active slot (switching saves mid-round).
+    if (commit) {
+      await idbAdapter.setGuarded(key, stateTree, commit.guard);
+      commit.committed();
+    } else {
+      await idbAdapter.set(key, stateTree);
+    }
 
     // 联动更新 ProfileManager 中的存档元数据
     // §5.2：每次存档都把 slotMeta.packVersion 戳为当前 pack 版本，保证下次 loadGame
@@ -91,7 +92,7 @@ export class SaveManager {
       saveSize,
       characterStatus,
       // 云端插槽新鲜度比较的回合依据（docs/design/cloud-slot-freshness.md §3）
-      roundNumber: readRoundNumber(data),
+      roundNumber,
       ...(this.currentPackVersion ? { packVersion: this.currentPackVersion } : {}),
       ...meta,
     });
@@ -189,6 +190,8 @@ export class SaveManager {
 
   /** 删除存档 */
   async deleteGame(profileId: string, slotId: string): Promise<void> {
+    // A board arrangement still waiting for this profile must not bring the save back (§13.1).
+    eventBus.emit('engine:save-replaced', { profileId } satisfies SaveReplacedEvent);
     await idbAdapter.delete(saveKey(profileId, slotId));
   }
 

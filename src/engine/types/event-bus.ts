@@ -11,6 +11,13 @@ export type EngineEventName =
   | 'engine:sub-pipelines-done'
   | 'engine:state-changed'
   | 'engine:save-complete'
+  // Saves are being overwritten or removed by something other than a game save: a backup restore, a cloud slot
+  // replace, a deleted slot or a wiped store (P1, docs/design/plot-vector-rebuild-plan.md §13.1).
+  // Payload: SaveReplacedEvent — no profileId means every save; phase 'begin'/'end' brackets a restore (its
+  // rollback included), no phase is a single moment. Emitted right before the first such write, so a write already
+  // started finishes first and one that starts later sees it. Deliberately not 'engine:save-complete': cloud sync
+  // marks those for upload.
+  | 'engine:save-replaced'
   | 'engine:save-error'
   | 'engine:config-changed'
   | 'engram:config-changed'
@@ -107,3 +114,6 @@ export const MAX_TOAST_ACTIONS = 2;
 
 /** Generic event handler — receives the payload and optionally returns a Promise */
 export type EventHandler<T = unknown> = (payload: T) => void | Promise<void>;
+
+/** Payload of 'engine:save-replaced'. */
+export interface SaveReplacedEvent { profileId?: string; phase?: 'begin' | 'end' }

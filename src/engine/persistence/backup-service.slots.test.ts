@@ -491,6 +491,14 @@ describe('backup-service save-slot primitives', () => {
       };
     }
 
+    it('a full import announces that every save is replaced (P1 §13.1)', async () => {
+      await seedTwoProfiles();
+      emitted.length = 0;
+      await service.importAll(toBlob(fullBundle()));
+      expect(emitted.filter(e => e.event === 'engine:save-replaced').map(e => e.payload)).toEqual([{ phase: 'begin' }, { phase: 'end' }]);
+      expect(emitted.some(e => e.event === 'engine:save-complete')).toBe(false);
+    });
+
     it('exportForSync reports worldBookIntegrity per profile (2026-09-10)', async () => {
       await seedTwoProfiles();
       const { idbAdapter } = await import('./idb-adapter');
@@ -587,6 +595,31 @@ describe('backup-service save-slot primitives', () => {
       // p2 毫发无损
       expect(memStore.get('save_p2_s1')).toBeDefined();
       expect(pm.getProfile('p2')).toBeDefined();
+    });
+
+    // P1 (docs/design/plot-vector-rebuild-plan.md §13.1): a board arrangement waiting to be written must not land on a
+    // restored save; the announcement is not 'save-complete', which cloud sync would mark for upload.
+    it('announces the replace before it writes any save, and never as a game save', async () => {
+      await seedTwoProfiles();
+      emitted.length = 0;
+      const { idbAdapter } = await import('./idb-adapter');
+      const writesSeenAt: number[] = [];
+      const original = idbAdapter.set.bind(idbAdapter);
+      const spy = vi.spyOn(idbAdapter, 'set').mockImplementation(async (key: string, value: unknown) => {
+        if (key.startsWith('save_')) writesSeenAt.push(emitted.length);
+        return original(key, value);
+      });
+      try {
+        await service.importProfileReplace(toBlob(p1ReplaceBundle()));
+      } finally { spy.mockRestore(); }
+      // Bracketed: begin before the first save write, end after the last (a deleted slot announces itself too).
+      const replaced = emitted.map((e, i) => ({ ...e, i })).filter(e => e.event === 'engine:save-replaced');
+      expect(replaced[0].payload).toEqual({ profileId: 'p1', phase: 'begin' });
+      expect(replaced.at(-1)!.payload).toEqual({ profileId: 'p1', phase: 'end' });
+      expect(replaced.slice(1, -1).map(e => e.payload)).toEqual([{ profileId: 'p1' }]);   // s2 deleted
+      expect(writesSeenAt.length).toBeGreaterThan(0);
+      expect(writesSeenAt.every(seen => seen > replaced[0].i && seen <= replaced.at(-1)!.i)).toBe(true);
+      expect(emitted.some(e => e.event === 'engine:save-complete')).toBe(false);
     });
 
     it('drops cross-profile composite keys — a profile bundle can never write another profile', async () => {
@@ -691,7 +724,10 @@ describe('backup-service save-slot primitives', () => {
       const bundle = p1ReplaceBundle({
         worldBooks: { version: 1, exportedAt: 'x', books: [{ id: 'boom' } as never] },
       });
+      emitted.length = 0;
       await expect(service.importProfileReplace(toBlob(bundle))).rejects.toThrow('已回滚');
+      // The bracket closes after the rollback too, so the board does not stay blocked (P1 §13.1).
+      expect(emitted.filter(e => e.event === 'engine:save-replaced').at(-1)?.payload).toEqual({ profileId: 'p1', phase: 'end' });
 
       // p1 恢复原状：s1 旧树、s2 还在、世界书还在
       const s1 = memStore.get('save_p1_s1') as Record<string, unknown>;

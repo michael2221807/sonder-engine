@@ -2,6 +2,7 @@ import { cloneDeep } from 'lodash-es';
 import type { StateManager } from '../../engine/core/state-manager';
 import type { SaveManager } from '../../engine/persistence/save-manager';
 import { eventBus } from '../../engine/core/event-bus';
+import type { SaveReplacedEvent } from '../../engine/types/event-bus';
 import { DEFAULT_ENGINE_PATHS as P } from '../../engine/pipeline/types';
 import { readPlotVectorControl, subscribePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { projectSavedElements, savedSources } from './saved-elements';
@@ -36,6 +37,8 @@ export interface BoardView {
  * at that commit (a plain snapshot sharing unchanged branches with the live tree), and which loaded tree it was.
  */
 interface PendingWrite { profileId: string; slotId: string; tree: Record<string, unknown>; generation: number }
+/** A board write that gave way to a restore of its save. */
+class BoardSaveReplaced extends Error { constructor() { super('board-save-replaced'); } }
 
 /**
  * Optional UI port. No acceptance hooks. Its only model call is the player's explicit ability retry, delegated
@@ -48,6 +51,11 @@ interface PendingWrite { profileId: string; slotId: string; tree: Record<string,
  * on a save that was restored or synced meanwhile. The same save loaded again, or rolled back, keeps its tree.
  * A view is current while nothing else changed the state since it was opened or since its own last commit:
  * every state write emits `engine:state-changed`, so counting those replaces comparing whole-tree copies.
+ * Anything else that overwrites or removes saves — a backup restore, a cloud slot replace, a deleted slot, a wiped
+ * store — announces itself first (`engine:save-replaced`; a restore brackets itself, rollback included): a waiting
+ * arrangement of that profile is dropped (the restored save is the truth); no board write starts while a restore
+ * runs; and one already under way gives up inside its transaction unless its transaction came first (then the
+ * restore's write lands after it).
  */
 export class VectorBoardAccess {
   private revision = 0;
@@ -58,6 +66,12 @@ export class VectorBoardAccess {
   private writers = 0;
   private get writing(): boolean { return this.writers > 0; }
   private pending: PendingWrite | null = null;
+  /** Announcements of replaced saves, counted per profile ('' stands for every save). */
+  private replaced = new Map<string, number>();
+  /** Restores under way, per profile ('' for every save). */
+  private replacing = new Map<string, number>();
+  private replacedFor(profileId: string): number { return (this.replaced.get(profileId) ?? 0) + (this.replaced.get('') ?? 0); }
+  private replacingFor(profileId: string): boolean { return (this.replacing.get(profileId) ?? 0) + (this.replacing.get('') ?? 0) > 0; }
   /** The board's own write in progress, so a second one waits for it. */
   private boardWrite: Promise<unknown> | null = null;
   get isSaving(): boolean { return this.writing; }
@@ -79,6 +93,14 @@ export class VectorBoardAccess {
         // active save right after replacing the tree, so look once that has run.
         const target = this.pending;
         if (target && target.generation === this.generation - 1) queueMicrotask(() => { void this.settleReplaced(target); });
+      }),
+      eventBus.on<SaveReplacedEvent | undefined>('engine:save-replaced', change => {
+        const profileId = change?.profileId ?? '';
+        this.replaced.set(profileId, (this.replaced.get(profileId) ?? 0) + 1);
+        if (change?.phase === 'begin') this.replacing.set(profileId, (this.replacing.get(profileId) ?? 0) + 1);
+        if (change?.phase === 'end') this.replacing.set(profileId, Math.max(0, (this.replacing.get(profileId) ?? 0) - 1));
+        // An arrangement kept during a restore was made on the tree from before it: dropped at its end too.
+        if (this.pending && (!profileId || this.pending.profileId === profileId)) this.pending = null;
       }),
       // Any other save of the same slot (a round, a retry) already carried the arrangement, or superseded it.
       eventBus.on<{ profileId?: string; slotId?: string } | undefined>('engine:save-complete', saved => {
@@ -139,20 +161,29 @@ export class VectorBoardAccess {
   private async write(target: PendingWrite, sameTree: boolean): Promise<boolean> {
     this.writers++;
     let written = false;
+    const replacedAtStart = this.replacedFor(target.profileId);
+    const replacedSince = () => this.replacingFor(target.profileId) || this.replacedFor(target.profileId) !== replacedAtStart;
     try {
+      // A restore of this profile is running: what it writes is the truth; nothing is written over it.
+      if (this.replacingFor(target.profileId)) { if (this.pending === target) this.pending = null; return true; }
       if (!sameTree && !(await this.saves.hasSave(target.profileId, target.slotId))) {
         if (this.pending === target) this.pending = null;
         return true;
       }
       const data = sameTree ? this.state.snapshotWith(P.plotVector, this.state.get(P.plotVector)) : target.tree;
-      // The data is fixed before the first await and always goes to its own save, so nothing can cross slots.
+      // The data always goes to its own save. A kept tree no longer changes once it was replaced; the live tree is
+      // taken by the write at the call (saveGame writes it before it yields), so nothing can cross slots.
+      // The guard runs right before the database transaction starts and again before it commits.
       await this.saves.saveGame(target.profileId, target.slotId, data, undefined, {
-        guard: () => {},
+        // A restore of this save meanwhile: the restored save wins, this write gives up.
+        guard: () => { if (replacedSince()) throw new BoardSaveReplaced(); },
         // A commit made while this write ran leaves a new pending mark, written next time.
         committed: () => { written = true; if (this.pending === target) this.pending = null; },
       });
       return true;
     } catch (error) {
+      // Its save was restored meanwhile: the arrangement was dropped with it, nothing to report.
+      if (error instanceof BoardSaveReplaced) return true;
       // A metadata failure after the atomic data write does not undo it; it is still reported.
       if (!written) throw error;
       console.warn('[PlotVector] The arrangement was saved but the slot details were not updated:', error);

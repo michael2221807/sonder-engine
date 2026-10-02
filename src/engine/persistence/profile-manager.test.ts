@@ -30,6 +30,11 @@ vi.mock('./idb-adapter', () => ({
   },
 }));
 
+const emitted: Array<{ event: string; payload: unknown }> = [];
+vi.mock('../core/event-bus', () => ({
+  eventBus: { emit: (event: string, payload?: unknown) => { emitted.push({ event, payload }); } },
+}));
+
 import { ProfileManager } from './profile-manager';
 import type { ProfileMeta } from '../types';
 
@@ -87,5 +92,16 @@ describe('ProfileManager — sessionType (Story 9)', () => {
     await pm.updateSlotMeta('p1', 's1', { sessionType: 'worldBuilding' });
     await pm.updateSlotMeta('p1', 's1', { sessionType: 'play' });
     expect(pm.getSlotMeta('p1', 's1')?.sessionType).toBe('play');
+  });
+});
+
+describe('ProfileManager.clearAll', () => {
+  it('announces that every save goes before it wipes the store (P1 §13.1)', async () => {
+    memStore.set('save_p1_s1', { x: 1 });
+    const pm = new ProfileManager();
+    emitted.length = 0;
+    await pm.clearAll();
+    expect(emitted).toEqual([{ event: 'engine:save-replaced', payload: {} }]);
+    expect(memStore.size).toBe(0);
   });
 });

@@ -531,7 +531,8 @@ export class GameOrchestrator {
         const current = this._getActiveSlot();
         if (slot.profileId !== current?.profileId || slot.slotId !== current?.slotId) continue;
         const revision = this.stateRevision;
-        await this._saveManager.saveGame(slot.profileId, slot.slotId, this._stateManager.toSnapshot(), undefined, {
+        // The live tree, not a copy: saveGame writes it as it is at this call (P1 存档写入提速).
+        await this._saveManager.saveGame(slot.profileId, slot.slotId, this._stateManager.liveTree(), undefined, {
           guard: () => {
             const live = this._getActiveSlot();
             if (revision !== this.stateRevision || live?.profileId !== slot.profileId || live?.slotId !== slot.slotId)

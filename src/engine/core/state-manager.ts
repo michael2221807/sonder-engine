@@ -361,6 +361,15 @@ export class StateManager {
   }
 
   /**
+   * The live tree itself as plain data — not a copy. For a writer that serializes it before it yields
+   * (SaveManager.saveGame: the database takes the value at the call), so a round save costs no copy of its own
+   * (P1 存档写入提速). Never keep it past that call, never mutate it.
+   */
+  liveTree(): Record<string, unknown> {
+    return toRaw(this.state) as Record<string, unknown>;
+  }
+
+  /**
    * The tree as plain data with one plain dot-path replaced, sharing every other branch with the live tree
    * instead of copying it. For a writer that copies before it yields (SaveManager.saveGame clones first), so
    * saving one small branch of a large tree costs one copy instead of three. Never keep or mutate the result.
@@ -381,7 +390,10 @@ export class StateManager {
       to = copy;
       from = child;
     }
-    to[keys[keys.length - 1]] = value;
+    // A value read through the state (`get`) is a reactive proxy: hand over the plain object behind it, so the
+    // database can take it as it is (a proxy cannot be cloned, and a fallback copy would undo P1's saving). Only
+    // the top is unwrapped: a proxy stored deeper inside still works, through the adapter's slower fallback.
+    to[keys[keys.length - 1]] = value && typeof value === 'object' ? toRaw(value) : value;
     return out;
   }
 

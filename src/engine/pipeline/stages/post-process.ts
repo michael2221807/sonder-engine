@@ -530,13 +530,13 @@ export class PostProcessStage implements PipelineStage {
     const slot = this.getActiveSlot();
     if (!slot) return;
 
-    const snapshot = this.stateManager.toSnapshot();
     const timeData = this.stateManager.get(this.paths.gameTime);
 
+    // The live tree, not a copy: saveGame writes it as it is at this call (P1 存档写入提速).
     await this.saveManager.saveGame(
       slot.profileId,
       slot.slotId,
-      snapshot,
+      this.stateManager.liveTree(),
       {
         gameTime: timeData !== undefined ? JSON.stringify(timeData) : undefined,
         characterName: this.stateManager.get<string>(this.paths.playerName),

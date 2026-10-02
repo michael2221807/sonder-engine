@@ -12,12 +12,12 @@ function harness() {
   const host = Object.create(GameOrchestrator.prototype) as {
     abortController: AbortController | null; _subPipelineActive: boolean; requestedSaveActive: boolean;
     stateRevision: number; pendingSave: typeof slot | null; subPipelines: object;
-    _getActiveSlot: () => typeof slot; _stateManager: { toSnapshot: () => unknown };
+    _getActiveSlot: () => typeof slot; _stateManager: { liveTree: () => unknown };
     _saveManager: { saveGame: typeof save }; flushRequestedSave: () => Promise<void>;
   };
   Object.assign(host, { abortController: null, _subPipelineActive: false, requestedSaveActive: false,
     stateRevision: 0, pendingSave: null, subPipelines: {}, _getActiveSlot: () => slot,
-    _stateManager: { toSnapshot: () => ({ round }) }, _saveManager: { saveGame: save } });
+    _stateManager: { liveTree: () => ({ round }) }, _saveManager: { saveGame: save } });
   return { host, save, queue: () => { host.pendingSave = { ...slot }; },
     round: (value: number) => { round = value; }, slot: (id: string) => { slot = { ...slot, slotId: id }; } };
 }
@@ -75,7 +75,7 @@ describe('rollback saves the restored round', () => {
       get: (path: string) => path === '元数据.上次对话前快照' ? (live.元数据 as Record<string, unknown> | undefined)?.上次对话前快照 : undefined,
       rollbackTo: (snapshot: Record<string, unknown>) => { live = structuredClone(snapshot); eventBus.emit('engine:state-changed', { type: 'rollback' }); },
     };
-    Object.assign(h.host, { _stateManager: { toSnapshot: () => live }, memoryManager: { clearConfigCache: () => {} },
+    Object.assign(h.host, { _stateManager: { liveTree: () => live }, memoryManager: { clearConfigCache: () => {} },
       engramManager: { isEnabled: () => false }, unsubscribers: [] as Array<() => void> });
     // The orchestrator's own listeners: the rollback request and the revision bump on state changes.
     const host = h.host as unknown as { subscribeToEvents: (s: typeof sm) => void; unsubscribers: Array<() => void>; rollbackLastRound: (s: typeof sm) => void };

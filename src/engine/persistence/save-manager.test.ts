@@ -109,6 +109,14 @@ describe('SaveManager', () => {
       }));
     });
 
+    it('deleting a save announces it first (P1 §13.1: nothing waiting may bring it back)', async () => {
+      await sm.saveGame('p1', 's1', {});
+      emitted.length = 0;
+      await sm.deleteGame('p1', 's1');
+      expect(emitted).toEqual([{ event: 'engine:save-replaced', payload: { profileId: 'p1' } }]);
+      expect(memStore.has('save_p1_s1')).toBe(false);
+    });
+
     it('emits save-complete event', async () => {
       await sm.saveGame('p1', 's1', {});
       expect(emitted.some((e) => e.event === 'engine:save-complete')).toBe(true);

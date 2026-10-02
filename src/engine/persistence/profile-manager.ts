@@ -10,6 +10,8 @@
  */
 import { cloneDeep } from 'lodash-es';
 import { idbAdapter } from './idb-adapter';
+import { eventBus } from '../core/event-bus';
+import type { SaveReplacedEvent } from '../types/event-bus';
 import type { ProfileMeta, SaveSlotMeta, StorageRoot } from '../types';
 
 /** IndexedDB 中存储根数据的 key */
@@ -153,6 +155,8 @@ export class ProfileManager {
    * 调用后应用应导航到首页，避免 UI 继续依赖已清空的状态。
    */
   async clearAll(): Promise<void> {
+    // Every save goes: nothing waiting to be written may bring one back (plot-vector-rebuild-plan §13.1).
+    eventBus.emit('engine:save-replaced', {} satisfies SaveReplacedEvent);
     await idbAdapter.clear();
     // 重置内存缓存，防止持久化残留数据
     this.root = { activeProfile: null, profiles: {} };

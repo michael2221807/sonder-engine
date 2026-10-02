@@ -52,6 +52,7 @@ function makeStateManager() {
     }),
     delete: vi.fn(),
     toSnapshot: vi.fn(() => tree),
+    liveTree: vi.fn(() => tree),
     _pushed: pushed,
     _tree: tree,
   };

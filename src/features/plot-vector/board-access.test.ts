@@ -297,3 +297,71 @@ it('lists obtained entries whose ability is not ready; the player retry holds th
     expect(regenerate).toHaveBeenCalledTimes(1);
   } finally { retryAccess.dispose(); }
 });
+// P1 (docs/design/plot-vector-rebuild-plan.md §13.1): a backup restore or a cloud slot replace announces itself before it
+// writes; the restored save is the truth.
+it('a restore of the save drops an arrangement still waiting to be written; another profile\'s restore does not', async () => {
+  const h = setup(), view = await access.open();
+  await view.commit(view.prepared.layout, 'ring');
+  eventBus.emit('engine:save-replaced', { profileId: 'other-profile' });
+  expect(access.hasUnsaved).toBe(true);
+  eventBus.emit('engine:save-replaced', { profileId: 'p' });
+  expect(access.hasUnsaved).toBe(false);
+  expect(await access.persist()).toBe(true);
+  expect(h.saveGame).not.toHaveBeenCalled();
+  // A full restore (every save) drops it too.
+  const again = await access.open();
+  await again.commit(again.prepared.layout, 'line');
+  eventBus.emit('engine:save-replaced', {});
+  expect(access.hasUnsaved).toBe(false);
+});
+it('a board write under way when a restore of its save begins gives up inside its transaction, quietly', async () => {
+  const h = setup(), view = await access.open();
+  await view.commit(view.prepared.layout, 'ring');
+  // The restore announces itself while the board write waits for the database: the write's guard sees it.
+  h.saveGame.mockImplementationOnce(async (_p, _s, _tree, _meta, commit) => {
+    eventBus.emit('engine:save-replaced', { profileId: 'p' });
+    commit?.guard();
+    commit?.committed();
+  });
+  expect(await access.persist()).toBe(true);
+  expect(h.settled).toHaveBeenCalledTimes(1);
+  expect(access.hasUnsaved).toBe(false);
+  // A board write that starts after the restore is not held back by it.
+  const later = await access.open();
+  await later.commit(later.prepared.layout, 'line');
+  expect(await access.persist()).toBe(true);
+  expect(h.saveGame).toHaveBeenCalledTimes(2);
+});
+it('while a restore of the profile runs no board write starts; after it ends, a new arrangement is written as usual', async () => {
+  const h = setup(), view = await access.open();
+  await view.commit(view.prepared.layout, 'ring');
+  eventBus.emit('engine:save-replaced', { profileId: 'p', phase: 'begin' });
+  expect(access.hasUnsaved).toBe(false);
+  // A move made during the restore is kept live but not written over the restored save.
+  const during = await access.open();
+  await during.commit(during.prepared.layout, 'line');
+  expect(await access.persist()).toBe(true);
+  expect(h.saveGame).not.toHaveBeenCalled();
+  expect(access.hasUnsaved).toBe(false);
+  // A move kept during the restore, never attempted before it ended, is dropped at its end.
+  const late = await access.open();
+  await late.commit(late.prepared.layout, 'ring');
+  expect(access.hasUnsaved).toBe(true);
+  eventBus.emit('engine:save-replaced', { profileId: 'p', phase: 'end' });
+  expect(access.hasUnsaved).toBe(false);
+  const after = await access.open();
+  await after.commit(after.prepared.layout, 'ring');
+  expect(await access.persist()).toBe(true);
+  expect(h.saveGame).toHaveBeenCalledTimes(1);
+});
+it('a slot deleted or the store wiped: what is waiting is dropped, never written back', async () => {
+  const h = setup(), view = await access.open();
+  await view.commit(view.prepared.layout, 'ring');
+  eventBus.emit('engine:save-replaced', { profileId: 'p' });   // SaveManager.deleteGame
+  expect(await access.persist()).toBe(true);
+  const again = await access.open();
+  await again.commit(again.prepared.layout, 'line');
+  eventBus.emit('engine:save-replaced', {});                   // ProfileManager.clearAll
+  expect(await access.persist()).toBe(true);
+  expect(h.saveGame).not.toHaveBeenCalled();
+});

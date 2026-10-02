@@ -16,7 +16,8 @@
  *   存储压力下被浏览器自动驱逐（best-effort → persistent）。
  */
 // App doc: docs/user-guide/pages/game-save.md §3.2 (数据持久化与浏览器驱逐) · docs/user-guide/cloud-sync.md
-import { openDB, type IDBPDatabase } from 'idb';
+import { openDB, type IDBPDatabase, type IDBPTransaction } from 'idb';
+import { cloneDeep } from 'lodash-es';
 import { eventBus } from '../core/event-bus';
 
 const DB_NAME = 'aga-saves';
@@ -25,6 +26,8 @@ const STORE_NAME = 'data';
 
 /** 缓存的 DB 连接 Promise — 懒初始化，全应用共享 */
 let dbPromise: Promise<IDBPDatabase> | null = null;
+/** The connection once it is open, so a write can start in the same moment it is asked for (see `startWrite`). */
+let openDb: IDBPDatabase | null = null;
 
 /** 获取（或首次打开）IndexedDB 连接 */
 function getDB(): Promise<IDBPDatabase> {
@@ -38,11 +41,11 @@ function getDB(): Promise<IDBPDatabase> {
       terminated() {
         // 连接被浏览器异常关闭（存储驱逐 / 另一标签页 deleteDatabase / 致命错误）。
         // 丢弃缓存句柄，使下一次 getDB() 重新打开，而不是一直拿着死句柄报错。
-        if (dbPromise === p) dbPromise = null;
+        if (dbPromise === p) { dbPromise = null; openDb = null; }
       },
     });
     // open 自身失败时不要把 rejected promise 永久缓存，否则后续全部失败。
-    p.catch(() => { if (dbPromise === p) dbPromise = null; });
+    p.then(db => { if (dbPromise === p) openDb = db; }, () => { if (dbPromise === p) dbPromise = null; });
     dbPromise = p;
   }
   return dbPromise;
@@ -66,8 +69,106 @@ async function withDB<T>(op: (db: IDBPDatabase) => Promise<T> | T): Promise<T> {
   } catch (err) {
     if (!isConnectionClosedError(err)) throw err;
     dbPromise = null;
+    openDb = null;
     return op(await getDB());
   }
+}
+
+type WriteTx = IDBPTransaction<unknown, [typeof STORE_NAME], 'readwrite'>;
+
+/**
+ * Puts a value, starting now: the browser serializes the value inside `put`, so what is written is the value as it
+ * is at this call — no copy of our own is needed (P1 存档写入提速, docs/design/plot-vector-rebuild-plan.md §13.1).
+ * A value the browser cannot clone (a reactive proxy left inside the tree) is written as a plain deep copy, as it
+ * always was. `guard` runs right before the write starts. Throws synchronously when the connection is closed.
+ */
+function startWrite(db: IDBPDatabase, key: string, value: unknown, guard?: () => void): { tx: WriteTx; put: Promise<IDBValidKey> } {
+  guard?.();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  try {
+    try {
+      return { tx, put: tx.store.put(value, key) };
+    } catch (err) {
+      if (!isDataCloneError(err)) throw err;
+      // Nothing was written by the failed put; the transaction is still open for the plain copy.
+      return { tx, put: tx.store.put(cloneDeep(value), key) };
+    }
+  } catch (err) {
+    // Abort the unused transaction; its `done` then rejects, which nobody else waits for.
+    tx.done.catch(() => {});
+    try { tx.abort(); } catch { /* already finished */ }
+    throw err;
+  }
+}
+
+/** The browser could not clone the value (by name: test realms and older engines differ in the error's class). */
+function isDataCloneError(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && (err as { name?: unknown }).name === 'DataCloneError';
+}
+
+/** A copy taken now, for a write that has to wait for the connection first. Same fallback as `startWrite`. */
+function copyNow(value: unknown): unknown {
+  try { return structuredClone(value); }
+  catch (err) {
+    if (isDataCloneError(err)) return cloneDeep(value);
+    throw err;
+  }
+}
+
+/**
+ * Writes waiting for the connection. While any wait, a new write waits behind them too, so writes reach the
+ * database in the order they were asked for (a later write never lands under an earlier one).
+ */
+let waitingWrites = 0;
+
+/** Waits for a started write; `guard` again before it commits. A failure aborts it. */
+async function finishWrite({ tx, put }: { tx: WriteTx; put: Promise<IDBValidKey> }, guard?: () => void): Promise<void> {
+  try {
+    await put;
+    guard?.();
+    await tx.done;
+  } catch (error) {
+    try { tx.abort(); } catch { /* Already completed. */ }
+    await tx.done.catch(() => {});
+    throw error;
+  }
+}
+
+/**
+ * One write of a whole value: on an open connection it starts at this call (no copy); otherwise the value is copied
+ * now and written once the connection is open. A connection found closed is reopened once, as `withDB` does.
+ */
+async function writeValue(key: string, value: unknown, guard?: () => void): Promise<void> {
+  const db = openDb;
+  if (db && waitingWrites === 0) {
+    let started: ReturnType<typeof startWrite> | null = null;
+    try { started = startWrite(db, key, value, guard); }
+    catch (err) {
+      if (!isConnectionClosedError(err)) throw err;
+      if (openDb === db) { dbPromise = null; openDb = null; }
+    }
+    if (started) {
+      try { return await finishWrite(started, guard); }
+      catch (err) {
+        if (!isConnectionClosedError(err)) throw err;
+        // The connection closed under the write, which wrote nothing: reopen and write once more, as withDB
+        // always did. The value can only be taken as it is now (rare: the browser closed the connection).
+        if (openDb === db) { dbPromise = null; openDb = null; }
+        console.warn('[IDB] The connection closed during a write; writing again on a new connection.');
+      }
+    }
+  }
+  const copy = copyNow(value);
+  waitingWrites++;
+  let waiting = true;
+  const stopWaiting = () => { if (waiting) { waiting = false; waitingWrites--; } };
+  try {
+    await withDB(async live => {
+      const started = startWrite(live, key, copy, guard);
+      stopWaiting();
+      return finishWrite(started, guard);
+    });
+  } finally { stopWaiting(); }
 }
 
 /**
@@ -110,34 +211,22 @@ let _lastQuotaCheck = 0;
 const QUOTA_CHECK_INTERVAL = 60_000;
 
 export const idbAdapter = {
-  /** Guard after opening the connection and await transaction completion, not just put. */
+  /**
+   * Writes the value as it is at this call (see `writeValue`), checking `guard` right before the write starts and
+   * again before it commits; resolves once the transaction is complete, not just the put.
+   */
   async setGuarded(key: string, value: unknown, guard: () => void): Promise<void> {
-    const cloned = structuredClone(value);
-    await withDB(async db => {
-      guard();
-      const tx = db.transaction(STORE_NAME, 'readwrite');
-      try {
-        await tx.store.put(cloned, key);
-        guard();
-        await tx.done;
-      } catch (error) {
-        try { tx.abort(); } catch { /* Already completed. */ }
-        await tx.done.catch(() => {});
-        throw error;
-      }
-    });
+    await writeValue(key, value, guard);
   },
   /** 按 key 读取 */
   async get<T>(key: string): Promise<T | undefined> {
     return withDB((db) => db.get(STORE_NAME, key) as Promise<T | undefined>);
   },
 
-  /** 写入（structuredClone 避免 reactive proxy 问题） */
+  /** 写入：写进去的是调用这一刻的值（见 `writeValue`；不可克隆的响应式代理退回深拷贝）。 */
   async set(key: string, value: unknown): Promise<void> {
-    // 先克隆一次，重试时复用同一份，避免重复克隆大对象。
-    const cloned = structuredClone(value);
     try {
-      await withDB((db) => db.put(STORE_NAME, cloned, key));
+      await writeValue(key, value);
     } catch (err) {
       if (err instanceof DOMException && err.name === 'QuotaExceededError') {
         console.error('[IDB] QuotaExceededError — storage full');
