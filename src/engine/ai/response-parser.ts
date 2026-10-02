@@ -77,6 +77,105 @@ export function liftSidecars(text: string, tags: readonly string[] | undefined):
   return { text: kept.trim(), sidecars: Object.fromEntries([...found].map(([tag, blocks]) => [tag, blocks.join('\n\n')])) };
 }
 
+/** Top-level keys the parser reads; any other top-level key is kept in `customFields`. */
+const KNOWN_RESPONSE_KEYS = new Set([
+  'text', '叙事文本',
+  'commands', 'tavern_commands', '指令',
+  'mid_term_memory', '中期记忆',
+  'action_options', '行动选项',
+  'judgement',
+  'semantic_memory',
+  'knowledge_facts',
+  'setting_updates',
+  'memoryEntry', 'memory_entry', '记忆条目',
+]);
+
+const ENVELOPE_HEAD = /^\{\s*"(?:text|叙事文本)"\s*:\s*"/;
+const ENVELOPE_ESCAPES: Record<string, string> = { n: '\n', t: '\t', r: '\r', b: '\b', f: '\f', '"': '"', '\\': '\\', '/': '/' };
+const QUOTED_KEY = /^"(?:[^"\\]|\\.)*"\s*:/;
+const LOOSE_KEY = /^(?:'([^'\\]*)'|([^\s'":,{}[\]]+))\s*:/;
+
+/**
+ * Whether the quote just before `from` ends the narrative value: the object ends, the reply ends, or the next key
+ * follows — any double-quoted key, or one of the reply's own keys written single-quoted or bare (`, commands:`),
+ * which prose never is.
+ */
+function closesEnvelopeValue(text: string, from: number): boolean {
+  let j = from;
+  while (j < text.length && /\s/.test(text[j])) j++;
+  if (j >= text.length || text[j] === '}') return true;
+  if (text[j] !== ',') return false;
+  j++;
+  while (j < text.length && /\s/.test(text[j])) j++;
+  if (j >= text.length) return true;
+  const rest = text.slice(j, j + 200);
+  if (QUOTED_KEY.test(rest)) return true;
+  const loose = LOOSE_KEY.exec(rest);
+  return !!loose && KNOWN_RESPONSE_KEYS.has(loose[1] ?? loose[2]);
+}
+
+/**
+ * Where the narrative value of the reply's envelope starts: the first top-level object (outside any other object;
+ * prose before it may have braces of its own) that opens with `"text":"`, or else the first `{"` of the reply if
+ * that is the envelope. A `"text"` nested inside another object is never the narrative. -1 without one.
+ */
+function envelopeValueStart(text: string): number {
+  let depth = 0, inString = false, escaped = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (c === '\\') escaped = true;
+      else if (c === '"') inString = false;
+    } else if (c === '{') {
+      const head = depth === 0 ? ENVELOPE_HEAD.exec(text.slice(i, i + 200)) : null;
+      if (head) return i + head[0].length;
+      depth++;
+    } else if (c === '}' && depth > 0) depth--;
+    else if (c === '"' && depth > 0) inString = true;
+  }
+  // An unbalanced brace in the prose (`好的，{`) hides the envelope from the scan above. Then the first thing
+  // that opens like a JSON object has to be the envelope itself.
+  const first = /\{\s*"/.exec(text);
+  const head = first ? ENVELOPE_HEAD.exec(text.slice(first.index, first.index + 200)) : null;
+  return first && head ? first.index + head[0].length : -1;
+}
+
+/**
+ * The narrative of a reply whose JSON could not be parsed, read out of its `{"text":"…` envelope. The value is
+ * read leniently: escapes are decoded (an unknown one keeps its character, as the escape sanitizer does), a raw
+ * line break stays, a quote that is not followed by the end of the object or the next key is part of the text,
+ * and a reply cut off before the closing quote (or inside an escape) gives everything before it. Without such an
+ * envelope: null.
+ */
+export function salvageEnvelopeText(text: string): string | null {
+  let i = envelopeValueStart(text);
+  if (i < 0) return null;
+  let out = '';
+  while (i < text.length) {
+    const c = text[i];
+    if (c === '\\') {
+      const next = text[i + 1];
+      if (next === undefined) break;
+      const hex = next === 'u' ? text.slice(i + 2, i + 6) : '';
+      if (/^[0-9a-fA-F]{4}$/.test(hex)) {
+        out += String.fromCharCode(parseInt(hex, 16));
+        i += 6;
+      } else if (next === 'u' && hex.length < 4 && /^[0-9a-fA-F]*$/.test(hex)) {
+        break; // the reply was cut off inside a \uXXXX escape
+      } else {
+        out += ENVELOPE_ESCAPES[next] ?? next;
+        i += 2;
+      }
+      continue;
+    }
+    if (c === '"' && closesEnvelopeValue(text, i + 1)) break;
+    out += c;
+    i++;
+  }
+  return out.trim() || null;
+}
+
 export class ResponseParser {
   /**
    * 思维链标签的匹配模式（英文标签名 —— PRINCIPLES §3.17）
@@ -189,10 +288,12 @@ export class ResponseParser {
     }
 
     // JSON parse 全部策略失败 —— 退化到整段文本当作 narrative。
-    // If a <正文> tag was found, use its content as text; otherwise use the full sanitized text.
+    // A <正文> tag wins; otherwise the narrative is read out of a `{"text":"…` envelope (split-gen step1 has no
+    // repair stage behind it, so this is the only thing between the player and the JSON source); otherwise the
+    // full sanitized text.
     // `parseOk: false` 通知下游（如 ResponseRepairStage）走补救路径。
     return {
-      text: this.stripNarrativeWrapperTags(narrativeFromTag ?? sanitized),
+      text: this.stripNarrativeWrapperTags(narrativeFromTag ?? salvageEnvelopeText(textForJson) ?? sanitized),
       thinking,
       raw: sanitized,
       parseOk: false,
@@ -349,17 +450,7 @@ export class ResponseParser {
     return result.length > 0 ? result : undefined;
   }
 
-  private static readonly KNOWN_KEYS = new Set([
-    'text', '叙事文本',
-    'commands', 'tavern_commands', '指令',
-    'mid_term_memory', '中期记忆',
-    'action_options', '行动选项',
-    'judgement',
-    'semantic_memory',
-    'knowledge_facts',
-    'setting_updates',
-    'memoryEntry', 'memory_entry', '记忆条目',
-  ]);
+  private static readonly KNOWN_KEYS = KNOWN_RESPONSE_KEYS;
 
   /**
    * Canon Capture: shape-normalize `setting_updates` WITHOUT judging its contents.
