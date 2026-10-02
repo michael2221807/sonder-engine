@@ -70,7 +70,7 @@ describe('a body stays inside the card domain: it can never reach or change the 
     ['const o = { m(n) { return n ? o.m(n - 1) + o.m(n - 1) : 0; } }; return { push: o.m(40) };', 'not "m("'],
     ['const o = { get push() { return 1; } }; return o;', 'getters and setters'],
     // A keyword-named getter run by a spread would recurse without any call syntax (review finding).
-    ['const bomb = { get in() { return ctx.step === 6 ? { ...bomb } : {}; } }; return ctx.step === 6 ? { ...bomb } : { push: 1 };', 'getters and setters'],
+    ['const bomb = { get in() { return ctx.step === 6 ? bomb.in : {}; } }; return ctx.step === 6 ? bomb.in : { push: 1 };', 'getters and setters'],
     ["const o = { set 'x'(v) {} }; return {};", 'getters and setters'],
     ['return ctx.rng?.();', 'optional calls'],
     // Destructuring would hand over a built-in by any literal name.
@@ -99,7 +99,7 @@ describe('a body stays inside the card domain: it can never reach or change the 
       "if (!ctx.back) return {};\nreturn { convert: { from: 'drag', to: 'social', amount: ctx.drag / 2 } };",
       'const n = Math.min(3, ctx.level + 1); return ctx.rng() < 0.5 ? { chance: n } : { push: n, steps: Number.isInteger(n) ? 1 : 0 };',
       'let x = ctx.push; x = x * 2; x /= 4; return { push: x, from: "push" }; // a comment',
-      'const r = { push: 1 }; r.push = r.push + (ctx.stored >= 10 ? 5 : 0); return ctx.pass % 2 === 0 ? r : { ...r, turn: 1 };',
+      'const r = { push: 1 }; r.push = r.push + (ctx.stored >= 10 ? 5 : 0); return ctx.pass % 2 === 0 ? r : { push: r.push, turn: 1 };',
       'return (ctx.push + ctx.drag) / 2 > 3 ? { relay: { xPush: 2, echo: 1 } } : { store: { from: "push", amount: Math.floor(ctx.push / 2) } };',
       'if (ctx.step > 3) { return { steps: 1 }; } else { return {}; }',
       'const get = ctx.push, set = ctx.drag; return { push: get - set };',

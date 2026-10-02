@@ -11,8 +11,21 @@
  * names of the domain; calls only to Math/Number functions, isFinite, isNaN and ctx.rng(); no getters or
  * setters (they run without call syntax). Everything a body can reach is a fresh frozen object, never one
  * of the page's own built-ins.
+ *
+ * Nor may a body hold the page (P5, docs/design/plot-vector-rebuild-plan.md §13.3). Without loops each operator
+ * runs at most once, but some operators cost without bound all the same:
+ * - `x = x + x` doubles a text every statement (some thirty reach half a billion characters, and one comparison
+ *   or conversion then takes hundreds of megabytes): text is only a channel name (the domain's only text) and a
+ *   body has at most MAX_PLUS plus signs, so any text it builds is its longest piece × 2^15 at most (a few
+ *   million characters even when a piece is a stand-in's source; comparing or converting it takes milliseconds);
+ * - a BigInt literal (`3n ** 300000000n`, also `0x1n`) computes for minutes or exhausts memory: numbers are plain
+ *   numbers, and a number running into a name is refused;
+ * - spread turns every character of a text into a property (`{ ...x }`, a million per spread): no spread.
+ * The body's length is held to LIMITS.sourceChars here too. In-page code cannot be interrupted, so a pass that
+ * still runs long switches its card off for the session (SLOW_PASS_MS). What a failing body reports is cut
+ * short and is never a function's source (it travels with the trip into the save).
  */
-import type { PassValues } from './types';
+import { CHANNEL_NAMES, LIMITS, type PassValues } from './types';
 
 /** Words and fragments a body may not contain (matched outside identifiers where the token is a word). */
 const FORBIDDEN_WORDS = [
@@ -61,6 +74,22 @@ const SCOPE_VALUES: ReadonlyMap<string, unknown> = new Map<string, unknown>([
   ['isNaN', standIn((v: unknown) => Number.isNaN(v))], ['NaN', NaN], ['Infinity', Infinity], ['undefined', undefined],
 ]);
 const FREE_CALLS = new Set(['isFinite', 'isNaN']);
+/**
+ * Plus signs a body may use (each runs at most once, and only `+` can grow a text). The cards written so far use
+ * at most 3 (97 cards, P5); 16 keeps arithmetic room and caps a text at its longest piece × 2^16.
+ */
+export const MAX_PLUS = 16;
+/** The only texts a body may write: the channel names (in convert and store). */
+const TEXTS = new Set(CHANNEL_NAMES.flatMap(name => [`'${name}'`, `"${name}"`]));
+/** How much of a failing body's report is kept (it travels with the trip into the save). */
+export const MAX_ERROR_CHARS = 300;
+/**
+ * A pass longer than this switches its card off for the session (a pass normally takes microseconds; this is far
+ * above that even on a slow phone).
+ */
+export const SLOW_PASS_MS = 250;
+/** Words after which `(` may follow without being a call (an `if` head, a grouped expression after a keyword). */
+const CALL_FREE_KEYWORDS = new Set(['if', 'return', 'typeof', 'void', 'delete', 'in', 'instanceof', 'throw', 'else']);
 
 /** Names a body may read after a dot: the ctx values, Math and Number members, and the return fields. */
 const CTX_FIELDS = ['push', 'drag', 'social', 'chance', 'pass', 'step', 'back', 'level', 'stored', 'rng'];
@@ -76,7 +105,7 @@ interface Token { kind: 'name' | 'number' | 'string' | 'punct'; text: string; cl
 const NAME_START = /[\p{ID_Start}$_]/u;
 const NAME_PART = /[\p{ID_Continue}$\u200c\u200d]/u;
 const LINE_END = new RegExp('[\n\r\u2028\u2029]', 'u');
-const NUMBER = /(?:0[xX][\da-fA-F_]+|0[oO][0-7_]+|0[bB][01_]+|(?:\d[\d_]*\.?[\d_]*|\.\d[\d_]*)(?:[eE][+-]?\d[\d_]*)?n?)/y;
+const NUMBER = /(?:0[xX][\da-fA-F_]+|0[oO][0-7_]+|0[bB][01_]+|(?:\d[\d_]*\.?[\d_]*|\.\d[\d_]*)(?:[eE][+-]?\d[\d_]*)?)/y;
 
 /**
  * Split a body into tokens the way the engine will run it. Strings and comments are the only text skipped;
@@ -104,6 +133,8 @@ function tokenize(source: string): Token[] {
       NUMBER.lastIndex = i;
       const match = NUMBER.exec(source);
       if (!match) throw new Error(`unexpected character "${c}"`);
+      // `1n`, `0x1n`: a BigInt (unbounded work); any name glued to a number reads differently in the engine.
+      if (NAME_PART.test(source[i + match[0].length] ?? '')) throw new Error('numbers are plain numbers (no BigInt)');
       tokens.push({ kind: 'number', text: match[0] }); i += match[0].length; continue;
     }
     if (NAME_START.test(c)) {
@@ -118,7 +149,7 @@ function tokenize(source: string): Token[] {
       if (!division) throw new Error('regular expressions are not available');
       tokens.push({ kind: 'punct', text: '/' }); i++; continue;
     }
-    if (source.startsWith('...', i)) { tokens.push({ kind: 'punct', text: '...' }); i += 3; continue; }
+    if (source.startsWith('...', i)) throw new Error('spread is not available');
     if (source.startsWith('?.', i) && !/\d/.test(source[i + 2] ?? '')) { tokens.push({ kind: 'punct', text: '?.' }); i += 2; continue; }
     if (!'{}();,<>+-*%&|^!~?:=.'.includes(c)) throw new Error(`unexpected character "${c}"`);
     const token: Token = { kind: 'punct', text: c };
@@ -132,7 +163,11 @@ function tokenize(source: string): Token[] {
 /** Hold a body to the domain's subset (see the file comment). Throws with the reason. */
 function checkShape(source: string): void {
   const tokens = tokenize(source);
+  const plus = tokens.filter(token => token.kind === 'punct' && token.text === '+').length;
+  if (plus > MAX_PLUS) throw new Error(`at most ${MAX_PLUS} plus signs, not ${plus}`);
   tokens.forEach((token, i) => {
+    if (token.kind === 'string' && !TEXTS.has(token.text))
+      throw new Error(`text can only be a channel name (${CHANNEL_NAMES.join(', ')}), not ${token.text.slice(0, 20)}`);
     const prev = tokens[i - 1], before = tokens[i - 2];
     // An accessor runs without call syntax (a spread or a read calls it), so it could recurse: refused.
     // `get`/`set` followed by a property name and `(` only ever defines one.
@@ -149,7 +184,7 @@ function checkShape(source: string): void {
     if (token.text !== '(' || !prev) return;
     if (prev.text === '?.') throw new Error('optional calls are not available');
     const callsName = prev.kind === 'name' && (
-      (before && (before.text === '.' || before.text === '?.') ? CALLABLE_MEMBERS.has(prev.text) : FREE_CALLS.has(prev.text) || EXPRESSION_KEYWORDS.has(prev.text)));
+      (before && (before.text === '.' || before.text === '?.') ? CALLABLE_MEMBERS.has(prev.text) : FREE_CALLS.has(prev.text) || CALL_FREE_KEYWORDS.has(prev.text)));
     // `(` after a name, `)`, `}` or a literal is a call; only Math/Number functions, isFinite, isNaN and ctx.rng can be called.
     if (prev.kind === 'punct' ? [')', '}'].includes(prev.text) : !callsName)
       throw new Error(`only Math and Number functions, isFinite, isNaN and ctx.rng() can be called, not "${prev.text}("`);
@@ -173,6 +208,7 @@ export type CompiledPass = (ctx: PassContext) => unknown;
 
 /** Compile a body. Throws when it contains a forbidden token or does not parse. */
 export function compilePass(source: string): CompiledPass {
+  if (source.length > LIMITS.sourceChars) throw new Error(`onPass is longer than ${LIMITS.sourceChars} characters`);
   const forbidden = findForbiddenToken(source);
   if (forbidden) throw new Error(`forbidden token: ${forbidden}`);
   checkShape(source);
@@ -224,9 +260,25 @@ export function seededRng(seed: string): () => number {
   };
 }
 
+/** Bodies that ran longer than SLOW_PASS_MS once: switched off until the page is reloaded. */
+const tooSlow = new WeakSet<CompiledPass>();
+
+/**
+ * What a failing body reports: an error's message, cut short, or a thrown channel name. Any other thrown value —
+ * which could carry a stand-in function's source text — becomes a fixed sentence.
+ */
+function reportOf(error: unknown): string {
+  if (typeof error === 'string' && (CHANNEL_NAMES as readonly string[]).includes(error)) return error;
+  const text = error instanceof Error ? String(error.message) : 'the card threw something that is not an error';
+  return text.length > MAX_ERROR_CHARS ? `${text.slice(0, MAX_ERROR_CHARS - 1)}…` : text;
+}
+
 /** Run a compiled body once. Never throws: an error comes back as the reason this pass did not act. */
 export function runPass(compiled: CompiledPass, values: PassValues, seed: string): { ok: true; value: unknown } | { ok: false; error: string } {
+  if (tooSlow.has(compiled)) return { ok: false, error: `this card took longer than ${SLOW_PASS_MS} ms and is switched off until the page is reloaded` };
   const ctx: PassContext = Object.freeze({ ...values, rng: Object.freeze(seededRng(seed)) });
+  const started = performance.now();
   try { return { ok: true, value: compiled(ctx) }; }
-  catch (error) { return { ok: false, error: error instanceof Error ? error.message : String(error) }; }
+  catch (error) { return { ok: false, error: reportOf(error) }; }
+  finally { if (performance.now() - started > SLOW_PASS_MS) tooSlow.add(compiled); }
 }
