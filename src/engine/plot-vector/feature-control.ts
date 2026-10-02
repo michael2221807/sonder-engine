@@ -1,8 +1,21 @@
 /** Global opt-in. No story data is deleted when disabled. */
 export const PLOT_VECTOR_CONTROL_KEY = 'aga_plot_vector_control';
 export const PLOT_VECTOR_CONTROL_EVENT = 'aga:plot-vector-control';
-/** Release gate: terminateable Workers are not yet a reviewed production sandbox. */
-export const plotVectorAvailable = import.meta.env.DEV;
+/** Values of VITE_PLOT_VECTOR_RELEASE that keep the feature open, in any case; unset is open too. */
+const RELEASE_ON = ['', 'on', 'true', '1', 'yes'];
+/**
+ * Whether a build made with this VITE_PLOT_VECTOR_RELEASE value offers plot momentum. Any other value closes it:
+ * someone closing it in a hurry may write 'OFF', 'false' or 'disabled', and a word nobody expected is read as that.
+ */
+export function releaseOpen(value: string | undefined): boolean {
+  return RELEASE_ON.includes(String(value ?? '').trim().toLowerCase());
+}
+/**
+ * Release gate (P5, docs/design/plot-vector-rebuild-plan.md §13.3): the in-page card code passed its security
+ * acceptance, so the feature is available in every build — still off until the player turns it on in settings.
+ * A build made with VITE_PLOT_VECTOR_RELEASE=off (or any value but on/true/1/yes) keeps it closed.
+ */
+export const plotVectorAvailable = releaseOpen(import.meta.env.VITE_PLOT_VECTOR_RELEASE);
 export interface PlotVectorControl { enabled: boolean; epoch: string }
 export function readPlotVectorControl(): PlotVectorControl {
   try {
@@ -20,7 +33,7 @@ export function randomId(): string {
     : Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('');
 }
 export function writePlotVectorControl(enabled: boolean): void {
-  if (enabled && !plotVectorAvailable) throw new Error('Plot vector is available in local previews only');
+  if (enabled && !plotVectorAvailable) throw new Error('Narrative momentum is not available in this build');
   localStorage.setItem(PLOT_VECTOR_CONTROL_KEY, JSON.stringify({ enabled, epoch: randomId() }));
   window.dispatchEvent(new Event(PLOT_VECTOR_CONTROL_EVENT));
 }

@@ -1,6 +1,6 @@
 {
   "settings.plotVector.title": "剧情动能（实验）",
-  "settings.plotVector.releaseGate": "当前仅在本地预览开放，正式版须完成代码隔离安全验收后再启用。",
+  "settings.plotVector.releaseGate": "这个版本没有开放剧情动能。",
   "settings.plotVector.label": "剧情动能",
   "settings.plotVector.description": "默认关闭。开启后，每回合开始前棋盘给剧情一点轻微推动，只是轻轻一推，不判成败。本回合新得到的物品、天赋、状态和新出现的环境，会随这一回合的回复一起写出能力卡，不另外调用模型；没写出来的条目，之后的回合会自动补（补的时候多一次模型请求）。",
   "settings.plotVector.rollback": "关闭即可恢复原流程，保留已有卡牌；尚未保存的动能回合会取消。补给卡每用一回合扣一次，用完离手，每回合自动补一张，手里最多 3 张；卡由你在棋盘上摆放，状态卡自动进入 06 格，环境卡在出发时起作用。这个开关只保存在当前设备，换设备要再打开一次。",
