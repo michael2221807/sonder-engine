@@ -52,7 +52,11 @@ test('in-page cards cannot reach or change the page: escapes are refused at bind
       { id: 'GEN', onPass: "const o = { *m() {} }; return o.m() ? {} : {};", reason: /can be called/ },
       { id: 'DESTRUCTURE', onPass: 'const { toString: t } = {}; const o = { push: t }; return {};', reason: /destructuring/ },
       { id: 'REDOS', onPass: "return /^(a+)+$/.test('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!') ? {} : {};", reason: /regular expressions/ },
-      { id: 'GETTER', onPass: 'const bomb = { get in() { return ctx.step === 6 ? { ...bomb } : {}; } }; return ctx.step === 6 ? { ...bomb } : { push: 1 };', reason: /getters and setters/ },
+      { id: 'GETTER', onPass: 'const bomb = { get in() { return ctx.step === 6 ? bomb.in : {}; } }; return ctx.step === 6 ? bomb.in : { push: 1 };', reason: /getters and setters/ },
+      // P5 (docs/design/plot-vector-rebuild-plan.md §13.3): costs without bound, refused before anything runs.
+      { id: 'BIGINT', onPass: 'const a = 3n ** 300000000n; return { push: 1 };', reason: /no BigInt/ },
+      { id: 'SPREAD', onPass: "let x = 'social'; x = x + x; return { ...x };", reason: /spread/ },
+      { id: 'TEXT', onPass: "return { convert: { from: 'socialsocial', to: 'push', amount: 1 } };", reason: /channel name/ },
       { id: 'RECURSE', onPass: 'const o = { m(n) { return n ? o.m(n - 1) + o.m(n - 1) : 0; } }; return { push: o.m(60) };', reason: /can be called/ },
       { id: 'STORAGE', onPass: "localStorage.clear(); return {};", reason: /forbidden token: localStorage/ },
       // Rewrites of what a body can reach throw on every sample (all of it is frozen and its own): refused.
@@ -68,14 +72,14 @@ test('in-page cards cannot reach or change the page: escapes are refused at bind
     }
     // Page globals read as undefined inside a card; an honest card binds.
     const [look, honest] = await bindCards(page, [
-      { id: 'LOOK', onPass: "return (typeof console) + (typeof navigator) + (typeof location) === 'undefinedundefinedundefined' ? { chance: 1 } : { chance: 2 };" },
+      { id: 'LOOK', onPass: "return typeof console === typeof undefined && typeof navigator === typeof undefined && typeof location === typeof undefined ? { chance: 1 } : { chance: 2 };" },
       { id: 'HONEST', onPass: 'return { chance: 1 };' },
     ]);
     expect([look, honest]).toEqual([{ ok: true }, { ok: true }]);
     const seen = await page.evaluate(async () => {
       const path = '/src/features/plot-vector/contract/compile.ts';
       const { runPass, compilePass } = await import(/* @vite-ignore */ path);
-      return runPass(compilePass("return (typeof console) + (typeof navigator) + (typeof location) === 'undefinedundefinedundefined' ? { chance: 1 } : { chance: 2 };"),
+      return runPass(compilePass("return typeof console === typeof undefined && typeof navigator === typeof undefined && typeof location === typeof undefined ? { chance: 1 } : { chance: 2 };"),
         { push: 0, drag: 0, social: 0, chance: 0, pass: 1, step: 1, back: false, level: 0, stored: 0 }, 'gate');
     });
     expect(seen).toEqual({ ok: true, value: { chance: 1 } });
