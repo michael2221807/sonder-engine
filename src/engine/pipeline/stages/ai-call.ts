@@ -287,22 +287,29 @@ export class AICallStage implements PipelineStage {
  * AI output. Works for both single-call (`{"text":"...","commands":...}`) and
  * splitGen step1 (`{"text":"..."}`).
  *
- * States: SEEKING → IN_TEXT → (ESCAPE) → DONE / PASSTHROUGH
+ * States: SEEKING → IN_TEXT → (ESCAPE | QUOTE) → DONE / PASSTHROUGH
  *
- * - SEEKING: buffers chars until `{"text":"` prefix is detected
+ * - SEEKING: buffers chars until `{"text":"` prefix is detected (also behind `<正文>`, which a CoT reply may wrap
+ *   the whole JSON in — 2026-10-03)
  * - IN_TEXT: emits narrative chars, decodes JSON escapes (\n→newline, \"→")
  * - ESCAPE: just saw `\` inside the text value
+ * - QUOTE: just saw a bare `"` — it closes the value only if `}` comes next, or `,` and then a `"` (the next
+ *   key, most likely; the parser, which sees the whole reply, checks the key itself); otherwise it was a quote in
+ *   the story the model forgot to escape, and the stream goes on (it used to stop there for the rest of the step).
+ *   A story quote followed by `, "` can still end the live text early; the round's final text is the parser's.
  * - DONE: hit the closing `"` of the text value — discards the rest
- * - PASSTHROUGH: prefix not detected after 20 chars — emits everything raw
+ * - PASSTHROUGH: prefix not detected after 30 chars — emits everything raw
  */
-function createJsonTextStreamUnwrapper(
+export function createJsonTextStreamUnwrapper(
   onChunk: (chunk: string) => void,
 ): { onChunk: (chunk: string) => void; flush: () => void } {
-  const PREFIX_RE = /^\s*\{\s*"text"\s*:\s*"/;
-  const PREFIX_MAX = 20;
+  const PREFIX_RE = /^\s*(?:<正文>\s*)?\{\s*"(?:text|叙事文本)"\s*:\s*"/;
+  const PREFIX_MAX = 30;
 
-  let state: 'seeking' | 'text' | 'escape' | 'done' | 'passthrough' = 'seeking';
+  let state: 'seeking' | 'text' | 'escape' | 'quote' | 'quoteComma' | 'done' | 'passthrough' = 'seeking';
   let seekBuf = '';
+  /** What followed a bare quote while deciding whether it closes the value (whitespace, a comma). */
+  let quoteBuf = '';
 
   return {
     onChunk(chunk: string) {
@@ -334,10 +341,43 @@ function createJsonTextStreamUnwrapper(
             if (ch === '\\') {
               state = 'escape';
             } else if (ch === '"') {
+              state = 'quote';
+              quoteBuf = '';
+            } else {
+              onChunk(ch);
+            }
+            break;
+
+          case 'quote':
+            if (/\s/.test(ch)) {
+              quoteBuf += ch;
+            } else if (ch === '}') {
+              state = 'done';
+              return;
+            } else if (ch === ',') {
+              quoteBuf += ch;
+              state = 'quoteComma';
+            } else {
+              // A quote in the story: show it and what came after it, and read on.
+              onChunk('"' + quoteBuf);
+              quoteBuf = '';
+              state = 'text';
+              i--;
+            }
+            break;
+
+          case 'quoteComma':
+            if (/\s/.test(ch)) {
+              quoteBuf += ch;
+            } else if (ch === '"') {
               state = 'done';
               return;
             } else {
-              onChunk(ch);
+              // `"fine", then left`: the quote and the comma were the story's.
+              onChunk('"' + quoteBuf);
+              quoteBuf = '';
+              state = 'text';
+              i--;
             }
             break;
 

@@ -217,7 +217,7 @@ function applyWritingSettings(promptId: string, content: string, length: WordCou
 
 /** The length rule when the module has none of its own (PO 2026-10-03: a target, not a minimum). */
 function lengthRuleOf({ target, min, max }: WordCountRange): string {
-  return `<字数>本次<正文>标签内内容约 ${target} 字，控制在 ${min}–${max} 字之间。</字数>`;
+  return `<字数>本回合正文约 ${target} 字，控制在 ${min}–${max} 字之间。</字数>`;
 }
 
 /**
@@ -521,7 +521,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
 
   // ── 7. Word Count ──
   const wordCountContent = slot('write_req') ||
-    `【字数要求】\n${lengthRuleOf(lengthAsked)}\n- 正文指 \`<正文>\` 中除【判定】外的叙事与对白总和。`;
+    `【字数要求】\n${lengthRuleOf(lengthAsked)}\n- 正文指本回合的叙事与对白总和，不含【判定】。`;
   push('length_prompt', '字数要求提示词', '系统', 'system', wordCountContent);
 
   // ── 8. Long-term Memory ──

@@ -7,11 +7,11 @@
  *   - Narrative rescue from <正文>...</正文> when present
  *   - Structure rescue via AI call (commands/memory/options restored)
  *   - Graceful degradation when both rescue paths fail
- *   - extractNarrativeFromWrapper correctness
+ *   - The story read as the parser reads it (a reply wrapped in <正文> is not the story)
  */
 import { describe, it, expect, vi } from 'vitest';
 import { hasSettingUpdatesTrace } from './response-repair';
-import { ResponseRepairStage, extractNarrativeFromWrapper } from './response-repair';
+import { ResponseRepairStage } from './response-repair';
 import { ResponseParser } from '../../ai/response-parser';
 import type { PipelineContext } from '../types';
 import type { AIResponse } from '../../ai/types';
@@ -38,36 +38,57 @@ function makeCtx(overrides: Partial<PipelineContext> = {}): PipelineContext {
   };
 }
 
-describe('extractNarrativeFromWrapper', () => {
-  it('returns null on empty / non-string', () => {
-    expect(extractNarrativeFromWrapper('')).toBeNull();
-    expect(extractNarrativeFromWrapper(null as unknown as string)).toBeNull();
-  });
+// PO trial 2026-10-03, round 128: the model wrapped the whole reply in <正文> (quotes unescaped, line breaks raw).
+// The parser reads the story out of it; this stage used to take the last <正文> body blindly — the JSON source —
+// and put `{"text":"` back at the top of the round.
+describe('ResponseRepairStage · the story is read as the parser reads it', () => {
+  const STORY = '【楼道那盏声控灯，又"啪"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。';
+  const TAGGED = `<正文>{"text":"${STORY}"}</正文>`;
+  const parser = new ResponseParser();
 
-  it('extracts content between last <正文>...</正文>', () => {
-    const raw = '<thinking>...</thinking>\n<正文>\n深沉的夜色。\n</正文>\n{"text":"..."}';
-    expect(extractNarrativeFromWrapper(raw)).toBe('深沉的夜色。');
+  it('split: a step1 reply wrapped in the tag keeps its clean story when step2 needs repair', async () => {
+    const service = makeAIService(JSON.stringify({ text: '编造', commands: [], action_options: ['a', 'b', 'c'] }));
+    const out = await new ResponseRepairStage(service as never, parser).execute(makeCtx({
+      rawResponse: TAGGED,
+      parsedResponse: { ...parser.parse(TAGGED), parseOk: false },
+      meta: { rawResponseStep2: '{"commands":[{"action":"set"' },
+    }));
+    expect(out.parsedResponse?.text).toBe(STORY);
+    expect(out.parsedResponse?.actionOptions).toEqual(['a', 'b', 'c']);
   });
-
-  it('returns null when no <正文> tag present', () => {
-    const raw = '{"text":"just json"}';
-    expect(extractNarrativeFromWrapper(raw)).toBeNull();
+  it('single call: a loose reply wrapped in the tag keeps its story whatever the repair returns', async () => {
+    const raw = `<正文>{"text":"${STORY}","commands":[{"action":"set","key":"x","value":1}]</正文>`;
+    for (const repairReply of ['not json', JSON.stringify({ text: '修复模型的版本', commands: [] })]) {
+      const parsed = parser.parse(raw);
+      expect(parsed.text).toBe(STORY);
+      const out = await new ResponseRepairStage(makeAIService(repairReply) as never, parser).execute(makeCtx({ rawResponse: raw, parsedResponse: parsed }));
+      expect(out.parsedResponse?.text).toBe(STORY);
+    }
   });
-
-  it('returns null for empty <正文></正文>', () => {
-    expect(extractNarrativeFromWrapper('<正文></正文>')).toBeNull();
+  it('the reply is re-read as AICall read it: a feature block it lifted does not come back into the story', async () => {
+    const raw = '她推开门。\n<能力>[{"a":1},{"b":2}]</能力>';
+    const parsed = parser.parse(raw, { sidecars: ['能力'] });
+    expect(parsed.text).toBe('她推开门。');
+    const out = await new ResponseRepairStage(makeAIService('not json') as never, parser).execute(makeCtx({
+      rawResponse: raw, parsedResponse: parsed, meta: { responseSidecars: ['能力'] },
+    }));
+    expect(out.parsedResponse?.text ?? parsed.text).toBe('她推开门。');
   });
-
-  it('handles unclosed <正文> by taking until end', () => {
-    const raw = '<正文>未闭合的正文';
-    expect(extractNarrativeFromWrapper(raw)).toBe('未闭合的正文');
+  it('a reply whose story could not be read at all takes the repair model\'s text (single call)', async () => {
+    const raw = '好的：\n{text: "未加引号的键", commands: []}';
+    const parsed = parser.parse(raw);
+    expect(parsed.parseOk).toBe(false);
+    const service = makeAIService(JSON.stringify({ text: '修好的正文', commands: [], action_options: ['走'] }));
+    const out = await new ResponseRepairStage(service as never, parser).execute(makeCtx({ rawResponse: raw, parsedResponse: parsed }));
+    expect(out.parsedResponse?.text).toBe('修好的正文');
   });
-
-  it('skips <正文> literals inside thinking block and uses the last real one', () => {
-    const raw =
-      '<thinking>输出格式是 <正文>...</正文></thinking>\n' +
-      '<正文>真正的叙事。</正文>';
-    expect(extractNarrativeFromWrapper(raw)).toBe('真正的叙事。');
+  it('a tag inside the JSON string never brings back escapes', async () => {
+    const escaped = STORY.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+    const raw = `{"text":"<正文>${escaped}</正文>","commands":[`;
+    const parsed = parser.parse(raw);
+    expect(parsed.text).toBe(STORY);
+    const out = await new ResponseRepairStage(makeAIService('not json') as never, parser).execute(makeCtx({ rawResponse: raw, parsedResponse: parsed }));
+    expect(out.parsedResponse?.text).toBe(STORY);
   });
 });
 
@@ -346,9 +367,9 @@ describe('ResponseRepairStage · Canon Capture provenance gate (end-to-end)', ()
 
 describe('ResponseRepairStage · split-gen text is never clobbered (review of 9226845, Important #2)', () => {
   it('real step1 shape ({"text":...}, no <正文> tag): repair-model text is DISCARDED, step1 narrative survives', async () => {
-    // Production splitGenStep1 outputs {"text":"..."} — extractNarrativeFromWrapper
-    // finds no <正文> and returns null, so before this guard the repair model's
-    // fabricated text silently replaced step1's genuinely good narrative.
+    // Production splitGenStep1 outputs {"text":"..."} — there is no <正文> to read the story
+    // from, so before this guard the repair model's fabricated text silently replaced
+    // step1's genuinely good narrative.
     const service = makeAIService(JSON.stringify({
       text: '修复模型编造的正文，绝不能出现在最终输出里',
       commands: [],

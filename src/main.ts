@@ -101,6 +101,7 @@ import { DEFAULT_ENGINE_PATHS } from './engine/pipeline/types';
 import { setBootstrapGamePack } from './engine/bootstrap-pack';
 import { TimeService, gameCalendar } from './engine/behaviors/time-service';
 import { NpcDedupModule } from './engine/behaviors/npc-dedup';
+import { NarrativeEnvelopeRepairModule } from './engine/behaviors/narrative-envelope-repair';
 import { MemoryCompilerModule } from './engine/behaviors/memory-compiler';
 import { ComputedFieldsModule } from './engine/behaviors/computed-fields';
 import { EffectLifecycleModule } from './engine/behaviors/effect-lifecycle';
@@ -387,6 +388,9 @@ async function bootstrap(): Promise<void> {
     longTermCap: 30,
   };
   const memoryManager = new MemoryManager(stateManager, memoryPathConfig);
+  // NarrativeEnvelopeRepairModule：读档时修好存成 JSON 外壳（`{"text":"…`）的回合正文、短期记忆与收藏楼层快照（2026-10-03）
+  behaviorRunner.register(new NarrativeEnvelopeRepairModule(
+    DEFAULT_ENGINE_PATHS.narrativeHistory, memoryPathConfig.shortTermPath, DEFAULT_ENGINE_PATHS.bookmarkedRounds));
   const memoryRetriever = new MemoryRetriever(memoryPathConfig, memoryManager);
 
   // MemoryCompilerModule：在上下文组装阶段将结构化记忆注入 prompt 变量

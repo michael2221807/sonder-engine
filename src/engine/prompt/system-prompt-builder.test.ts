@@ -69,11 +69,11 @@ describe('buildSystemPrompt · action options and word count', () => {
     // A target of 150 inside "1500" must not pass for the current setting.
     for (const old of ['<字数>本次正文必须达到${wordCount}字以上。</字数>', '<字数>本次正文必须达到1500字以上。</字数>']) {
       const piece = build({ wordCountRequirement: 150 }, { wordCountReq: `【字数要求】\n${old}` }).contextPieces.length_prompt;
-      expect(piece).toBe('【字数要求】\n<字数>本次<正文>标签内内容约 150 字，控制在 120–180 字之间。</字数>');
+      expect(piece).toBe('【字数要求】\n<字数>本回合正文约 150 字，控制在 120–180 字之间。</字数>');
     }
     // A module with no block of its own gets the rule after it.
     expect(build({ wordCountRequirement: 800 }, { wordCountReq: '【字数要求】' }).contextPieces.length_prompt)
-      .toBe('【字数要求】\n<字数>本次<正文>标签内内容约 800 字，控制在 640–960 字之间。</字数>');
+      .toBe('【字数要求】\n<字数>本回合正文约 800 字，控制在 640–960 字之间。</字数>');
   });
   it('the length rule asks for the player\'s target and its band (a fifth either way), not a minimum', () => {
     expect(build({ wordCountRequirement: 2500 }).contextPieces.length_prompt).toContain('约 2500 字，控制在 2000–3000 字之间');

@@ -8,9 +8,9 @@
  * 等更深层的问题。
  *
  * 两阶段救援：
- *   1. **正文抢救**（无 AI 调用）：如果 rawResponse 里有 `<正文>...</正文>`
- *      块，直接把块内容当作 narrative text。这避免 body polish 把一整团
- *      JSON 源码当成叙事去优化。
+ *   1. **正文抢救**（无 AI 调用）：用同一个解析器重读 rawResponse（`<正文>` 按所在位置判断，
+ *      2026-10-03）；读出的正文不是 JSON 原文才用。这避免 body polish 把一整团
+ *      JSON 源码当成叙事去优化，也不再把整个包进 `<正文>` 的 JSON 回复放回正文。
  *   2. **结构救援**（AI 调用）：针对 commands / mid_term_memory /
  *      action_options / semantic_memory 再发一次请求，让模型只输出这几个
  *      字段的合法 JSON。成功的话合入 parsedResponse，失败就算了——保持
@@ -38,29 +38,8 @@ import {
   extractThinkingFromRaw,
 } from '../../core/prompt-debug';
 
-/**
- * 从 raw text 里抽出 `<正文>...</正文>` 块的正文内容
- *
- * 行为与 body-polish-stage.ts 的 `extractBodyFromPolishOutput` 一致，但复制
- * 到这里避免跨 stage 循环依赖。策略：找最后一个开标签（跳过 thinking block
- * 里可能出现的例子）、到匹配关闭标签或结尾之间的内容。失败返回 null（注意：
- * 空字符串也算失败，因为一个空 `<正文></正文>` 不是救援信号）。
- */
-export function extractNarrativeFromWrapper(raw: string): string | null {
-  if (!raw || typeof raw !== 'string') return null;
-  const openRe = /<\s*正文\s*>/gi;
-  let lastOpen: RegExpExecArray | null = null;
-  let m: RegExpExecArray | null;
-  while ((m = openRe.exec(raw)) !== null) {
-    lastOpen = m;
-  }
-  if (!lastOpen) return null;
-  const afterOpen = raw.slice(lastOpen.index + lastOpen[0].length);
-  const closeMatch = afterOpen.match(/<\s*\/\s*正文\s*>/i);
-  const body = closeMatch ? afterOpen.slice(0, closeMatch.index) : afterOpen;
-  const trimmed = body.replace(/^[\t ]+|[\t ]+$/gm, '').trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
+/** A story that is still the reply's JSON source (bare, or behind the narrative tag): no story was read. */
+const STILL_SOURCE = /^\s*(?:<正文>\s*)?\{/;
 
 /**
  * Canon Capture provenance gate (design §5.6).
@@ -130,8 +109,16 @@ export class ResponseRepairStage implements PipelineStage {
     const rawStructure = usingStep2Raw ? (metaStep2Raw as string) : ctx.rawResponse;
     const structureRaw = ctx.meta.responseSidecars?.length ? liftSidecars(rawStructure, ctx.meta.responseSidecars).text : rawStructure;
 
-    // Step 1: 正文抢救 —— 零成本（narrative always lives in ctx.rawResponse）
-    let recoveredText: string | null = extractNarrativeFromWrapper(ctx.rawResponse);
+    // Step 1: 正文抢救 —— 零成本（narrative always lives in ctx.rawResponse）. The story is read the way the parser
+    // reads it — the narrative tag judged by where it stands (2026-10-03). Taking the last <正文> body here blindly
+    // put the reply's own JSON back as the story when the model wrapped the whole reply in the tag (PO trial,
+    // round 128: `{"text":"` at the top of the round, the parser's clean story overwritten).
+    const parserStory = (parsed.text ?? '').trim();
+    // Read as AICall read it: a single call with the feature blocks lifted, split step1 without (code review).
+    const reread = this.responseParser.parse(ctx.rawResponse, { sidecars: usingStep2Raw ? undefined : ctx.meta.responseSidecars }).text.trim();
+    let recoveredText: string | null = reread && !STILL_SOURCE.test(reread) && reread !== parserStory ? reread : null;
+    /** No story could be read from the reply: what the parser kept is its JSON source, or the whole reply. */
+    const storyMissing = !recoveredText && (STILL_SOURCE.test(parserStory) || parserStory === (parsed.raw ?? '').trim());
 
     // Step 2: 结构救援 —— AI 调用
     let recoveredCommands = parsed.commands;
@@ -204,12 +191,12 @@ export class ResponseRepairStage implements PipelineStage {
         if (wantSettingUpdates && repaired.settingUpdates) {
           recoveredSettingUpdates = repaired.settingUpdates;
         }
-        // If <正文> wasn't found but repair gave clean text, use it — SINGLE-CALL ONLY.
+        // If no story could be read from the reply but repair gave clean text, use it — SINGLE-CALL ONLY.
         // In split mode structureRaw is step2's JSON, which structurally contains no
         // narrative: any `text` the repair model returns is fabricated, and letting it
         // through would silently replace step1's genuinely good narrative (review of
         // 9226845, Important #2). parsed.text (= step1's narrative) stays authoritative.
-        if (!usingStep2Raw && !recoveredText && repaired.text && repaired.text.trim()) {
+        if (!usingStep2Raw && storyMissing && repaired.text && repaired.text.trim()) {
           recoveredText = repaired.text;
         }
       } else {

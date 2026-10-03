@@ -176,6 +176,62 @@ export function salvageEnvelopeText(text: string): string | null {
   return out.trim() || null;
 }
 
+const NARRATIVE_OPEN = '<正文>';
+const NARRATIVE_CLOSE = '</正文>';
+
+/**
+ * The first closed `<正文>…</正文>` block that does not stand inside a JSON string, with its content and span;
+ * null without one. A tag inside a JSON string (`{"text":"<正文>…"}`) is part of that value — its content there is
+ * still JSON-escaped — and is left to the JSON. Valid JSON can hold a tag only inside a string, so one found
+ * between braces but outside any string (after a stray `{` in prose) still counts. One pass, tracking string state
+ * inside objects like `liftSidecars`; outside JSON, quotes do not matter.
+ */
+function narrativeTagOutsideJson(text: string): { content: string; start: number; end: number } | null {
+  let depth = 0, inString = false, escaped = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (c === '\\') escaped = true;
+      else if (c === '"') inString = false;
+      continue;
+    }
+    if (text.startsWith(NARRATIVE_OPEN, i)) {
+      const close = text.indexOf(NARRATIVE_CLOSE, i + NARRATIVE_OPEN.length);
+      if (close < 0) return null;
+      return { content: text.slice(i + NARRATIVE_OPEN.length, close).trim(), start: i, end: close + NARRATIVE_CLOSE.length };
+    }
+    if (c === '{') depth++;
+    else if (c === '}' && depth > 0) depth--;
+    else if (c === '"' && depth > 0) inString = true;
+  }
+  return null;
+}
+
+/** A JSON string's content decoded leniently: known escapes decoded, any other `\\x` keeps its character. */
+function decodeLooseJsonString(s: string): string {
+  return s.replace(/\\(u[0-9a-fA-F]{4}|[\s\S])/g, (_, e: string) =>
+    e.length === 5 ? String.fromCharCode(parseInt(e.slice(1), 16)) : (ENVELOPE_ESCAPES[e] ?? e));
+}
+
+/** Whether a tag's content is a reply object (its narrative under `text`), maybe in a code fence. */
+const REPLY_HEAD = /^(?:```(?:json|JSON)?\s*)?\{\s*"(?:text|叙事文本)"\s*:/;
+
+/** A stored narrative that is really a reply's JSON envelope, bare or inside `<正文>` (both the 2026-10-02/03 leaks). */
+const STORED_ENVELOPE = /^(?:<正文>\s*)?\{\s*"(?:text|叙事文本)"\s*:/;
+
+/**
+ * The narrative a stored round should have shown, when what was stored is the reply's JSON envelope (a parser
+ * before 2026-10-03 kept `{"text":"…` as the story when the reply was unparseable or wrapped in `<正文>`); null
+ * when the text is not such an envelope or nothing better can be read from it. Used to heal saved rounds on load.
+ */
+export function repairStoredNarrative(text: string): string | null {
+  const trimmed = text.trim();
+  if (!STORED_ENVELOPE.test(trimmed)) return null;
+  const repaired = new ResponseParser().parse(trimmed).text.trim();
+  return repaired && repaired !== trimmed && !STORED_ENVELOPE.test(repaired) ? repaired : null;
+}
+
 export class ResponseParser {
   /**
    * 思维链标签的匹配模式（英文标签名 —— PRINCIPLES §3.17）
@@ -250,12 +306,38 @@ export class ResponseParser {
 
     // Extract <正文> block before JSON parsing — some models put narrative
     // outside the JSON in CoT-style tags instead of inside json.text.
-    const narrativeFromTag = this.extractNarrativeTag(sanitized);
-    const textForJson = narrativeFromTag
-      ? sanitized.replace(/<正文>[\s\S]*?<\/正文>/gi, '').trim()
-      : sanitized;
+    // The tag is judged by where it stands (2026-10-03, the `{"text":"` leak's root): the CoT protocol asks for the
+    // narrative in <正文> while the format asks for a JSON reply, and a model that does both writes either
+    // `{"text":"<正文>…</正文>"}` (a tag inside the JSON string: the JSON's own business) or
+    // `<正文>{"text":"…"}</正文>` (the whole reply in the tag: its content is the reply to parse, not the story).
+    const tag = narrativeTagOutsideJson(sanitized);
+    const tagJson = tag && /^(?:```(?:json)?\s*)?\{/i.test(tag.content) ? this.tryParseJson(tag.content) : null;
+    // The tag holds the reply when its content is an object carrying the narrative (parsed), or reads like one.
+    const replyInTag = tag !== null && (
+      (tagJson !== null && (typeof tagJson.text === 'string' || typeof tagJson['叙事文本'] === 'string'))
+      || REPLY_HEAD.test(tag.content));
+    const narrativeFromTag = tag && !replyInTag ? tag.content || null : null;
+    const outsideTag = tag ? (sanitized.slice(0, tag.start) + sanitized.slice(tag.end)).trim() : '';
+    const textForJson = !tag ? sanitized : replyInTag ? tag.content : outsideTag;
 
-    const json = this.tryParseJson(textForJson);
+    let json = replyInTag ? tagJson : this.tryParseJson(textForJson);
+    if (replyInTag && tag && outsideTag) {
+      // Fields the model wrote after the tag, in a JSON block of their own, still count; the tag's own win.
+      const extra = this.tryParseJson(outsideTag);
+      const story = json ? null : salvageEnvelopeText(tag.content);
+      if (extra && (json || story)) json = { ...extra, ...(json ?? {}), ...(story ? { text: story } : {}) };
+    }
+    if (!json && !tag) {
+      // A tag inside the JSON string of a reply too loose to parse (raw line breaks, unescaped quotes in the story):
+      // without the tag the rest may parse — keep its fields; the story is the tag's content, decoded.
+      const inner = /<正文>([\s\S]*?)<\/正文>/.exec(textForJson);
+      const rest = inner ? this.tryParseJson(textForJson.replace(inner[0], '')) : null;
+      if (inner && rest) {
+        const story = decodeLooseJsonString(inner[1].trim());
+        const other = String(rest.text ?? rest['叙事文本'] ?? '');
+        json = { ...rest, text: story.length >= other.length ? story : other };
+      }
+    }
 
     if (json) {
       const rawText = String(json.text ?? json['叙事文本'] ?? '');
@@ -306,7 +388,7 @@ export class ResponseParser {
    *
    * CoT-ON 主回合的 prompt 同时告诉模型两件互相冲突的事：
    *   1. `core.md` 铁律："直接输出 JSON，字段是 `text`"
-   *   2. `cot-preamble` / `cot-masquerade` / `wordCountReq`："把正文包在 `<正文>...</正文>` 里"
+   *   2. `cot-preamble` / `cot-masquerade`："把正文包在 `<正文>...</正文>` 里"（`wordCountReq` 2026-10-03 起不再点名标签）
    *
    * 多数模型选 (1) 走 JSON 格式，但因为 (2) 在多个系统提示词里反复强调
    * `<正文>` tag，模型顺手把开头的 `<正文>` 字面量塞进 `json.text` 字符串里
@@ -319,19 +401,6 @@ export class ResponseParser {
    * `<judge>`）从 narrative text 里剥掉，只拿内容。不动 thinking 标签（那是
    * 独立处理的），也不动 `【…】` / `〖…〗` / `"…"` 这些真正用于排版的符号。
    */
-  /**
-   * Extract content from `<正文>...</正文>` tags.
-   *
-   * Some models (especially with CoT prompts) place the narrative text in
-   * a `<正文>` tag outside the JSON rather than inside `json.text`. This
-   * method captures that content so parse() can use it as fallback when
-   * the JSON has no `text` field.
-   */
-  private extractNarrativeTag(text: string): string | null {
-    const match = text.match(/<正文>([\s\S]*?)<\/正文>/i);
-    return match?.[1]?.trim() || null;
-  }
-
   private stripNarrativeWrapperTags(text: string): string {
     if (!text) return text;
     // Match both opening `<tag>` and closing `</tag>` — keep inner content.
