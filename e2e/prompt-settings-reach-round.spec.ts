@@ -108,9 +108,10 @@ for (const splitGen of [true, false]) {
 
       await playRound(page, '我接过伞。');
       let asked = sent.join('\n');
-      expect(asked).toContain('2500字以上');
+      // A target with its band (PO 2B), not the old fixed range nor the seeded 650.
+      expect(asked).toContain('约 2500 字，控制在 2000–3000 字之间');
       expect(asked).not.toContain('500-1500');
-      expect(asked).not.toContain('650字以上');
+      expect(asked).not.toContain('约 650 字');
       expect(asked).toContain('玩家关闭了行动选项');
       expect(asked).not.toContain('# 行动选项规范');
       // The model offered options anyway; none are shown.
@@ -129,7 +130,7 @@ for (const splitGen of [true, false]) {
       sent.length = 0;
       await playRound(page, '我们沿着河走。');
       asked = sent.join('\n');
-      expect(asked).toContain('2500字以上');
+      expect(asked).toContain('约 2500 字，控制在 2000–3000 字之间');
       expect(asked).toContain('剧情导向模式');
       expect(asked).toContain('当前节奏为**慢节奏**');
       expect(asked).not.toContain('当前节奏为**快节奏**');
@@ -148,7 +149,7 @@ for (const splitGen of [true, false]) {
       expect(asked).not.toContain('剧情导向模式');
       expect(asked).not.toContain('当前节奏为**慢节奏**');
 
-      // Off again: the options on screen leave at once, before any new round, and the settings page says why.
+      // Off again: the options on screen leave at once, before any new round.
       await expect(shownOptions(page)).toBeVisible();
       await openSettingsTab(page);
       await optionsSwitch.click();
@@ -156,16 +157,42 @@ for (const splitGen of [true, false]) {
       await goToGameTab(page, '');
       await expect(page.getByText(STORY).first()).toBeVisible();
       await expect(shownOptions(page)).toHaveCount(0);
+
+      // The settings page's 「显示行动选项」 is the same switch (PO 4B): it shows off, and turning it on there turns
+      // options on for the save — the prompt page shows it, and the options come back on screen.
       await goToGameTab(page, 'settings');
-      await expect(page.getByTestId('settings-action-off-note')).toBeVisible();
+      const settingsSwitch = page.getByTestId('settings-action-options-switch');
+      await expect(settingsSwitch).toHaveAttribute('aria-checked', 'false');
+      await expect(page.locator('#settings-action')).toHaveCount(0);
+      await settingsSwitch.click();
+      await expect(settingsSwitch).toHaveAttribute('aria-checked', 'true');
+      await expect(page.locator('#settings-action')).toHaveCount(1);
+      await openSettingsTab(page);
+      await expect(optionsSwitch).toHaveAttribute('aria-checked', 'true');
+      await goToGameTab(page, '');
+      await expect(shownOptions(page)).toBeVisible();
     });
 }
 
 test('the settings page shows the choice made on the prompt page, and keeps pace in story mode',
   { tag: ['@regression'] }, async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-1920', 'one viewport is enough for a shared setting');
+    test.slow();
     await seedSave(page);
+    // A player at the default settings whose older build also saved showActionOptions (removed 2026-10-03): the
+    // stale key is ignored, so 「重置全部」 does not show (it would wipe their other device settings).
+    await page.evaluate(() => localStorage.setItem('aga_user_settings', JSON.stringify({
+      fontSize: 14, themeAccent: 'sage-amber', enableAnimations: true, autoSaveInterval: 5, language: 'zh-CN', showActionOptions: false })));
     await page.reload();
+    // Before a game is loaded the save's switch cannot be set (PO 4B); the device's style can.
+    await page.getByRole('button', { name: '设置', exact: true }).click();
+    const homeSwitch = page.getByTestId('settings-action-options-switch');
+    await expect(homeSwitch).toBeDisabled();
+    await expect(page.getByRole('button', { name: '重置全部' })).toHaveCount(0);
+    await expect(page.getByText('每个存档单独设置，进入游戏后可改')).toBeVisible();
+    await expect(page.locator('#settings-action')).toHaveCount(1);
+    await page.keyboard.press('Escape');
+    await expect(homeSwitch).toHaveCount(0);
     await enterSeededGame(page);
     await openSettingsTab(page);
     await pick(page, 'prompt-action-mode', '剧情导向');
@@ -176,6 +203,17 @@ test('the settings page shows the choice made on the prompt page, and keeps pace
       const sm = app.__vue_app__._context.provides.stateManager as { get: (p: string) => unknown };
       return sm.get('系统.actionOptions');
     })).toMatchObject({ mode: 'story', pace: 'slow' });
+
+    // Back to Home without reloading (the store still holds the tree): the save's switch is not usable there either,
+    // since 继续游戏 loads the save again and would drop the change (code review 2026-10-03).
+    await page.getByRole('button', { name: '返回首页' }).click();
+    await page.getByRole('button', { name: '不保存退出' }).click();
+    await page.waitForURL(/\/$/);
+    await page.getByRole('button', { name: '设置', exact: true }).click();
+    await expect(page.getByTestId('settings-action-options-switch')).toBeDisabled();
+    await expect(page.getByText('每个存档单独设置，进入游戏后可改')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await enterSeededGame(page);
 
     // The settings page shows that choice, and its pace row stays in story mode (it used to show only for action-led).
     await goToGameTab(page, 'settings');

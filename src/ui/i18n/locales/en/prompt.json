@@ -185,7 +185,7 @@
   "prompt.settings.perspectiveTitle": "Narrative Perspective (Exclusive)",
   "prompt.settings.perspectiveDesc": "Controls how AI refers to the player character. Only one perspective is active at a time.",
   "prompt.settings.wordCountTitle": "Word Count Requirement",
-  "prompt.settings.wordCountDesc": "Minimum word count for AI narrative per round",
+  "prompt.settings.wordCountDesc": "Target length of the AI narrative per round (within about a fifth either way)",
   "prompt.settings.storyStyleTitle": "Story Style (Exclusive)",
   "prompt.settings.storyStyleDesc": "Selecting a style replaces the current style prompt. Only one style is active at a time.",
   "prompt.settings.worldBookTitle": "World Book",

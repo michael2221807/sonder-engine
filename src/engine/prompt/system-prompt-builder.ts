@@ -21,7 +21,7 @@ import type {
 } from './world-book';
 import { formatHeroinePlanForContext, type HeroinePlan } from '../story/heroine-plan';
 import { buildPlotFocusCorpusTexts } from '../plot/plot-corpus';
-import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio, actionOptionsOn, wordCountOf } from './world-book';
+import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio, actionOptionsOn, wordCountRangeOf, type WordCountRange } from './world-book';
 import { BUILTIN_SLOTS } from './builtin-slots';
 import type { EnginePathConfig } from '../pipeline/types';
 import {
@@ -203,14 +203,21 @@ function renderTemplateVars(content: string, vars: Record<string, string>): stri
  * Step 3: Apply writing settings — inject word count into write_req prompts.
  * Applies writing settings (word count injection).
  */
-function applyWritingSettings(promptId: string, content: string, wordCount: number): string {
+function applyWritingSettings(promptId: string, content: string, length: WordCountRange, raw: string): string {
   if (promptId !== 'write_req' && promptId !== 'wordCountReq') return content;
-  const lengthRule = `<字数>本次<正文>标签内内容必须达到${wordCount}字以上。</字数>`;
-  // Replace existing <字数> block if present
-  if (/<字数>[\s\S]*?<\/字数>/m.test(content)) {
-    return content.replace(/<字数>[\s\S]*?<\/字数>/m, lengthRule);
-  }
-  return `${content.trim()}\n${lengthRule}`;
+  const blockPattern = /<字数>[\s\S]*?<\/字数>/m;
+  // A block written for the band (its template names {{wordCountMin}} and {{wordCountMax}}) has just been filled
+  // with the current values and stays in the pack's own words and language. Any other block — a fixed number, an
+  // old "X字以上" minimum — is replaced, and a module without one gets the rule (code review 2026-10-03).
+  const rawBlock = blockPattern.exec(raw)?.[0] ?? '';
+  if (rawBlock.includes('wordCountMin') && rawBlock.includes('wordCountMax')) return content;
+  const lengthRule = lengthRuleOf(length);
+  return blockPattern.test(content) ? content.replace(blockPattern, () => lengthRule) : `${content.trim()}\n${lengthRule}`;
+}
+
+/** The length rule when the module has none of its own (PO 2026-10-03: a target, not a minimum). */
+function lengthRuleOf({ target, min, max }: WordCountRange): string {
+  return `<字数>本次<正文>标签内内容约 ${target} 字，控制在 ${min}–${max} 字之间。</字数>`;
 }
 
 /**
@@ -265,7 +272,7 @@ function renderPromptPipeline(
 ): string {
   if (!rawContent.trim()) return '';
   let content = renderTemplateVars(rawContent, vars);
-  content = applyWritingSettings(slotId, content, wordCountOf(settings));
+  content = applyWritingSettings(slotId, content, wordCountRangeOf(settings), rawContent);
   content = filterByFeatureToggles(content, settings);
   return content;
 }
@@ -307,9 +314,12 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   const rawSettings = stateManager.get<Partial<PromptSettings>>('系统.设置.prompt');
   const settings: PromptSettings = { ...DEFAULT_PROMPT_SETTINGS, ...rawSettings };
 
+  const lengthAsked = wordCountRangeOf(settings);
   const templateVars: Record<string, string> = {
     playerName,
-    wordCount: String(wordCountOf(settings)),
+    wordCount: String(lengthAsked.target),
+    wordCountMin: String(lengthAsked.min),
+    wordCountMax: String(lengthAsked.max),
   };
 
   // Helper to resolve + render a slot through the full 5-step pipeline
@@ -511,7 +521,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
 
   // ── 7. Word Count ──
   const wordCountContent = slot('write_req') ||
-    `【字数要求】\n<字数>本次<正文>标签内内容必须达到${wordCountOf(settings)}字以上。</字数>\n- 正文指 \`<正文>\` 中除【判定】外的叙事与对白总和。`;
+    `【字数要求】\n${lengthRuleOf(lengthAsked)}\n- 正文指 \`<正文>\` 中除【判定】外的叙事与对白总和。`;
   push('length_prompt', '字数要求提示词', '系统', 'system', wordCountContent);
 
   // ── 8. Long-term Memory ──

@@ -50,7 +50,7 @@ import {
   lastNarrativeText,
 } from '../../prompt/character-vectors';
 import { hasSettingTag, parseSettingTagNames } from '../../prompt/setting-tag-scanner';
-import { DEFAULT_PROMPT_SETTINGS, actionOptionsOn, wordCountOf } from '../../prompt/world-book';
+import { DEFAULT_PROMPT_SETTINGS, actionOptionsOn, wordCountRangeOf } from '../../prompt/world-book';
 import type { PromptSettings } from '../../prompt/world-book';
 import { buildEnvironmentBlock } from '../../prompt/environment-block';
 import { PlotInjector } from '../../plot/plot-injector';
@@ -344,6 +344,7 @@ export class ContextAssemblyStage implements PipelineStage {
       ...(this.stateManager.get<Partial<PromptSettings>>('系统.设置.prompt') ?? {}),
     };
     const actionOptionsEnabled = actionOptionsOn(promptSettings);
+    const lengthAsked = wordCountRangeOf(promptSettings);
     const settingTagNames = parseSettingTagNames(this.pack.engineFragments?.settingTagNames);
     const settingCaptureActive =
       promptSettings.enableWorldBook !== false &&
@@ -391,8 +392,11 @@ export class ContextAssemblyStage implements PipelineStage {
         ? (ctx.meta['worldEventContext'] as string | undefined) ?? ''
         : '',
       USER_INPUT: ctx.userInput,
-      // The player's word-count setting, which the format prompts state (the builder fills the same name).
-      wordCount: String(wordCountOf(promptSettings)),
+      // The player's target length and its band, which the length module and the format prompts state (the builder
+      // fills the same names).
+      wordCount: String(lengthAsked.target),
+      wordCountMin: String(lengthAsked.min),
+      wordCountMax: String(lengthAsked.max),
 
       // Canon Capture: drives the `settingCapture` module in the split-gen step2 flow.
       // It MUST be a flow `condition` rather than a `PROMPT_FEATURE` block — the

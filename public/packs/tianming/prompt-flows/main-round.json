@@ -7,6 +7,7 @@
     { "promptId": "cot-preamble", "role": "system", "order": -0.5, "depth": 1, "condition": "COT_ENABLED" },
     { "promptId": "cot-masquerade", "role": "assistant", "order": -0.4, "depth": 1, "condition": "COT_ENABLED" },
     { "promptId": "mainRound", "role": "system", "order": 0, "depth": 0 },
+    { "promptId": "wordCountReq", "role": "system", "order": 0.5, "depth": 0 },
     { "promptId": "core", "role": "system", "order": 1, "depth": 0 },
     { "promptId": "cot-no-thinking-guard", "role": "system", "order": 1.1, "depth": 0, "condition": "COT_DISABLED" },
     { "promptId": "cot-judge", "role": "system", "order": 1.2, "depth": 0, "condition": "COT_JUDGE_ENABLED" },

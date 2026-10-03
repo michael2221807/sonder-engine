@@ -145,7 +145,8 @@
   "settings.ui.themeAccent.presets.copper": "Copper · Slate",
   "settings.ui.themeAccent.presets.twilight": "Twilight · Dawn",
   "settings.ui.showActions.label": "Show Action Options",
-  "settings.ui.showActions.desc": "Display available actions after AI response",
+  "settings.ui.showActions.desc": "Offer actions to pick after each AI reply; the same switch as in Prompts & World Book",
+  "settings.ui.showActions.descOutside": "Set per save; available once a game is loaded",
   "settings.ui.enableAnimations.label": "Enable Animations",
   "settings.ui.enableAnimations.desc": "Interface transitions and animation effects",
 
@@ -157,7 +158,6 @@
   "settings.game.language.desc": "Interface display language",
 
   "settings.action.sectionTitle": "Action Options Depth",
-  "settings.action.offInSave": "This save has action options off, so rounds write none; turn them on in Prompts & World Book → Game Settings.",
   "settings.action.mode.label": "Action Mode",
   "settings.action.mode.desc": "Control the style of AI-generated action options",
   "settings.action.mode.action": "Action-oriented",

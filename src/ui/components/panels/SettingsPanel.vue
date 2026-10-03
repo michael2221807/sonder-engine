@@ -7,7 +7,7 @@
  * Persists to localStorage / game state tree.
  */
 import { ref, computed, watch, onMounted, onBeforeUnmount, inject, nextTick } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { eventBus } from '@/engine/core/event-bus';
 import { AI_SETTINGS_STORAGE_KEY } from '@/engine/ai/ai-service';
 import Modal from '@/ui/components/common/Modal.vue';
@@ -40,7 +40,6 @@ const SETTINGS_KEY = 'aga_user_settings';
 /** User settings shape */
 interface UserSettings {
   fontSize: number;
-  showActionOptions: boolean;
   themeAccent: string;
   enableAnimations: boolean;
   autoSaveInterval: number;
@@ -69,7 +68,6 @@ const ACCENT_PRESETS: AccentPreset[] = [
 
 const defaultSettings: UserSettings = {
   fontSize: 14,
-  showActionOptions: true,
   themeAccent: 'sage-amber',
   enableAnimations: true,
   autoSaveInterval: 5,
@@ -80,13 +78,24 @@ const settings = ref<UserSettings>({ ...defaultSettings });
 
 // ─── Persistence ───
 
+/**
+ * The stored settings this build knows, over the defaults. A key an older build saved (showActionOptions, removed
+ * 2026-10-03) is dropped: kept, it would make 「重置全部」 show forever for a player at the defaults.
+ */
+function knownSettings(raw: unknown): UserSettings {
+  const known: UserSettings = { ...defaultSettings };
+  if (!raw || typeof raw !== 'object') return known;
+  const stored = raw as Partial<Record<keyof UserSettings, unknown>>;
+  for (const key of Object.keys(defaultSettings) as (keyof UserSettings)[]) {
+    if (stored[key] !== undefined) (known as Record<keyof UserSettings, unknown>)[key] = stored[key];
+  }
+  return known;
+}
+
 function loadSettings(): void {
   try {
     const saved = localStorage.getItem(SETTINGS_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved) as Partial<UserSettings>;
-      settings.value = { ...defaultSettings, ...parsed };
-    }
+    if (saved) settings.value = knownSettings(JSON.parse(saved));
   } catch {
     settings.value = { ...defaultSettings };
   }
@@ -252,9 +261,21 @@ watch(memorySettings, () => {
 
 const { isLoaded, get, setValue, useValue } = useGameState();
 
-/** The loaded save has action options switched off (系统.设置.prompt, the prompt page's switch). */
+/**
+ * 「显示行动选项」 is the save's action-options switch — the same value as 「提示词与世界书管理 → 游戏设定」's
+ * (系统.设置.prompt.enableActionOptions; PO 2026-10-03, 4B). It belongs to a save, so it waits for one to be loaded.
+ */
 const savedPromptSettings = useValue<Partial<PromptSettings>>('系统.设置.prompt');
-const actionOptionsOffInSave = computed(() => isLoaded.value && !actionOptionsOn(savedPromptSettings.value));
+const actionOptionsSwitchOn = computed(() => actionOptionsOn(savedPromptSettings.value));
+const route = useRoute();
+/**
+ * A game is being played: a save is loaded and this is the game's page. After 「返回首页」 the store still holds the
+ * tree, but 继续游戏 loads the save again, so a switch flipped from Home would be lost (code review 2026-10-03).
+ */
+const inGame = computed(() => isLoaded.value && route.path.startsWith('/game'));
+function setActionOptionsSwitch(on: boolean): void {
+  if (inGame.value) setValue('系统.设置.prompt.enableActionOptions', on);
+}
 
 // ─── Action Options → state tree sync (bugfix 2026-04-11) ───
 //
@@ -659,7 +680,7 @@ function openImportSettings(): void {
     if (!file) return;
     try {
       const raw = JSON.parse(await file.text()) as Record<string, unknown>;
-      if (raw.settings) settings.value = { ...defaultSettings, ...(raw.settings as Partial<typeof settings.value>) };
+      if (raw.settings) settings.value = knownSettings(raw.settings);
       if (raw.actionOptions) actionOptions.value = normalizeActionOptionsStyle(raw.actionOptions);
       if (raw.debugSettings) debugSettings.value = { ...defaultDebug, ...(raw.debugSettings as Partial<DebugSettings>) };
       if (Array.isArray(raw.textReplaceRules)) {
@@ -1089,7 +1110,7 @@ const navCategories = computed<NavCategory[]>(() => [
   { id: 'settings-voice-input', label: t('settings.nav.voiceInput') },
   { id: 'settings-ui', label: t('settings.nav.ui') },
   { id: 'settings-game', label: t('settings.nav.game') },
-  { id: 'settings-action', label: t('settings.nav.action') },
+  ...(!inGame.value || actionOptionsSwitchOn.value ? [{ id: 'settings-action', label: t('settings.nav.action') }] : []),
   { id: 'settings-heartbeat', label: t('settings.nav.heartbeat') },
   { id: 'settings-npc', label: t('settings.nav.npc') },
   { id: 'settings-plot', label: t('settings.nav.plot') },
@@ -1502,11 +1523,14 @@ onBeforeUnmount(() => {
       <div class="setting-row">
         <div class="setting-info">
           <span class="setting-label">{{ $t('settings.ui.showActions.label') }}</span>
-          <span class="setting-desc">{{ $t('settings.ui.showActions.desc') }}</span>
+          <span class="setting-desc">{{ inGame ? $t('settings.ui.showActions.desc') : $t('settings.ui.showActions.descOutside') }}</span>
         </div>
         <AgaToggle
-          :model-value="settings.showActionOptions"
-          @update:model-value="settings.showActionOptions = $event"
+          :model-value="actionOptionsSwitchOn"
+          :disabled="!inGame"
+          :label="$t('settings.ui.showActions.label')"
+          data-testid="settings-action-options-switch"
+          @update:model-value="setActionOptionsSwitch"
         />
       </div>
 
@@ -1557,12 +1581,8 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- ─── B.2.1 行动选项深度设置 ─── -->
-    <section v-if="settings.showActionOptions" v-show="visibleCategoryIds.has('settings-action')" id="settings-action" class="settings-section">
+    <section v-if="!inGame || actionOptionsSwitchOn" v-show="visibleCategoryIds.has('settings-action')" id="settings-action" class="settings-section">
       <h3 class="section-title">{{ $t('settings.action.sectionTitle') }}</h3>
-      <!-- The switch lives on the prompt page (per save); say so here rather than offer choices that do nothing yet. -->
-      <p v-if="actionOptionsOffInSave" class="setting-desc action-off-note" data-testid="settings-action-off-note">
-        {{ $t('settings.action.offInSave') }}
-      </p>
 
       <div class="setting-row">
         <div class="setting-info">
@@ -2354,12 +2374,6 @@ onBeforeUnmount(() => {
 .setting-desc {
   font-size: 0.72rem;
   color: var(--color-text-secondary, #8888a0);
-}
-
-/* The save has action options off: one quiet line above the (still editable) device style. */
-.action-off-note {
-  margin: -4px 0 10px;
-  color: var(--color-amber-300, #e8c48a);
 }
 
 /* ── Font size control ── */

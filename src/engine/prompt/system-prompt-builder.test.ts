@@ -29,13 +29,16 @@ describe('phase-selected default format', () => {
 
 // PO 2026-10-03: the player's action-options switch and word count reach the builder's request.
 describe('buildSystemPrompt · action options and word count', () => {
-  function build(prompt: Record<string, unknown> | undefined, opts: { formatPromptId?: string; actionOptionsBlock?: string } = {}) {
+  function build(prompt: Record<string, unknown> | undefined,
+    opts: { formatPromptId?: string; actionOptionsBlock?: string; wordCountReq?: string } = {}) {
     const { sm } = createMockStateManager(prompt === undefined ? {} : { 系统: { 设置: { prompt } } });
+    const { wordCountReq, ...rest } = opts;
     return buildSystemPrompt({ stateManager: sm as unknown as StateManager,
       paths: DEFAULT_ENGINE_PATHS,
-      packPrompts: { mainRound: 'format {{wordCount}}', splitGenStep1: 'narrative only', actionOptionsOff: 'OFF NOTE' },
+      packPrompts: { mainRound: 'format {{wordCount}}', splitGenStep1: 'narrative only', actionOptionsOff: 'OFF NOTE',
+        ...(wordCountReq === undefined ? {} : { wordCountReq }) },
       builtinOverrides: [], worldBooks: [], userInput: 'hello', playerName: 'player',
-      cotEnabled: false, cotJudgeEnabled: false, splitGen: false, cotPseudoEnabled: false, ...opts });
+      cotEnabled: false, cotJudgeEnabled: false, splitGen: false, cotPseudoEnabled: false, ...rest });
   }
   const ids = (r: ReturnType<typeof build>) => Object.keys(r.contextPieces);
 
@@ -58,6 +61,24 @@ describe('buildSystemPrompt · action options and word count', () => {
     const on = build({ enableActionOptions: true }, { actionOptionsBlock: 'STORY MODULE slow' });
     expect(on.contextPieces.action_options).toBe('STORY MODULE slow');
     expect(ids(on).indexOf('action_options')).toBeGreaterThan(ids(on).indexOf('format_prompt'));
+  });
+  it('a length module written for the band keeps its own words; an old minimum or a fixed number is replaced', () => {
+    const band = '【Length】\n<字数>about {{wordCount}} characters, between {{wordCountMin}} and {{wordCountMax}}.</字数>';
+    expect(build({ wordCountRequirement: 2500 }, { wordCountReq: band }).contextPieces.length_prompt)
+      .toBe('【Length】\n<字数>about 2500 characters, between 2000 and 3000.</字数>');
+    // A target of 150 inside "1500" must not pass for the current setting.
+    for (const old of ['<字数>本次正文必须达到${wordCount}字以上。</字数>', '<字数>本次正文必须达到1500字以上。</字数>']) {
+      const piece = build({ wordCountRequirement: 150 }, { wordCountReq: `【字数要求】\n${old}` }).contextPieces.length_prompt;
+      expect(piece).toBe('【字数要求】\n<字数>本次<正文>标签内内容约 150 字，控制在 120–180 字之间。</字数>');
+    }
+    // A module with no block of its own gets the rule after it.
+    expect(build({ wordCountRequirement: 800 }, { wordCountReq: '【字数要求】' }).contextPieces.length_prompt)
+      .toBe('【字数要求】\n<字数>本次<正文>标签内内容约 800 字，控制在 640–960 字之间。</字数>');
+  });
+  it('the length rule asks for the player\'s target and its band (a fifth either way), not a minimum', () => {
+    expect(build({ wordCountRequirement: 2500 }).contextPieces.length_prompt).toContain('约 2500 字，控制在 2000–3000 字之间');
+    expect(build({ wordCountRequirement: 650 }).contextPieces.length_prompt).toContain('约 650 字，控制在 520–780 字之间');
+    expect(build({ wordCountRequirement: 2500 }).contextPieces.length_prompt).not.toContain('以上');
   });
   it('the format and the length rule state the player\'s word count, or the default when it is unusable', () => {
     expect(build({ wordCountRequirement: 2500 }).contextPieces.format_prompt).toBe('format 2500');

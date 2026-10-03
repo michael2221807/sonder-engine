@@ -185,7 +185,7 @@
   "prompt.settings.perspectiveTitle": "叙事人称（互斥选择）",
   "prompt.settings.perspectiveDesc": "控制 AI 如何称呼玩家角色。同一时间只有一种人称生效。",
   "prompt.settings.wordCountTitle": "字数要求",
-  "prompt.settings.wordCountDesc": "每回合 AI 叙事正文的最低字数",
+  "prompt.settings.wordCountDesc": "每回合 AI 叙事正文的目标字数（上下浮动约两成）",
   "prompt.settings.storyStyleTitle": "剧情风格（互斥选择）",
   "prompt.settings.storyStyleDesc": "选择一种风格后，对应的叙事偏好提示词会替换当前风格位。同一时间只有一个风格生效。",
   "prompt.settings.worldBookTitle": "世界书",

@@ -158,7 +158,7 @@ export const BUILTIN_SLOTS: Record<string, BuiltinSlotDefinition> = {
     id: 'write_req',
     title: '字数要求',
     category: '主剧情',
-    description: '每回合叙事正文的最低字数要求',
+    description: '每回合叙事正文的目标字数（上下浮动约两成）',
     defaultPromptId: 'wordCountReq',
   },
 

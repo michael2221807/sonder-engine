@@ -205,12 +205,13 @@ describe('real pack judgment transition, zero network', () => {
         }
         // The player's input is never changed. Recent story keeps its words without its system line when on, and is
         // sent verbatim when off.
-        // PO 2026-10-03: the narrative call asks for the word-count setting, never a hard-coded 500-1500 against it.
+        // PO 2026-10-03: the narrative call asks for the word-count setting as a target with its band (2B), never a
+        // hard-coded 500-1500 or a minimum against it.
         for (const assembled of [on, off]) {
           const narrativeCall = assembled.messages.map(m => String(m.content)).join('\n');
-          // The format prompt's own wording (the word-count module says it too, in other words).
-          expect(narrativeCall).toMatch(en ? /\(2500\+ characters\)/ : /（2500字以上）/);
-          expect(narrativeCall).not.toMatch(/500-1500|\{\{wordCount\}\}/);
+          // The length module, in the pack's own language, on every path (builder and flows).
+          expect(narrativeCall).toContain(en ? 'about 2500 characters, between 2000 and 3000' : '约 2500 字，控制在 2000–3000 字之间');
+          expect(narrativeCall).not.toMatch(/500-1500|字以上|at least 2500|2500\+ characters|\{\{wordCount/);
         }
         expect(on.messages.some(m => typeof m.content === 'string' && m.content.includes(input))).toBe(true);
         expect(everything).toContain('历史原文保留');

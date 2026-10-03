@@ -328,7 +328,7 @@ export interface SystemPromptBuildResult {
 export interface PromptSettings {
   /** Narrator perspective — 第一人称 (I), 第二人称 (you), 第三人称 (he/she/name) */
   perspective: '第一人称' | '第二人称' | '第三人称';
-  /** Minimum word count for narrative output */
+  /** Target length of each round's narrative: about this many characters, within a fifth either way (PO 2026-10-03). */
   wordCountRequirement: number;
   /** Story style preference */
   storyStyle: 'general' | 'harem' | 'pureLove' | 'cultivation' | 'shura' | 'ntlHarem';
@@ -405,8 +405,28 @@ export function actionOptionsOn(settings: Partial<PromptSettings> | null | undef
   return settings?.enableActionOptions !== false;
 }
 
-/** The player's minimum narrative length (`wordCountRequirement`), or the default when it is not a usable number. */
+/** The player's target narrative length (`wordCountRequirement`), or the default when it is not a usable number. */
 export function wordCountOf(settings: Partial<PromptSettings> | null | undefined): number {
   const n = Math.round(Number(settings?.wordCountRequirement));
   return Number.isFinite(n) && n > 0 ? n : DEFAULT_PROMPT_SETTINGS.wordCountRequirement;
+}
+
+/** The length a round is asked for: about `target` characters, between `min` and `max`. */
+export interface WordCountRange { target: number; min: number; max: number }
+
+/** How far a round may stray from the target either way (the prompt page says 「上下浮动约两成」). */
+export const WORD_COUNT_BAND = 0.2;
+
+/**
+ * The length a round is asked for: the player's target and the band around it, rounded to tens, never on the wrong
+ * side of the target (PO 2026-10-03: the setting is a target — set it lower and rounds get shorter — not a minimum).
+ */
+export function wordCountRangeOf(settings: Partial<PromptSettings> | null | undefined): WordCountRange {
+  const target = wordCountOf(settings);
+  const toTen = (n: number) => Math.round(n / 10) * 10;
+  return {
+    target,
+    min: Math.max(1, Math.min(target, toTen(target * (1 - WORD_COUNT_BAND)))),
+    max: Math.max(target, toTen(target * (1 + WORD_COUNT_BAND))),
+  };
 }
