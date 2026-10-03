@@ -30,6 +30,8 @@
   "inventory.edit.label.type": "类型",
   "inventory.edit.label.quantity": "数量",
   "inventory.edit.label.quality": "品质",
+  "inventory.edit.qualityFromCard": "由这件物品的卡决定",
+  "inventory.quality.fromCard": "稀有度按这件物品的卡的强度显示",
   "inventory.edit.label.description": "描述",
   "inventory.edit.label.equippable": "可装备",
   "inventory.edit.label.equipped": "已装备",

@@ -30,6 +30,8 @@
   "inventory.edit.label.type": "Type",
   "inventory.edit.label.quantity": "Quantity",
   "inventory.edit.label.quality": "Quality",
+  "inventory.edit.qualityFromCard": "Set by this item's card",
+  "inventory.quality.fromCard": "Rarity follows the strength of this item's card",
   "inventory.edit.label.description": "Description",
   "inventory.edit.label.equippable": "Equippable",
   "inventory.edit.label.equipped": "Equipped",

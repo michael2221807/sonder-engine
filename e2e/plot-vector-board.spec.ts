@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => { await page.emulateMedia({ reducedMotion: '
 // Each test seeds a save, reloads it and waits for background saves.
 test.slow();
 
-async function addBoardFixture(page: Page, ids: SeedIds, accept = false, store = false) {
+async function addBoardFixture(page: Page, ids: SeedIds, accept = false, store = false, notebookItem: Record<string, unknown> = VECTOR_NOTEBOOK_ITEM) {
     // Handwritten deterministic cards in the contract format, never a fabricated model/story response.
     await page.evaluate(async ({ profileId, slotId, accept, store, notebook }) => {
       const load = (p: string) => import(/* @vite-ignore */ p);
@@ -48,7 +48,7 @@ async function addBoardFixture(page: Page, ids: SeedIds, accept = false, store =
       }
       state.set(P.plotVector, component);
       await idbAdapter.set(key, state.toSnapshot());
-    }, { ...ids, accept, store, notebook: VECTOR_NOTEBOOK_ITEM });
+    }, { ...ids, accept, store, notebook: notebookItem });
 }
 /** The board state as written to disk. */
 async function persisted(page: Page, ids: SeedIds) {
@@ -568,4 +568,55 @@ test('a move that meets a busy engine is put back and kept once the engine is fr
     await engineRound(page, 'finished');
     await plotVector.kept(board => board?.layout?.placements?.['02'] === 'basic:push' && board?.layout?.placements?.['01'] === 'item:notebook');
     await expect(lock).toHaveCount(0);
+  });
+
+/** The notebook item as the live game holds it (the backpack's source). */
+async function liveNotebook(page: Page): Promise<Record<string, unknown> | undefined> {
+  return page.evaluate(() => {
+    type App = { config: { globalProperties: { $pinia: { _s: Map<string, { tree: Record<string, unknown> }> } } } };
+    const app = (document.querySelector('#app') as { __vue_app__?: App } | null)?.__vue_app__;
+    const tree = app?.config.globalProperties.$pinia._s.get('engineState')?.tree as { 角色?: { 背包?: { 物品?: Record<string, unknown> } } } | undefined;
+    return JSON.parse(JSON.stringify(tree?.角色?.背包?.物品?.notebook ?? null)) ?? undefined;
+  });
+}
+
+test('an item shows its card\'s rarity in the backpack, the same as on the table; its own 品质 stays in the save',
+  { tag: ['@plot-vector', '@regression'] }, async ({ page, gameShell, plotVector }) => {
+    const ids = await seedSave(page);
+    // The model wrote the notebook as 神话; its card measures otherwise (PO 2026-10-03: the card's strength is the
+    // item's real strength). Like an item the model made, it has no 类型 / 可装备 / 已装备 for the form to fill in.
+    await addBoardFixture(page, ids, false, false, { ...VECTOR_NOTEBOOK_ITEM, 品质: '神话' });
+    await enterSeededGame(page);
+    await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
+    await plotVector.openBoard();
+    const tier = await plotVector.handCard('item:notebook').getAttribute('data-tier');
+    const names: Record<string, string> = { common: '普通', uncommon: '优良', rare: '稀有', epic: '史诗', legendary: '传说', mythic: '神话' };
+    expect(tier && names[tier]).toBeTruthy();
+    expect(tier).not.toBe('mythic');
+    await plotVector.closeBoard();
+
+    await gameShell.goTab('inventory');
+    const row = page.locator('.item-card', { hasText: '随身日记' });
+    const badge = row.getByTestId('inventory-quality');
+    await expect(badge).toHaveText(names[tier!]);
+    await expect(badge).toHaveAttribute('data-from-card', 'true');
+    await expect(badge).toHaveAttribute('style', new RegExp(`--tier-${tier}`));
+
+    // The form shows the card's rarity read only; a new description is the only thing saved (no field the form
+    // showed a default for), so the item's 品质 is untouched and the card stays.
+    await row.click();
+    await row.locator('.action-btn--edit').click();
+    await expect(page.getByTestId('inventory-quality-card')).toContainText(names[tier!]);
+    await page.locator('.form-textarea').fill('换了个说法');
+    await page.locator('.btn-primary', { hasText: '保存' }).click();
+    await expect.poll(async () => (await liveNotebook(page))?.描述).toBe('换了个说法');
+    expect(await liveNotebook(page)).toEqual({ ...VECTOR_NOTEBOOK_ITEM, 品质: '神话', 描述: '换了个说法' });
+    await expect(badge).toHaveText(names[tier!]);
+    await expect(badge).toHaveAttribute('data-from-card', 'true');
+
+    // Plot momentum off: the item's own 品质 again, in the same rarity colours.
+    await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('inventory');
+    await expect(badge).toHaveText('神话');
+    await expect(badge).not.toHaveAttribute('data-from-card', 'true');
+    await expect(badge).toHaveAttribute('style', /--tier-mythic/);
   });

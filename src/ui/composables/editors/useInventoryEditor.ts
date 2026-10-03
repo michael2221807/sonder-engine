@@ -17,6 +17,23 @@ import type {
 } from './types';
 import { emitEditorToast } from './types';
 
+/** The form fields besides the name, which every save sends (it is required). */
+const ITEM_FORM_FIELDS = ['类型', '数量', '品质', '描述', '可装备', '已装备'] as const satisfies readonly (keyof InventoryItemFormData)[];
+
+/**
+ * What an edit changed: the name, and each other field only when the player changed it from what the form showed
+ * when it opened. A field the item never had is not written because the form showed a default for it: an item's
+ * fields other than its name, description and count are what its plot-vector card was made from, so writing one
+ * retires the card (PO 2026-10-03: a description fix must not change the item's rarity).
+ */
+export function changedItemFields(opened: InventoryItemFormData, now: InventoryItemFormData): InventoryItemFormData {
+  const patch: InventoryItemFormData = { 名称: now.名称 };
+  for (const key of ITEM_FORM_FIELDS) {
+    if (now[key] !== opened[key]) Object.assign(patch, { [key]: now[key] });
+  }
+  return patch;
+}
+
 export interface UseInventoryEditorReturn {
   create(formData: InventoryItemFormData): EditorResult<{ id: string }>;
   update(itemId: string, formData: InventoryItemFormData): EditorResult;

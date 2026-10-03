@@ -10,7 +10,9 @@ vi.mock('@/engine/core/event-bus', () => ({
   eventBus: { emit: vi.fn(), on: () => () => {} },
 }));
 
-const { useInventoryEditor } = await import('../useInventoryEditor');
+const { useInventoryEditor, changedItemFields } = await import('../useInventoryEditor');
+const { projectSavedElements } = await import('@/features/plot-vector/saved-elements');
+const { capabilityKey } = await import('@/features/plot-vector/genesis/post-save');
 
 describe('useInventoryEditor', () => {
   beforeEach(() => {
@@ -101,6 +103,36 @@ describe('useInventoryEditor', () => {
       const result = editor.update('weapon_001', { 名称: '倚天剑', 数量: 0 });
       expect(result.ok).toBe(false);
       expect(result.error?.code).toBe('ITEM_QUANTITY_INVALID');
+    });
+  });
+
+  // PO 2026-10-03: an edit writes only what the player changed, so an item keeps its card (and its card's rarity).
+  describe('changedItemFields', () => {
+    const opened = { 名称: '随身日记', 类型: '其他', 数量: 1, 品质: '稀有', 描述: '记录日常', 可装备: false, 已装备: false };
+
+    it('sends the name alone when nothing else changed', () => {
+      expect(changedItemFields(opened, { ...opened })).toEqual({ 名称: '随身日记' });
+    });
+
+    it('sends each field the player changed, and only those', () => {
+      expect(changedItemFields(opened, { ...opened, 名称: '旧日记', 描述: '换了个说法', 数量: 2 }))
+        .toEqual({ 名称: '旧日记', 描述: '换了个说法', 数量: 2 });
+      expect(changedItemFields(opened, { ...opened, 可装备: true, 已装备: true, 品质: '史诗' }))
+        .toEqual({ 名称: '随身日记', 可装备: true, 已装备: true, 品质: '史诗' });
+    });
+
+    it('a description fix on an item the model made adds no field, so its card stays the same card', () => {
+      const made = { 名称: '随身日记', 描述: '记录日常', 数量: 1, 品质: '稀有', 能力版本: 1 };
+      const { mock } = createMockGameState({ 角色: { 背包: { 物品: { notebook: { ...made } } } } });
+      mockState = mock;
+      const keyOf = () => capabilityKey(projectSavedElements(mockState.tree.value).entries[0]);
+      const before = keyOf();
+      // What the form shows for it: defaults for the fields it never had.
+      const form = { 名称: made.名称, 类型: '其他', 数量: 1, 品质: '稀有', 描述: made.描述, 可装备: false, 已装备: false };
+      const result = useInventoryEditor().update('notebook', changedItemFields(form, { ...form, 描述: '换了个说法' }));
+      expect(result.ok).toBe(true);
+      expect(mockState.get('角色.背包.物品.notebook')).toEqual({ ...made, 描述: '换了个说法' });
+      expect(keyOf()).toBe(before);
     });
   });
 

@@ -54,7 +54,7 @@ export function projectSavedElements(state: unknown, options: { includeEnvironme
       const identity = !array ? key : typeof explicitId === 'string' && explicitId ? explicitId : `name:${name}`;
       const description = descriptions.map(k => data[k]).find(v => typeof v === 'string') ?? '';
       const rest = Object.fromEntries(Object.entries(data).filter(([k]) => !bookkeeping.has(k) && !names.includes(k) && !descriptions.includes(k) && k !== 'id' && k !== 'ID'));
-      pending.push({ id: `${kind}:${identity}`, kind, capability: { ...rest, name, description } });
+      pending.push({ id: savedElementId(kind, identity), kind, capability: { ...rest, name, description } });
     }
     const counts = new Map<string, number>();
     for (const e of pending) counts.set(e.id, (counts.get(e.id) ?? 0) + 1);
@@ -65,6 +65,9 @@ export function projectSavedElements(state: unknown, options: { includeEnvironme
   }
   return { entries, issues };
 }
+
+/** A saved entry's id: its kind and its identity (the record key for keyed collections such as the backpack). */
+export function savedElementId(kind: SavedElement['kind'], identity: string): string { return `${kind}:${identity}`; }
 
 /** Pending replacements and removed entries cannot keep an old ability active. */
 export function activeSavedCards(entries: readonly SavedElement[], rows: readonly { bound?: BoundCard }[]): BoundCard[] {

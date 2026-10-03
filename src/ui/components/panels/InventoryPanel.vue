@@ -12,14 +12,20 @@
  * 1. items 类型错误为 InventoryItem[]，导致 Array.isArray 永远失败 → 背包永远空
  * 2. currency 类型错误为 number，读取容器对象 → 显示 0
  */
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { set } from 'lodash-es';
 import { useGameState } from '@/ui/composables/useGameState';
 import { useActionQueueStore } from '@/engine/stores/engine-action-queue';
+import { readPlotVectorControl, subscribePlotVectorControl } from '@/engine/plot-vector/feature-control';
+import { projectSavedElements, savedElementId } from '@/features/plot-vector/saved-elements';
+import { usePacedCardTiers } from '@/ui/composables/usePacedCardTiers';
+import type { CardTier } from '@/features/plot-vector/rating';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
-import { useInventoryEditor } from '@/ui/composables/editors';
+import Tooltip from '@/ui/components/shared/Tooltip.vue';
+import { useInventoryEditor, changedItemFields } from '@/ui/composables/editors';
 import { useRouter } from 'vue-router';
 import Modal from '@/ui/components/common/Modal.vue';
 import { eventBus } from '@/engine/core/event-bus';
@@ -124,16 +130,10 @@ const currencyEntries = computed<{ name: string; icon: string; amount: number }[
     }));
 });
 
-// ─── Quality badge ───
+// ─── Quality badge: an item's card decides its rarity (PO 2026-10-03) ───
 
-const QUALITY_COLORS: Record<string, string> = {
-  普通: 'var(--color-text-muted)',
-  优良: 'var(--color-sage-300)',
-  稀有: 'var(--color-sage-400)',
-  史诗: 'var(--color-amber-300)',
-  传说: 'var(--color-amber-400)',
-  神话: 'var(--color-danger)',
-};
+/** The six rarity names, common to mythic: an item's own 品质 and its card's tier share one ladder and colour. */
+const QUALITY_TIERS: Record<string, CardTier> = { 普通: 'common', 优良: 'uncommon', 稀有: 'rare', 史诗: 'epic', 传说: 'legendary', 神话: 'mythic' };
 
 function getQualityLabel(item: InventoryItem): string | null {
   const q = item.品质;
@@ -143,9 +143,29 @@ function getQualityLabel(item: InventoryItem): string | null {
   return null;
 }
 
-function getQualityColor(label: string): string {
-  return QUALITY_COLORS[label] ?? 'var(--color-text-muted)';
-}
+const vectorOn = ref(readPlotVectorControl().enabled);
+onUnmounted(subscribePlotVectorControl(() => { vectorOn.value = readPlotVectorControl().enabled; }));
+const vectorState = useValue<unknown>(DEFAULT_ENGINE_PATHS.plotVector);
+/**
+ * While plot momentum is on, the tier of each item's card: the card's strength is the item's real strength, so the
+ * backpack shows the same rarity the table does. The item's own 品质 stays in the save (it is part of what the card
+ * was made from) and shows again whenever there is no card. Cards the runtime has not rated yet are worked out a
+ * few at a time (usePacedCardTiers), so opening the backpack never waits on them.
+ */
+const cardTiers = usePacedCardTiers(() => (vectorOn.value && vectorState.value && items.value
+  ? { entries: projectSavedElements(set({}, DEFAULT_ENGINE_PATHS.inventoryItems, items.value)).entries, vectorState: vectorState.value }
+  : null));
+const cardTierOf = (itemId: string): CardTier | undefined => cardTiers.value.get(savedElementId('item', itemId));
+
+interface QualityShown { label: string; color: string; fromCard: boolean }
+/** What an item's badge shows: its card's tier when it has one, else its own 品质. */
+const qualities = computed(() => new Map<string, QualityShown | null>(allItems.value.map((item) => {
+  const tier = cardTierOf(item._id);
+  if (tier) return [item._id, { label: t(`mainGame.vectorTable.tier.${tier}`), color: `var(--tier-${tier})`, fromCard: true }];
+  const own = getQualityLabel(item);
+  const ownTier = own ? QUALITY_TIERS[own] : undefined;
+  return [item._id, own ? { label: own, color: ownTier ? `var(--tier-${ownTier})` : 'var(--color-text-muted)', fromCard: false } : null];
+})));
 
 // ─── Item detail ───
 
@@ -239,6 +259,8 @@ watch(showItemModal, (open) => {
 const itemForm = ref<ItemEditForm>({
   名称: '', 类型: '其他', 数量: 1, 品质: '普通', 描述: '', 可装备: false, 已装备: false,
 });
+/** The form as it opened on an existing item: a save sends only what the player changed from it. */
+let formOpenedWith: ItemEditForm | null = null;
 
 function openCreateItem(): void {
   editingItemId.value = null;
@@ -259,23 +281,21 @@ function openEditItem(item: DisplayItem, event: Event): void {
     可装备: item.可装备 === true,
     已装备: item.已装备 === true,
   };
+  formOpenedWith = { ...itemForm.value };
   showItemModal.value = true;
 }
 
-function saveItem(): void {
-  const formData = {
-    名称: itemForm.value.名称,
-    类型: itemForm.value.类型,
-    数量: itemForm.value.数量,
-    品质: itemForm.value.品质,
-    描述: itemForm.value.描述,
-    可装备: itemForm.value.可装备,
-    已装备: itemForm.value.已装备,
-  };
+/** An item with a card shows its card's rarity in the form, read only: its own 品质 is kept as it is saved. */
+const editingCardTier = computed(() => (editingItemId.value ? cardTierOf(editingItemId.value) : undefined));
 
+function saveItem(): void {
+  const form = { ...itemForm.value };
+  // An edit writes only what the player changed: the item's other fields are what its card was made from, and a
+  // field written for the first time (a default the form showed) would retire the card. Its 品质 cannot change
+  // while it has a card (the form shows the card's rarity, read only).
   const result = editingItemId.value
-    ? invEditor.update(editingItemId.value, formData)
-    : invEditor.create(formData);
+    ? invEditor.update(editingItemId.value, changedItemFields(formOpenedWith ?? form, form))
+    : invEditor.create(form);
 
   if (result.ok) {
     showItemModal.value = false;
@@ -415,13 +435,20 @@ function saveCurrency(): void {
             <div class="item-name-row">
               <span class="item-name">{{ item.名称 }}</span>
               <span v-if="item.已装备" class="equipped-badge">{{ t('inventory.badge.equipped') }}</span>
+              <Tooltip v-if="qualities.get(item._id)?.fromCard" :text="t('inventory.quality.fromCard')" fixed>
+                <span
+                  class="quality-badge"
+                  data-testid="inventory-quality"
+                  data-from-card="true"
+                  :style="{ color: qualities.get(item._id)!.color, borderColor: qualities.get(item._id)!.color }"
+                >{{ qualities.get(item._id)!.label }}</span>
+              </Tooltip>
               <span
-                v-if="getQualityLabel(item)"
+                v-else-if="qualities.get(item._id)"
                 class="quality-badge"
-                :style="{ color: getQualityColor(getQualityLabel(item)!), borderColor: getQualityColor(getQualityLabel(item)!) }"
-              >
-                {{ getQualityLabel(item) }}
-              </span>
+                data-testid="inventory-quality"
+                :style="{ color: qualities.get(item._id)!.color, borderColor: qualities.get(item._id)!.color }"
+              >{{ qualities.get(item._id)!.label }}</span>
             </div>
             <span v-if="item.描述" class="item-desc">{{ item.描述 }}</span>
             <div class="item-meta">
@@ -473,7 +500,14 @@ function saveCurrency(): void {
           </div>
           <div class="form-group form-group--half">
             <label class="form-label">{{ t('inventory.edit.label.quality') }}</label>
-            <AgaSelect v-model="itemForm.品质" class="form-select-aga" :options="qualitySelectOptions" :ariaLabel="t('inventory.edit.label.quality')" />
+            <div v-if="editingCardTier" class="quality-from-card" data-testid="inventory-quality-card">
+              <span
+                class="quality-badge"
+                :style="{ color: `var(--tier-${editingCardTier})`, borderColor: `var(--tier-${editingCardTier})` }"
+              >{{ t(`mainGame.vectorTable.tier.${editingCardTier}`) }}</span>
+              <span class="quality-from-card__hint">{{ t('inventory.edit.qualityFromCard') }}</span>
+            </div>
+            <AgaSelect v-else v-model="itemForm.品质" class="form-select-aga" :options="qualitySelectOptions" :ariaLabel="t('inventory.edit.label.quality')" />
           </div>
         </div>
         <div class="form-group">
@@ -712,6 +746,22 @@ function saveCurrency(): void {
   border-radius: 8px;
   opacity: 0.9;
   text-shadow: 0 0 4px currentColor;
+}
+
+/* An item with a card: its rarity is the card's, shown read only in the form (PO 2026-10-03). */
+.quality-from-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+}
+.quality-from-card .quality-badge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+}
+.quality-from-card__hint {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
 }
 
 .item-desc {

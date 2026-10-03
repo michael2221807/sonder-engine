@@ -1,7 +1,7 @@
 export { useCharacterEditor } from './useCharacterEditor';
 export { useNpcEditor } from './useNpcEditor';
 export { useLocationEditor } from './useLocationEditor';
-export { useInventoryEditor } from './useInventoryEditor';
+export { useInventoryEditor, changedItemFields } from './useInventoryEditor';
 export { usePlotEditor } from './usePlotEditor';
 export type {
   EditorResult,
