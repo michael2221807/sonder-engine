@@ -16,13 +16,18 @@
     },
     {
       "promptId": "core",
-      "to": "| 系统提示 | `〖系统提示：…〗` |",
-      "from": "| 系统判定 / 状态提示 | `〖…〗` |"
+      "to": "",
+      "from": "| 系统判定 / 状态提示 | `〖…〗` |\n"
     },
     {
       "promptId": "core",
-      "to": "只用于 `〖系统提示：…〗`，叙事与心理不用",
-      "from": "系统判定 / 状态变化"
+      "to": "",
+      "from": "- `〖〗` = 系统判定 / 状态变化\n"
+    },
+    {
+      "promptId": "core",
+      "to": "**正文只写故事**：不加任何提示或标注行；状态与数值的变化只写进 commands，界面会单独显示。",
+      "from": "**禁止混用**：\n- `【系统提示】`、`【判定成功】`、`【好感度+10】` 均为错误\n- 正确：`〖系统提示：好感度变化〗`"
     },
     {
       "promptId": "core",
@@ -101,13 +106,18 @@
     },
     {
       "promptId": "core",
-      "to": "| System notice | `〖System Notice: …〗` |",
-      "from": "| System judgement / status notification | `〖…〗` |"
+      "to": "",
+      "from": "| System judgement / status notification | `〖…〗` |\n"
     },
     {
       "promptId": "core",
-      "to": "only for `〖System Notice: …〗`, never narrative or inner thoughts",
-      "from": "system judgement / status change"
+      "to": "",
+      "from": "- `〖〗` = system judgement / status change\n"
+    },
+    {
+      "promptId": "core",
+      "to": "**The narrative is only the story**: no notice or annotation lines; state and value changes go only into commands, and the interface shows them on its own.",
+      "from": "**Never mix them**:\n- `【System Notice】`, `【Judgement: Success】`, `【Affinity +10】` are all incorrect\n- Correct: `〖System Notice: Affinity Changed〗`"
     },
     {
       "promptId": "core",

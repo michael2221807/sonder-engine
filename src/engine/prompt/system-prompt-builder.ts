@@ -79,6 +79,8 @@ const GPROXY_CACHE_TAIL_PIECE_IDS: ReadonlySet<string> = new Set([
 export interface SystemPromptBuildParams {
   /** Round-local module adaptation, before variable interpolation and cache grouping. */
   transformPrompt?: import('./raw-prompt-transform').RawPromptTransform;
+  /** How recent story text is shown to the model (PipelineMeta.historyStoryOnly); absent = as saved. */
+  historyText?: (text: string) => string;
   /** Round-selected pack default for the format slot; explicit user edits still win. */
   formatPromptId?: string;
   stateManager: StateManager;
@@ -633,8 +635,9 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
 
   // ── 19. Short-term Memory (即时剧情回顾) — returned separately ──
   const shortTerm = stateManager.get<Array<{ summary: string; round?: number }>>('记忆.短期') ?? [];
+  const recent = (text: string) => (params.historyText ? params.historyText(text) : text);
   const shortMemoryContext = shortTerm.length > 0
-    ? `【即时剧情回顾】\n${shortTerm.map((e) => typeof e === 'string' ? e : (e.summary ?? '')).join('\n')}`
+    ? `【即时剧情回顾】\n${shortTerm.map((e) => recent(typeof e === 'string' ? e : (e.summary ?? ''))).join('\n')}`
     : '';
 
   // ── 20. Narrative Constraints + Story Style (radio group: one active at a time) ──

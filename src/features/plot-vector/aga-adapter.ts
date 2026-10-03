@@ -109,6 +109,8 @@ export class AgaPlotVectorAdapter implements PlotVectorRoundPort {
       if (readPlotVectorControl().epoch !== control.epoch) throw new Error('剧情动能开关在组装期间改变，请重新开始本回合');
     };
     ctx.meta.plotVectorPromptMode = true;
+    // Rounds in this mode write no system lines (PO 2026-10-02 A); the old ones in the save must not invite more.
+    ctx.meta.historyStoryOnly = true;
     return this.promptPolicy.transform;
   }
   async prepare(ctx: PipelineContext): Promise<PipelineContext> {

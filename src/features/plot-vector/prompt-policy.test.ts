@@ -9,6 +9,8 @@ import { PromptRegistry } from '../../engine/prompt/prompt-registry';
 import { PromptAssembler } from '../../engine/prompt/prompt-assembler';
 import { TemplateEngine } from '../../engine/prompt/template-engine';
 import { ContextAssemblyStage } from '../../engine/pipeline/stages/context-assembly';
+import { MemoryRetriever } from '../../engine/memory/memory-retriever';
+import { MemoryManager } from '../../engine/memory/memory-manager';
 import { StateManager } from '../../engine/core/state-manager';
 import { RoundOwnership } from '../../engine/core/round-ownership';
 import { DEFAULT_ENGINE_PATHS as P, type PipelineContext } from '../../engine/pipeline/types';
@@ -60,12 +62,18 @@ function harness(en: boolean, builder: boolean, split: boolean, cot: boolean, ca
   Object.entries(pack.prompts).forEach(([id, content]) => registry.register({ id, content, enabled: true }));
   const assembler = new PromptAssembler(registry, new TemplateEngine());
   const policy = parseVectorPromptPolicy(rules, pack.prompts.plotVectorMode)!;
-  const stage = (active?: boolean, adapter?: AgaPlotVectorAdapter) => new ContextAssemblyStage(state, assembler, { retrieve: () => '' }, behavior,
+  // The real keyword retriever (Engram off is the default): its short-term section quotes the recent story too.
+  const memoryPaths = { shortTermPath: '记忆.短期', midTermPath: '记忆.中期', longTermPath: '记忆.长期', implicitMidTermPath: '记忆.隐式中期',
+    shortTermCapacity: 5, midTermRefineThreshold: 25, longTermSummaryThreshold: 50, longTermSummarizeCount: 50, midTermKeep: 0, longTermCap: 30 };
+  const retriever = new MemoryRetriever(memoryPaths, new MemoryManager(state, memoryPaths));
+  const stage = (active?: boolean, adapter?: AgaPlotVectorAdapter) => new ContextAssemblyStage(state, assembler, retriever, behavior,
     pack, P, undefined, undefined, () => [], () => [], builder, () => cache,
     active === undefined ? undefined : c => {
       if (!active) return;
       if (adapter) return adapter.promptTransform(c);
+      // As the adapter does (aga-adapter promptTransform): the mode, and the model's view of recent story.
       c.meta.plotVectorPromptMode = true;
+      c.meta.historyStoryOnly = true;
       return policy.transform;
     });
   return { pack, state, registry, assembler, policy, stage, ctx: () => ctx(split) };
@@ -115,20 +123,35 @@ describe('real pack judgment transition, zero network', () => {
           expect(core).not.toMatch(/\{"text":|\| `text` \|/);
           expect(core).toContain('mid_term_memory');
           expect(core).toContain('knowledge_facts');
-          expect(core).toContain(en ? 'only for `〖System Notice: …〗`' : '只用于 `〖系统提示：…〗`');
+          expect(core).toContain(en ? '**The narrative is only the story**' : '**正文只写故事**');
         }
-        // PO D2 (2026-09-26): with the mode on, 〖〗 is only for system notices, never a verdict or a change of state.
+        // PO 2026-10-02 (A, replacing D2 of 2026-09-26): with the mode on the narrative writes no notice at all. No rule
+        // names a bracket form or a notice (naming a retired form invites it, I27), and the recent story the model
+        // sees has its system lines left out: apart from the player's own words, no 〖 reaches the model.
         const everything = on.messages.concat(on.meta.splitStep2Messages ?? []).map(m => String(m.content)).join('\n');
-        expect(everything).not.toMatch(/`〖〗` = (系统判定|状态变化|system judgement|status change)|\| (系统判定 \/ 状态提示|状态提示|System judgement \/ status notification|Status notification) \|/);
-        expect(h.policy.mode).toContain(en ? '`〖〗` is only for `〖System Notice: …〗`' : '`〖〗` 只留给 `〖系统提示：…〗`');
+        expect(everything.split(input).join('')).not.toContain('〖');
+        expect(everything).not.toMatch(/系统提示|System Notice/);
+        expect(h.policy.mode).toContain(en ? 'no rolls, scores, notices or annotation lines' : '不写骰点、分数或任何提示、标注行');
+        expect(h.policy.mode).not.toMatch(/〖|系统提示|System Notice/);
+        // The judgement mode (the feature off) keeps its markers and its notice example, word for word, wherever core
+        // is sent (the builder's single call has no core module at all).
+        const offAll = off.messages.concat(off.meta.splitStep2Messages ?? []).map(m => String(m.content)).join('\n');
+        if (off.messageSources!.concat(off.meta.splitStep2Sources ?? []).includes('module:core')) {
+          expect(offAll).toContain(en ? '- `〖〗` = system judgement / status change' : '- `〖〗` = 系统判定 / 状态变化');
+          expect(offAll).toContain(en ? 'Correct: `〖System Notice: Affinity Changed〗`' : '正确：`〖系统提示：好感度变化〗`');
+        }
         if (split) {
           expect(on.meta.splitStep2Followup).toBe(h.pack.prompts.splitGenStep2Followup.trim());
           expect(off.meta.splitStep2Followup).toBeUndefined();
           expect(structuredSources).not.toContain('module:historyFraming');
           expect(off.meta.splitStep2Sources).toContain('module:historyFraming');
         }
+        // The player's input is never changed. Recent story keeps its words without its system line when on, and is
+        // sent verbatim when off.
         expect(on.messages.some(m => typeof m.content === 'string' && m.content.includes(input))).toBe(true);
-        expect(on.messages.some(m => typeof m.content === 'string' && m.content.includes(history))).toBe(true);
+        expect(everything).toContain('历史原文保留');
+        expect(everything).not.toContain(history);
+        expect(off.messages.concat(off.meta.splitStep2Messages ?? []).some(m => String(m.content).includes(history))).toBe(true);
         const structured = (on.meta.splitStep2Messages ?? on.messages).map(m => m.content).join('\n');
         expect(structured).toContain('commands');
         expect(structured).toContain('action_options');

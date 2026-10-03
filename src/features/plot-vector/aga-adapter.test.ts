@@ -150,6 +150,8 @@ describe('AGA opt-in integration (zero network)', () => {
     const h = setup(); writePlotVectorControl(true);
     const c = h.ctx(); c.meta.splitStep2Messages = [{ role: 'system', content: 'commands' }, { role: 'user', content: 'player input' }];
     expect(h.adapter.promptTransform(c)).toBeTypeOf('function');
+    // PO 2026-10-02 A: in this mode the model sees its recent story without system lines.
+    expect(c.meta).toMatchObject({ plotVectorPromptMode: true, historyStoryOnly: true });
     const result = await h.adapter.prepare(c);
     expect(result.messageSources).toContain('plot-vector-mode');
     expect(result.messages.find(m => m.content === 'mode contract')).toBeDefined();
@@ -166,6 +168,7 @@ describe('AGA opt-in integration (zero network)', () => {
   it('rejects mode changes during context assembly in either direction', async () => {
     const h = setup();
     const off = h.ctx(); expect(h.adapter.promptTransform(off)).toBeUndefined();
+    expect(off.meta.historyStoryOnly).toBeUndefined();
     writePlotVectorControl(true);
     await expect(h.adapter.prepare(off)).rejects.toThrow('组装期间');
     const on = h.ctx(); h.adapter.promptTransform(on); writePlotVectorControl(false);
@@ -185,6 +188,7 @@ describe('AGA opt-in integration (zero network)', () => {
     const before = h.state.toSnapshot();
     const c = h.ctx(); c.meta.isEnhancedOpening = true;
     expect(h.adapter.promptTransform(c)).toBeUndefined();
+    expect(c.meta.historyStoryOnly).toBeUndefined();
     expect(await h.adapter.prepare(c)).toBe(c);
     expect(h.state.toSnapshot()).toEqual(before);
     expect(runtimeCalls.prepare).not.toHaveBeenCalled();

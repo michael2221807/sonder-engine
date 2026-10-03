@@ -52,6 +52,12 @@ export interface PipelineMeta {
   /** Frozen before asynchronous context assembly to avoid mixing feature modes. */
   plotVectorAssemblyEpoch?: string;
   plotVectorPromptMode?: boolean;
+  /**
+   * The model sees its recent story (short-term memory, narrative history) without system lines, as the player
+   * reads it (`storyText`). Set during context assembly by a component whose rounds write none (plot vector):
+   * old lines in the save would otherwise invite the model to keep writing them. The save itself is unchanged.
+   */
+  historyStoryOnly?: boolean;
 
   // ── 子管线分派标志（GameOrchestrator 读取） ──
   /** 短期记忆已满 → 触发 MemorySummaryPipeline */

@@ -18,7 +18,7 @@
  *     消灭"孤零零短段"造成的最明显卡顿。
  *   - 最多句数为硬上限(兜底延迟/停止粒度),即使短尾合并也不突破。
  */
-import { isSystemBracket } from '../core/narrative-brackets';
+import { withoutSystemLines } from '../core/narrative-brackets';
 
 /**
  * 剔除「判定 / 系统提示」块 — 这些是系统层信息(骰值、难度、状态变化),
@@ -37,45 +37,11 @@ import { isSystemBracket } from '../core/narrative-brackets';
  *      (core.md 明确警告「用〖〗不是【】」)。只在内容是 `判定:` / `系统提示:` 这类
  *      冒号形式,或含 `判定值:` 字段时才剔除;`【环境】`、`【判定日快到了】`、
  *      `【任务】难度:高` 这类叙事标签不受影响。
+ * The rule itself is `withoutSystemLines` (engine/core/narrative-brackets.ts), shared with the plot-vector
+ * component's view of recent story, so what is read and what the model is shown never disagree.
  */
 export function stripJudgementForSpeech(raw: string): string {
-  if (!raw) return '';
-  let t = raw;
-  // 1) <judge>...</judge> 判定思考块(含未闭合时不吞尾,故要求闭合)
-  t = t.replace(/<\s*judge\s*>[\s\S]*?<\s*\/\s*judge\s*>/gi, '');
-  // 2) 〖...〗 判定/系统提示块 —— 用「最近的 〗 收口」逐段扫描,与展示层
-  //    formatted-text-parser.findJudgementSlices 逐字同规则:遇 `〖` 就吃到下一个
-  //    `〗`(即使中间又出现 `〖` 也一并吞掉,与展示层"孤立 〖 后的文本不渲染成正文"
-  //    一致);找不到闭合的 `〗` 则停手,不吞后文。若改成正则 /〖[^〖〗]*〗/,
-  //    孤立 `〖` 后面那段展示层不显示的文本会被朗读出来 —— 视听不一致。
-  //    只跳过判定／系统提示(首句有冒号,isSystemBracket);其余 〖…〗 是叙事自己的强调,
-  //    展示层按正文显示,这里读出内文(PO G2)。
-  let out = '';
-  let cursor = 0;
-  while (cursor < t.length) {
-    const open = t.indexOf('〖', cursor);
-    if (open === -1) break;
-    const close = t.indexOf('〗', open + 1);
-    if (close === -1) break; // 未闭合 → 后文原样保留(展示层同样忽略这个 〖)
-    const inner = t.slice(open + 1, close);
-    out += t.slice(cursor, open) + (isSystemBracket(inner) ? '' : inner);
-    cursor = close + 1;
-  }
-  t = out + t.slice(cursor);
-  // 3) 误用方括号的系统块:仅当内容确实是判定/系统提示语法时才剔除
-  t = t.replace(/【([^【】]*)】/g, (whole, inner: string) => {
-    const norm = inner.replace(/：/g, ':').replace(/，/g, ',').trim();
-    // 收紧到「确实是判定语法」:`判定:` 形式的类型冒号,或带 `判定值:` 字段。
-    // 不能只看「判定」两字开头 —— 那是日常词,会误伤 `【判定日快到了】`;
-    // 也不能只看难度/基础/幸运,太泛,会误伤 `【任务】难度:高`。
-    const looksLikeJudgement = /^判定\s*:/.test(norm) || /判定值\s*:/.test(norm);
-    // 系统提示同属系统层信息(与 〖系统提示:…〗 对齐),要求冒号形式避免误伤叙事。
-    const looksLikeSystemNote = /^系统提示\s*:/.test(norm);
-    return looksLikeJudgement || looksLikeSystemNote ? '' : whole;
-  });
-  // 残留的孤立 〖 / 〗(未闭合)不该被读出来
-  t = t.replace(/[〖〗]/g, '');
-  return t;
+  return withoutSystemLines(raw);
 }
 
 /**

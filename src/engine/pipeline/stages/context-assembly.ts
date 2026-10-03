@@ -24,6 +24,7 @@ import type { GamePack } from '../../types';
 import type { StateManager } from '../../core/state-manager';
 import type { PromptAssembler } from '../../prompt/prompt-assembler';
 import { eventBus } from '../../core/event-bus';
+import { storyLines, storyText } from '../../core/narrative-brackets';
 import { stringifySnapshotForPrompt, stripTagFromMessages, NSFW_STRIP_TAG } from '../../memory/snapshot-sanitizer';
 import {
   buildSentRegistry,
@@ -126,6 +127,11 @@ export class ContextAssemblyStage implements PipelineStage {
   async execute(ctx: PipelineContext): Promise<PipelineContext> {
     const transformPrompt = this.getPromptTransform?.(ctx);
     const assembler = this.promptAssembler.withTransform(transformPrompt);
+    // The model's view of recent story, without system lines when the active component asks for it
+    // (PipelineMeta.historyStoryOnly, set by the transform above). Player input is never changed.
+    const storyOnly = ctx.meta.historyStoryOnly === true;
+    const historyText = storyOnly ? storyText : undefined;
+    const story = (text: string): string => (historyText ? historyText(text) : text);
     // ── 1. 冻结状态树快照 ──
     const stateSnapshot = this.stateManager.toSnapshot();
 
@@ -135,14 +141,17 @@ export class ContextAssemblyStage implements PipelineStage {
     // ── 3. 记忆检索（E.2：按 retrievalMode 选择检索路径） ──
     // 参照 ming: 短期记忆单独作为 assistant 消息注入 chat history (depth=2)
     // MEMORY_BLOCK 只包含中期/长期/隐式中期（避免重复注入短期）
-    const memoryBlock = await this.retrieveMemory(ctx.userInput, ctx);
+    const retrieved = await this.retrieveMemory(ctx.userInput, ctx);
+    // The memory block quotes recent story too (the keyword retriever's short-term section; event snippets): the
+    // same view applies to it, line by line, so a snippet cut inside a bracket never takes the next bullets along.
+    const memoryBlock = storyOnly && retrieved ? storyLines(retrieved) : retrieved;
 
     // 读取短期记忆用于单独注入（参照 ming: 短期记忆作为独立 assistant 消息注入 chat history 末端）
     // 路径来自 memoryPathConfig，默认 '记忆.短期'
     const shortTermEntries = this.stateManager.get<Array<{ summary: string; round?: number }>>(
       '记忆.短期'
     ) ?? [];
-    const shortTermJoined = shortTermEntries.map((e) => typeof e === 'string' ? e : (e.summary ?? '')).join('\n');
+    const shortTermJoined = shortTermEntries.map((e) => story(typeof e === 'string' ? e : (e.summary ?? ''))).join('\n');
     const shortTermTemplate = this.pack.engineFragments?.shortTermMemoryHeader
       ?? '# 【最近事件】\n{entries}。根据这刚刚发生的文本事件，合理生成下一次文本信息，要保证衔接流畅、不断层，符合上文的文本信息';
     const shortTermText = shortTermEntries.length > 0
@@ -491,7 +500,7 @@ export class ContextAssemblyStage implements PipelineStage {
       if (role === 'user') {
         wrapped = `<玩家输入>\n${m.content}\n</玩家输入>`;
       } else if (role === 'assistant') {
-        wrapped = `<叙事正文>\n${m.content}\n</叙事正文>`;
+        wrapped = `<叙事正文>\n${story(m.content)}\n</叙事正文>`;
       }
       return { role, content: wrapped };
     };
@@ -545,6 +554,7 @@ export class ContextAssemblyStage implements PipelineStage {
 
       const buildResult = buildSystemPrompt({
         transformPrompt,
+        historyText,
         // Reuse the pack's narrative phase instead of asking Step 1 for data
         // that the split merge discards. Legacy/off and opening stay unchanged.
         formatPromptId: ctx.meta.plotVectorPromptMode && splitGen

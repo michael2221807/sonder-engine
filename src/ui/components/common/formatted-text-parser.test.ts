@@ -82,6 +82,44 @@ describe('judgement blocks', () => {
     const j = parts.find((p) => p.kind === 'judgement');
     expect(j?.judgement?.details.join(',')).toContain('**strong**');
   });
+
+  // PO 2026-10-02: a notice was cut at its first comma like a verdict ("车门关上", "你把这一整天").
+  describe('a notice the verdict parse would cut short says its whole sentence', () => {
+    const judgementOf = (line: string) => parseInline(line).find((p) => p.kind === 'judgement')?.judgement;
+    it('under the notice key, in either language and either punctuation, whatever words it holds', () => {
+      expect(judgementOf('〖系统提示：车门关上，后座那人，没再看你。〗'))
+        .toEqual({ type: '系统提示', result: '车门关上，后座那人，没再看你。', details: [], notice: true });
+      expect(judgementOf('〖系统提示:车门关上,后座那人没再看你。〗')).toMatchObject({ result: '车门关上,后座那人没再看你。', notice: true });
+      expect(judgementOf('〖System Notice: The door closes, and nobody looks back.〗'))
+        .toMatchObject({ type: 'System Notice', result: 'The door closes, and nobody looks back.', notice: true });
+      expect(judgementOf('〖系统提示：状态：疲惫，脚步发沉〗')).toMatchObject({ result: '状态：疲惫，脚步发沉', notice: true });
+      // 状态 / 结果 are everyday words in a notice, not the fields that make a verdict.
+      expect(judgementOf('〖系统提示：你累了，状态：疲惫，需要休息〗')).toMatchObject({ result: '你累了，状态：疲惫，需要休息', notice: true });
+      expect(judgementOf('〖系统提示：任务失败，请重试〗')).toMatchObject({ result: '任务失败，请重试', notice: true });
+      // A 结果 the parse would ignore is text left out too.
+      expect(judgementOf('〖系统提示：任务更新，结果：未知〗')).toMatchObject({ result: '任务更新，结果：未知', notice: true });
+      // A thought written with a colon in its first clause reads whole as well (its "label" is the long clause).
+      expect(judgementOf('〖他想起了那天夜里在医院走廊里听到的话：快走，别回头，不要相信他〗'))
+        .toMatchObject({ type: '他想起了那天夜里在医院走廊里听到的话', result: '快走，别回头，不要相信他', notice: true });
+    });
+    it('without the key, a line whose first clause is no outcome (a time skip)', () => {
+      expect(judgementOf('〖时间流逝：三天后，你回到了宿舍〗')).toMatchObject({ type: '时间流逝', result: '三天后，你回到了宿舍', notice: true });
+    });
+    it('lines the parse keeps whole, verdicts and malformed lines look as before', () => {
+      expect(judgementOf('〖系统提示：好感度变化〗')).toEqual({ type: '系统提示', result: '好感度变化', details: [] });
+      expect(judgementOf('〖系统提示：好感度变化，〗')?.notice).toBeUndefined();
+      expect(judgementOf('〖系统提示：好感度变化：〗')).toEqual({ type: '系统提示', result: '好感度变化', details: [] });
+      expect(judgementOf('〖社交:成功〗')).toEqual({ type: '社交', result: '成功', details: [] });
+      expect(judgementOf('〖战斗:成功,备注:**strong**〗')?.notice).toBeUndefined();
+      // A verdict keeps its look even when the parse drops its tail (real lines from a player's backup).
+      expect(judgementOf('〖行动(现场确认复诊流程):自动成功——日常事务，无需判定〗'))
+        .toEqual({ type: '行动(现场确认复诊流程)', result: '自动成功——日常事务', details: [] });
+      expect(judgementOf('〖战斗:大成功,伤害:12,暴击〗')).toEqual({ type: '战斗', result: '大成功', details: ['伤害:12'] });
+      expect(judgementOf('〖社交:成功,判定值:16,她笑了〗')).toEqual({ type: '社交', result: '成功', finalValue: '16', details: [] });
+      // A line holding another 〖 was swallowed by an unclosed bracket: parsed as before, never a sentence.
+      expect(judgementOf('〖系统提示：一句，〖社交:成功〗')?.notice).toBeUndefined();
+    });
+  });
 });
 
 // ─── markdown inline: emphasis + links ────────────────────────

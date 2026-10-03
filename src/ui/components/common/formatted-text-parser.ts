@@ -32,6 +32,7 @@ import { isSystemBracket } from '@/engine/core/narrative-brackets';
 
 export interface JudgementData {
   type: string;
+  /** A verdict's outcome; for a notice, its whole text after the key. */
   result: string;
   finalValue?: string;
   difficulty?: string;
@@ -40,6 +41,11 @@ export interface JudgementData {
   environment?: string;
   status?: string;
   details: string[];
+  /**
+   * A notice the verdict parse would cut short (`系统提示：车门关上，……`): `result` holds its whole sentence, shown as
+   * text rather than an outcome. A notice the parse keeps whole (`系统提示：好感度变化`) is not flagged and looks as before.
+   */
+  notice?: boolean;
 }
 
 /** 行内叶子片段种类 */
@@ -83,6 +89,13 @@ export type Block =
 
 // ─── Judgement parsing ────────────────────────────────────────
 
+/** Fields only a dice verdict carries (环境/状态/结果 are everyday words a notice may use as well). */
+const VERDICT_KEYS = new Set(['判定值', '难度', '基础', '幸运']);
+/** The pack's key for a notice line (zh / en core: `〖系统提示：…〗` / `〖System Notice: …〗`). */
+const NOTICE_KEY = /^(系统提示|system notice)$/i;
+/** A verdict's outcome reads as one of these (成功 also covers 大成功 / 自动成功, 失败 also 大失败). */
+const OUTCOME_WORD = /成功|失败|完美/;
+
 /**
  * Parse 〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗。
  * 纯解析——缺省类型返回空串，展示层自行兜底文案（避免 i18n 依赖）。
@@ -96,12 +109,16 @@ export function parseJudgement(raw: string): JudgementData {
     result: resultStr ?? '',
     details: [],
   };
+  let verdictFields = 0;
+  // Text the parse leaves out: the first clause past its second colon, and every later clause it skips.
+  let dropped = (parts[0] ?? '').split(':').slice(2).join(':').trim() !== '';
   for (let i = 1; i < parts.length; i++) {
     const colonIdx = parts[i].indexOf(':');
-    if (colonIdx === -1) continue;
+    if (colonIdx === -1) { if (parts[i]) dropped = true; continue; }
     const key = parts[i].slice(0, colonIdx).trim();
     const val = parts[i].slice(colonIdx + 1).trim();
-    if (!key || !val) continue;
+    if (!key || !val) { if (key || val) dropped = true; continue; }
+    if (VERDICT_KEYS.has(key)) verdictFields++;
     if (key === '判定值') data.finalValue = val;
     else if (key === '难度') data.difficulty = val;
     else if (key === '基础') data.base = val;
@@ -111,8 +128,19 @@ export function parseJudgement(raw: string): JudgementData {
     else if (key === '结果') {
       // AI sometimes generates 〖社交:判定,结果:成功,...〗 instead of 〖社交:成功,...〗
       if (!data.result || data.result === '判定') data.result = val;
+      else if (val !== data.result) dropped = true;
     }
     else data.details.push(`${key}:${val}`);
+  }
+  // A notice the parse above cuts short says everything after its key instead (PO 2026-10-02: cut at the first
+  // comma like a verdict, `系统提示：车门关上，……` showed only "车门关上"). A notice is a line under the notice key,
+  // or a line with no verdict field whose first clause is no outcome (a time skip, a status note). A verdict keeps
+  // its look even when the parse drops its tail (`行动:自动成功——日常事务，无需判定`, `战斗:大成功,伤害:12,暴击`), as
+  // does any line the parse keeps whole; a line holding another 〖 is malformed and stays as parsed.
+  const keyEnd = raw.search(/[:：]/);
+  const notice = NOTICE_KEY.test(data.type) || (verdictFields === 0 && !OUTCOME_WORD.test(data.result));
+  if (dropped && notice && keyEnd >= 0 && !raw.includes('〖')) {
+    return { type: data.type, result: raw.slice(keyEnd + 1).trim(), details: [], notice: true };
   }
   return data;
 }
