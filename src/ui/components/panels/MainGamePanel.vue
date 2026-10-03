@@ -62,6 +62,7 @@ import { useRouter } from 'vue-router';
 import type { SaveHealthReport } from '@/engine/persistence/save-health';
 import type { EventBus } from '@/engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS, type BookmarkedRound } from '@/engine/pipeline/types';
+import { actionOptionsOn, type PromptSettings } from '@/engine/prompt/world-book';
 import Modal from '@/ui/components/common/Modal.vue';
 import FormattedText from '@/ui/components/common/FormattedText.vue';
 import SettingTaggedText from '@/ui/components/common/SettingTaggedText.vue';
@@ -229,6 +230,10 @@ const environmentTags = useValue<unknown>(DEFAULT_ENGINE_PATHS.environmentTags);
 
 /** Persisted action options from state tree — survives page refresh */
 const persistedActionOptions = useValue<string[]>('元数据.当前行动选项');
+/** The player's action-options switch: off, the last round's options leave the screen at once (PO 2026-10-03). */
+const promptSettings = useValue<Partial<PromptSettings>>('系统.设置.prompt');
+const NO_OPTIONS: string[] = [];
+const shownActionOptions = computed(() => (actionOptionsOn(promptSettings.value) ? actionOptions.value : NO_OPTIONS));
 
 /** Whether the AI is currently generating a response (pipeline is running) */
 const isGenerating = ref(false);
@@ -1573,7 +1578,7 @@ watch(
     <GameComposer
       v-if="!isWorldBuilding"
       ref="composerRef"
-      :action-options="actionOptions"
+      :action-options="shownActionOptions"
       :is-generating="isGenerating"
       :can-rollback="canRollback"
       @send="handleComposerSend"

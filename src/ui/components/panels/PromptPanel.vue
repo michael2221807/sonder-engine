@@ -12,7 +12,7 @@
  * - 导入（选择 JSON，合并不清空）
  * - 权重持久化到 localStorage
  */
-import { ref, computed, inject, watch } from 'vue';
+import { ref, computed, inject, watch, onActivated } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import Modal from '@/ui/components/common/Modal.vue';
@@ -25,12 +25,13 @@ const { t } = useI18n();
 import { eventBus } from '@/engine/core/event-bus';
 import type { GamePack } from '@/engine/types/game-pack';
 import { useGameState } from '@/ui/composables/useGameState';
-import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio, type PromptSettings } from '@/engine/prompt/world-book';
+import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio, actionOptionsOn, wordCountOf, type PromptSettings } from '@/engine/prompt/world-book';
 import { BUILTIN_SLOTS } from '@/engine/prompt/builtin-slots';
 import { createEmptyHeroinePlan, type HeroinePlan, type HeroineEntry, type HeroineInteractionEvent } from '@/engine/story/heroine-plan';
 import type { PromptRegistry } from '@/engine/prompt/prompt-registry';
 import WorldBookTab from './WorldBookTab.vue';
 import NarrativeContractTab from './NarrativeContractTab.vue';
+import { useActionOptionsStyle } from '@/ui/composables/useActionOptionsStyle';
 
 const pack = inject<GamePack>('gamePack');
 const promptRegistry = inject<PromptRegistry>('promptRegistry');
@@ -85,6 +86,20 @@ function updatePromptSetting<K extends keyof PromptSettings>(key: K, value: Prom
   const current = promptSettings.value;
   setValue('系统.设置.prompt', { ...current, [key]: value });
 }
+
+/** A cleared or unusable entry keeps the length the rounds use, and the box shows it again. */
+function onWordCountChange(event: Event): void {
+  const input = event.target as HTMLInputElement;
+  const n = Math.round(Number(input.value));
+  if (input.value.trim() && Number.isFinite(n) && n > 0) updatePromptSetting('wordCountRequirement', n);
+  else input.value = String(wordCountOf(promptSettings.value));
+}
+
+// Mode and pace are the device's action-option style, the one the settings page edits and the round reads
+// (系统.actionOptions.*). They used to be kept here as actionOptionsMode / actionPace, which nothing read.
+const { style: actionStyle, save: saveActionStyle, refresh: refreshActionStyle } = useActionOptionsStyle();
+// The panel is kept alive between visits; a card import may have changed the device's style meanwhile.
+onActivated(refreshActionStyle);
 
 // ─── Action options select options ──────────────────────────
 const actionModeOptions = computed(() => [
@@ -275,6 +290,7 @@ const PROMPT_DISPLAY_KEY_MAP: Record<string, string> = {
   worldHeartbeat: 'prompt.display.worldHeartbeat',
   actionOptions: 'prompt.display.actionOptions',
   actionOptionsStory: 'prompt.display.actionOptionsStory',
+  actionOptionsOff: 'prompt.display.actionOptionsOff',
   historyFraming: 'prompt.display.historyFraming',
   assistantInjectionContract: 'prompt.display.assistantInjectionContract',
   privacyRepair: 'prompt.display.privacyRepair',
@@ -750,8 +766,8 @@ function previewContent(content: string, maxLen = 100): string {
           <h3 class="settings-group-title">{{ $t('prompt.settings.wordCountTitle') }}</h3>
           <p class="settings-desc">{{ $t('prompt.settings.wordCountDesc') }}</p>
           <input type="number" class="settings-input" min="200" max="3000" step="50"
-            :value="promptSettings.wordCountRequirement"
-            @change="updatePromptSetting('wordCountRequirement', Number(($event.target as HTMLInputElement).value))"
+            :value="wordCountOf(promptSettings)"
+            @change="onWordCountChange"
           />
         </div>
 
@@ -833,24 +849,26 @@ function previewContent(content: string, maxLen = 100): string {
           <h3 class="settings-group-title">{{ $t('prompt.settings.actionOptionsTitle') }}</h3>
           <div class="settings-row">
             <AgaToggle
-              :modelValue="promptSettings.enableActionOptions"
+              :modelValue="actionOptionsOn(promptSettings)"
               :label="$t('prompt.settings.enableActionOptions')"
               show-label
               @update:modelValue="v => updatePromptSetting('enableActionOptions', v)"
             />
           </div>
-          <div v-if="promptSettings.enableActionOptions" class="settings-row">
+          <div v-if="actionOptionsOn(promptSettings)" class="settings-row">
             <AgaSelect
               class="settings-select-control"
-              :modelValue="promptSettings.actionOptionsMode"
+              :modelValue="actionStyle.mode"
               :options="actionModeOptions"
-              @update:modelValue="v => updatePromptSetting('actionOptionsMode', v as 'action' | 'story')"
+              data-testid="prompt-action-mode"
+              @update:modelValue="v => saveActionStyle({ mode: v as 'action' | 'story' })"
             />
             <AgaSelect
               class="settings-select-control"
-              :modelValue="promptSettings.actionPace"
+              :modelValue="actionStyle.pace"
               :options="actionPaceOptions"
-              @update:modelValue="v => updatePromptSetting('actionPace', v as 'fast' | 'slow')"
+              data-testid="prompt-action-pace"
+              @update:modelValue="v => saveActionStyle({ pace: v as 'fast' | 'slow' })"
             />
           </div>
         </div>
@@ -1184,7 +1202,8 @@ function previewContent(content: string, maxLen = 100): string {
 .settings-label { font-size: 13px; color: var(--color-text-secondary); display: flex; align-items: center; gap: 6px; cursor: pointer; }
 
 /* AgaSelect sizing on chrome surfaces */
-.settings-select-control { max-width: 300px; min-width: 160px; }
+/* Two side by side: they share a narrow row instead of running past the card on a phone. */
+.settings-select-control { flex: 0 1 160px; min-width: 0; max-width: 300px; }
 .heroine-type-select { width: 130px; }
 .filter-select-control { min-width: 140px; }
 .meta-select-control { min-width: 140px; }

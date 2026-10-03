@@ -21,7 +21,7 @@ import type {
 } from './world-book';
 import { formatHeroinePlanForContext, type HeroinePlan } from '../story/heroine-plan';
 import { buildPlotFocusCorpusTexts } from '../plot/plot-corpus';
-import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio } from './world-book';
+import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio, actionOptionsOn, wordCountOf } from './world-book';
 import { BUILTIN_SLOTS } from './builtin-slots';
 import type { EnginePathConfig } from '../pipeline/types';
 import {
@@ -81,6 +81,8 @@ export interface SystemPromptBuildParams {
   transformPrompt?: import('./raw-prompt-transform').RawPromptTransform;
   /** How recent story text is shown to the model (PipelineMeta.historyStoryOnly); absent = as saved. */
   historyText?: (text: string) => string;
+  /** The rendered action-options module for a single call (the player's mode, pace and request); absent = none. */
+  actionOptionsBlock?: string;
   /** Round-selected pack default for the format slot; explicit user edits still win. */
   formatPromptId?: string;
   stateManager: StateManager;
@@ -224,7 +226,7 @@ function filterByFeatureToggles(content: string, settings: PromptSettings): stri
   const isFeatureEnabled = (featureId: string): boolean => {
     switch (featureId.toLowerCase()) {
       case 'nocontrol': return settings.enableNoControl;
-      case 'action_options': return settings.enableActionOptions;
+      case 'action_options': return actionOptionsOn(settings);
       // Canon Capture must be recognised EXPLICITLY. The `default: true` below means an
       // unknown feature id stays switched on — so relying on it would leave the capture
       // instructions in the prompt even with the feature turned off, breaking the
@@ -263,7 +265,7 @@ function renderPromptPipeline(
 ): string {
   if (!rawContent.trim()) return '';
   let content = renderTemplateVars(rawContent, vars);
-  content = applyWritingSettings(slotId, content, settings.wordCountRequirement);
+  content = applyWritingSettings(slotId, content, wordCountOf(settings));
   content = filterByFeatureToggles(content, settings);
   return content;
 }
@@ -301,14 +303,14 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
     gproxyCache = false,
   } = params;
 
-  const templateVars: Record<string, string> = {
-    playerName,
-    wordCount: String(params.stateManager.get<number>('系统.设置.prompt.wordCountRequirement') ?? 650),
-  };
-
   // Read prompt settings from state tree
   const rawSettings = stateManager.get<Partial<PromptSettings>>('系统.设置.prompt');
   const settings: PromptSettings = { ...DEFAULT_PROMPT_SETTINGS, ...rawSettings };
+
+  const templateVars: Record<string, string> = {
+    playerName,
+    wordCount: String(wordCountOf(settings)),
+  };
 
   // Helper to resolve + render a slot through the full 5-step pipeline
   const slot = (slotId: string): string => {
@@ -509,7 +511,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
 
   // ── 7. Word Count ──
   const wordCountContent = slot('write_req') ||
-    `【字数要求】\n<字数>本次<正文>标签内内容必须达到${settings.wordCountRequirement}字以上。</字数>\n- 正文指 \`<正文>\` 中除【判定】外的叙事与对白总和。`;
+    `【字数要求】\n<字数>本次<正文>标签内内容必须达到${wordCountOf(settings)}字以上。</字数>\n- 正文指 \`<正文>\` 中除【判定】外的叙事与对白总和。`;
   push('length_prompt', '字数要求提示词', '系统', 'system', wordCountContent);
 
   // ── 8. Long-term Memory ──
@@ -689,6 +691,13 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
 
   // ── 22. Format/Output Protocol ──
   push('format_prompt', '输出格式提示词', '系统', 'system', slot('format_prompt'));
+  // The player turned action options off (PO 2026-10-03): the default format asks for them, so say so right after
+  // it. A round-selected format (split Step 1 in the impulse mode) writes the narrative only and needs nothing.
+  if (!actionOptionsOn(settings) && !params.formatPromptId && packPrompts['actionOptionsOff']?.trim()) {
+    push('action_options_off', '行动选项（已关闭）', '系统', 'system', packPrompts['actionOptionsOff']);
+  }
+  // A single call writes the options too: the module for the player's mode and pace (PO 2026-10-03).
+  if (params.actionOptionsBlock) push('action_options', '行动选项', '系统', 'system', params.actionOptionsBlock);
 
   // ── 22a. Canon Capture (only when THIS round carries a <设定> tag) ──
   //

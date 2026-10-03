@@ -123,6 +123,7 @@
   "prompt.display.worldHeartbeat": "世界心跳",
   "prompt.display.actionOptions": "行动选项（行动导向）",
   "prompt.display.actionOptionsStory": "行动选项（剧情导向）",
+  "prompt.display.actionOptionsOff": "行动选项（已关闭）",
   "prompt.display.historyFraming": "历史对话说明",
   "prompt.display.assistantInjectionContract": "助手注入协议",
   "prompt.display.privacyRepair": "私密信息修复",

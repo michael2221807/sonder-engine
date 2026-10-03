@@ -197,6 +197,30 @@ describe('StateManager', () => {
       expect(sm.get('x')).toBe(1);
     });
 
+    // PO 2026-10-03: a setting changed after the snapshot outlives the rollback; the story does not.
+    it('rollbackTo keeps the listed paths as they are now, in the one rollback change', () => {
+      sm.loadTree({ story: { round: 1 }, prefs: { words: 650, on: true, mode: 'action' }, flag: 1 } as never);
+      const snap = sm.toSnapshot();
+      sm.set('story.round', 2, 'system');
+      sm.set('prefs', { words: 2500, on: false, mode: '' }, 'user');
+      sm.set('flag', 0, 'user');
+      sm.set('extra', { made: 'after' }, 'user');
+      const keptBefore = toRaw(sm.get<{ words: number }>('prefs'))!;
+      clearEmitted();
+      sm.rollbackTo(snap, ['prefs', 'flag', 'missing.path', 'extra']);
+      expect(sm.get('story.round')).toBe(1);
+      // Falsy values are kept too.
+      expect(sm.get('prefs')).toEqual({ words: 2500, on: false, mode: '' });
+      expect(sm.get('flag')).toBe(0);
+      // A kept path with no value now is left as the snapshot has it; one made after the snapshot is kept.
+      expect(sm.get('missing')).toBeUndefined();
+      expect(sm.get('extra')).toEqual({ made: 'after' });
+      expect(getEmitted()).toEqual([{ event: 'engine:state-changed', payload: { type: 'rollback' } }]);
+      // The kept value is a copy: the object the old tree held is not the restored tree's.
+      keptBefore.words = 7;
+      expect(sm.get('prefs.words')).toBe(2500);
+    });
+
     it('clear empties state', () => {
       sm.set('x', 1, 'system');
       sm.clear();

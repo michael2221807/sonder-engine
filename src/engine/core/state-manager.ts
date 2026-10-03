@@ -403,9 +403,18 @@ export class StateManager {
    * 与 loadTree 的区别：不重置 loaded 标志，也不重置变更历史，
    * 因为回滚是游戏进行中的操作，而非"重新开始加载"。
    * 保留 reactive 引用，确保 Vue 组件自动响应回滚后的状态。
+   *
+   * `keep`: plain dot-paths whose current value outlives the rollback — the player's settings
+   * (`PREFERENCE_PATHS`): the story goes back, a setting changed meanwhile does not (PO 2026-10-03). They are
+   * copied into the restored tree before it is shown, so the one 'rollback' change already carries them. A path
+   * with no current value is left as the snapshot has it.
    */
-  rollbackTo(snapshot: Record<string, unknown>): void {
+  rollbackTo(snapshot: Record<string, unknown>, keep: readonly string[] = []): void {
     const cloned = cloneDeep(snapshot);
+    for (const path of keep) {
+      const value = _get(toRaw(this.state), path) as unknown;
+      if (value !== undefined) _set(cloned, path, cloneDeep(toRaw(value)));
+    }
     for (const key of Object.keys(this.state)) {
       delete this.state[key];
     }

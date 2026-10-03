@@ -123,6 +123,7 @@
   "prompt.display.worldHeartbeat": "World Heartbeat",
   "prompt.display.actionOptions": "Action Options (Action-driven)",
   "prompt.display.actionOptionsStory": "Action Options (Story-driven)",
+  "prompt.display.actionOptionsOff": "Action Options (Off)",
   "prompt.display.historyFraming": "History Framing",
   "prompt.display.assistantInjectionContract": "Assistant Injection Contract",
   "prompt.display.privacyRepair": "Privacy Info Repair",

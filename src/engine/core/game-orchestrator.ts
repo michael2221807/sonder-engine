@@ -86,6 +86,7 @@ import type {
   PipelineContext,
   CompileTrace,
 } from '../pipeline/types';
+import { PREFERENCE_PATHS } from '../pipeline/types';
 import type { GamePack } from '../types';
 import type { GameTime } from '../image/scene-context';
 import type { ImageBackendType, StylePreset } from '../image/types';
@@ -494,7 +495,8 @@ export class GameOrchestrator {
       return;
     }
 
-    stateManager.rollbackTo(snapshot);
+    // The story goes back; the player's settings stay as they are now (PO 2026-10-03).
+    stateManager.rollbackTo(snapshot, PREFERENCE_PATHS);
     useActionQueueStore().consumeActions(); // 清空 action queue
     this.memoryManager.clearConfigCache(); // R-04: 清除记忆配置缓存
 
@@ -623,7 +625,8 @@ export class GameOrchestrator {
         ctx: initialCtx,
       });
       if (snapshot && recoveryAllowed) {
-        stateManager.rollbackTo(snapshot);
+        // Settings changed while the round ran stay (PO 2026-10-03).
+        stateManager.rollbackTo(snapshot, PREFERENCE_PATHS);
         this.memoryManager.clearConfigCache();
         if (this.engramManager.isEnabled()) {
           this.engramManager.syncVectorsToState(stateManager).catch(() => {});

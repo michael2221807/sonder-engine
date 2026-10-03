@@ -157,6 +157,7 @@
   "settings.game.language.desc": "Interface display language",
 
   "settings.action.sectionTitle": "Action Options Depth",
+  "settings.action.offInSave": "This save has action options off, so rounds write none; turn them on in Prompts & World Book → Game Settings.",
   "settings.action.mode.label": "Action Mode",
   "settings.action.mode.desc": "Control the style of AI-generated action options",
   "settings.action.mode.action": "Action-oriented",

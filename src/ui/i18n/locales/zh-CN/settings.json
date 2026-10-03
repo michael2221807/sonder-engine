@@ -157,6 +157,7 @@
   "settings.game.language.desc": "界面显示语言",
 
   "settings.action.sectionTitle": "行动选项深度",
+  "settings.action.offInSave": "这个存档关闭了行动选项，回合不会生成选项；在「提示词与世界书管理 → 游戏设定」里打开。",
   "settings.action.mode.label": "行动模式",
   "settings.action.mode.desc": "控制 AI 生成行动选项的风格",
   "settings.action.mode.action": "行动导向",

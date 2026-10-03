@@ -46,6 +46,7 @@ import type { ResponseParser } from '../../ai/response-parser';
 import type { PromptAssembler } from '../../prompt/prompt-assembler';
 import type { GamePack, Command } from '../../types';
 import type { EnginePathConfig, IEngramManager } from '../types';
+import { PREFERENCE_PATHS } from '../types';
 import type { MemoryManager } from '../../memory/memory-manager';
 import { unset as _unset } from 'lodash-es';
 import {
@@ -359,7 +360,8 @@ export class NpcChatPipeline {
     if (currentRound !== this._lastChatRound) {
       return { success: false, error: '快照期间已推进回合，回退可能导致数据丢失，已阻止' };
     }
-    this.stateManager.rollbackTo(this._lastChatSnapshot);
+    // The chat goes back; settings changed meanwhile stay (PO 2026-10-03).
+    this.stateManager.rollbackTo(this._lastChatSnapshot, PREFERENCE_PATHS);
     if (this.engramManager?.isEnabled()) {
       this.engramManager.syncVectorsToState(this.stateManager).catch((e: unknown) =>
         console.warn('[NpcChat] Engram vector sync after rollback failed (non-blocking):', e),

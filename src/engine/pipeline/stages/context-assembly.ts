@@ -50,7 +50,7 @@ import {
   lastNarrativeText,
 } from '../../prompt/character-vectors';
 import { hasSettingTag, parseSettingTagNames } from '../../prompt/setting-tag-scanner';
-import { DEFAULT_PROMPT_SETTINGS } from '../../prompt/world-book';
+import { DEFAULT_PROMPT_SETTINGS, actionOptionsOn, wordCountOf } from '../../prompt/world-book';
 import type { PromptSettings } from '../../prompt/world-book';
 import { buildEnvironmentBlock } from '../../prompt/environment-block';
 import { PlotInjector } from '../../plot/plot-injector';
@@ -191,8 +191,10 @@ export class ContextAssemblyStage implements PipelineStage {
     //   4. `ACTION_PACE_HINT` / `CUSTOM_ACTION_PROMPT` 作为模板变量供 prompt 内部引用
     //
     // Fallback：状态树未设置时默认 'action' + 'fast'（保持之前的行为导向行为）
-    const actionMode = (this.stateManager.get<string>('系统.actionOptions.mode') ?? 'action') as 'action' | 'story';
-    const actionPace = (this.stateManager.get<string>('系统.actionOptions.pace') ?? 'fast') as 'fast' | 'slow';
+    // Anything but the two known values (a damaged save, an imported card's typo) reads as the default, so the
+    // options never go missing while the switch is on.
+    const actionMode: 'action' | 'story' = this.stateManager.get<unknown>('系统.actionOptions.mode') === 'story' ? 'story' : 'action';
+    const actionPace: 'fast' | 'slow' = this.stateManager.get<unknown>('系统.actionOptions.pace') === 'slow' ? 'slow' : 'fast';
     const customActionPrompt = this.stateManager.get<string>('系统.actionOptions.customPrompt') ?? '';
     // D7: author opening-style hint (card import Phase E only; absent for every other call).
     const openingSetupHint = typeof ctx.meta['openingSetupHint'] === 'string'
@@ -341,6 +343,7 @@ export class ContextAssemblyStage implements PipelineStage {
       ...DEFAULT_PROMPT_SETTINGS,
       ...(this.stateManager.get<Partial<PromptSettings>>('系统.设置.prompt') ?? {}),
     };
+    const actionOptionsEnabled = actionOptionsOn(promptSettings);
     const settingTagNames = parseSettingTagNames(this.pack.engineFragments?.settingTagNames);
     const settingCaptureActive =
       promptSettings.enableWorldBook !== false &&
@@ -388,6 +391,8 @@ export class ContextAssemblyStage implements PipelineStage {
         ? (ctx.meta['worldEventContext'] as string | undefined) ?? ''
         : '',
       USER_INPUT: ctx.userInput,
+      // The player's word-count setting, which the format prompts state (the builder fills the same name).
+      wordCount: String(wordCountOf(promptSettings)),
 
       // Canon Capture: drives the `settingCapture` module in the split-gen step2 flow.
       // It MUST be a flow `condition` rather than a `PROMPT_FEATURE` block — the
@@ -402,10 +407,12 @@ export class ContextAssemblyStage implements PipelineStage {
       CHARACTER_VECTORS: characterVectorsBlock ? '1' : '',
       CHARACTER_VECTORS_BLOCK: characterVectorsBlock,
 
-      // Action options wiring — 条件变量 + 内容注入
+      // Action options wiring — 条件变量 + 内容注入. The player's switch decides first: off, neither options module
+      // loads and the "off" module says so after everything that asks for options (PO 2026-10-03).
       ACTION_OPTIONS_MODE: actionMode,
-      ACTION_OPTIONS_MODE_IS_ACTION: actionMode === 'action' ? '1' : '',
-      ACTION_OPTIONS_MODE_IS_STORY: actionMode === 'story' ? '1' : '',
+      ACTION_OPTIONS_MODE_IS_ACTION: actionOptionsEnabled && actionMode === 'action' ? '1' : '',
+      ACTION_OPTIONS_MODE_IS_STORY: actionOptionsEnabled && actionMode === 'story' ? '1' : '',
+      ACTION_OPTIONS_OFF: actionOptionsEnabled ? '' : '1',
       ACTION_OPTIONS_PACE: actionPace,
       ACTION_PACE_HINT: paceHint,
       CUSTOM_ACTION_PROMPT: customActionPrompt
@@ -555,6 +562,11 @@ export class ContextAssemblyStage implements PipelineStage {
       const buildResult = buildSystemPrompt({
         transformPrompt,
         historyText,
+        // A single call writes the options itself: the options module for the player's mode, pace and request
+        // (split Step 2 loads it from its flow instead).
+        actionOptionsBlock: !splitGen && actionOptionsEnabled
+          ? assembler.renderSingle(actionMode === 'story' ? 'actionOptionsStory' : 'actionOptions', variables) ?? undefined
+          : undefined,
         // Reuse the pack's narrative phase instead of asking Step 1 for data
         // that the split merge discards. Legacy/off and opening stay unchanged.
         formatPromptId: ctx.meta.plotVectorPromptMode && splitGen
@@ -904,6 +916,7 @@ export class ContextAssemblyStage implements PipelineStage {
         cotEnabled,
         cotJudgeEnabled,
         cotInjectStep2,
+        actionOptionsEnabled,
         // P2 env-tags port: forward to BodyPolishStage so it can prepend the
         // same context block as a read-only reference when polishing narrative.
         environmentBlock,

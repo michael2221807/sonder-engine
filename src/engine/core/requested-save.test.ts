@@ -97,6 +97,79 @@ describe('rollback saves the restored round', () => {
     } finally { offs.forEach(off => off()); h.dispose(); }
   });
 
+  // PO 2026-10-03: a setting changed after the round began survives undoing the round (the real StateManager).
+  const before = {
+    系统: { 设置: { prompt: { wordCountRequirement: 650, enableActionOptions: true } }, actionOptions: { mode: 'action', pace: 'fast' },
+      扩展: { plotVector: { round: 'before' }, image: { enabled: false, config: { autoSceneOnRound: false }, characterAnchors: ['before'] } } },
+    世界: { 状态: { 心跳: { 配置: { enabled: false, period: 5 }, 历史: ['before'] } } },
+    元数据: { 回合序号: 89 },
+  };
+  const now = {
+    系统: { 设置: { prompt: { wordCountRequirement: 2500, enableActionOptions: false } }, actionOptions: { mode: 'story', pace: 'slow' },
+      扩展: { plotVector: { round: 'after' }, image: { enabled: true, config: { autoSceneOnRound: true }, characterAnchors: ['after'] } } },
+    世界: { 状态: { 心跳: { 配置: { enabled: true, period: 3 }, 历史: ['after'] } } },
+    元数据: { 回合序号: 90, 上次对话前快照: before },
+  };
+  const at = (tree: unknown, path: string): unknown =>
+    path.split('.').reduce<unknown>((o, k) => (o as Record<string, unknown> | undefined)?.[k], tree);
+  /** The settings as they are now; the story (round, vector state, heartbeat history, image anchors) as before. */
+  function expectSettingsKeptStoryBack(tree: unknown): void {
+    expect(at(tree, '元数据.回合序号')).toBe(89);
+    expect(at(tree, '系统.扩展.plotVector')).toEqual({ round: 'before' });
+    expect(at(tree, '世界.状态.心跳.历史')).toEqual(['before']);
+    expect(at(tree, '系统.扩展.image.characterAnchors')).toEqual(['before']);
+    expect(at(tree, '系统.设置.prompt')).toEqual({ wordCountRequirement: 2500, enableActionOptions: false });
+    expect(at(tree, '系统.actionOptions')).toEqual({ mode: 'story', pace: 'slow' });
+    expect(at(tree, '世界.状态.心跳.配置')).toEqual({ enabled: true, period: 3 });
+    expect(at(tree, '系统.扩展.image.enabled')).toBe(true);
+    expect(at(tree, '系统.扩展.image.config')).toEqual({ autoSceneOnRound: true });
+  }
+
+  it('undoing a round keeps the player\'s settings as they are now: the story goes back, the settings do not', async () => {
+    const { StateManager } = await import('./state-manager');
+    const sm = new StateManager();
+    sm.loadTree(structuredClone(now));
+    const h = harness();
+    Object.assign(h.host, { _stateManager: sm, memoryManager: { clearConfigCache: () => {} },
+      engramManager: { isEnabled: () => false }, unsubscribers: [] as Array<() => void> });
+    const host = h.host as unknown as { subscribeToEvents: (s: typeof sm) => void; unsubscribers: Array<() => void>; rollbackLastRound: (s: typeof sm) => void };
+    host.subscribeToEvents(sm);
+    try {
+      host.rollbackLastRound(sm);
+      await vi.waitFor(() => expect(h.save).toHaveBeenCalledTimes(1));
+      expectSettingsKeptStoryBack(h.save.mock.calls[0][2]);
+    } finally { host.unsubscribers.splice(0).forEach(off => off()); }
+  });
+
+  it('a round that fails goes back the same way: settings changed while it ran stay', async () => {
+    const { StateManager } = await import('./state-manager');
+    const { DEFAULT_ENGINE_PATHS: P } = await import('../pipeline/types');
+    const sm = new StateManager();
+    sm.loadTree(structuredClone(before));
+    const h = harness();
+    const errors: unknown[] = [];
+    const off = eventBus.on('ai:error', (payload) => { errors.push(payload); });
+    Object.assign(h.host, {
+      _stateManager: sm, _paths: P, subPipelines: {},
+      memoryManager: { clearConfigCache: () => {} }, engramManager: { isEnabled: () => false },
+      runner: { run: async () => {
+        // As PreProcess does: the snapshot first, then the round moves on and the story changes.
+        sm.set(P.preRoundSnapshot, sm.toSnapshot(), 'system');
+        for (const path of ['元数据.回合序号', '系统.扩展.plotVector', '世界.状态.心跳.历史', '系统.扩展.image.characterAnchors'])
+          sm.set(path, structuredClone(at(now, path)), 'system');
+        // Meanwhile the player changes settings; then the model call fails.
+        for (const path of ['系统.设置.prompt', '系统.actionOptions', '世界.状态.心跳.配置', '系统.扩展.image.enabled', '系统.扩展.image.config'])
+          sm.set(path, structuredClone(at(now, path)), 'user');
+        throw new Error('model down');
+      } },
+    });
+    try {
+      await (h.host as unknown as { runRound: (text: string, s: typeof sm) => Promise<void> }).runRound('go', sm);
+    } finally { off(); }
+    expect(errors).toHaveLength(1);
+    expectSettingsKeptStoryBack(sm.liveTree());
+  });
+
   it('writes nothing when there is no snapshot or a round is still running', async () => {
     const none = rollbackHarness({ 元数据: { 回合序号: 90 } });
     const busy = rollbackHarness({ 元数据: { 回合序号: 90, 上次对话前快照: { 元数据: { 回合序号: 89 } } } });

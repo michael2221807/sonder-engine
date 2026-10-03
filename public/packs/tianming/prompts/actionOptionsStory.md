@@ -33,6 +33,8 @@
 
 每项为单个字符串，放入 `action_options` 数组；字符串内换行用 `\n`。数量须为 3–5 个，每条均须保证篇幅与深度，不可为凑数而写短选项。
 
+{{ACTION_PACE_HINT}}
+
 {{CUSTOM_ACTION_PROMPT}}
 
 ## 生成规则

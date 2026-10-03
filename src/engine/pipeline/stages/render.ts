@@ -21,7 +21,9 @@ export class RenderStage implements PipelineStage {
 
   async execute(ctx: PipelineContext): Promise<PipelineContext> {
     const narrativeText = ctx.parsedResponse?.text ?? '';
-    const actionOptions = ctx.parsedResponse?.actionOptions ?? [];
+    // Off (the player's switch, PO 2026-10-03): no options on screen, whatever the model wrote; PostProcess keeps
+    // none in the save either.
+    const actionOptions = ctx.meta.actionOptionsEnabled === false ? [] : (ctx.parsedResponse?.actionOptions ?? []);
 
     // 广播渲染事件 — UI 层（如 MainGamePanel.vue）监听此事件更新视图
     // 载荷包含 roundNumber 和 judgement 是因为 UI 可能需要：

@@ -336,11 +336,14 @@ export interface PromptSettings {
   ntlTier?: '禁止乱伦' | '假乱伦' | '无限制';
   /** Enable NoControl directive (prevents AI from controlling player actions) */
   enableNoControl: boolean;
-  /** Enable action options generation */
+  /** Enable action options generation (read by ContextAssembly: off, the round has no options). */
   enableActionOptions: boolean;
-  /** Action options mode */
+  /**
+   * Legacy, never read: the mode and pace are the device's action-option style at `系统.actionOptions.*`, which
+   * both settings pages edit (ui/composables/useActionOptionsStyle). Kept so older saves load unchanged.
+   */
   actionOptionsMode: 'action' | 'story';
-  /** Action pace */
+  /** Legacy, never read — see `actionOptionsMode`. */
   actionPace: 'fast' | 'slow';
   /** Custom additional system prompt */
   customSystemPrompt: string;
@@ -392,3 +395,18 @@ export const DEFAULT_PROMPT_SETTINGS: PromptSettings = {
   enableSettingCapture: true,
   capturedEntryBudgetRatio: CAPTURED_BUDGET_RATIO_DEFAULT,
 };
+
+/**
+ * Whether rounds write action options (`enableActionOptions`): on unless the player switched them off — any other
+ * stored value counts as the default, on. Every reader (the builder, ContextAssembly, the prompt page) asks here,
+ * so a damaged value cannot turn them off in one place and on in another.
+ */
+export function actionOptionsOn(settings: Partial<PromptSettings> | null | undefined): boolean {
+  return settings?.enableActionOptions !== false;
+}
+
+/** The player's minimum narrative length (`wordCountRequirement`), or the default when it is not a usable number. */
+export function wordCountOf(settings: Partial<PromptSettings> | null | undefined): number {
+  const n = Math.round(Number(settings?.wordCountRequirement));
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_PROMPT_SETTINGS.wordCountRequirement;
+}

@@ -26,6 +26,11 @@ import { writePlotTimelineAxis } from '@/ui/composables/usePlotTimelineAxis';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import { useLocale } from '@/ui/composables/useLocale';
+import {
+  useActionOptionsStyle, readActionOptionsStyle, normalizeActionOptionsStyle, ACTION_OPTIONS_STYLE_KEY, DEFAULT_ACTION_OPTIONS_STYLE,
+  type ActionOptionsStyle,
+} from '@/ui/composables/useActionOptionsStyle';
+import { actionOptionsOn, type PromptSettings } from '@/engine/prompt/world-book';
 import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n();
@@ -185,27 +190,14 @@ const hasChanges = computed(() =>
 
 // ─── B.2.1 Action Options deep settings ───────────────────────
 
-const ACTION_OPTIONS_KEY = 'aga_action_options_settings';
+const ACTION_OPTIONS_KEY = ACTION_OPTIONS_STYLE_KEY;
+const defaultActionOptions: ActionOptionsStyle = { ...DEFAULT_ACTION_OPTIONS_STYLE };
 
-interface ActionOptionsSettings {
-  mode: 'action' | 'story';
-  pace: 'fast' | 'slow';
-  customPrompt: string;
-}
-
-const defaultActionOptions: ActionOptionsSettings = {
-  mode: 'action',
-  pace: 'fast',
-  customPrompt: '',
-};
-
-const actionOptions = ref<ActionOptionsSettings>({ ...defaultActionOptions });
+/** The device's action-option style — the same value 「提示词与世界书管理」 edits (useActionOptionsStyle). */
+const actionOptions = useActionOptionsStyle().style;
 
 function loadActionOptions(): void {
-  try {
-    const raw = JSON.parse(localStorage.getItem(ACTION_OPTIONS_KEY) ?? '{}') as Partial<ActionOptionsSettings>;
-    actionOptions.value = { ...defaultActionOptions, ...raw };
-  } catch { actionOptions.value = { ...defaultActionOptions }; }
+  actionOptions.value = readActionOptionsStyle();
 }
 
 watch(actionOptions, () => {
@@ -259,6 +251,10 @@ watch(memorySettings, () => {
 // ─── B.2.2 Heartbeat advanced settings (game state) ──────────
 
 const { isLoaded, get, setValue, useValue } = useGameState();
+
+/** The loaded save has action options switched off (系统.设置.prompt, the prompt page's switch). */
+const savedPromptSettings = useValue<Partial<PromptSettings>>('系统.设置.prompt');
+const actionOptionsOffInSave = computed(() => isLoaded.value && !actionOptionsOn(savedPromptSettings.value));
 
 // ─── Action Options → state tree sync (bugfix 2026-04-11) ───
 //
@@ -664,7 +660,7 @@ function openImportSettings(): void {
     try {
       const raw = JSON.parse(await file.text()) as Record<string, unknown>;
       if (raw.settings) settings.value = { ...defaultSettings, ...(raw.settings as Partial<typeof settings.value>) };
-      if (raw.actionOptions) actionOptions.value = { ...defaultActionOptions, ...(raw.actionOptions as Partial<ActionOptionsSettings>) };
+      if (raw.actionOptions) actionOptions.value = normalizeActionOptionsStyle(raw.actionOptions);
       if (raw.debugSettings) debugSettings.value = { ...defaultDebug, ...(raw.debugSettings as Partial<DebugSettings>) };
       if (Array.isArray(raw.textReplaceRules)) {
         textReplaceRules.value = (raw.textReplaceRules as unknown[]).filter(
@@ -1563,6 +1559,10 @@ onBeforeUnmount(() => {
     <!-- ─── B.2.1 行动选项深度设置 ─── -->
     <section v-if="settings.showActionOptions" v-show="visibleCategoryIds.has('settings-action')" id="settings-action" class="settings-section">
       <h3 class="section-title">{{ $t('settings.action.sectionTitle') }}</h3>
+      <!-- The switch lives on the prompt page (per save); say so here rather than offer choices that do nothing yet. -->
+      <p v-if="actionOptionsOffInSave" class="setting-desc action-off-note" data-testid="settings-action-off-note">
+        {{ $t('settings.action.offInSave') }}
+      </p>
 
       <div class="setting-row">
         <div class="setting-info">
@@ -1581,24 +1581,23 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <Transition name="fade-row">
-        <div v-if="actionOptions.mode === 'action'" class="setting-row">
-          <div class="setting-info">
-            <span class="setting-label">{{ $t('settings.action.pace.label') }}</span>
-            <span class="setting-desc">{{ $t('settings.action.pace.desc') }}</span>
-          </div>
-          <div class="radio-group">
-            <label class="radio-opt">
-              <input type="radio" v-model="actionOptions.pace" value="fast" />
-              <span>{{ $t('settings.action.pace.fast') }}</span>
-            </label>
-            <label class="radio-opt">
-              <input type="radio" v-model="actionOptions.pace" value="slow" />
-              <span>{{ $t('settings.action.pace.slow') }}</span>
-            </label>
-          </div>
+      <!-- Pace applies to both modes (the story-led options read it too since 2026-10-03). -->
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">{{ $t('settings.action.pace.label') }}</span>
+          <span class="setting-desc">{{ $t('settings.action.pace.desc') }}</span>
         </div>
-      </Transition>
+        <div class="radio-group">
+          <label class="radio-opt">
+            <input type="radio" v-model="actionOptions.pace" value="fast" />
+            <span>{{ $t('settings.action.pace.fast') }}</span>
+          </label>
+          <label class="radio-opt">
+            <input type="radio" v-model="actionOptions.pace" value="slow" />
+            <span>{{ $t('settings.action.pace.slow') }}</span>
+          </label>
+        </div>
+      </div>
 
       <div class="setting-row setting-row--column">
         <div class="setting-info">
@@ -2355,6 +2354,12 @@ onBeforeUnmount(() => {
 .setting-desc {
   font-size: 0.72rem;
   color: var(--color-text-secondary, #8888a0);
+}
+
+/* The save has action options off: one quiet line above the (still editable) device style. */
+.action-off-note {
+  margin: -4px 0 10px;
+  color: var(--color-amber-300, #e8c48a);
 }
 
 /* ── Font size control ── */

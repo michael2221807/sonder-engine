@@ -92,7 +92,7 @@ If any NPC field in the save data is flagged for real-time tracking, even if tha
 
 ```json
 {
-  "text": "This round's narrative (500-1500 characters)",
+  "text": "This round's narrative ({{wordCount}}+ characters)",
   "mid_term_memory": {
     "相关角色": ["Player"],
     "事件时间": "1-01-15-08-30",

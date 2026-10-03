@@ -25,7 +25,7 @@ export interface MockStateManager {
   add(path: string, value: number, source?: string): void;
   loadTree(data: Record<string, unknown>): void;
   toSnapshot(): Record<string, unknown>;
-  rollbackTo(snapshot: Record<string, unknown>): void;
+  rollbackTo(snapshot: Record<string, unknown>, keep?: readonly string[]): void;
   clear(): void;
   isLoaded(): boolean;
   readonly _data: Record<string, unknown>;
@@ -146,8 +146,12 @@ export function createMockStateManager(
       return cloneDeep(data);
     },
 
-    rollbackTo(snapshot: Record<string, unknown>): void {
+    rollbackTo(snapshot: Record<string, unknown>, keep: readonly string[] = []): void {
       const cloned = cloneDeep(snapshot);
+      for (const path of keep) {
+        const value = _get(data, path) as unknown;
+        if (value !== undefined) _set(cloned, path, cloneDeep(value));
+      }
       for (const key of Object.keys(data)) delete data[key];
       Object.assign(data, cloned);
     },

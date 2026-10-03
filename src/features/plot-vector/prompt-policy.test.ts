@@ -31,15 +31,19 @@ import { extractPlotEvaluations } from '../../engine/plot/types';
 
 const root = resolve('public/packs/tianming');
 const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
-function packFor(en: boolean): GamePack {
+function packFor(en: boolean, fragments = false): GamePack {
   const prompts = Object.fromEntries(manifest.prompts.map(id => {
     const localized = `prompts-en/${id}.md`;
     return [id, read(en && existsSync(resolve(root, localized)) ? localized : `prompts/${id}.md`)];
   }));
+  // As PackLoader does: the Chinese fragments, overridden by the English ones for an English pack.
+  const engineFragments = !fragments ? {} : { ...JSON.parse(read('prompts/engine-fragments.json')) as Record<string, string>,
+    ...(en ? JSON.parse(read('prompts-en/engine-fragments.json')) as Record<string, string> : {}) };
   return { prompts, promptFlows: Object.fromEntries(Object.entries(manifest.promptFlows)
-    .map(([id, path]) => [id, JSON.parse(read(path)) as PromptFlowConfig])), engineFragments: {}, rules: {} } as GamePack;
+    .map(([id, path]) => [id, JSON.parse(read(path)) as PromptFlowConfig])), engineFragments, rules: {} } as GamePack;
 }
 const packs = [packFor(false), packFor(true)];
+const packsWithFragments = [packFor(false, true), packFor(true, true)];
 const oldFormat = '〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗';
 const history = `历史原文保留 ${oldFormat}`;
 const input = `玩家引用原文 ${oldFormat}`;
@@ -50,13 +54,14 @@ function ctx(split: boolean): PipelineContext {
     messages: [], worldEventTriggered: false, roundNumber: 3, generationId: 'policy',
     meta: { splitGen: split, roundOwnership: new RoundOwnership(() => ({ profileId: 'p', slotId: 's' }), () => 0, new AbortController().signal) } };
 }
-function harness(en: boolean, builder: boolean, split: boolean, cot: boolean, cache: boolean) {
-  const pack = packs[Number(en)], state = new StateManager();
+function harness(en: boolean, builder: boolean, split: boolean, cot: boolean, cache: boolean, fragments = false) {
+  const pack = (fragments ? packsWithFragments : packs)[Number(en)], state = new StateManager();
   state.loadTree({});
   state.set(P.roundNumber, 3);
   state.set(P.playerName, '测试角色');
   state.set('元数据.叙事历史', [{ role: 'assistant', content: history }]);
   state.set('系统.设置.cot', { enabled: cot, judgeEnabled: true });
+  state.set('系统.设置.prompt', { wordCountRequirement: 2500 });
   state.set('记忆.短期', [{ summary: history, round: 2 }]);
   const registry = new PromptRegistry();
   Object.entries(pack.prompts).forEach(([id, content]) => registry.register({ id, content, enabled: true }));
@@ -84,6 +89,58 @@ beforeEach(() => {
   vi.stubGlobal('window', new EventTarget());
 });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+// PO 2026-10-03: the action-options settings of 「提示词与世界书管理」 reach every assembly (they did not before).
+describe('the player\'s action-options switch, mode and pace reach the request (real pack, zero network)', () => {
+  for (const en of [false, true]) for (const builder of [false, true]) for (const split of [false, true]) {
+    it(`locale=${en ? 'en' : 'zh'} builder=${builder} split=${split}`, async () => {
+      vi.spyOn(console, 'debug').mockImplementation(() => {});
+      const h = harness(en, builder, split, false, false, true);
+      const offNote = en ? 'turned action options off' : '玩家关闭了行动选项';
+      const actionModule = en ? '# Action Options Specification (active' : '# 行动选项规范（启用时生效）';
+      const storyModule = en ? '# Action Options Specification — Story-Driven Mode' : '# 行动选项规范 — 剧情导向模式';
+      // The pack's own pace texts, in the pack's language.
+      const slowHint = en ? 'Current pacing is **slow pace**' : '当前节奏为**慢节奏**';
+      const fastHint = en ? 'Current pacing is **fast pace**' : '当前节奏为**快节奏**';
+      const structuredMessages = (c: PipelineContext) => c.meta.splitStep2Messages ?? c.messages;
+      const structuredOf = (c: PipelineContext) => structuredMessages(c).map(m => String(m.content)).join('\n');
+      for (const active of [false, true]) {
+        // Off: no options module, the "off" note, and the round knows it (the follow-up and PostProcess read it).
+        h.state.set('系统.设置.prompt', { enableActionOptions: false });
+        const off = await h.stage(active).execute(h.ctx());
+        expect(off.meta.actionOptionsEnabled).toBe(false);
+        expect(structuredOf(off)).toContain(offNote);
+        expect(structuredOf(off)).not.toContain(actionModule);
+        expect(structuredOf(off)).not.toContain(storyModule);
+        // A flow places the note after every module that asks for options (the single call says so in its words).
+        if (split || !builder) {
+          const asking = structuredMessages(off).filter(m => m.role === 'system' && String(m.content).includes('action_options'));
+          expect(String(asking.at(-1)?.content)).toContain(offNote);
+        }
+        // On, story mode, slow: the story module with the slow pace hint, also in a single call.
+        h.state.set('系统.设置.prompt', { enableActionOptions: true });
+        h.state.set('系统.actionOptions', { mode: 'story', pace: 'slow', customPrompt: '' });
+        const story = await h.stage(active).execute(h.ctx());
+        expect(story.meta.actionOptionsEnabled).toBe(true);
+        expect(structuredOf(story)).not.toContain(offNote);
+        expect(structuredOf(story)).toContain(storyModule);
+        expect(structuredOf(story)).toContain(slowHint);
+        expect(structuredOf(story)).not.toContain(fastHint);
+        // On, action mode: the action module.
+        h.state.set('系统.actionOptions', { mode: 'action', pace: 'fast', customPrompt: '' });
+        const action = await h.stage(active).execute(h.ctx());
+        expect(structuredOf(action)).toContain(actionModule);
+        expect(structuredOf(action)).not.toContain(storyModule);
+        expect(structuredOf(action)).toContain(fastHint);
+        // A damaged mode reads as the default instead of loading no module at all.
+        h.state.set('系统.actionOptions', { mode: 'Story', pace: 'quick', customPrompt: '' });
+        const damaged = await h.stage(active).execute(h.ctx());
+        expect(structuredOf(damaged)).toContain(actionModule);
+        expect(structuredOf(damaged)).toContain(fastHint);
+      }
+    });
+  }
+});
 
 describe('real pack judgment transition, zero network', () => {
   for (const en of [false, true]) for (const builder of [false, true]) for (const split of [false, true])
@@ -148,6 +205,13 @@ describe('real pack judgment transition, zero network', () => {
         }
         // The player's input is never changed. Recent story keeps its words without its system line when on, and is
         // sent verbatim when off.
+        // PO 2026-10-03: the narrative call asks for the word-count setting, never a hard-coded 500-1500 against it.
+        for (const assembled of [on, off]) {
+          const narrativeCall = assembled.messages.map(m => String(m.content)).join('\n');
+          // The format prompt's own wording (the word-count module says it too, in other words).
+          expect(narrativeCall).toMatch(en ? /\(2500\+ characters\)/ : /（2500字以上）/);
+          expect(narrativeCall).not.toMatch(/500-1500|\{\{wordCount\}\}/);
+        }
         expect(on.messages.some(m => typeof m.content === 'string' && m.content.includes(input))).toBe(true);
         expect(everything).toContain('历史原文保留');
         expect(everything).not.toContain(history);

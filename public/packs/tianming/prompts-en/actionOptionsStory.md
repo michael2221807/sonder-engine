@@ -33,6 +33,8 @@ The writing style should feel like a player-written prompt: atmospheric, charact
 
 Each option is a single string placed in the `action_options` array; use `\n` for newlines within strings. Must be 3–5 options, each guaranteed sufficient length and depth — don't write short options just to fill the count.
 
+{{ACTION_PACE_HINT}}
+
 {{CUSTOM_ACTION_PROMPT}}
 
 ## Generation Rules

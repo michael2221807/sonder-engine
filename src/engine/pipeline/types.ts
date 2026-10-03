@@ -58,6 +58,12 @@ export interface PipelineMeta {
    * old lines in the save would otherwise invite the model to keep writing them. The save itself is unchanged.
    */
   historyStoryOnly?: boolean;
+  /**
+   * The player's action-options switch for this round (系统.设置.prompt.enableActionOptions, default on), set by
+   * ContextAssembly. Off: no options module, an explicit "off" note, a step2 follow-up that does not ask for them,
+   * and PostProcess clears whatever the model wrote anyway — the round has no options.
+   */
+  actionOptionsEnabled?: boolean;
 
   // ── 子管线分派标志（GameOrchestrator 读取） ──
   /** 短期记忆已满 → 触发 MemorySummaryPipeline */
@@ -1123,6 +1129,30 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
     lastInteractionTime: '最后互动时间',
   },
 };
+
+/**
+ * The settings the game keeps in the tree — what the player sets, never what a round writes: the prompt page's
+ * game settings and the other settings under 系统.设置, the action-option style and NSFW filter copied from the
+ * device, the world heartbeat settings (its history and last-run marks are story and stay out), the image panel's
+ * switch and settings (not its presets, anchors or pictures), the event panel's settings and the NPC settings of
+ * the settings page. A rollback (a round undone or failed, a private chat undone) takes the story back and keeps
+ * these as they are now: a setting changed and then a round undone used to fall back to its old value without a
+ * word (PO 2026-10-03).
+ */
+export const PREFERENCE_PATHS: readonly string[] = [
+  '系统.设置',
+  '系统.actionOptions',
+  '系统.nsfwMode',
+  '系统.nsfwGenderFilter',
+  DEFAULT_ENGINE_PATHS.heartbeatConfig,
+  '世界.状态.心跳.历史条数',
+  '世界.状态.心跳.遗忘回合数',
+  '系统.扩展.image.enabled',
+  '系统.扩展.image.config',
+  '世界.状态.事件配置',
+  '系统.npcDemotionThreshold',
+  '系统.importantNpcGenerationRange',
+];
 
 // ═══════════════════════════════════════════════════════════════
 //  辅助类型

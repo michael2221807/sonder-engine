@@ -10,6 +10,8 @@
     { "promptId": "actionOptions", "role": "system", "order": 3, "depth": 0,
       "condition": "ACTION_OPTIONS_MODE_IS_ACTION" },
     { "promptId": "actionOptionsStory", "role": "system", "order": 3, "depth": 0,
-      "condition": "ACTION_OPTIONS_MODE_IS_STORY" }
+      "condition": "ACTION_OPTIONS_MODE_IS_STORY" },
+    { "promptId": "actionOptionsOff", "role": "system", "order": 900, "depth": 0,
+      "condition": "ACTION_OPTIONS_OFF" }
   ]
 }

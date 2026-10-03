@@ -281,7 +281,9 @@ export class PostProcessStage implements PipelineStage {
     // ── 10.0. 持久化行动选项 ──
     // 将当前回合的行动选项写入状态树，这样刷新/退出后重新加载时 UI 能恢复。
     // 每回合覆写（不是 push），因为只需要保留最新回合的选项。
-    const actionOpts = ctx.parsedResponse?.actionOptions;
+    // The player turned action options off (PO 2026-10-03): whatever the model wrote, the round keeps none
+    // (RenderStage applies the same rule to what it shows).
+    const actionOpts = ctx.meta.actionOptionsEnabled === false ? [] : ctx.parsedResponse?.actionOptions;
     if (Array.isArray(actionOpts) && actionOpts.length > 0) {
       this.stateManager.set('元数据.当前行动选项', actionOpts, 'system');
     } else {

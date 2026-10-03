@@ -5,7 +5,7 @@
 Output only a single JSON object — no prefix or suffix text, no ` ``` ` code blocks:
 
 ```
-{"text":"500-1500 character narrative body text"}
+{"text":"narrative body text ({{wordCount}}+ characters)"}
 ```
 
 If `text` needs paragraph breaks, use `\n` (do not insert raw newlines inside quoted strings — that will cause JSON parsing failure).
@@ -24,7 +24,7 @@ Use the following markers to enhance narrative expressiveness:
 
 ## Body Text Requirements (mandatory)
 
-1. **Length**: 500-1500 characters — not too short
+1. **Length**: at least {{wordCount}} characters — not too short
 2. **Judgement system**: Exploration/social/conflict/adventure scenes **must use judgement rolls**
 3. **Judgement format**: `〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗`
 4. **Narrative style**: More description, less summary; end with a hook; continue from the preceding plot

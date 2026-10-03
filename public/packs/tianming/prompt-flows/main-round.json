@@ -17,6 +17,7 @@
     { "promptId": "actionOptionsStory", "role": "system", "order": 2, "depth": 0, "condition": "ACTION_OPTIONS_MODE_IS_STORY" },
     { "promptId": "plotDirective", "role": "system", "order": 850, "depth": 1, "condition": "PLOT_DIRECTIVE" },
     { "promptId": "plotEvaluationStep2", "role": "system", "order": 851, "depth": 0, "condition": "PLOT_COMPLETION_HINT" },
-    { "promptId": "historyFraming", "role": "system", "order": 10, "depth": 0 }
+    { "promptId": "historyFraming", "role": "system", "order": 10, "depth": 0 },
+    { "promptId": "actionOptionsOff", "role": "system", "order": 900, "depth": 0, "condition": "ACTION_OPTIONS_OFF" }
   ]
 }

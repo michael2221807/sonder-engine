@@ -27,6 +27,46 @@ describe('phase-selected default format', () => {
   });
 });
 
+// PO 2026-10-03: the player's action-options switch and word count reach the builder's request.
+describe('buildSystemPrompt · action options and word count', () => {
+  function build(prompt: Record<string, unknown> | undefined, opts: { formatPromptId?: string; actionOptionsBlock?: string } = {}) {
+    const { sm } = createMockStateManager(prompt === undefined ? {} : { 系统: { 设置: { prompt } } });
+    return buildSystemPrompt({ stateManager: sm as unknown as StateManager,
+      paths: DEFAULT_ENGINE_PATHS,
+      packPrompts: { mainRound: 'format {{wordCount}}', splitGenStep1: 'narrative only', actionOptionsOff: 'OFF NOTE' },
+      builtinOverrides: [], worldBooks: [], userInput: 'hello', playerName: 'player',
+      cotEnabled: false, cotJudgeEnabled: false, splitGen: false, cotPseudoEnabled: false, ...opts });
+  }
+  const ids = (r: ReturnType<typeof build>) => Object.keys(r.contextPieces);
+
+  it('off: the note follows the default format, which asks for options; on, nothing is added', () => {
+    const off = build({ enableActionOptions: false });
+    expect(off.contextPieces.action_options_off).toBe('OFF NOTE');
+    expect(ids(off).indexOf('action_options_off')).toBe(ids(off).indexOf('format_prompt') + 1);
+    expect(build({ enableActionOptions: true }).contextPieces.action_options_off).toBeUndefined();
+    expect(build(undefined).contextPieces.action_options_off).toBeUndefined();
+  });
+  it('a format the round selected (the narrative alone) needs no note', () => {
+    expect(build({ enableActionOptions: false }, { formatPromptId: 'splitGenStep1' }).contextPieces.action_options_off).toBeUndefined();
+  });
+  it('a damaged switch counts as on, the default, so no reader sees it differently', () => {
+    for (const value of [null, 0, '', 'false']) {
+      expect(build({ enableActionOptions: value }).contextPieces.action_options_off).toBeUndefined();
+    }
+  });
+  it('a single call carries the options module it is given, after the format', () => {
+    const on = build({ enableActionOptions: true }, { actionOptionsBlock: 'STORY MODULE slow' });
+    expect(on.contextPieces.action_options).toBe('STORY MODULE slow');
+    expect(ids(on).indexOf('action_options')).toBeGreaterThan(ids(on).indexOf('format_prompt'));
+  });
+  it('the format and the length rule state the player\'s word count, or the default when it is unusable', () => {
+    expect(build({ wordCountRequirement: 2500 }).contextPieces.format_prompt).toBe('format 2500');
+    for (const value of [null, 0, 0.4, -5, 'abc']) {
+      expect(build({ wordCountRequirement: value }).contextPieces.format_prompt).toBe('format 650');
+    }
+  });
+});
+
 describe('estimateTokens', () => {
   it('returns 0 for empty string', () => {
     expect(estimateTokens('')).toBe(0);

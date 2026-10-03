@@ -36,7 +36,7 @@
     "memorySummary", "memorySummaryInput", "midTermRefine", "midTermRefineInput",
     "longTermCompact", "longTermCompactInput", "splitGenStep1", "splitGenStep2",
     "splitGenContext", "settingAuthority", "settingCapture", "worldHeartbeat", "worldHeartbeatInput",
-    "actionOptions", "actionOptionsStory", "privacyRepair", "privacyRepairInput",
+    "actionOptions", "actionOptionsStory", "actionOptionsOff", "privacyRepair", "privacyRepairInput",
     "npcChat",
     "cot-preamble", "cot-masquerade", "cot-judge", "cot-opening", "cot-no-thinking-guard",
     "bodyPolish", "npcMemorySummary", "presencePartition",

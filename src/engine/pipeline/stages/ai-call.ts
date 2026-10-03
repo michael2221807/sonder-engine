@@ -146,12 +146,21 @@ export class AICallStage implements PipelineStage {
     // list MUST include setting_updates; on untagged rounds the text stays byte-identical
     // to the pre-capture version (D6: no prompt delta when the feature is unused).
     const captureActive = ctx.meta.settingCaptureActive === true;
+    // The player's action-options switch (PO 2026-10-03): off, the last instruction the model reads must not ask
+    // for them. On, the text is byte-identical to before.
+    const optionsOff = ctx.meta.actionOptionsEnabled === false;
     const STEP2_FOLLOWUP_USER =
       '请基于上面的叙事正文，输出 step2 的结构化数据。要求：\n\n' +
-      (captureActive
-        ? '1. **完整输出**：commands / action_options / mid_term_memory / knowledge_facts / setting_updates 五个字段必须全部给出，不得用 "(略)" / "(省略)" / "(略 N 条类似)" 之类敷衍，不得中途截断。\n'
-        : '1. **完整输出**：commands / action_options / mid_term_memory / knowledge_facts 四个字段必须全部给出，不得用 "(略)" / "(省略)" / "(略 N 条类似)" 之类敷衍，不得中途截断。\n') +
-      '2. **action_options 必须 3-5 个**（按 `actionOptions` 或 `actionOptionsStory` 模块要求的长度），绝不可空数组或只给 1-2 个。\n' +
+      (optionsOff
+        ? (captureActive
+          ? '1. **完整输出**：commands / mid_term_memory / knowledge_facts / setting_updates 四个字段必须全部给出，不得用 "(略)" / "(省略)" / "(略 N 条类似)" 之类敷衍，不得中途截断。\n'
+          : '1. **完整输出**：commands / mid_term_memory / knowledge_facts 三个字段必须全部给出，不得用 "(略)" / "(省略)" / "(略 N 条类似)" 之类敷衍，不得中途截断。\n')
+        : captureActive
+          ? '1. **完整输出**：commands / action_options / mid_term_memory / knowledge_facts / setting_updates 五个字段必须全部给出，不得用 "(略)" / "(省略)" / "(略 N 条类似)" 之类敷衍，不得中途截断。\n'
+          : '1. **完整输出**：commands / action_options / mid_term_memory / knowledge_facts 四个字段必须全部给出，不得用 "(略)" / "(省略)" / "(略 N 条类似)" 之类敷衍，不得中途截断。\n') +
+      (optionsOff
+        ? '2. **不要输出 action_options**：玩家已关闭行动选项。\n'
+        : '2. **action_options 必须 3-5 个**（按 `actionOptions` 或 `actionOptionsStory` 模块要求的长度），绝不可空数组或只给 1-2 个。\n') +
       '3. **commands 必须完整**：若本回合正文描述了多个状态变化（位置/时间/NPC/物品/体力/技能等），每条都要对应一条 command；不得合并省略。\n' +
       '4. **格式铁律**：直接输出一个合法 JSON 对象 —— 无 ``` 代码围栏、无前后缀文字、无 `<thinking>` 标签。不重复或扩写正文（正文已由 step1 生成）。\n' +
       (captureActive

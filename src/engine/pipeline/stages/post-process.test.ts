@@ -516,3 +516,18 @@ describe('collectCanonMutations', () => {
     expect(out.every((m) => m.op === 'add')).toBe(true);
   });
 });
+
+describe('PostProcessStage — the player turned action options off (PO 2026-10-03)', () => {
+  it('keeps none in the save when off, whatever the model wrote; keeps the model\'s when on', async () => {
+    for (const [enabled, expected] of [[false, []], [undefined, ['走', '停', '回头']], [true, ['走', '停', '回头']]] as const) {
+      const sm = makeStateManager();
+      const stage = new PostProcessStage(sm as never, makeMemoryManager(), makeEngramManager(), makeBehaviorRunner(),
+        makeSaveManager() as never, paths, () => null);
+      await stage.execute(makeCtx({
+        parsedResponse: { text: 't', actionOptions: ['走', '停', '回头'] } as AIResponse,
+        meta: enabled === undefined ? {} : { actionOptionsEnabled: enabled },
+      }));
+      expect(sm._tree['元数据.当前行动选项'], String(enabled)).toEqual(expected);
+    }
+  });
+});

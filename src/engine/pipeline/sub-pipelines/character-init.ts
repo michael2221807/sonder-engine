@@ -44,6 +44,7 @@ import { readStatFields } from '../../pack/stat-section-reader';
 import { settleCreationAttributes } from '../../creation/creation-attributes';
 import { formatCreationPromptContext } from '../../creation/creation-prompt-formatter';
 import { validateFinalCreationChoices } from '../../creation/creation-budget';
+import { wordCountOf, type PromptSettings } from '../../prompt/world-book';
 
 /** 创角结果 — 返回给调用方的完整创建信息 */
 export interface CharacterInitResult {
@@ -538,6 +539,8 @@ export class CharacterInitPipeline {
       ),
       WORLD_DESCRIPTION: worldDescription ?? '',
       CHARACTER_NAME: this.extractCharacterName(choices),
+      // The opening's narrative module states the player's word-count setting like every round's.
+      wordCount: String(wordCountOf(this.stateManager.get<Partial<PromptSettings>>('系统.设置.prompt'))),
     };
 
     // 分步模式：要求两个 flow 都存在，否则回退到单次
