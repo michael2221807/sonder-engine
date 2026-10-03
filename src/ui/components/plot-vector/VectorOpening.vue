@@ -7,7 +7,8 @@
  * the round's push landing like a stamp. It floats up and a thin light rises into the story, where the writing
  * indicator glows once. A press puts it away at once; it never covers the input. Without the walk (reduced motion,
  * or the automatic walk turned off) only the result shows. The badge walks the same cells at the same moments
- * (PO A: `step`).
+ * (PO A: `step`). A ring board plays as a ring (PO 2026-10-03): its six cells where the table puts them — two
+ * above, one at each side, two below — around a closed track, the shuttle going round it.
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -15,6 +16,7 @@ import type { RoundOpening } from '@/features/plot-vector/table-model';
 import type { LocalizedLabel } from '@/engine/plot-vector/core/types';
 import { MARK_COLOR, MARK_GLYPH, SIGN_MARK } from './effect-marks';
 import { prefersReducedMotion } from './use-trip-walk';
+import { RING_ORDER, closedSpline } from './ring-geometry';
 
 const props = defineProps<{
   opening: RoundOpening;
@@ -45,6 +47,20 @@ const root = ref<HTMLElement>();
 const rail = ref<HTMLElement>();
 const cellEls = new Map<string, HTMLElement>();
 const bindCell = (id: string) => (el: unknown) => { if (el instanceof HTMLElement) cellEls.set(id, el); else cellEls.delete(id); };
+
+const ring = computed(() => props.opening.shape === 'ring');
+/** Where each ring cell sits in the miniature, in percent of its width and height: the table's ring, drawn small. */
+const RING_SPOTS: Record<string, readonly [number, number]> = {
+  '01': [30, 12], '02': [70, 12], '03': [88, 50], '04': [70, 88], '05': [30, 88], '06': [12, 50],
+};
+/** The closed track through the cells, drawn as the table draws its ring. */
+const ringTrack = closedSpline(RING_ORDER.map(id => RING_SPOTS[id])).path;
+/** Whether the trip plays at all (otherwise only the result shows, and the ring needs no room). */
+const motion = props.walk && !prefersReducedMotion();
+const ringSpot = (cell: string) => RING_SPOTS[cell] ?? ([50, 50] as const);
+const ringCellStyle = (cell: string) => ({ left: `${ringSpot(cell)[0]}%`, top: `${ringSpot(cell)[1]}%` });
+/** The ring's shuttle: the cell it is on (it slides from cell to cell, 06 to 01 included). */
+const dotCell = ref<string | null>(null);
 
 const tendency = computed(() => props.opening.walk.tendency);
 const sBar = computed(() => {
@@ -90,24 +106,26 @@ function cellX(cell: string): number | null {
   const a = el.getBoundingClientRect(), b = r.getBoundingClientRect();
   return a.left + a.width / 2 - b.left;
 }
-/** A mark rising from a cell (or from the start, for what acts at departure). */
+/** A mark rising from a cell (or from the start, for what acts at departure); `x` places it across. */
 function sign(at: HTMLElement, mark: keyof typeof MARK_GLYPH, x?: number): void {
   if (!root.value) return;
   const s = document.createElement('span');
   s.className = 'vopen__sign';
   s.textContent = MARK_GLYPH[mark];
   s.style.color = MARK_COLOR[mark];
-  if (x !== undefined) s.style.left = `${x}px`;
+  if (x !== undefined) { s.style.left = `${x}px`; s.style.right = 'auto'; }
   at.appendChild(s);
   s.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, offset: 0.3 }, { opacity: 0, transform: 'translateY(-10px)' }],
     { duration: 520, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }).onfinish = () => s.remove();
 }
-function trail(x: number): void {
+/** A fading light where the shuttle was: `left`/`top` in the rail's (line) or the ring's own units. */
+function trail(left: string, top?: string): void {
   const r = rail.value;
   if (!r) return;
   const dot = document.createElement('span');
   dot.className = 'vopen__trail';
-  dot.style.left = `${x}px`;
+  dot.style.left = left;
+  if (top !== undefined) dot.style.top = top;
   r.appendChild(dot);
   dot.animate([{ opacity: 0.55 }, { opacity: 0 }], { duration: 520, easing: 'ease-out' }).onfinish = () => dot.remove();
 }
@@ -118,13 +136,23 @@ async function play(): Promise<void> {
   await frame();
   if (!alive) return;
   shown.value = true;
-  const motion = props.walk && !prefersReducedMotion();
   if (motion) {
     phase.value = 'walk';
     await wait(420);
     if (!alive) return;
     const { steps, departure } = props.opening.walk;
-    const start = cellX(steps[0]?.cell ?? '01');
+    if (ring.value) {
+      // Round the ring: what acts at departure rises from the first cell.
+      const first = cellEls.get(steps[0]?.cell ?? '01');
+      if (departure.length && first) {
+        // Up to three signs side by side above the first cell, as the line spreads them above its start.
+        const signs = departure.slice(0, 3);
+        signs.forEach((d, i) => sign(first, SIGN_MARK[d.sign], first.clientWidth / 2 + (i - (signs.length - 1) / 2) * 12));
+        await wait(220);
+        if (!alive) return;
+      }
+    }
+    const start = ring.value ? null : cellX(steps[0]?.cell ?? '01');
     if (departure.length && rail.value && start !== null) {
       dotX.value = start;
       // Up to three signs side by side above the start.
@@ -138,13 +166,18 @@ async function play(): Promise<void> {
     let last: string | null = null;
     for (const step of steps) {
       if (!alive) return;
-      const x = cellX(step.cell);
-      if (x === null) continue;
-      // Around the ring the shuttle comes back to 01 from 06: it jumps there instead of sliding back over the row.
-      jump.value = last !== null && Math.abs(Number(step.cell) - Number(last)) > 1;
-      dotX.value = x;
+      if (ring.value) {
+        dotCell.value = step.cell;
+        trail(`${ringSpot(step.cell)[0]}%`, `${ringSpot(step.cell)[1]}%`);
+      } else {
+        const x = cellX(step.cell);
+        if (x === null) continue;
+        // On the line, a return card can send the shuttle back over several cells: it jumps there instead of sliding.
+        jump.value = last !== null && Math.abs(Number(step.cell) - Number(last)) > 1;
+        dotX.value = x;
+        trail(`${x}px`);
+      }
       emit('step', step.cell);
-      trail(x);
       const acted = step.acted[0];
       const el = cellEls.get(step.cell);
       if (acted && el) {
@@ -219,14 +252,34 @@ onBeforeUnmount(() => {
     <div
       ref="root"
       class="vopen"
-      :class="[`vopen--${phase}`, { 'vopen--in': shown && phase !== 'leaving', 'vopen--flash': flash }]"
+      :class="[`vopen--${phase}`, { 'vopen--in': shown && phase !== 'leaving', 'vopen--flash': flash, 'vopen--ring': ring && motion }]"
       :style="style"
       role="status"
       :aria-label="`${t('mainGame.vectorTable.opening.label')}${words ? `：${words}` : ''}`"
       data-testid="vector-opening"
+      :data-shape="opening.shape"
       @click="leave(false)"
     >
-      <div class="vopen__mini" aria-hidden="true">
+      <div v-if="ring" class="vopen__mini vopen__mini--ring" aria-hidden="true" data-testid="vector-opening-ring">
+        <div ref="rail" class="vopen__ring">
+          <svg class="vopen__ring-track" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <path :d="ringTrack" vector-effect="non-scaling-stroke" />
+          </svg>
+          <div
+            v-for="cell in opening.cells"
+            :key="cell.id"
+            :ref="bindCell(cell.id)"
+            class="vopen__cell vopen__cell--ring"
+            :class="{ 'vopen__cell--held': cell.card && !cell.status, 'vopen__cell--status': cell.status && cell.card }"
+            :style="[ringCellStyle(cell.id), cell.card?.tier && cell.card.tier !== 'common' ? { '--edge': `var(--tier-${cell.card.tier})` } : {}]"
+            :data-cell="cell.id"
+          >
+            <span v-if="cell.card">{{ label(cell.card.name) }}</span>
+          </div>
+          <span v-if="dotCell !== null" class="vopen__dot vopen__dot--ring" :style="ringCellStyle(dotCell)" :data-cell="dotCell" data-testid="vector-opening-shuttle" />
+        </div>
+      </div>
+      <div v-else class="vopen__mini" aria-hidden="true">
         <div class="vopen__cells">
           <div
             v-for="cell in opening.cells"
@@ -324,6 +377,16 @@ onBeforeUnmount(() => {
 .vopen__dot--jump { transition: none; }
 .vopen__rail :deep(.vopen__trail) { position: absolute; top: 5px; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 50%; background: var(--color-amber-400); box-shadow: 0 0 6px var(--color-amber-400); pointer-events: none; }
 
+/* The ring, drawn small: the table's six cells around a closed track (PO 2026-10-03). */
+.vopen--ring { height: 150px; }
+.vopen__ring { position: absolute; inset: 0; }
+.vopen__ring-track { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.vopen__ring-track path { fill: none; stroke: oklch(0.34 0.02 95); stroke-width: 1px; }
+.vopen__cell--ring { position: absolute; width: 27%; height: 26px; transform: translate(-50%, -50%); }
+.vopen__cell--ring span { bottom: 5px; }
+.vopen__dot--ring { top: 0; z-index: 1; margin-top: -5.5px; transition: left 120ms var(--ease-in-out), top 120ms var(--ease-in-out); }
+.vopen__ring :deep(.vopen__trail) { position: absolute; z-index: 1; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: var(--color-amber-400); box-shadow: 0 0 6px var(--color-amber-400); pointer-events: none; }
+
 /* The result, lit. */
 .vopen__result { position: absolute; inset: 14px 20px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 16px; opacity: 0; pointer-events: none; }
 .vopen--result .vopen__result, .vopen--leaving .vopen__result { opacity: 1; transition: opacity 260ms var(--ease-in-out) 80ms; }
@@ -369,6 +432,8 @@ onBeforeUnmount(() => {
 /* A narrow phone: the ribbon keeps its height, the cells their order; the words go under the bars. */
 @media (max-width: 480px) {
   .vopen { height: 112px; padding: 12px 14px; }
+  .vopen--ring { height: 150px; }
+  .vopen__cell--ring { width: 29%; }
   .vopen__mini, .vopen__result { inset: 12px 14px; }
   .vopen__cells { gap: 6px; }
   .vopen__result { grid-template-columns: 1fr; gap: 8px; align-content: center; }

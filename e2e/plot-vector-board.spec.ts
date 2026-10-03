@@ -366,8 +366,8 @@ test('a card says what it does: marks on its face, the effect, how it grows, and
   });
 
 /** The round start as the adapter sends it: this save's trip worked out by the runtime, through the app's own bus. */
-async function startRound(page: Page, ids: SeedIds) {
-  await page.evaluate(async ({ profileId, slotId }) => {
+async function startRound(page: Page, ids: SeedIds, shape: 'line' | 'ring' = 'line') {
+  await page.evaluate(async ({ profileId, slotId, shape }) => {
     const load = (p: string) => import(/* @vite-ignore */ p);
     const own = performance.getEntriesByType('resource').map(e => e.name).find(name => name.includes('/src/engine/core/event-bus.ts'));
     const { eventBus } = await load(own ?? '/src/engine/core/event-bus.ts');
@@ -380,13 +380,63 @@ async function startRound(page: Page, ids: SeedIds) {
     const { roundOpening } = await load('/src/features/plot-vector/table-model.ts');
     const state = new StateManager();
     state.loadTree(await idbAdapter.get(`save_${profileId}_${slotId}`));
-    const component = { ...readVectorState(state.get(P.plotVector)), layout: { placements: { '01': 'item:notebook', '02': null, '03': null, '04': null, '05': null, '06': null }, tray: [] } };
+    const component = { ...readVectorState(state.get(P.plotVector)), shape, layout: { placements: { '01': 'item:notebook', '02': null, '03': null, '04': null, '05': null, '06': null }, tray: [] } };
     const rules = parseNativeRules(await (await fetch('/packs/tianming/rules/plot-vector.json')).json());
     const prepared = prepareVector(component, projectSavedElements(state.toSnapshot(), { includeEnvironment: true }).entries,
       `${profileId}/${slotId}/9`, projectNativeInput(state.toSnapshot(), rules));
     eventBus.emit('plotVector:round-started', roundOpening(component, prepared));
-  }, ids);
+  }, { ...ids, shape });
 }
+
+test('a ring board\'s round start plays on a ring: the cells where the table puts them, the shuttle going round',
+  { tag: ['@plot-vector', '@story-pv-1001'] }, async ({ page, gameShell, plotVector }) => {
+    // PO 2026-10-03: the ring board's opening still played the line's row of six.
+    const ids = await seedSave(page);
+    await addBoardFixture(page, ids);
+    await enterSeededGame(page);
+    await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+
+    // The line board keeps its row.
+    await startRound(page, ids, 'line');
+    await expect(plotVector.opening).toHaveAttribute('data-shape', 'line');
+    await expect(page.getByTestId('vector-opening-ring')).toHaveCount(0);
+    await plotVector.opening.click();
+    await expect(plotVector.opening).toHaveCount(0);
+
+    await startRound(page, ids, 'ring');
+    await expect(plotVector.opening).toHaveAttribute('data-shape', 'ring');
+    const ring = page.getByTestId('vector-opening-ring');
+    await expect(ring).toBeVisible();
+    // Two above, one at each side, two below — as on the table. Measured in one frame: the ribbon is still rising,
+    // and cells measured one after another would be caught at different points of that motion.
+    const [p1, p2, p3, p4, p5, p6] = await ring.evaluate((el) => ['01', '02', '03', '04', '05', '06'].map((cell) => {
+      const b = el.querySelector(`[data-cell="${cell}"]`)!.getBoundingClientRect();
+      return { x: b.left + b.width / 2, y: b.top + b.height / 2 };
+    }));
+    expect(Math.abs(p1.y - p2.y)).toBeLessThan(2);
+    expect(Math.abs(p4.y - p5.y)).toBeLessThan(2);
+    expect(Math.abs(p3.y - p6.y)).toBeLessThan(2);
+    expect(p1.y).toBeLessThan(p3.y);
+    expect(p3.y).toBeLessThan(p4.y);
+    expect(p6.x).toBeLessThan(p1.x);
+    expect(p1.x).toBeLessThan(p2.x);
+    expect(p2.x).toBeLessThan(p3.x);
+    expect(p5.x).toBeLessThan(p4.x);
+    // The shuttle goes round: it visits cells off the top row, sitting on the cell it is at.
+    const shuttle = page.getByTestId('vector-opening-shuttle');
+    const visited = new Set<string>();
+    const deadline = Date.now() + 4000;
+    while (Date.now() < deadline && visited.size < 6) {
+      const cell = await shuttle.getAttribute('data-cell', { timeout: 1000 }).catch(() => null);
+      if (cell) visited.add(cell);
+      await page.waitForTimeout(40);
+    }
+    expect(visited.size).toBeGreaterThanOrEqual(3);
+    expect([...visited].some(cell => ['03', '04', '05', '06'].includes(cell))).toBe(true);
+    await expect(page.getByTestId('vector-opening-result')).toBeVisible({ timeout: 5000 });
+    await expect(plotVector.opening).toHaveCount(0, { timeout: 8000 });
+  });
 
 test('a round start plays its trip in a ribbon above the input, the badge walking with it; a press puts it away',
   { tag: ['@plot-vector', '@story-pv-1001'] }, async ({ page, gameShell, plotVector }) => {

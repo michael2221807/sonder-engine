@@ -21,6 +21,22 @@ export interface RingGeometry {
 
 const fmt = (p: readonly [number, number]) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`;
 
+/**
+ * A closed smooth curve through `points` (Catmull-Rom as cubic Béziers), as SVG path data: the whole loop and one
+ * segment per point to the next. The table's ring track, and the round opening's ring drawn small (any units).
+ */
+export function closedSpline(points: ReadonlyArray<readonly [number, number]>): { path: string; segments: string[] } {
+  const n = points.length, segments: string[] = [], curves: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const p0 = points[(i - 1 + n) % n], p1 = points[i], p2 = points[(i + 1) % n], p3 = points[(i + 2) % n];
+    const c1: [number, number] = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2: [number, number] = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    segments.push(`M ${fmt(p1)} C ${fmt(c1)} ${fmt(c2)} ${fmt(p2)}`);
+    curves.push(`C ${fmt(c1)} ${fmt(c2)} ${fmt(p2)}`);
+  }
+  return { segments, path: `M ${fmt(points[0])} ${curves.join(' ')} Z` };
+}
+
 export function ringGeometry(width: number): RingGeometry {
   const narrow = width < 640;
   const cw = narrow ? Math.floor((width - 16) / 3.4) : 150, ch = narrow ? 96 : 110;
@@ -35,18 +51,10 @@ export function ringGeometry(width: number): RingGeometry {
     cells[id] = { left, top: y, width: cw, height: ch };
     anchors.push(row === 0 ? [cx + x, y - 28] : row === 2 ? [cx + x, y + ch + 12] : [x > 0 ? left + cw + gap : left - gap, y + ch / 2]);
   }
-  // A closed smooth curve through the anchors (Catmull-Rom as cubic Béziers).
-  const n = anchors.length, segments: string[] = [], curves: string[] = [];
-  for (let i = 0; i < n; i++) {
-    const p0 = anchors[(i - 1 + n) % n], p1 = anchors[i], p2 = anchors[(i + 1) % n], p3 = anchors[(i + 2) % n];
-    const c1: [number, number] = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
-    const c2: [number, number] = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
-    segments.push(`M ${fmt(p1)} C ${fmt(c1)} ${fmt(c2)} ${fmt(p2)}`);
-    curves.push(`C ${fmt(c1)} ${fmt(c2)} ${fmt(p2)}`);
-  }
+  // A closed smooth curve through the anchors.
+  const { segments, path } = closedSpline(anchors);
   return {
-    cells, anchors, segments, narrow,
-    path: `M ${fmt(anchors[0])} ${curves.join(' ')} Z`,
+    cells, anchors, segments, narrow, path,
     height: top + rowStep * 2 + ch + 30,
     hubTop: (top + ch + top + 2 * rowStep - 20) / 2,
   };
