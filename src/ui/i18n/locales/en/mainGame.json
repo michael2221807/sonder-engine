@@ -277,6 +277,7 @@
   "mainGame.vectorTable.tendency.y": "People",
   "mainGame.vectorTable.tendency.j": "Openings",
   "mainGame.vectorTable.lock": "The story is being written",
+  "mainGame.vectorTable.settling": "Finishing this round",
   "mainGame.vectorTable.note.cleared": "Last arrangement doesn't compute this round, so the cards were taken off; just place them again.",
   "mainGame.vectorTable.note.openFailed": "The board can't open right now.",
   "mainGame.vectorTable.note.saveFailed": "That arrangement wasn't saved; please place it again.",

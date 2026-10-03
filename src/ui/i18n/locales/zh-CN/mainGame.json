@@ -277,6 +277,7 @@
   "mainGame.vectorTable.tendency.y": "人际",
   "mainGame.vectorTable.tendency.j": "机会",
   "mainGame.vectorTable.lock": "故事正在写",
+  "mainGame.vectorTable.settling": "这一回合正在收尾",
   "mainGame.vectorTable.note.cleared": "上次的摆法这回合算不出来，卡已先拿下来；重新摆好就行。",
   "mainGame.vectorTable.note.openFailed": "牌桌暂时打不开。",
   "mainGame.vectorTable.note.saveFailed": "刚才的摆法没存上，请再摆一次。",

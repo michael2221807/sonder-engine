@@ -483,3 +483,89 @@ test('on a phone with the ring board a card is carried by touch, and the table h
     await expect(plotVector.cellCard(target)).toHaveCount(0);
     await heldOnceCarried();
   });
+
+/**
+ * The engine around a round, through the app's own bus: the story is shown (`engine:round-complete`) while the
+ * passes after it (Step3 and the rest) still keep the orchestrator busy, until `engine:sub-pipelines-done`. A
+ * sub-pipeline retry flips the panel back to "writing" (`ai:retrying`). `busy` / `free` change the engine silently,
+ * as a background save (`requestedSaveActive`) does.
+ */
+async function engineRound(page: Page, step: 'start' | 'story-shown' | 'retrying' | 'finished' | 'busy' | 'free') {
+  await page.evaluate(async step => {
+    const path = '/src/engine/core/event-bus.ts';
+    const { eventBus } = await import(/* @vite-ignore */ path);
+    const app = document.querySelector('#app') as unknown as { __vue_app__: { _context: { provides: Record<string, unknown> } } };
+    const host = app.__vue_app__._context.provides.gameOrchestrator as { _subPipelineActive: boolean };
+    if (step === 'start') eventBus.emit('engine:round-start');
+    if (step === 'story-shown') { host._subPipelineActive = true; eventBus.emit('engine:round-complete', { actionOptions: [] }); }
+    if (step === 'retrying') eventBus.emit('ai:retrying', { attempt: 1, maxRetries: 2 });
+    if (step === 'finished') { host._subPipelineActive = false; eventBus.emit('engine:sub-pipelines-done'); }
+    if (step === 'busy') host._subPipelineActive = true;
+    if (step === 'free') host._subPipelineActive = false;
+  }, step);
+}
+
+test('while the engine finishes a round after its story is shown, the table waits, locked, and opens by itself',
+  { tag: ['@plot-vector', '@regression'] }, async ({ page, gameShell, plotVector }) => {
+    const ids = await seedSave(page);
+    await addBoardFixture(page, ids);
+    await enterSeededGame(page);
+    await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
+    const lock = page.getByTestId('vector-board-locked');
+
+    // PO 2026-10-02: opened right after the story was shown, the table said it could not open until reopened.
+    await engineRound(page, 'start');
+    await engineRound(page, 'story-shown');
+    await plotVector.boardOpen.click();
+    await expect(lock).toContainText('这一回合正在收尾');
+    await expect(plotVector.note).not.toContainText('打不开');
+    await engineRound(page, 'finished');
+    await expect(lock).toHaveCount(0);
+    await expect(plotVector.handCard('item:notebook')).toBeVisible();
+    await expect(plotVector.note).toHaveText('');
+    await plotVector.closeBoard();
+
+    // Opened during the round: locked while the story is written, still locked while the round is finished — also
+    // through a retry of a pass after it — then read.
+    await engineRound(page, 'start');
+    await plotVector.boardOpen.click();
+    await expect(lock).toContainText('故事正在写');
+    await engineRound(page, 'story-shown');
+    await expect(lock).toContainText('这一回合正在收尾');
+    await engineRound(page, 'retrying');
+    await expect(lock).toContainText('故事正在写');
+    await engineRound(page, 'finished');
+    await expect(lock).toHaveCount(0);
+    await expect(plotVector.handCard('item:notebook')).toBeVisible();
+    await expect(plotVector.note).toHaveText('');
+  });
+
+test('a move that meets a busy engine is put back and kept once the engine is free, also when it frees without a word',
+  { tag: ['@plot-vector', '@regression'] }, async ({ page, gameShell, plotVector }) => {
+    const ids = await seedSave(page);
+    await addBoardFixture(page, ids);
+    await enterSeededGame(page);
+    await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
+    const lock = page.getByTestId('vector-board-locked');
+    await plotVector.openBoard();
+
+    // The engine is busy (a background save holds it) when the move walks: the walk is refused, the table waits.
+    await engineRound(page, 'busy');
+    await plotVector.place('item:notebook', '01');
+    await expect(lock).toContainText('这一回合正在收尾');
+    // It frees itself without an event: the table looks again by itself, puts the move back and keeps it.
+    await engineRound(page, 'free');
+    await expect(lock).toHaveCount(0);
+    await expect(plotVector.cellCard('01')).toContainText('随身日记');
+    await plotVector.kept(board => board?.layout?.placements?.['01'] === 'item:notebook');
+    await expect(plotVector.note).toHaveText('');
+
+    // The engine turns busy right after a move, before the move is kept: its keeping is refused, the table waits,
+    // and keeps it once the engine says it is done.
+    await plotVector.place('basic:push', '02');
+    await engineRound(page, 'busy');
+    await expect(lock).toContainText('这一回合正在收尾');
+    await engineRound(page, 'finished');
+    await plotVector.kept(board => board?.layout?.placements?.['02'] === 'basic:push' && board?.layout?.placements?.['01'] === 'item:notebook');
+    await expect(lock).toHaveCount(0);
+  });

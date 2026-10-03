@@ -146,7 +146,12 @@ function keepFaces(next: TableModel): TableModel {
 const model = computed(() => (view.value && prepared.value
   ? keepFaces(tableModel(view.value, prepared.value, layout.value, shape.value, provisional.value)) : null));
 const shown = computed(() => replaying.value ?? model.value);
-const locked = computed(() => props.generating);
+/** The story is shown before the engine finishes the round (Step3 and the other passes after it); see whenEngineFree. */
+const settling = ref(false);
+let settleTimer: ReturnType<typeof setTimeout> | undefined;
+/** The component is going: nothing waits for the engine any more. */
+let disposed = false;
+const locked = computed(() => props.generating || settling.value);
 const hasPlaced = computed(() => !!model.value?.cells.some(c => c.role !== 'status' && c.card));
 const placeable = computed(() => new Set(model.value ? [...model.value.hand, ...model.value.cells.filter(c => c.role !== 'status' && c.card).map(c => c.card!)] : []));
 const canPlace = (card: string) => !locked.value && !replaying.value && placeable.value.has(card) && !model.value?.cards[card]?.resting;
@@ -383,7 +388,7 @@ async function openTable(event?: MouseEvent): Promise<void> {
   helpOpen.value = false;
   await nextTick();
   sheet.value?.focus({ preventScroll: true });
-  if (!props.generating) await load();
+  if (!props.generating) whenEngineFree();
 }
 /** `keepFocus`: focus has already gone where the player wants it (the input); leave it there. */
 function close(opts?: { keepFocus?: boolean } | Event): void {
@@ -408,12 +413,33 @@ function close(opts?: { keepFocus?: boolean } | Event): void {
 // A round ends: the board changed under the view (uses, new cards), so read it again. A move the player made
 // just before the round began and that could not be kept in time is put back and kept now.
 watch(() => props.generating, (now, before) => {
-  if (now) { selected.value = null; detail.value = null; return; }
-  if (!before) return;
+  if (now) { clearTimeout(settleTimer); settling.value = false; selected.value = null; detail.value = null; return; }
+  if (before) whenEngineFree();
+});
+/**
+ * The story is shown before the engine has finished the round (Step3 and the other passes after it), and until it
+ * has, the board can be neither read nor kept. The table counts that time as part of the round: it stays locked,
+ * then — once the engine is free — reads the board again, puts back a move that met the busy engine, or writes an
+ * arrangement still waiting. Opening it meanwhile used to end in "the table cannot open" until it was closed and
+ * opened again (PO 2026-10-02). The engine says when it is done; a short look-again covers any other busy spell.
+ */
+function whenEngineFree(): void {
+  clearTimeout(settleTimer);
+  // A new round began meanwhile (its own end comes back here), or the table is going.
+  if (props.generating || disposed) { settling.value = false; return; }
+  if (access?.roundRunning()) {
+    // Nothing to read, put back or write: a later opening waits by itself.
+    if (!open.value && !dirty && !access.hasUnsaved) { settling.value = false; return; }
+    settling.value = true;
+    settleTimer = setTimeout(whenEngineFree, 400);
+    return;
+  }
+  settling.value = false;
   if (dirty) void restoreAfter();
   else if (open.value) void load();
   else if (access?.hasUnsaved) void persistSoon();
-});
+}
+onUnmounted(eventBus.on('engine:sub-pipelines-done', () => { if (settling.value) whenEngineFree(); }));
 async function restoreAfter(): Promise<void> {
   const keep = cloneDeep(layout.value), keepShape = shape.value, keepSlot = view.value ? slotOf(view.value) : null;
   await load({ seen: open.value });
@@ -517,11 +543,19 @@ async function recover(error: unknown): Promise<void> {
   // carried onto the new board.
   if (message.includes('switched')) {
     dirty = false;
-    if (open.value && !props.generating) await load();
+    if (!open.value) return;
+    // The engine still busy (a round, or the passes after one): the board is read once it is free.
+    if (locked.value || access?.roundRunning()) whenEngineFree();
+    else await load();
     return;
   }
-  // A round began: the move stays pending and is put back and kept when the round ends (restoreAfter).
-  if (props.generating || access?.roundRunning()) return;
+  // A round began, or the engine is still finishing one: the move stays pending — whether its walk or its keeping
+  // was refused — and is put back and kept when the engine is free (restoreAfter, from whenEngineFree).
+  if (props.generating || access?.roundRunning()) {
+    dirty = true;
+    whenEngineFree();
+    return;
+  }
   if (!message.includes('stale') || !access) { note.value = 'saveFailed'; return; }
   const keep = cloneDeep(layout.value), keepShape = shape.value;
   await load({ seen: open.value });
@@ -567,7 +601,7 @@ async function persistSoon(): Promise<void> {
 }
 function retryPersist(): void {
   // During a round the round's own save takes the arrangement along; the round's end tries again as well.
-  if (props.generating || ++persistTries > 5) { persistTries = 0; return; }
+  if (locked.value || ++persistTries > 5) { persistTries = 0; return; }
   persistTimer = setTimeout(() => { void persistSoon(); }, 1000);
 }
 // The story panel is kept alive while another page shows (browser Back, a panel opened from elsewhere): the table,
@@ -578,10 +612,12 @@ function onPageHidden(): void { if (document.visibilityState === 'hidden') void 
 document.addEventListener('visibilitychange', onPageHidden);
 window.addEventListener('pagehide', onPageHidden);
 onBeforeUnmount(() => {
+  disposed = true;
   document.removeEventListener('visibilitychange', onPageHidden);
   window.removeEventListener('pagehide', onPageHidden);
   clearTimeout(savedTimer);
   clearTimeout(persistTimer);
+  clearTimeout(settleTimer);
   void persistSoon();
 });
 
@@ -1001,7 +1037,7 @@ const ghostStyle = computed(() => {
           />
         </div>
         <div ref="dim" class="vtable__dim" aria-hidden="true" />
-        <div v-if="locked" class="vtable__lock" data-testid="vector-board-locked"><span>{{ t('mainGame.vectorTable.lock') }}</span></div>
+        <div v-if="locked" class="vtable__lock" data-testid="vector-board-locked"><span>{{ settling ? t('mainGame.vectorTable.settling') : t('mainGame.vectorTable.lock') }}</span></div>
       </section>
     </Transition>
     </div>
