@@ -1,7 +1,8 @@
 import { test, expect, seedSave, enterSeededGame } from './fixtures/base';
 import type { Page } from '@playwright/test';
 import type { SeedIds } from './fixtures/seed-save';
-import { VECTOR_NOTEBOOK_ITEM } from './fixtures/seed-tree';
+import { VECTOR_NOTEBOOK_ITEM, VECTOR_RULES_URL } from './fixtures/seed-tree';
+import { addBoardFixture } from './fixtures/plot-vector-seed';
 
 // The table's motion is checked by eye; these tests check what it does, so they run without it
 // (the product then shows the table at once, with no sliding).
@@ -9,47 +10,6 @@ test.beforeEach(async ({ page }) => { await page.emulateMedia({ reducedMotion: '
 // Each test seeds a save, reloads it and waits for background saves.
 test.slow();
 
-async function addBoardFixture(page: Page, ids: SeedIds, accept = false, store = false, notebookItem: Record<string, unknown> = VECTOR_NOTEBOOK_ITEM) {
-    // Handwritten deterministic cards in the contract format, never a fabricated model/story response.
-    await page.evaluate(async ({ profileId, slotId, accept, store, notebook }) => {
-      const load = (p: string) => import(/* @vite-ignore */ p);
-      const { idbAdapter } = await load('/src/engine/persistence/idb-adapter.ts');
-      const { StateManager } = await load('/src/engine/core/state-manager.ts');
-      const { DEFAULT_ENGINE_PATHS: P } = await load('/src/engine/pipeline/types.ts');
-      const { projectSavedElements } = await load('/src/features/plot-vector/saved-elements.ts');
-      const { tasksAfterSave } = await load('/src/features/plot-vector/genesis/post-save.ts');
-      const { POSITIVE_EXAMPLES } = await load('/src/features/plot-vector/genesis/test-fixtures.ts');
-      const { initialVectorState, bindCard, prepareVector, acceptVector } = await load('/src/features/plot-vector/runtime.ts');
-      const key = `save_${profileId}_${slotId}`, state = new StateManager();
-      state.loadTree(await idbAdapter.get(key));
-      state.set(P.inventoryItems, { notebook });
-      state.set(P.characterAttributes, { 体质: 10, 心性: 10, 魅力: 10, 直觉: 5, 气运: 15, 悟性: 15 });
-      state.set(P.environmentTags, [{ 名称: '微风', 描述: '舒适的微风', 效果: '使人放松' }]);
-      const entry = projectSavedElements(state.toSnapshot()).entries.find((e: {id: string}) => e.id === 'item:notebook');
-      const task = tasksAfterSave({ id: 'fixture', success: true, before: [], after: [entry] })[0];
-      // The diary grows a level every round; the store variant keeps up to 3 push in its own store.
-      const card = store
-        ? { for: '随身日记', type: 'item', summary: '把推力存起来，最多存 3 点。', onPass: 'return ctx.stored < 3 ? { store: { from: "push", amount: 3 - ctx.stored } } : {};' }
-        : POSITIVE_EXAMPLES[2].card;
-      const bound = bindCard(task, card);
-      const env = projectSavedElements(state.toSnapshot(), { includeEnvironment: true }).entries.find((e: {kind: string}) => e.kind === 'environment');
-      const envTask = tasksAfterSave({ id: 'fixture', success: true, before: [], after: [env] })[0];
-      const environment = bindCard(envTask, { for: '微风', type: 'environment', summary: '出发时推力 +1。', onPass: 'return { push: 1 };' });
-      let component = { ...initialVectorState(), cards: [bound, environment] };
-      if (accept) {
-        if (store) component = { ...component, layout: { placements: { '01': 'item:notebook' }, tray: [] } };
-        const { projectNativeInput, parseNativeRules } = await load('/src/features/plot-vector/native-input.ts');
-        const rules = parseNativeRules(await (await fetch('/packs/tianming/rules/plot-vector.json')).json());
-        // Named like a real round of this save, so the round title shows its impulse.
-        const round = state.get(P.roundNumber) ?? 0;
-        const prepared = prepareVector(component, projectSavedElements(state.toSnapshot(), { includeEnvironment: true }).entries,
-          `${profileId}/${slotId}/${round}`, projectNativeInput(state.toSnapshot(), rules));
-        component = acceptVector(component, prepared);
-      }
-      state.set(P.plotVector, component);
-      await idbAdapter.set(key, state.toSnapshot());
-    }, { ...ids, accept, store, notebook: notebookItem });
-}
 /** The board state as written to disk. */
 async function persisted(page: Page, ids: SeedIds) {
   return page.evaluate(async ({ profileId, slotId }) => {
@@ -367,7 +327,7 @@ test('a card says what it does: marks on its face, the effect, how it grows, and
 
 /** The round start as the adapter sends it: this save's trip worked out by the runtime, through the app's own bus. */
 async function startRound(page: Page, ids: SeedIds, shape: 'line' | 'ring' = 'line') {
-  await page.evaluate(async ({ profileId, slotId, shape }) => {
+  await page.evaluate(async ({ profileId, slotId, shape, rulesUrl }) => {
     const load = (p: string) => import(/* @vite-ignore */ p);
     const own = performance.getEntriesByType('resource').map(e => e.name).find(name => name.includes('/src/engine/core/event-bus.ts'));
     const { eventBus } = await load(own ?? '/src/engine/core/event-bus.ts');
@@ -381,11 +341,11 @@ async function startRound(page: Page, ids: SeedIds, shape: 'line' | 'ring' = 'li
     const state = new StateManager();
     state.loadTree(await idbAdapter.get(`save_${profileId}_${slotId}`));
     const component = { ...readVectorState(state.get(P.plotVector)), shape, layout: { placements: { '01': 'item:notebook', '02': null, '03': null, '04': null, '05': null, '06': null }, tray: [] } };
-    const rules = parseNativeRules(await (await fetch('/packs/tianming/rules/plot-vector.json')).json());
+    const rules = parseNativeRules(await (await fetch(rulesUrl)).json());
     const prepared = prepareVector(component, projectSavedElements(state.toSnapshot(), { includeEnvironment: true }).entries,
       `${profileId}/${slotId}/9`, projectNativeInput(state.toSnapshot(), rules));
     eventBus.emit('plotVector:round-started', roundOpening(component, prepared));
-  }, { ...ids, shape });
+  }, { ...ids, shape, rulesUrl: VECTOR_RULES_URL });
 }
 
 test('a ring board\'s round start plays on a ring: the cells where the table puts them, the shuttle going round',

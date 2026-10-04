@@ -20,6 +20,15 @@ export const NPC_NAME = '林婉儿';
 export const PROTAGONIST = '叶尘';
 /** Optional inventory revision fixture; absent in legacy/default seeds. */
 export const VECTOR_NOTEBOOK_ITEM = { 名称: '随身日记', 描述: '记录日常', 数量: 1, 能力版本: 1 };
+/** The pack's plot-vector rules, which the plot-vector seed (plot-vector-seed.ts) reads to play a round. */
+export const VECTOR_RULES_URL = '/packs/tianming/rules/plot-vector.json';
+/** The plot-vector seed: the attributes the pack's native rules read. */
+export const VECTOR_ATTRIBUTES = { 体质: 10, 心性: 10, 魅力: 10, 直觉: 5, 气运: 15, 悟性: 15 };
+/** One environment tag, and its card: a push at departure. */
+export const VECTOR_ENV_TAG = { 名称: '微风', 描述: '舒适的微风', 效果: '使人放松' };
+export const VECTOR_ENV_CARD = { for: '微风', type: 'environment', summary: '出发时推力 +1。', onPass: 'return { push: 1 };' };
+/** The diary's store variant: it keeps up to 3 push in its own store. */
+export const VECTOR_STORE_CARD = { for: '随身日记', type: 'item', summary: '把推力存起来，最多存 3 点。', onPass: 'return ctx.stored < 3 ? { store: { from: "push", amount: 3 - ctx.stored } } : {};' };
 
 // NOTE: GameStateTree is `Record<string, unknown>` by design (the tree's shape is
 // defined by the Game Pack schema at runtime, not statically). Binding the seed to it
