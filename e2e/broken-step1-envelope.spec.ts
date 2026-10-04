@@ -149,10 +149,13 @@ const COT_STEP1 = `<thinking>先把这一回合想清楚。</thinking>\n\n<正�
 const ONCE = JSON.stringify(TAGGED_STORY).slice(1, -1);
 const TWICE_STEP1 = `<正文>\n${JSON.stringify({ text: ONCE })}\n</正文>\n\n<短期记忆>\n记下这一夜。\n</短期记忆>`;
 
-/** Step 2 waits a while, so the bubble can be read as it stands between the two steps. */
-async function answerSlowStep2(route: Route, step1: string): Promise<void> {
+/** Step 2 waits a while, so the bubble can be read as it stands between the two steps (step 1 all in). */
+async function answerSlowStep2(route: Route, step1: string, seen: { step2: boolean }): Promise<void> {
   const body = JSON.parse(route.request().postData() ?? '{}') as { stream?: boolean };
-  if (!body.stream) await new Promise(resolve => setTimeout(resolve, 4000));
+  if (!body.stream) {
+    seen.step2 = true;
+    await new Promise(resolve => setTimeout(resolve, 4000));
+  }
   return answer(route, step1);
 }
 
@@ -171,14 +174,16 @@ for (const [name, step1] of [['the CoT protocol shape', COT_STEP1], ['a story es
       localStorage.setItem('aga_ai_settings', JSON.stringify({ ...ai, splitGen: true, streaming: true, maxRetries: 0 }));
     });
     await page.reload();
-    await page.route('http://127.0.0.1:1/**', route => answerSlowStep2(route, step1));
+    const seen = { step2: false };
+    await page.route('http://127.0.0.1:1/**', route => answerSlowStep2(route, step1, seen));
     await enterSeededGame(page);
     await page.locator('.message-input').fill('我回到寝室。');
     await page.locator('.send-btn').click();
 
-    // Step 1 is in, step 2 is still out: the bubble holds the whole story and nothing else.
+    // Step 1 is all in (step 2 has been asked for and is still out): the bubble holds the whole story and nothing else.
+    await expect.poll(() => seen.step2, { timeout: 60_000 }).toBe(true);
     const bubble = page.locator('.message--streaming .message-text');
-    await expect(bubble).toContainText('你轻手轻脚地，推开了寝室那扇门。', { timeout: 60_000 });
+    await expect(bubble).toContainText('你轻手轻脚地，推开了寝室那扇门。', { timeout: 10_000 });
     const live = await bubble.innerText();
     expect(live).toContain('又"啪"地熄了。');
     for (const leak of ['<正文>', '</正文>', '短期记忆', '记下这一夜', '剧情规划', '\\"', '\\n', '{"text"']) expect(live).not.toContain(leak);
@@ -199,7 +204,7 @@ test('a round saved still escaped once is healed when the game loads', { tag: ['
   await seedSave(page, { tree: makeSeedTree({ 元数据: { 叙事历史: [
     { role: 'user', content: '我回到寝室。' },
     { role: 'assistant', content: ONCE, _rawResponse: TWICE_STEP1 },
-  ] } }) });
+  ] }, 记忆: { 短期: [{ round: 3, summary: ONCE, timestamp: 1 }] } }) });
   await enterSeededGame(page);
   await expect(page.getByText('你轻手轻脚地，推开了寝室那扇门。').first()).toBeVisible();
   const shown = await page.locator('body').innerText();
@@ -209,9 +214,10 @@ test('a round saved still escaped once is healed when the game loads', { tag: ['
     type App = { config: { globalProperties: { $pinia: { _s: Map<string, { tree: Record<string, unknown> }> } } } };
     const app = (document.querySelector('#app') as { __vue_app__?: App } | null)?.__vue_app__;
     const tree = app?.config.globalProperties.$pinia._s.get('engineState')?.tree as
-      { 元数据: { 叙事历史: Array<{ content: string; _rawResponse?: string }> } };
+      { 元数据: { 叙事历史: Array<{ content: string; _rawResponse?: string }> }; 记忆: { 短期: Array<{ summary: string }> } };
     const last = tree.元数据.叙事历史.at(-1);
-    return { content: last?.content, raw: last?._rawResponse };
+    return { content: last?.content, raw: last?._rawResponse, memory: tree.记忆.短期.at(-1)?.summary };
   });
-  expect(live).toEqual({ content: TAGGED_STORY, raw: TWICE_STEP1 });
+  // The raw reply is the evidence and stays as it was; the short-term memory holding the same text follows.
+  expect(live).toEqual({ content: TAGGED_STORY, raw: TWICE_STEP1, memory: TAGGED_STORY });
 });

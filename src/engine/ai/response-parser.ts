@@ -214,19 +214,35 @@ function decodeLooseJsonString(s: string): string {
     e.length === 5 ? String.fromCharCode(parseInt(e.slice(1), 16)) : (ENVELOPE_ESCAPES[e] ?? e));
 }
 
-/** The JSON escapes a story escaped twice still carries after one decode (the stream's display reads the same). */
+/** The CoT protocol's blocks written after the story (`<正文>` comes first). */
+export const COT_BLOCKS: readonly string[] = ['短期记忆', '变量规划', '剧情规划'];
+/** The CoT protocol's pseudo-tags — never part of a story; the stream's display takes out the same ones. */
+export const COT_PSEUDO_TAGS: readonly string[] = ['正文', ...COT_BLOCKS, 'judge'];
+/** Thinking blocks a reply may carry — never part of a story. */
+export const THINKING_TAGS: readonly string[] = ['think', 'thinking', 'reasoning', 'thought'];
+/** The JSON escapes a story escaped twice still carries after one decode, and what each reads as. */
+export const RESIDUAL_ESCAPES: Readonly<Record<string, string>> = { n: '\n', t: '\t', r: '\r', '"': '"', '\\': '\\', '/': '/' };
 const RESIDUAL_ESCAPE = /\\(u[0-9a-fA-F]{4}|[ntr"\\/])/g;
 
 /**
- * A story still JSON-escaped once its envelope was decoded: a model that wraps its whole reply in `<正文>` may
- * escape the story twice (`\\n`, `\\\"` — 2026-10-03 release check, round 3), and one decode left literal `\n` and
- * `\"` in it. Prose never holds a backslash before `n` or a quote, so a story with either is decoded once more —
- * the JSON escapes only; any other backslash is the story's own (`\(^o^)/`). Any other text is returned as it is.
+ * Whether a story still carries a second layer of JSON escapes: a model that wraps its whole reply in `<正文>` may
+ * escape the story twice (`\\n`, `\\\"` — 2026-10-03 release check, round 3), and one decode then leaves every
+ * line break a literal `\n` and every quote a `\"`. So: a literal `\n` and not one real line break, or a `\"` and
+ * not one plain quote. A story that merely shows a backslash of its own — a path, a code line, a face like
+ * `\(^o^)/` — has real line breaks or plain quotes beside it, or neither sign at all, and is left alone.
+ */
+export function escapedTwice(text: string): boolean {
+  return (/\\n/.test(text) && !text.includes('\n')) || (/\\"/.test(text) && !/(?:^|[^\\])"/.test(text));
+}
+
+/**
+ * A story with a second layer of JSON escapes (`escapedTwice`) decoded once more — the JSON escapes only; any other
+ * backslash is the story's own. Any other text is returned as it is.
  */
 export function decodeResidualEscapes(text: string): string {
-  if (!/\\[n"]/.test(text)) return text;
+  if (!escapedTwice(text)) return text;
   return text.replace(RESIDUAL_ESCAPE, (_, e: string) =>
-    e.length === 5 ? String.fromCharCode(parseInt(e.slice(1), 16)) : (ENVELOPE_ESCAPES[e] ?? e));
+    e.length === 5 ? String.fromCharCode(parseInt(e.slice(1), 16)) : (RESIDUAL_ESCAPES[e] ?? e));
 }
 
 /** Whether a tag's content is a reply object (its narrative under `text`), maybe in a code fence. */
@@ -237,18 +253,28 @@ const STORED_ENVELOPE = /^(?:<正文>\s*)?\{\s*"(?:text|叙事文本)"\s*:/;
 
 /**
  * The narrative a stored round should have shown, when what was stored is the reply's JSON envelope (a parser
- * before 2026-10-03 kept `{"text":"…` as the story when the reply was unparseable or wrapped in `<正文>`), or a
- * story still escaped once (literal `\n` / `\"`: a reply wrapped in `<正文>` that escaped its story twice); null
- * when the text is neither or nothing better can be read from it. Used to heal saved rounds on load.
+ * before 2026-10-03 kept `{"text":"…` as the story when the reply was unparseable or wrapped in `<正文>`); null
+ * when the text is not such an envelope or nothing better can be read from it. Used to heal saved rounds on load.
  */
 export function repairStoredNarrative(text: string): string | null {
   const trimmed = text.trim();
-  if (!STORED_ENVELOPE.test(trimmed)) {
-    const decoded = decodeResidualEscapes(trimmed);
-    return decoded !== trimmed ? decoded : null;
-  }
+  if (!STORED_ENVELOPE.test(trimmed)) return null;
   const repaired = new ResponseParser().parse(trimmed).text.trim();
   return repaired && repaired !== trimmed && !STORED_ENVELOPE.test(repaired) ? repaired : null;
+}
+
+/**
+ * The story a saved round should show when what was stored is that story with a second layer of escapes still in
+ * it (a parser before 2026-10-03 decoded one layer of a reply that escaped its story twice). The round's own raw
+ * reply is the evidence: read again, it must give exactly the stored text with that layer decoded. So a story that
+ * shows a backslash of its own is never touched, and a healed round reads the same on every later load. Null
+ * without a raw reply, or when the stored text is not that.
+ */
+export function rereadStoredNarrative(stored: string, rawResponse: unknown): string | null {
+  if (typeof rawResponse !== 'string' || !rawResponse.trim()) return null;
+  const current = stored.trim();
+  const fresh = new ResponseParser().parse(rawResponse).text.trim();
+  return fresh && fresh !== current && decodeResidualEscapes(current) === fresh ? fresh : null;
 }
 
 export class ResponseParser {
@@ -259,7 +285,7 @@ export class ResponseParser {
    * 大小写不敏感 (`/gi`)。非贪婪 `[\s\S]*?`。
    */
   private static readonly THINKING_TAG_PATTERN =
-    '<(?:think|thinking|reasoning|thought)>([\\s\\S]*?)<\\/(?:think|thinking|reasoning|thought)>';
+    `<(?:${THINKING_TAGS.join('|')})>([\\s\\S]*?)<\\/(?:${THINKING_TAGS.join('|')})>`;
 
   /**
    * 清理 AI 原始输出 — 销毁式 strip（pre-migration 行为）
@@ -428,7 +454,7 @@ export class ResponseParser {
     // Match both opening `<tag>` and closing `</tag>` — keep inner content.
     // Tag names match the CoT protocol pseudo-tags that should never appear
     // in rendered narrative.
-    const CoT_TAG_RE = /<\s*\/?\s*(正文|短期记忆|变量规划|剧情规划|judge)\s*>/gi;
+    const CoT_TAG_RE = new RegExp(`<\\s*\\/?\\s*(${COT_PSEUDO_TAGS.join('|')})\\s*>`, 'gi');
     return text.replace(CoT_TAG_RE, '').trim();
   }
 

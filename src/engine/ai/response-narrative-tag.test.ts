@@ -6,7 +6,7 @@
  * judged by where it stands. These are the shapes, every one checked with and without thinking capture.
  */
 import { describe, expect, it } from 'vitest';
-import { ResponseParser, repairStoredNarrative } from './response-parser';
+import { ResponseParser, escapedTwice, repairStoredNarrative, rereadStoredNarrative } from './response-parser';
 import { createJsonTextStreamUnwrapper } from '../pipeline/stages/ai-call';
 import { NarrativeEnvelopeRepairModule } from '../behaviors/narrative-envelope-repair';
 import { StateManager } from '../core/state-manager';
@@ -106,13 +106,45 @@ describe('a story escaped twice', () => {
     expect(parsed.parseOk).toBe(false);
     expect(parsed.text).toBe(parsed.raw);
   });
+  // Code review 2026-10-03: a story is read again only when it carries the second layer's sign — not one real line
+  // break beside its literal `\n`, or not one plain quote beside its `\"` — so a backslash of its own stays.
+  it('a story with paragraphs that shows a path or a code line keeps its backslashes', () => {
+    const own = '他打开 C:\\notes\\log.txt，屏幕上是 print("a\\n")。\n\n她笑了，说"好"。';
+    expect(escapedTwice(own)).toBe(false);
+    expect(textOf(JSON.stringify({ text: own }))).toBe(own);
+    expect(textOf(`<正文>${own}</正文>`)).toBe(own);
+  });
+  it('a backslash of the story\'s own with no n or quote after it is never touched', () => {
+    const own = '他打开了C:\\temp\\x.txt，又比了个\\/(^o^)\\/，还有\\\\server。';
+    expect(textOf(JSON.stringify({ text: own }))).toBe(own);
+    expect(textOf(`<正文>${own}</正文>`)).toBe(own);
+  });
+  it('every quote escaped and not one plain is the sign too, with or without line breaks', () => {
+    expect(textOf(JSON.stringify({ text: '他说：\\"走\\"。' }))).toBe('他说："走"。');
+    expect(textOf(JSON.stringify({ text: '第一段。\n他说：\\"走\\"。' }))).toBe('第一段。\n他说："走"。');
+  });
+  it('once the sign is there, backslash pairs and unicode escapes are read too', () => {
+    expect(textOf(JSON.stringify({ text: '甲\\\\乙\\u4e2d丙\\n丁' }))).toBe('甲\\乙中丙\n丁');
+    const story = 'C:\\x\n好';
+    expect(textOf(`<正文>${JSON.stringify({ text: JSON.stringify(story).slice(1, -1) })}</正文>`)).toBe(story);
+  });
 });
 
-describe('repairStoredNarrative', () => {
-  it('decodes a story saved still escaped once, and leaves one without escapes alone', () => {
-    expect(repairStoredNarrative(ONCE)).toBe(STORY);
-    expect(repairStoredNarrative(`<正文>${TWICE_JSON}</正文>`)).toBe(STORY);
-    expect(repairStoredNarrative('他比了个\\(^o^)/。')).toBeNull();
+describe('repairStoredNarrative / rereadStoredNarrative', () => {
+  it('an envelope is read for its story; a story still escaped once is read again from its raw reply, and only then', () => {
+    const raw = `<正文>${TWICE_JSON}</正文>`;
+    expect(repairStoredNarrative(raw)).toBe(STORY);
+    expect(repairStoredNarrative(ONCE)).toBeNull();
+    expect(rereadStoredNarrative(ONCE, raw)).toBe(STORY);
+    expect(rereadStoredNarrative(ONCE, undefined)).toBeNull();
+    expect(rereadStoredNarrative(ONCE, '')).toBeNull();
+    // Already the story, or a story whose raw reply reads exactly as stored: nothing to do.
+    expect(rereadStoredNarrative(STORY, raw)).toBeNull();
+    const own = '他比了个\\(^o^)/。';
+    expect(rereadStoredNarrative(own, JSON.stringify({ text: own }))).toBeNull();
+  });
+  it('a story that reads differently from its raw reply in any other way is left alone', () => {
+    expect(rereadStoredNarrative(ONCE, JSON.stringify({ text: '另一个故事。' }))).toBeNull();
   });
   it('reads the story out of a round saved as its envelope, bare or in the tag', () => {
     expect(repairStoredNarrative(LOOSE)).toBe(STORY);
@@ -184,6 +216,84 @@ describe('the stream shows the story while it arrives', () => {
   it('prose without an envelope shows without stray protocol tags', () => {
     for (const size of [1, 3, 17]) expect(streamed(`${STORY}<judge>〖判定〗</judge>`, size)).toBe(`${STORY}〖判定〗`);
   });
+  // Code review 2026-10-03 (MEDIUM 4): planning before the story, a preface, or a thinking tag the provider does not
+  // filter (it knows <thinking> only) — the planning and the thinking stay hidden, as the parser leaves them out.
+  it('planning written before the story stays hidden, and so does what follows the story', () => {
+    const raw = `<剧情规划>\n- 保留：会诊\n</剧情规划>\n\n<正文>\n${STORY}\n</正文>\n\n<短期记忆>\n记下这一夜。\n</短期记忆>`;
+    for (const size of [1, 3, 17]) expect(streamed(raw, size).trim()).toBe(STORY);
+    expect(textOf(raw)).toBe(STORY);
+  });
+  it('a thinking block the provider passes on stays hidden', () => {
+    for (const tag of ['think', 'reasoning', 'thought']) {
+      const raw = `<${tag}>先想一想这一回合。</${tag}>\n${STORY}`;
+      for (const size of [1, 3, 17]) expect(streamed(raw, size).trim()).toBe(STORY);
+      expect(textOf(raw)).toBe(STORY);
+    }
+  });
+  it('a preface before the tag still shows; the story after it ends at its closing tag', () => {
+    for (const size of [1, 3, 17]) {
+      expect(streamed(`好的。\n<正文>${STORY}</正文>\n<短期记忆>记下</短期记忆>`, size)).toBe(`好的。\n${STORY}`);
+      expect(streamed(`好的。\n<正文>${STORY}</正文>\n以上是本回合。`, size)).toBe(`好的。\n${STORY}`);
+    }
+  });
+});
+
+// Code review 2026-10-03 (MEDIUM 2): what the display holds back, and when it lets go.
+describe('the stream display holds and releases', () => {
+  const run = (raw: string, size = 3) => {
+    const calls: string[] = [];
+    const filter = createJsonTextStreamUnwrapper((chunk) => { calls.push(chunk); });
+    for (const piece of raw.match(new RegExp(`[\\s\\S]{1,${size}}`, 'g')) ?? []) filter.onChunk(piece);
+    const beforeFlush = calls.join('');
+    filter.flush();
+    return { beforeFlush, all: calls.join('') };
+  };
+  const streamed = (raw: string, size = 3) => run(raw, size).all;
+  it('the end of the stream lets go of a held "<" and a held backslash, in the order they came', () => {
+    for (const size of [1, 3, 17]) {
+      expect(streamed('我爱你<3', size)).toBe('我爱你<3');
+      expect(streamed('<正文>她画了个<3', size)).toBe('她画了个<3');
+      expect(streamed('{"text":"她画了个<', size)).toBe('她画了个<');
+      expect(streamed('<正文>abc<\\', size)).toBe('abc<\\');
+    }
+  });
+  it('unicode escapes are read in the first layer and in the second', () => {
+    for (const size of [1, 3, 17]) {
+      expect(streamed('{"text":"abc\\u4e2dxyz"}', size)).toBe('abc中xyz');
+      expect(streamed('{"text":"第一段。\\n\\u4e2d"}', size)).toBe('第一段。\n中');
+      expect(streamed('{"text":"abc\\\\u4e2dxyz\\\\n"}', size)).toBe('abc中xyz\n');
+      expect(streamed('{"text":"abc\\\\u12 xyz\\\\n"}', size)).toBe('abc\\u12 xyz\n');
+    }
+  });
+  it('a "<" that never closes is let go while the stream goes on', () => {
+    expect(run('{"text":"她画了个<这是一个很长很长很长很长很长很长很长的东西然后继续写', 3).beforeFlush).toContain('然后继续');
+  });
+  it('a long prefix behind the tag (a fence, an indented key) is still an envelope', () => {
+    const raw = '<正文>\n```json\n{\n            "text": "第一句。\n第二句。"}\n```\n</正文>';
+    for (const size of [1, 3, 17]) expect(streamed(raw, size)).toBe('第一句。\n第二句。');
+  });
+  it('a story with a backslash of its own, escaped twice, shows as the story', () => {
+    const story = 'C:\\x\n好';
+    const twice = JSON.stringify({ text: JSON.stringify(story).slice(1, -1) });
+    for (const size of [1, 3, 17]) expect(streamed(`<正文>${twice}</正文>`, size)).toBe(story);
+  });
+  it('a short tagged story that opens with a backtick and carries escapes is read at the end', () => {
+    for (const size of [1, 3, 17]) expect(streamed('<正文>`嗯。\\n好`', size)).toBe('`嗯。\n好`');
+  });
+  it('a tagged story starts to show at once', () => {
+    expect(run('<正文>你好', 100).beforeFlush).toBe('你好');
+    expect(run('<正文>\n你好', 100).beforeFlush).toBe('你好');
+  });
+  it('a short tagged story read only at the end shows without the line break after its tag', () => {
+    for (const size of [1, 3, 17]) expect(streamed('<正文>\n`短。`', size)).toBe('`短。`');
+  });
+  it('once the story shows a real line break or a plain quote, nothing is decoded a second time', () => {
+    for (const size of [1, 3, 17]) {
+      expect(streamed(JSON.stringify({ text: '第一段。\n他打开 C:\\notes。' }), size)).toBe('第一段。\n他打开 C:\\notes。');
+      expect(streamed(JSON.stringify({ text: '他说"好"，又写下 a\\"b。' }), size)).toBe('他说"好"，又写下 a\\"b。');
+      expect(streamed(`<正文>第一段。\n他打开 C:\\temp。</正文>`, size)).toBe('第一段。\n他打开 C:\\temp。');
+    }
+  });
   it('a quote and a comma in the story do not end it; a quote, a comma and the next key do', () => {
     const prose = '他说"好", 然后走了。';
     for (const size of [1, 3, 17]) {
@@ -205,6 +315,37 @@ describe('NarrativeEnvelopeRepairModule', () => {
     expect(last.content).toBe(STORY);
     expect(last._rawResponse).toBe(`<正文>${TWICE_JSON}</正文>`);
     expect(sm.get('记忆.短期')).toEqual([{ round: 3, summary: STORY }]);
+  });
+  // Code review 2026-10-03 (MEDIUM 1): escapes are decoded only on the raw reply's word, and once.
+  it('without the raw reply, a round, its memory and its bookmark are left as they are', () => {
+    const sm = new StateManager();
+    sm.loadTree({
+      元数据: { 叙事历史: [{ role: 'assistant', content: ONCE }], 收藏楼层: [{ id: 'bm_3', round: 3, content: ONCE }] },
+      记忆: { 短期: [{ round: 3, summary: ONCE }] },
+    } as never);
+    const before = JSON.stringify(sm.toSnapshot());
+    new NarrativeEnvelopeRepairModule('元数据.叙事历史', '记忆.短期', '元数据.收藏楼层').onGameLoad(sm);
+    expect(JSON.stringify(sm.toSnapshot())).toBe(before);
+  });
+  it('a healed round reads the same on every later load, and a story that shows code of its own is not peeled', () => {
+    const code = '他敲下 echo "a\\\\nb"，回显 a\\nb。';
+    const sm = new StateManager();
+    sm.loadTree({
+      元数据: { 叙事历史: [
+        { role: 'assistant', content: ONCE, _rawResponse: `<正文>${TWICE_JSON}</正文>` },
+        { role: 'assistant', content: code, _rawResponse: JSON.stringify({ text: code }) },
+      ] },
+    } as never);
+    const repair = new NarrativeEnvelopeRepairModule('元数据.叙事历史', '记忆.短期', '元数据.收藏楼层');
+    repair.onGameLoad(sm);
+    const once = JSON.stringify(sm.get('元数据.叙事历史'));
+    expect(sm.get<Array<Record<string, unknown>>>('元数据.叙事历史')![0].content).toBe(STORY);
+    // The code line reads as the parser reads its raw reply now, and stays so.
+    const codeRead = new ResponseParser().parse(JSON.stringify({ text: code })).text;
+    expect(sm.get<Array<Record<string, unknown>>>('元数据.叙事历史')![1].content).toBe(codeRead);
+    repair.onGameLoad(sm);
+    repair.onGameLoad(sm);
+    expect(JSON.stringify(sm.get('元数据.叙事历史'))).toBe(once);
   });
   it('heals saved rounds and short-term memories, and nothing else', () => {
     const sm = new StateManager();

@@ -15,7 +15,7 @@
  */
 import type { PipelineStage, PipelineContext, PromptMetrics, PromptStepMetrics } from '../types';
 import type { AIService } from '../../ai/ai-service';
-import type { ResponseParser } from '../../ai/response-parser';
+import { COT_BLOCKS, COT_PSEUDO_TAGS, RESIDUAL_ESCAPES, THINKING_TAGS, type ResponseParser } from '../../ai/response-parser';
 import type { AIMessage, AIResponse } from '../../ai/types';
 import { eventBus } from '../../core/event-bus';
 import { emitPromptAssemblyDebug } from '../../core/prompt-debug';
@@ -282,35 +282,49 @@ export class AICallStage implements PipelineStage {
   }
 }
 
-/** The CoT protocol's pseudo-tags — the parser takes the same ones out of a story (stripNarrativeWrapperTags). */
-const COT_TAG = /^<\s*(\/?)\s*(正文|短期记忆|变量规划|剧情规划|judge)\s*>$/i;
-/** A `<` held longer than this (the longest such tag, spaces and all) was the story's own. */
+/** A `<` held longer than this (the longest tag below, spaces and all) was the story's own. */
 const COT_TAG_MAX = 16;
-/** The protocol blocks written after a tagged story: when one opens, the story is over. */
-const AFTER_STORY = new Set(['短期记忆', '变量规划', '剧情规划']);
-/** The JSON escapes a story escaped twice still carries once its envelope is read (the parser's decodeResidualEscapes). */
-const SECOND_ESCAPES: Record<string, string> = { n: '\n', t: '\t', r: '\r', '"': '"', '\\': '\\', '/': '/' };
+/** The CoT pseudo-tags and the thinking tags, the ones the parser knows (response-parser). */
+const COT_TAG = new RegExp(`^<\\s*(\\/?)\\s*(${[...COT_PSEUDO_TAGS, ...THINKING_TAGS].join('|')})\\s*>$`, 'i');
+const PROTOCOL_BLOCKS = new Set(COT_BLOCKS);
+const THINKING_BLOCKS = new Set(THINKING_TAGS);
 
 /**
- * What the player sees of a story while it streams, fed one character at a time: with `decode`, a JSON escape left
- * in the story decoded (a reply wrapped in `<正文>` may escape its story twice — `\n` and `\"` would show); the CoT
- * pseudo-tags taken out, as the parser takes them out; and in a `tagged` story (the CoT protocol's own shape,
- * `<正文>…</正文>` and then `<短期记忆>`, `<变量规划>`, `<剧情规划>`), `</正文>` or the next protocol block ends what
- * is shown (`closed`). A `\` or `<` is held until it is known what it starts; `end` shows what is still held.
+ * How the display reads what comes: `json` — the story is a JSON string whose escapes the envelope reads;
+ * `tagged` — the story is written straight into `<正文>`; `raw` — no envelope was found.
+ */
+type DisplayMode = 'json' | 'tagged' | 'raw';
+
+/**
+ * What the player sees of a story while it streams, fed one character at a time.
+ * - `json`: a second layer of escapes is decoded (a reply wrapped in `<正文>` may escape its story twice) and the
+ *   CoT pseudo-tags are taken out, what they hold kept — as the parser reads a story.
+ * - `tagged`: the same, and `</正文>` or the next protocol block ends what is shown (`closed`); a thinking block
+ *   inside is hidden.
+ * - `raw`: what comes is shown, but a protocol block or a thinking block is hidden whole, the pseudo-tags are taken
+ *   out, and an opening `<正文>` makes the rest a tagged story — a reply that plans before its story, or prefaces
+ *   it, shows its story (and the preface).
+ * The second layer stops at the first real line break or plain quote the story shows of itself: a story escaped
+ * once has those, as the parser's `escapedTwice` reads it. A `\` or `<` is held until it is known what it starts;
+ * `end` shows what is still held.
  */
 function storyDisplay(emit: (text: string) => void) {
   let escape = '';
   let tag = '';
+  /** A real line break or a plain quote has come: the story is escaped once, nothing is decoded again. */
+  let plain = false;
+  /** The block being hidden, until its closing tag. */
+  let hidden: string | null = null;
+  const show = (text: string) => { if (!hidden && text) emit(text); };
   const display = {
-    decode: false,
-    tagged: false,
+    mode: 'raw' as DisplayMode,
     closed: false,
     put(ch: string): void {
       if (display.closed) return;
       if (escape) {
-        if (escape === '\\' && ch in SECOND_ESCAPES) {
+        if (escape === '\\' && ch in RESIDUAL_ESCAPES) {
           escape = '';
-          toTag(SECOND_ESCAPES[ch]);
+          toTag(RESIDUAL_ESCAPES[ch]);
           return;
         }
         if (escape === '\\' && ch === 'u') {
@@ -331,28 +345,29 @@ function storyDisplay(emit: (text: string) => void) {
         escape = '';
         for (const c of held) toTag(c);
       }
-      if (display.decode && ch === '\\') {
+      if (display.mode !== 'raw' && !plain && ch === '\\') {
         escape = '\\';
         return;
       }
+      if (ch === '\n' || ch === '"') plain = true;
       toTag(ch);
     },
     end(): void {
-      const held = escape + tag;
+      const held = tag + escape;
       escape = '';
       tag = '';
-      if (held && !display.closed) emit(held);
+      if (!display.closed) show(held);
     },
   };
   function toTag(ch: string): void {
     if (display.closed) return;
     if (!tag) {
       if (ch === '<') tag = '<';
-      else emit(ch);
+      else show(ch);
       return;
     }
     if (ch === '<') {
-      emit(tag);
+      show(tag);
       tag = '<';
       return;
     }
@@ -360,19 +375,37 @@ function storyDisplay(emit: (text: string) => void) {
     if (ch === '>') {
       const held = tag;
       tag = '';
-      const m = COT_TAG.exec(held);
-      if (!m) {
-        emit(held);
-        return;
-      }
-      // A pseudo-tag never shows; in a tagged story, the story's end or the next protocol block closes it.
-      if (display.tagged && (m[1] === '/' ? m[2] === '正文' : AFTER_STORY.has(m[2]))) display.closed = true;
+      readTag(held);
       return;
     }
     if (tag.length > COT_TAG_MAX || ch === '\n') {
-      emit(tag);
+      show(tag);
       tag = '';
     }
+  }
+  /** A complete `<…>`: a pseudo-tag or a thinking tag never shows, and may open, hide or close the story. */
+  function readTag(held: string): void {
+    const m = COT_TAG.exec(held);
+    if (!m) {
+      show(held);
+      return;
+    }
+    const closing = m[1] === '/';
+    const name = m[2].toLowerCase();
+    if (hidden) {
+      if (closing && name === hidden) hidden = null;
+      return;
+    }
+    if (closing) {
+      if (display.mode === 'tagged' && name === '正文') display.closed = true;
+      return;
+    }
+    if (display.mode === 'json') return;
+    if (THINKING_BLOCKS.has(name)) hidden = name;
+    else if (PROTOCOL_BLOCKS.has(name)) {
+      if (display.mode === 'tagged') display.closed = true;
+      else hidden = name;
+    } else if (name === '正文' && display.mode === 'raw') display.mode = 'tagged';
   }
   return display;
 }
@@ -409,8 +442,10 @@ export function createJsonTextStreamUnwrapper(
   const TAG_HEAD_RE = /^\s*<正文>\s*/;
   const PREFIX_MAX = 48;
 
-  let state: 'seeking' | 'text' | 'escape' | 'quote' | 'quoteComma' | 'tagged' | 'done' | 'passthrough' = 'seeking';
+  let state: 'seeking' | 'text' | 'escape' | 'unicode' | 'quote' | 'quoteComma' | 'tagged' | 'done' | 'passthrough' = 'seeking';
   let seekBuf = '';
+  /** The hex digits of a `\uXXXX` escape read so far. */
+  let hex = '';
   /** What followed a bare quote while deciding whether it closes the value (whitespace, a comma). */
   let quoteBuf = '';
   /** What one incoming chunk shows, sent on as one chunk. */
@@ -426,8 +461,7 @@ export function createJsonTextStreamUnwrapper(
   /** The story inside `<正文>`, from what was buffered after the tag. */
   const startTagged = (buffered: string) => {
     state = 'tagged';
-    display.decode = true;
-    display.tagged = true;
+    display.mode = 'tagged';
     put(buffered.replace(TAG_HEAD_RE, ''));
     if (display.closed) state = 'done';
   };
@@ -448,7 +482,7 @@ export function createJsonTextStreamUnwrapper(
             seekBuf += ch;
             if (PREFIX_RE.test(seekBuf)) {
               state = 'text';
-              display.decode = true;
+              display.mode = 'json';
               seekBuf = '';
             } else if (TAGGED_RE.test(seekBuf) || (seekBuf.length > PREFIX_MAX && TAG_HEAD_RE.test(seekBuf))) {
               startTagged(seekBuf);
@@ -509,6 +543,11 @@ export function createJsonTextStreamUnwrapper(
             break;
 
           case 'escape': {
+            if (ch === 'u') {
+              state = 'unicode';
+              hex = '';
+              break;
+            }
             const ESCAPE_MAP: Record<string, string> = {
               n: '\n', t: '\t', r: '\r', '"': '"', '\\': '\\', '/': '/',
             };
@@ -516,6 +555,21 @@ export function createJsonTextStreamUnwrapper(
             state = 'text';
             break;
           }
+
+          case 'unicode':
+            if (/[0-9a-fA-F]/.test(ch)) {
+              hex += ch;
+              if (hex.length === 4) {
+                put(String.fromCharCode(parseInt(hex, 16)));
+                state = 'text';
+              }
+            } else {
+              // Not a \uXXXX after all: what was read shows as it was, and this character is read as text.
+              put('\\u' + hex);
+              state = 'text';
+              i--;
+            }
+            break;
         }
       }
       send();
