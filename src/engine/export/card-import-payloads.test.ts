@@ -14,7 +14,7 @@ import {
   applyWorldBooks,
   applyGlobalConfigOverlays,
   applyGlobalPromptOverrides,
-  applyGlobalBuiltinOverrides,
+  applyGlobalPromptEdits,
   applyGlobalSettings,
   applyAuthorGameplaySettings,
   readImportedCardLedger,
@@ -27,6 +27,7 @@ import type { CustomPresetStore } from '../persistence/custom-preset-store';
 import type { WorldBookStorage } from '../prompt/world-book-storage';
 import type { ConfigStore } from '../core/config-system';
 import type { PromptStorage } from '../prompt/prompt-storage';
+import { eventBus } from '../core/event-bus';
 
 function imgEntry(id: string): CardImageAssetEntry {
   return {
@@ -186,7 +187,11 @@ describe('applyGlobalConfigOverlays (opt-in)', () => {
   });
 });
 
-describe('applyGlobalPromptOverrides + applyGlobalBuiltinOverrides (opt-in)', () => {
+describe('applyGlobalPromptOverrides + applyGlobalPromptEdits (opt-in)', () => {
+  let storage: ReturnType<typeof createMockLocalStorage>;
+  beforeEach(() => { storage = createMockLocalStorage(); storage.install(); });
+  afterEach(() => storage.restore());
+
   it('promptOverrides → promptStorage.importAll', async () => {
     const importAll = vi.fn(async () => {});
     const ps = { importAll } as unknown as PromptStorage;
@@ -195,19 +200,34 @@ describe('applyGlobalPromptOverrides + applyGlobalBuiltinOverrides (opt-in)', ()
     expect(importAll).toHaveBeenCalledWith(overrides);
   });
 
-  it('builtinOverrides → wb.importBuiltinOverrides(packId, data)', async () => {
-    const importBuiltinOverrides = vi.fn(async () => 2);
-    const wb = { importBuiltinOverrides } as unknown as WorldBookStorage;
-    const data = { version: 1, exportedAt: 'x', entries: [{}, {}] } as never;
-    expect(await applyGlobalBuiltinOverrides(wb, 'tianming', data)).toBe(2);
-    expect(importBuiltinOverrides).toHaveBeenCalledWith('tianming', data);
+  it('the author\'s prompt edits go where the prompt page keeps them, and the registry is told to reload', () => {
+    const emit = vi.spyOn(eventBus, 'emit');
+    localStorage.setItem('aga_prompt_tianming_writeStyle', 'mine, kept');
+    const n = applyGlobalPromptEdits('tianming', { promptEdits: { version: 1, packId: 'tianming', entries: [
+      { id: 'jailbreak', content: 'AUTHOR' }, { id: 'antiCliche', enabled: false },
+    ] } });
+    expect(n).toBe(2);
+    expect(localStorage.getItem('aga_prompt_tianming_jailbreak')).toBe('AUTHOR');
+    expect(localStorage.getItem('aga_prompt_enabled_tianming_antiCliche')).toBe('false');
+    expect(localStorage.getItem('aga_prompt_tianming_writeStyle')).toBe('mine, kept');
+    expect(emit).toHaveBeenCalledWith('prompt:edits-replaced', { packId: 'tianming' });
+    emit.mockRestore();
+  });
+
+  it('a card from before 2026-10-04 carries them as slot overrides: read as edits of the slots\' prompts', () => {
+    const n = applyGlobalPromptEdits('tianming', { builtinPromptOverrides: { version: 1, exportedAt: 'x', entries: [
+      { slotId: 'narrator_role', userContent: '旁白' }, { slotId: 'write_style', enabled: false },
+    ] } as never });
+    expect(n).toBe(2);
+    expect(localStorage.getItem('aga_prompt_tianming_narratorFrame')).toBe('旁白');
+    expect(localStorage.getItem('aga_prompt_enabled_tianming_writeStyle')).toBe('false');
   });
 
   it('缺失 → 0', async () => {
     const ps = { importAll: vi.fn() } as unknown as PromptStorage;
-    const wb = { importBuiltinOverrides: vi.fn() } as unknown as WorldBookStorage;
     expect(await applyGlobalPromptOverrides(ps, undefined)).toBe(0);
-    expect(await applyGlobalBuiltinOverrides(wb, 'p', undefined)).toBe(0);
+    expect(applyGlobalPromptEdits('p', {})).toBe(0);
+    expect(localStorage.length).toBe(0);
   });
 });
 

@@ -89,7 +89,6 @@ function makeDeps(over: Partial<ImportServiceDeps> = {}) {
     vectorizePending: vi.fn(async () => ({ vectorized: 0 })),
     appendPreservingIds: vi.fn(async () => []),
     importWorldBooks: vi.fn(async () => 0),
-    importBuiltinOverrides: vi.fn(async () => 0),
     configImportAll: vi.fn(async () => {}),
     promptImportAll: vi.fn(async () => {}),
     // global-backup capture/restore primitives (方案A)
@@ -99,7 +98,6 @@ function makeDeps(over: Partial<ImportServiceDeps> = {}) {
     promptExportAll: vi.fn(async () => [] as unknown[]),
     promptClear: vi.fn(async () => {}),
     promptReplaceAll: vi.fn(async () => {}),
-    exportBuiltinOverrides: vi.fn(async () => ({ version: 1, exportedAt: '', entries: [] })),
     clearBuiltinOverrides: vi.fn(async () => {}),
     replaceBuiltinOverrides: vi.fn(async () => {}),
     activateSave: vi.fn((t: Record<string, unknown>) => sm.loadTree(t)),
@@ -117,8 +115,6 @@ function makeDeps(over: Partial<ImportServiceDeps> = {}) {
     customPresetStore: { appendPreservingIds: spies.appendPreservingIds } as never,
     worldBookStorage: {
       importWorldBooks: spies.importWorldBooks,
-      importBuiltinOverrides: spies.importBuiltinOverrides,
-      exportBuiltinOverrides: spies.exportBuiltinOverrides,
       clearBuiltinOverrides: spies.clearBuiltinOverrides,
       replaceBuiltinOverrides: spies.replaceBuiltinOverrides,
     } as never,

@@ -2,7 +2,8 @@
 /**
  * Global-settings backup for card import (Story 6 — reversibility, user request 2026-06-04).
  *
- * The import's GLOBAL opt-in payloads (configOverlays / promptOverrides / builtinPromptOverrides /
+ * The import's GLOBAL opt-in payloads (configOverlays / promptOverrides / builtinPromptOverrides — the
+ * prompt-page edits / 
  * settings) and the NSFW gate write app-wide localStorage/IDB IMMEDIATELY. That is irreversible by
  * design otherwise — so before any global write we SNAPSHOT the affected stores, and the import flow:
  *   - restores the snapshot if the import FAILS (a failed import must not leave globals clobbered), and
@@ -16,8 +17,8 @@
 import { SETTINGS_EXPORT_WHITELIST } from './settings-export-whitelist';
 import type { ConfigStore } from '../core/config-system';
 import type { PromptStorage } from '../prompt/prompt-storage';
-import type { WorldBookStorage } from '../prompt/world-book-storage';
-import type { BuiltinPromptExportData } from '../prompt/world-book';
+import { readPromptEdits, restorePromptEdits, type PromptEdit } from '../prompt/prompt-edits';
+import { eventBus } from '../core/event-bus';
 import type { GlobalOptInFlag } from './game-card-import.types';
 
 type ConfigOverlays = Awaited<ReturnType<ConfigStore['exportAll']>>;
@@ -27,7 +28,6 @@ type PromptEntries = Awaited<ReturnType<PromptStorage['exportAll']>>;
 export interface GlobalBackupDeps {
   configStore: ConfigStore;
   promptStorage: PromptStorage;
-  worldBookStorage: WorldBookStorage;
 }
 
 export interface GlobalSettingsBackup {
@@ -37,8 +37,8 @@ export interface GlobalSettingsBackup {
   configOverlays?: ConfigOverlays;
   /** Prior PromptStorage entries — present only if `promptOverrides` was opted-in. */
   promptOverrides?: PromptEntries;
-  /** Prior built-in overrides for the pack — present only if `builtinPromptOverrides` was opted-in. */
-  builtinOverrides?: { packId: string; data: BuiltinPromptExportData };
+  /** Prior prompt-page edits for the pack — present only if `builtinPromptOverrides` was opted-in. */
+  promptEdits?: { packId: string; entries: PromptEdit[] };
   /** True iff the import will mutate ANY global store — drives the undo affordance + failure restore. */
   hasChanges: boolean;
 }
@@ -70,7 +70,7 @@ export async function captureGlobalSettingsBackup(
     backup.hasChanges = true;
   }
   if (opt.has('builtinPromptOverrides')) {
-    backup.builtinOverrides = { packId, data: await deps.worldBookStorage.exportBuiltinOverrides(packId) };
+    backup.promptEdits = { packId, entries: readPromptEdits(packId) };
     backup.hasChanges = true;
   }
   return backup;
@@ -118,9 +118,10 @@ export async function restoreGlobalSettingsBackup(
       failed.push('promptOverrides');
     }
   }
-  if (backup.builtinOverrides) {
+  if (backup.promptEdits) {
     try {
-      await deps.worldBookStorage.replaceBuiltinOverrides(backup.builtinOverrides.packId, backup.builtinOverrides.data);
+      restorePromptEdits(backup.promptEdits.packId, backup.promptEdits.entries);
+      eventBus.emit('prompt:edits-replaced', { packId: backup.promptEdits.packId });
     } catch {
       failed.push('builtinPromptOverrides');
     }

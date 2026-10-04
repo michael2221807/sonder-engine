@@ -26,6 +26,8 @@ import type {
   ConfigOverlayExport,
 } from './game-card-bundle.types';
 import type { WorldBookExportData, BuiltinPromptExportData } from '../prompt/world-book';
+import { promptEditsFromSlotOverrides, writePromptEdits, type PromptEditsExport } from '../prompt/prompt-edits';
+import { eventBus } from '../core/event-bus';
 import type { CustomPresetStore, CustomPresetEntry } from '../persistence/custom-preset-store';
 import type { WorldBookStorage } from '../prompt/world-book-storage';
 import type { ConfigStore } from '../core/config-system';
@@ -198,14 +200,21 @@ export async function applyGlobalPromptOverrides(
   return overrides.length;
 }
 
-/** Apply the card author's built-in prompt overrides (global, per pack). Opt-in only. */
-export async function applyGlobalBuiltinOverrides(
-  wb: WorldBookStorage,
+/**
+ * Apply the card author's built-in prompt edits (global, per pack). Opt-in only. They go where the prompt page
+ * keeps the player's own edits (prompt-edits.ts) and the registry reloads them, so the next round sends them.
+ * A card written before 2026-10-04 carries them as world-book slot overrides, read as edits of the slots' prompts.
+ * @returns number of prompts written.
+ */
+export function applyGlobalPromptEdits(
   packId: string,
-  builtin: BuiltinPromptExportData | undefined,
-): Promise<number> {
-  if (!builtin) return 0;
-  return wb.importBuiltinOverrides(packId, builtin);
+  card: { promptEdits?: PromptEditsExport; builtinPromptOverrides?: BuiltinPromptExportData },
+): number {
+  const edits = card.promptEdits?.entries ?? promptEditsFromSlotOverrides(card.builtinPromptOverrides?.entries ?? []);
+  if (edits.length === 0) return 0;
+  const written = writePromptEdits(packId, edits);
+  eventBus.emit('prompt:edits-replaced', { packId });
+  return written;
 }
 
 /**

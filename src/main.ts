@@ -63,6 +63,7 @@ import { BehaviorRunner } from './engine/behaviors/behavior-runner';
 import { AIService, applyPersistedAISettings } from './engine/ai/ai-service';
 import { ResponseParser } from './engine/ai/response-parser';
 import { PromptRegistry } from './engine/prompt/prompt-registry';
+import { hydratePromptRegistry } from './engine/prompt/prompt-edits';
 import { TemplateEngine } from './engine/prompt/template-engine';
 import { PromptAssembler } from './engine/prompt/prompt-assembler';
 import { CharacterInitPipeline } from './engine/pipeline/sub-pipelines/character-init';
@@ -297,15 +298,13 @@ async function bootstrap(): Promise<void> {
     }
   }
 
-  // Hydrate registry from localStorage overrides (PromptPanel persists edits there)
+  // The prompt page's edits (prompt-edits.ts): loaded now, and again whenever something replaces them.
   if (pack) {
-    const packId = pack.manifest.id;
-    for (const id of Object.keys(pack.prompts)) {
-      const userContent = localStorage.getItem(`aga_prompt_${packId}_${id}`);
-      if (userContent !== null) promptRegistry.setUserContent(id, userContent);
-      const enabledRaw = localStorage.getItem(`aga_prompt_enabled_${packId}_${id}`);
-      if (enabledRaw === 'false') promptRegistry.setEnabled(id, false);
-    }
+    const packId = pack.manifest.id, promptIds = Object.keys(pack.prompts);
+    hydratePromptRegistry(promptRegistry, packId, promptIds);
+    eventBus.on<{ packId?: string }>('prompt:edits-replaced', (payload) => {
+      if (!payload?.packId || payload.packId === packId) hydratePromptRegistry(promptRegistry, packId, promptIds);
+    });
   }
 
   const templateEngine = new TemplateEngine();

@@ -14,6 +14,7 @@ import type { EngramEdge } from '../memory/engram/knowledge-edge';
 import type { ImageAsset } from '../image/types';
 import type { CustomPresetEntry } from '../persistence/custom-preset-store';
 import type { WorldBookExportData, BuiltinPromptExportData } from '../prompt/world-book';
+import type { PromptEditsExport } from '../prompt/prompt-edits';
 import type { APIConfig, APIAssignment } from '../ai/types';
 
 /** Card schema version — independent of the engine/bundle version. Bump on breaking card-schema changes. */
@@ -154,7 +155,10 @@ export interface GameCardBundle {
 
   // Optional content — presence gated by the export checklist:
   worldBooks?: WorldBookExportData;                          // U5
-  builtinPromptOverrides?: BuiltinPromptExportData;          // U6
+  /** U6 as cards wrote it before 2026-10-04 (world-book slot overrides); read on import, no longer written. */
+  builtinPromptOverrides?: BuiltinPromptExportData;          // U6 (old cards)
+  /** U6: the author's edits on the prompt page (P7, 2026-10-04) — under the "built-in prompt edits" box. */
+  promptEdits?: PromptEditsExport;                           // U6
   configOverlays?: ConfigOverlayExport[];                    // U16/D14
   promptOverrides?: Array<{ key: string; value: unknown }>;  // U16/D14
   settings?: SafeSettingsExport;                             // U8

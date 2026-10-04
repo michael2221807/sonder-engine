@@ -11,6 +11,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { get as _get } from 'lodash-es';
 import { GameCardExportService } from './game-card-export-service';
 import { decodeAndValidateCard } from './game-card-import-service';
+import { applyGlobalPromptEdits } from './card-import-payloads';
 import { createMockLocalStorage } from '@/engine/__test-utils__/local-storage.mock';
 import type { ExportOptions } from './game-card-bundle.types';
 import type { GamePack } from '../types/game-pack';
@@ -79,7 +80,6 @@ function makeExportService(tree: Record<string, unknown>) {
   const promptStorage = { exportAll: async () => [{ key: 'sys.main', value: 'override' }] } as unknown as PromptStorage;
   const worldBookStorage = {
     exportWorldBooks: async () => ({ version: 1, exportedAt: 'x', books: [] }),
-    exportBuiltinOverrides: async () => ({ version: 1, exportedAt: 'x', entries: [] }),
   } as unknown as WorldBookStorage;
   const customPresetStore = { load: async () => ({ packId: 'tianming', schemaVersion: 1, presets: { origins: [{ id: 'user_o1', source: 'user', createdAt: 1, generatedBy: 'manual', name: '寒门', genres: ['modern'], adultOnly: true, attribute_modifiers: { 直觉: 2 } }] }, meta: { lastUpdated: 0 } }) } as unknown as CustomPresetStore;
   const imageAssetCache = { exportByIds: async (ids: Set<string>) => [...ids].map((id) => ({ id, metadata: { id }, base64: `B64_${id}`, mimeType: 'image/png' })) } as unknown as ImageAssetCache;
@@ -240,5 +240,37 @@ describe('export → import round-trip (real services)', () => {
     const { blob } = await svc.exportCard('p', 's', makeOptions());
     const decoded = await decodeAndValidateCard(blob, mockPack);
     expect(decoded.ok).toBe(true); // 若键序往返不一致 → checksum-mismatch
+  });
+});
+
+// P7 (PO 2026-10-04): "built-in prompt edits" carries what the author's rounds actually sent — the edits made on
+// the prompt page — and an importer who ticks it gets them; the world-book slot store nothing filled is gone.
+describe('export → import round-trip · the author\'s prompt edits', () => {
+  it('travel with the box ticked and land where the importer\'s prompt page keeps edits, their own kept', async () => {
+    localStorage.setItem('aga_prompt_tianming_jailbreak', 'AUTHOR JB');
+    localStorage.setItem('aga_prompt_enabled_tianming_antiCliche', 'false');
+    const svc = makeExportService(makeTree());
+    const { blob } = await svc.exportCard('p', 's', makeOptions());
+    const decoded = await decodeAndValidateCard(blob, mockPack);
+    expect(decoded.ok).toBe(true);
+    if (!decoded.ok) return;
+    expect(decoded.bundle.promptEdits).toEqual({ version: 1, packId: 'tianming', entries: [
+      { id: 'antiCliche', enabled: false }, { id: 'jailbreak', content: 'AUTHOR JB' },
+    ] });
+    expect(decoded.bundle.builtinPromptOverrides).toBeUndefined();
+    // The importer's device: their own edit of another prompt stays.
+    localStorage.clear();
+    localStorage.setItem('aga_prompt_tianming_writeStyle', 'IMPORTER STYLE');
+    expect(applyGlobalPromptEdits('tianming', decoded.bundle)).toBe(2);
+    expect(localStorage.getItem('aga_prompt_tianming_jailbreak')).toBe('AUTHOR JB');
+    expect(localStorage.getItem('aga_prompt_enabled_tianming_antiCliche')).toBe('false');
+    expect(localStorage.getItem('aga_prompt_tianming_writeStyle')).toBe('IMPORTER STYLE');
+  });
+
+  it('stay home with the box unticked', async () => {
+    localStorage.setItem('aga_prompt_tianming_jailbreak', 'AUTHOR JB');
+    const svc = makeExportService(makeTree());
+    const { bundle } = await svc.exportCard('p', 's', makeOptions({ checklist: { ...makeOptions().checklist, includedBuiltinOverrides: false } }));
+    expect(bundle.promptEdits).toBeUndefined();
   });
 });

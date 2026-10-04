@@ -132,7 +132,6 @@ function makeService(tree: Record<string, unknown> | null, captured: { ids?: Set
   } as unknown as PromptStorage;
   const worldBookStorage = {
     exportWorldBooks: async () => ({ worldBooks: [], version: 1 }),
-    exportBuiltinOverrides: async () => ({ overrides: {} }),
   } as unknown as WorldBookStorage;
   const customPresetStore = {
     load: async () => ({ presets: { origin: [{ id: 'o1', name: '寒门' }] } }),

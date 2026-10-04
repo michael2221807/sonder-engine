@@ -114,7 +114,6 @@ function makeService(saveManager: SaveManager) {
   const promptStorage = { exportAll: async () => [] } as unknown as PromptStorage;
   const worldBookStorage = {
     exportWorldBooks: async () => ({ version: 1, exportedAt: 'x', books: [] }),
-    exportBuiltinOverrides: async () => ({ version: 1, exportedAt: 'x', entries: [] }),
   } as unknown as WorldBookStorage;
   const customPresetStore = { load: async () => null } as unknown as CustomPresetStore;
   const imageAssetCache = {

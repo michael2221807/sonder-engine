@@ -140,19 +140,6 @@ export class WorldBookStorage {
     await db.delete('builtin-prompts', `${packId}:${slotId}`);
   }
 
-  async resetAllBuiltinOverrides(packId: string): Promise<void> {
-    const db = await this.getDB();
-    const keys = await db.getAllKeys('builtin-prompts');
-    const prefix = `${packId}:`;
-    const tx = db.transaction('builtin-prompts', 'readwrite');
-    for (const key of keys) {
-      if (String(key).startsWith(prefix)) {
-        await tx.store.delete(key);
-      }
-    }
-    await tx.done;
-  }
-
   // ─── Preset Groups ────────────────────────────────────────
 
   async savePresetGroup(profileId: string, group: WorldBookPresetGroup): Promise<void> {
@@ -202,27 +189,10 @@ export class WorldBookStorage {
     return data.books.length;
   }
 
-  async exportBuiltinOverrides(packId: string): Promise<BuiltinPromptExportData> {
-    const entries = await this.loadAllBuiltinOverrides(packId);
-    return {
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      entries,
-    };
-  }
-
-  async importBuiltinOverrides(packId: string, data: BuiltinPromptExportData): Promise<number> {
-    if (!data.entries || !Array.isArray(data.entries)) return 0;
-    for (const entry of data.entries) {
-      await this.saveBuiltinOverride(packId, entry);
-    }
-    return data.entries.length;
-  }
-
   /**
-   * Delete ALL built-in prompt overrides for a single pack (per-pack, unlike clearAll).
-   * Used by Story 6 card-import undo / failure-rollback to revert a card's built-in overrides
-   * exactly: clear the pack's entries, then re-import the pre-import snapshot.
+   * Delete ALL built-in prompt overrides for a single pack (per-pack, unlike clearAll). Used by a full
+   * backup's restore. (Game cards no longer touch this store: their built-in prompt edits are the
+   * prompt page's own — prompt-edits.ts.)
    */
   async clearBuiltinOverrides(packId: string): Promise<void> {
     const db = await this.getDB();

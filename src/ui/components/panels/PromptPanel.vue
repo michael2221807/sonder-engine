@@ -27,6 +27,7 @@ import type { GamePack } from '@/engine/types/game-pack';
 import { useGameState } from '@/ui/composables/useGameState';
 import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio, actionOptionsOn, wordCountOf, type PromptSettings } from '@/engine/prompt/world-book';
 import { BUILTIN_SLOTS, ROUND_FORMAT_PROMPT_IDS } from '@/engine/prompt/builtin-slots';
+import { promptContentKey, promptEnabledKey } from '@/engine/prompt/prompt-edits';
 import { createEmptyHeroinePlan, type HeroinePlan, type HeroineEntry, type HeroineInteractionEvent } from '@/engine/story/heroine-plan';
 import type { PromptRegistry } from '@/engine/prompt/prompt-registry';
 import WorldBookTab from './WorldBookTab.vue';
@@ -234,13 +235,12 @@ const typeOptions = computed(() => TYPE_OPTION_KEYS.map((value) => ({
   label: t(`prompt.type.${({ system_rule: 'systemRule', world_lore: 'worldLore', command_rule: 'commandRule', output_rule: 'outputRule' } as const)[value]}`),
 })));
 
+// The edits' one store (prompt-edits.ts): the registry, game cards and imports read the same keys.
 function storageKey(id: string): string {
-  const packId = pack?.manifest.id ?? 'unknown';
-  return `aga_prompt_${packId}_${id}`;
+  return promptContentKey(pack?.manifest.id ?? 'unknown', id);
 }
 function enabledKey(id: string): string {
-  const packId = pack?.manifest.id ?? 'unknown';
-  return `aga_prompt_enabled_${packId}_${id}`;
+  return promptEnabledKey(pack?.manifest.id ?? 'unknown', id);
 }
 function weightKey(id: string): string {
   const packId = pack?.manifest.id ?? 'unknown';

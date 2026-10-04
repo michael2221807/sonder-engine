@@ -22,6 +22,7 @@ import { stripStateTreeForCard, getByPath, isRecord, collectStringsAtPath } from
 import { buildDefaultCardStripPaths, type CardStripPaths } from './card-export-paths';
 import { convertCapturedBookForCard, extractCapturedBookFromTree } from './captured-settings-card';
 import type { WorldBookExportData } from '../prompt/world-book';
+import { readPromptEdits, type PromptEditsExport } from '../prompt/prompt-edits';
 import {
   CARD_FORMAT_VERSION,
   type GameCardBundle,
@@ -122,8 +123,9 @@ export class GameCardExportService {
       ? await this.collectWorldBooks(profileId, original, options.cardMeta.title)
       : undefined;
 
-    const builtinPromptOverrides = flags.includedBuiltinOverrides
-      ? await this.worldBookStorage.exportBuiltinOverrides(options.cardMeta.packId)
+    // The author's edits on the prompt page (prompt-edits.ts) — what their rounds actually sent (P7, 2026-10-04).
+    const promptEdits: PromptEditsExport | undefined = flags.includedBuiltinOverrides
+      ? { version: 1, packId: options.cardMeta.packId, entries: readPromptEdits(options.cardMeta.packId) }
       : undefined;
 
     let configOverlays: ConfigOverlayExport[] | undefined;
@@ -153,7 +155,7 @@ export class GameCardExportService {
       stateTree,
       engram,
       worldBooks,
-      builtinPromptOverrides,
+      promptEdits,
       configOverlays,
       promptOverrides,
       settings,

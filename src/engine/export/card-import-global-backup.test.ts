@@ -12,6 +12,7 @@ import {
   type GlobalBackupDeps,
 } from './card-import-global-backup';
 import type { GlobalOptInFlag } from './game-card-import.types';
+import { eventBus } from '../core/event-bus';
 
 function makeDeps() {
   const spies = {
@@ -21,22 +22,12 @@ function makeDeps() {
     promptExportAll: vi.fn(async () => [{ key: 'k', value: 'v' }]),
     promptImportAll: vi.fn(async () => {}),
     promptClear: vi.fn(async () => {}),
-    exportBuiltinOverrides: vi.fn(async () => ({ version: 1, exportedAt: 'x', entries: [{ slotId: 's' }] })),
-    importBuiltinOverrides: vi.fn(async () => 1),
-    clearBuiltinOverrides: vi.fn(async () => {}),
     configReplaceAll: vi.fn(async () => {}),
     promptReplaceAll: vi.fn(async () => {}),
-    replaceBuiltinOverrides: vi.fn(async () => {}),
   };
   const deps: GlobalBackupDeps = {
     configStore: { exportAll: spies.configExportAll, importAll: spies.configImportAll, clear: spies.configClear, replaceAll: spies.configReplaceAll } as never,
     promptStorage: { exportAll: spies.promptExportAll, importAll: spies.promptImportAll, clear: spies.promptClear, replaceAll: spies.promptReplaceAll } as never,
-    worldBookStorage: {
-      exportBuiltinOverrides: spies.exportBuiltinOverrides,
-      importBuiltinOverrides: spies.importBuiltinOverrides,
-      clearBuiltinOverrides: spies.clearBuiltinOverrides,
-      replaceBuiltinOverrides: spies.replaceBuiltinOverrides,
-    } as never,
   };
   return { deps, spies };
 }
@@ -56,7 +47,7 @@ describe('captureGlobalSettingsBackup', () => {
     expect(b.hasChanges).toBe(false);
     expect(b.localStorage).toEqual({});
     expect(spies.configExportAll).not.toHaveBeenCalled();
-    expect(spies.exportBuiltinOverrides).not.toHaveBeenCalled();
+    expect(b.promptEdits).toBeUndefined();
   });
 
   it('settings opt-in → 快照 localStorage 白名单键，hasChanges=true', async () => {
@@ -93,11 +84,14 @@ describe('captureGlobalSettingsBackup', () => {
     expect(b.hasChanges).toBe(true);
   });
 
-  it('builtinPromptOverrides opt-in → 快照 exportBuiltinOverrides(packId)', async () => {
-    const { deps, spies } = makeDeps();
+  it('builtinPromptOverrides opt-in → 快照提示词页的改动（本包）', async () => {
+    const { deps } = makeDeps();
+    localStorage.setItem('aga_prompt_tianming_jailbreak', 'MINE');
+    localStorage.setItem('aga_prompt_enabled_tianming_antiCliche', 'false');
+    localStorage.setItem('aga_prompt_other_jailbreak', 'OTHER PACK');
     const b = await captureGlobalSettingsBackup(deps, 'tianming', optset('builtinPromptOverrides'), false);
-    expect(spies.exportBuiltinOverrides).toHaveBeenCalledWith('tianming');
-    expect(b.builtinOverrides?.packId).toBe('tianming');
+    expect(b.promptEdits).toEqual({ packId: 'tianming', entries: [{ id: 'antiCliche', enabled: false }, { id: 'jailbreak', content: 'MINE' }] });
+    expect(b.hasChanges).toBe(true);
   });
 });
 
@@ -131,30 +125,35 @@ describe('restoreGlobalSettingsBackup', () => {
     expect(spies.promptReplaceAll).toHaveBeenCalledWith(snapshot);
   });
 
-  it('builtinOverrides：原子 replaceBuiltinOverrides(packId, data)', async () => {
-    const { deps, spies } = makeDeps();
-    const data = { version: 1, exportedAt: 'x', entries: [{ slotId: 's' }] };
+  it('promptEdits：本包改动按快照整体复原（导入加的被清掉），并通知注册表重读', async () => {
+    const { deps } = makeDeps();
+    const emit = vi.spyOn(eventBus, 'emit');
+    localStorage.setItem('aga_prompt_tianming_writeStyle', 'from the card');
+    localStorage.setItem('aga_prompt_tianming_jailbreak', 'from the card');
     await restoreGlobalSettingsBackup(deps, {
       localStorage: {},
-      builtinOverrides: { packId: 'tianming', data: data as never },
+      promptEdits: { packId: 'tianming', entries: [{ id: 'jailbreak', content: 'MINE' }] },
       hasChanges: true,
     });
-    expect(spies.replaceBuiltinOverrides).toHaveBeenCalledWith('tianming', data);
+    expect(localStorage.getItem('aga_prompt_tianming_writeStyle')).toBeNull();
+    expect(localStorage.getItem('aga_prompt_tianming_jailbreak')).toBe('MINE');
+    expect(emit).toHaveBeenCalledWith('prompt:edits-replaced', { packId: 'tianming' });
+    emit.mockRestore();
   });
 
-  it('★per-store 隔离：config 还原抛错不阻断 prompt/builtin 还原，failed 收集', async () => {
+  it('★per-store 隔离：config 还原抛错不阻断 prompt/提示词改动 还原，failed 收集', async () => {
     const { deps, spies } = makeDeps();
     spies.configReplaceAll.mockRejectedValueOnce(new Error('idb down'));
     const res = await restoreGlobalSettingsBackup(deps, {
       localStorage: {},
       configOverlays: [{ domainId: 'd', packId: 'p', patches: {}, version: 1, updatedAt: 0 }] as never,
       promptOverrides: [{ key: 'k', value: 'v' }] as never,
-      builtinOverrides: { packId: 'tianming', data: { version: 1, exportedAt: 'x', entries: [] } as never },
+      promptEdits: { packId: 'tianming', entries: [{ id: 'jailbreak', content: 'MINE' }] },
       hasChanges: true,
     });
     expect(res.failed).toEqual(['configOverlays']);          // 仅 config 失败
     expect(spies.promptReplaceAll).toHaveBeenCalled();        // prompt 仍被还原（未被阻断）
-    expect(spies.replaceBuiltinOverrides).toHaveBeenCalled(); // builtin 仍被还原
+    expect(localStorage.getItem('aga_prompt_tianming_jailbreak')).toBe('MINE'); // 提示词改动仍被还原
   });
 
   it('capture→restore 往返：localStorage 完整复原', async () => {

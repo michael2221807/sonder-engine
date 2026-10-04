@@ -42,6 +42,9 @@ export type EngineEventName =
   // cached format so the auto-sync path switches pipelines without a reload.
   | 'ui:cloud-format-changed'
   | 'worldbook:updated'
+  // Something replaced the stored prompt-page edits (a game card's prompt edits, an import undone): main.ts
+  // reloads them into the PromptRegistry so the next request reads them. Payload: { packId: string }.
+  | 'prompt:edits-replaced'
   // Settings → LeftSidebar: Debug 模式 toggle changed. Payload: boolean (new value).
   // Sole consumer gates the Prompt Assembly panel entry's visibility.
   | 'settings:debug-mode-changed'
