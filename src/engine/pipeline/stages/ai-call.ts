@@ -290,10 +290,10 @@ const PROTOCOL_BLOCKS = new Set(COT_BLOCKS);
 const THINKING_BLOCKS = new Set(THINKING_TAGS);
 /** A thinking block or a protocol block opening before the story (the provider filters only <thinking>). */
 const LEAD_OPEN_RE = new RegExp(`^\\s*<\\s*(${[...THINKING_TAGS, ...COT_BLOCKS].join('|')})\\s*>`, 'i');
-/** Any thinking tag closes a thinking block, as the parser's pattern takes them. */
-const THINKING_CLOSE_RE = new RegExp(`<\\s*\\/\\s*(?:${THINKING_TAGS.join('|')})\\s*>`, 'i');
+/** Any thinking tag closes a thinking block, as the parser's pattern takes them (global: scanned from where it left off). */
+const THINKING_CLOSE_RE = new RegExp(`<\\s*\\/\\s*(?:${THINKING_TAGS.join('|')})\\s*>`, 'gi');
 /** A block before the story that never closes is waited for this long, then what came is shown. */
-const LEAD_MAX = 20_000;
+const LEAD_MAX = 200_000;
 
 /**
  * How the display reads what comes: `json` — the story is a JSON string whose escapes the envelope reads;
@@ -410,12 +410,10 @@ function storyDisplay(emit: (text: string) => void) {
     const closing = m[1] === '/';
     const name = m[2].toLowerCase();
     if (hidden) {
-      const thinking = THINKING_BLOCKS.has(hidden);
       // Any thinking tag closes a thinking block (as the parser's pattern takes them); a protocol block closes with
-      // its own tag; a thinking block left open ends where the story begins.
-      if (closing && (name === hidden || (thinking && THINKING_BLOCKS.has(name)))) hidden = null;
-      if (!closing && name === '正文' && thinking) hidden = null;
-      else return;
+      // its own tag. A `<正文>` inside a thinking block is the model reciting the format, part of the block.
+      if (closing && (name === hidden || (THINKING_BLOCKS.has(hidden) && THINKING_BLOCKS.has(name)))) hidden = null;
+      return;
     }
     if (closing) {
       if (display.mode === 'tagged' && name === '正文') display.closed = true;
@@ -491,10 +489,12 @@ export function createJsonTextStreamUnwrapper(
     put(seekBuf);
     seekBuf = '';
   };
+  /** How much of an open block before the story has been searched for its closing tag (searched once, not again). */
+  let leadScanned = 0;
   /**
    * What has been buffered so far: a thinking or planning block before the story is skipped (waited for, then
-   * dropped — any thinking tag ends a thinking block, and one left open ends where `<正文>` begins), then the
-   * envelope is looked for in what remains.
+   * dropped — any thinking tag closes a thinking block; a `<正文>` inside it is the model reciting the format), then
+   * the envelope is looked for in what remains.
    */
   const seek = () => {
     for (;;) {
@@ -502,16 +502,15 @@ export function createJsonTextStreamUnwrapper(
       if (lead) {
         const name = lead[1].toLowerCase();
         const rest = seekBuf.slice(lead[0].length);
-        const close = (THINKING_BLOCKS.has(name) ? THINKING_CLOSE_RE : new RegExp(`<\\s*\\/\\s*${name}\\s*>`, 'i')).exec(rest);
-        const story = THINKING_BLOCKS.has(name) ? rest.indexOf('<正文>') : -1;
-        if (close && (story < 0 || close.index < story)) {
+        const closer = THINKING_BLOCKS.has(name) ? THINKING_CLOSE_RE : new RegExp(`<\\s*\\/\\s*${name}\\s*>`, 'gi');
+        closer.lastIndex = Math.max(0, leadScanned - COT_TAG_MAX);
+        const close = closer.exec(rest);
+        if (close) {
           seekBuf = rest.slice(close.index + close[0].length);
+          leadScanned = 0;
           continue;
         }
-        if (story >= 0) {
-          seekBuf = rest.slice(story);
-          continue;
-        }
+        leadScanned = rest.length;
         if (seekBuf.length > LEAD_MAX) passThrough();
         return;
       }

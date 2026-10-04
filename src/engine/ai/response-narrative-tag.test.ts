@@ -424,21 +424,42 @@ describe('review round 2: the two signs, blocks before the story, and what the t
       for (const size of [1, 3, 17]) expect(streamed(raw, size).trim()).toBe(STORY);
     }
   });
-  it('any thinking tag closes a thinking block, and one left open ends where the story begins', () => {
-    for (const raw of [`<think>先想一想。</thinking>\n${STORY}`, `<think>先想一想\n<正文>${STORY}</正文>`]) {
-      expect(textOf(raw)).toBe(STORY);
-      for (const size of [1, 3, 17]) expect(streamed(raw, size).trim()).toBe(STORY);
-    }
+  it('any thinking tag closes a thinking block', () => {
+    const raw = `<think>先想一想。</thinking>\n${STORY}`;
+    expect(textOf(raw)).toBe(STORY);
     for (const size of [1, 3, 17]) {
+      expect(streamed(raw, size).trim()).toBe(STORY);
       expect(streamed(`前言。<think>想</thinking>后文。${STORY}`, size)).toBe(`前言。后文。${STORY}`);
-      expect(streamed(`前言。${STORY}<think>想<正文>后文。</正文>以下略`, size)).toBe(`前言。${STORY}后文。`);
     }
   });
-  it('a thinking block left open ends where the story begins, and the story shows at once', () => {
-    const calls: string[] = [];
-    const filter = createJsonTextStreamUnwrapper((chunk) => { calls.push(chunk); });
-    filter.onChunk('<think>先想一想\n<正文>你好');
-    expect(calls.join('')).toBe('你好');
+  // Code review round 3, 2026-10-03: a thinking block may recite the format, `<正文>` and all — that is part of the
+  // block, never the story's start. Only a thinking tag closes it; one never closed keeps what follows hidden while
+  // it streams (the round's final text is the parser's).
+  it('a thinking block that is never closed keeps what follows hidden while it streams', () => {
+    const raw = `<think>先想一想\n<正文>${STORY}</正文>`;
+    expect(textOf(raw)).toBe(STORY);
+    for (const size of [1, 3, 17]) {
+      expect(streamed(raw, size)).toBe('');
+      expect(streamed(`前言。${STORY}<think>想<正文>后文。</正文>以下略`, size)).toBe(`前言。${STORY}`);
+    }
+  });
+  for (const [label, raw] of [
+    ['a format recited with both tags, then the tagged story', `<think>输出格式是 <正文>...</正文>，先想一想。</think>\n<正文>${STORY}</正文>`],
+    ['only the opening tag recited, then the tagged story', `<think>我会把正文放进 <正文> 里再写。</think>\n<正文>${STORY}</正文>`],
+    ['a reasoning block naming the tag, then a plain story', `<reasoning>要写 <正文> 标签。</reasoning>\n${STORY}`],
+    ['a recited format, then the JSON envelope', `<think>格式 <正文>…</正文></think>\n${JSON.stringify({ text: STORY })}`],
+  ] as const) {
+    it(`a thinking block that recites the story tag is all thinking: ${label}`, () => {
+      expect(textOf(raw)).toBe(STORY);
+      for (const size of [1, 3, 17]) expect(streamed(raw, size).trim()).toBe(STORY);
+    });
+  }
+  it('a recited story tag in a thinking block after a preface shows none of the thinking', () => {
+    const raw = `好的。\n<think>写 <正文> 里。</think>\n<正文>${STORY}</正文>`;
+    for (const size of [1, 3, 17]) {
+      expect(streamed(raw, size)).toContain(STORY);
+      expect(streamed(raw, size)).not.toContain('里。');
+    }
   });
   it('a block before the story still open when the stream ends shows nothing of it', () => {
     for (const size of [1, 3, 17]) expect(streamed('<think>还在想', size)).toBe('');
