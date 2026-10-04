@@ -282,45 +282,165 @@ export class AICallStage implements PipelineStage {
   }
 }
 
+/** The CoT protocol's pseudo-tags — the parser takes the same ones out of a story (stripNarrativeWrapperTags). */
+const COT_TAG = /^<\s*(\/?)\s*(正文|短期记忆|变量规划|剧情规划|judge)\s*>$/i;
+/** A `<` held longer than this (the longest such tag, spaces and all) was the story's own. */
+const COT_TAG_MAX = 16;
+/** The protocol blocks written after a tagged story: when one opens, the story is over. */
+const AFTER_STORY = new Set(['短期记忆', '变量规划', '剧情规划']);
+/** The JSON escapes a story escaped twice still carries once its envelope is read (the parser's decodeResidualEscapes). */
+const SECOND_ESCAPES: Record<string, string> = { n: '\n', t: '\t', r: '\r', '"': '"', '\\': '\\', '/': '/' };
+
 /**
- * Character-level state machine that strips the JSON envelope from streamed
- * AI output. Works for both single-call (`{"text":"...","commands":...}`) and
- * splitGen step1 (`{"text":"..."}`).
+ * What the player sees of a story while it streams, fed one character at a time: with `decode`, a JSON escape left
+ * in the story decoded (a reply wrapped in `<正文>` may escape its story twice — `\n` and `\"` would show); the CoT
+ * pseudo-tags taken out, as the parser takes them out; and in a `tagged` story (the CoT protocol's own shape,
+ * `<正文>…</正文>` and then `<短期记忆>`, `<变量规划>`, `<剧情规划>`), `</正文>` or the next protocol block ends what
+ * is shown (`closed`). A `\` or `<` is held until it is known what it starts; `end` shows what is still held.
+ */
+function storyDisplay(emit: (text: string) => void) {
+  let escape = '';
+  let tag = '';
+  const display = {
+    decode: false,
+    tagged: false,
+    closed: false,
+    put(ch: string): void {
+      if (display.closed) return;
+      if (escape) {
+        if (escape === '\\' && ch in SECOND_ESCAPES) {
+          escape = '';
+          toTag(SECOND_ESCAPES[ch]);
+          return;
+        }
+        if (escape === '\\' && ch === 'u') {
+          escape = '\\u';
+          return;
+        }
+        if (escape.startsWith('\\u') && /[0-9a-fA-F]/.test(ch)) {
+          escape += ch;
+          if (escape.length === 6) {
+            const decoded = String.fromCharCode(parseInt(escape.slice(2), 16));
+            escape = '';
+            toTag(decoded);
+          }
+          return;
+        }
+        // Not an escape: the backslash (and what followed it) was the story's own.
+        const held = escape;
+        escape = '';
+        for (const c of held) toTag(c);
+      }
+      if (display.decode && ch === '\\') {
+        escape = '\\';
+        return;
+      }
+      toTag(ch);
+    },
+    end(): void {
+      const held = escape + tag;
+      escape = '';
+      tag = '';
+      if (held && !display.closed) emit(held);
+    },
+  };
+  function toTag(ch: string): void {
+    if (display.closed) return;
+    if (!tag) {
+      if (ch === '<') tag = '<';
+      else emit(ch);
+      return;
+    }
+    if (ch === '<') {
+      emit(tag);
+      tag = '<';
+      return;
+    }
+    tag += ch;
+    if (ch === '>') {
+      const held = tag;
+      tag = '';
+      const m = COT_TAG.exec(held);
+      if (!m) {
+        emit(held);
+        return;
+      }
+      // A pseudo-tag never shows; in a tagged story, the story's end or the next protocol block closes it.
+      if (display.tagged && (m[1] === '/' ? m[2] === '正文' : AFTER_STORY.has(m[2]))) display.closed = true;
+      return;
+    }
+    if (tag.length > COT_TAG_MAX || ch === '\n') {
+      emit(tag);
+      tag = '';
+    }
+  }
+  return display;
+}
+
+/**
+ * Character-level state machine that shows the story of streamed AI output without its envelope. Works for
+ * single-call (`{"text":"...","commands":...}`), splitGen step1 (`{"text":"..."}`), and the CoT protocol's own shape
+ * (`<正文>…</正文>` and its planning blocks after it).
  *
- * States: SEEKING → IN_TEXT → (ESCAPE | QUOTE) → DONE / PASSTHROUGH
+ * States: SEEKING → TEXT → (ESCAPE | QUOTE) → DONE · SEEKING → TAGGED → DONE · SEEKING → PASSTHROUGH
  *
- * - SEEKING: buffers chars until `{"text":"` prefix is detected (also behind `<正文>`, which a CoT reply may wrap
- *   the whole JSON in — 2026-10-03)
- * - IN_TEXT: emits narrative chars, decodes JSON escapes (\n→newline, \"→")
+ * - SEEKING: buffers chars until the `{"text":"` prefix is detected (also behind `<正文>`, which a CoT reply may wrap
+ *   the whole JSON in, and inside a code fence), or a story written straight into `<正文>`
+ * - TEXT: shows narrative chars, decodes JSON escapes (\n→newline, \"→")
  * - ESCAPE: just saw `\` inside the text value
  * - QUOTE: just saw a bare `"` — it closes the value only if `}` comes next, or `,` and then a `"` (the next
  *   key, most likely; the parser, which sees the whole reply, checks the key itself); otherwise it was a quote in
  *   the story the model forgot to escape, and the stream goes on (it used to stop there for the rest of the step).
  *   A story quote followed by `, "` can still end the live text early; the round's final text is the parser's.
- * - DONE: hit the closing `"` of the text value — discards the rest
- * - PASSTHROUGH: prefix not detected after 30 chars — emits everything raw
+ * - TAGGED: the story inside `<正文>` (2026-10-03 release check: the tags and the planning blocks after the story
+ *   used to stream into the bubble and stay there through step 2) — shown until `</正文>` or the next protocol block
+ * - DONE: the story is over — discards the rest
+ * - PASSTHROUGH: no envelope after 48 chars — shows everything, the CoT pseudo-tags taken out
+ *
+ * What TEXT and TAGGED show goes through `storyDisplay`: a JSON escape still in the story decoded (a reply wrapped in
+ * `<正文>` may escape its story twice) and the pseudo-tags taken out, as the parser reads the story in the end.
  */
 export function createJsonTextStreamUnwrapper(
   onChunk: (chunk: string) => void,
 ): { onChunk: (chunk: string) => void; flush: () => void } {
-  const PREFIX_RE = /^\s*(?:<正文>\s*)?\{\s*"(?:text|叙事文本)"\s*:\s*"/;
-  const PREFIX_MAX = 30;
+  const PREFIX_RE = /^\s*(?:<正文>\s*)?(?:```(?:json|JSON)?\s*)?\{\s*"(?:text|叙事文本)"\s*:\s*"/;
+  /** A story written straight into the tag: `<正文>`, then neither an object nor a fence. */
+  const TAGGED_RE = /^\s*<正文>\s*[^\s{`]/;
+  const TAG_HEAD_RE = /^\s*<正文>\s*/;
+  const PREFIX_MAX = 48;
 
-  let state: 'seeking' | 'text' | 'escape' | 'quote' | 'quoteComma' | 'done' | 'passthrough' = 'seeking';
+  let state: 'seeking' | 'text' | 'escape' | 'quote' | 'quoteComma' | 'tagged' | 'done' | 'passthrough' = 'seeking';
   let seekBuf = '';
   /** What followed a bare quote while deciding whether it closes the value (whitespace, a comma). */
   let quoteBuf = '';
+  /** What one incoming chunk shows, sent on as one chunk. */
+  let shown = '';
+  const display = storyDisplay((text) => { shown += text; });
+  const send = () => {
+    if (!shown) return;
+    const text = shown;
+    shown = '';
+    onChunk(text);
+  };
+  const put = (text: string) => { for (const c of text) display.put(c); };
+  /** The story inside `<正文>`, from what was buffered after the tag. */
+  const startTagged = (buffered: string) => {
+    state = 'tagged';
+    display.decode = true;
+    display.tagged = true;
+    put(buffered.replace(TAG_HEAD_RE, ''));
+    if (display.closed) state = 'done';
+  };
+  const finish = () => {
+    state = 'done';
+    display.end();
+  };
 
   return {
     onChunk(chunk: string) {
       if (state === 'done') return;
 
-      if (state === 'passthrough') {
-        onChunk(chunk);
-        return;
-      }
-
-      for (let i = 0; i < chunk.length; i++) {
+      for (let i = 0; i < chunk.length && state !== 'done'; i++) {
         const ch = chunk[i];
 
         switch (state) {
@@ -328,13 +448,22 @@ export function createJsonTextStreamUnwrapper(
             seekBuf += ch;
             if (PREFIX_RE.test(seekBuf)) {
               state = 'text';
+              display.decode = true;
+              seekBuf = '';
+            } else if (TAGGED_RE.test(seekBuf) || (seekBuf.length > PREFIX_MAX && TAG_HEAD_RE.test(seekBuf))) {
+              startTagged(seekBuf);
               seekBuf = '';
             } else if (seekBuf.length > PREFIX_MAX) {
               state = 'passthrough';
-              onChunk(seekBuf + chunk.slice(i + 1));
+              put(seekBuf);
               seekBuf = '';
-              return;
             }
+            break;
+
+          case 'tagged':
+          case 'passthrough':
+            display.put(ch);
+            if (display.closed) state = 'done';
             break;
 
           case 'text':
@@ -344,7 +473,7 @@ export function createJsonTextStreamUnwrapper(
               state = 'quote';
               quoteBuf = '';
             } else {
-              onChunk(ch);
+              display.put(ch);
             }
             break;
 
@@ -352,14 +481,13 @@ export function createJsonTextStreamUnwrapper(
             if (/\s/.test(ch)) {
               quoteBuf += ch;
             } else if (ch === '}') {
-              state = 'done';
-              return;
+              finish();
             } else if (ch === ',') {
               quoteBuf += ch;
               state = 'quoteComma';
             } else {
               // A quote in the story: show it and what came after it, and read on.
-              onChunk('"' + quoteBuf);
+              put('"' + quoteBuf);
               quoteBuf = '';
               state = 'text';
               i--;
@@ -370,11 +498,10 @@ export function createJsonTextStreamUnwrapper(
             if (/\s/.test(ch)) {
               quoteBuf += ch;
             } else if (ch === '"') {
-              state = 'done';
-              return;
+              finish();
             } else {
               // `"fine", then left`: the quote and the comma were the story's.
-              onChunk('"' + quoteBuf);
+              put('"' + quoteBuf);
               quoteBuf = '';
               state = 'text';
               i--;
@@ -385,18 +512,23 @@ export function createJsonTextStreamUnwrapper(
             const ESCAPE_MAP: Record<string, string> = {
               n: '\n', t: '\t', r: '\r', '"': '"', '\\': '\\', '/': '/',
             };
-            onChunk(ESCAPE_MAP[ch] ?? '\\' + ch);
+            put(ESCAPE_MAP[ch] ?? '\\' + ch);
             state = 'text';
             break;
           }
         }
       }
+      send();
     },
 
     flush() {
       if (state === 'seeking' && seekBuf) {
-        onChunk(seekBuf);
+        if (TAG_HEAD_RE.test(seekBuf)) startTagged(seekBuf);
+        else put(seekBuf);
+        seekBuf = '';
       }
+      display.end();
+      send();
     },
   };
 }

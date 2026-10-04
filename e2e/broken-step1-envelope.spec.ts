@@ -141,3 +141,77 @@ test('a round saved as its envelope before the fix is healed when the game loads
   });
   expect(live).toEqual({ content: TAGGED_STORY, raw: TAGGED, memory: TAGGED_STORY });
 });
+
+// 2026-10-03 release check (real replies). Round 2: the CoT protocol's own shape — the tags and the planning blocks
+// after the story streamed into the bubble and stayed there while step 2 ran. Round 3: the reply wrapped in <正文>
+// with its story escaped twice — `\"` and `\n` on screen and in the save.
+const COT_STEP1 = `<thinking>先把这一回合想清楚。</thinking>\n\n<正文>\n${TAGGED_STORY}\n</正文>\n\n<短期记忆>\n记下这一夜。\n</短期记忆>\n\n<变量规划>\n锚点+2\n</变量规划>\n\n<剧情规划>\n- 保留：会诊\n</剧情规划>`;
+const ONCE = JSON.stringify(TAGGED_STORY).slice(1, -1);
+const TWICE_STEP1 = `<正文>\n${JSON.stringify({ text: ONCE })}\n</正文>\n\n<短期记忆>\n记下这一夜。\n</短期记忆>`;
+
+/** Step 2 waits a while, so the bubble can be read as it stands between the two steps. */
+async function answerSlowStep2(route: Route, step1: string): Promise<void> {
+  const body = JSON.parse(route.request().postData() ?? '{}') as { stream?: boolean };
+  if (!body.stream) await new Promise(resolve => setTimeout(resolve, 4000));
+  return answer(route, step1);
+}
+
+for (const [name, step1] of [['the CoT protocol shape', COT_STEP1], ['a story escaped twice in the tag', TWICE_STEP1]] as const) {
+  test(`${name}: the bubble and the round show only the story`, { tag: ['@regression', '@round'] }, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-1920', 'one viewport is enough for a parser path');
+    test.slow();
+    await seedSave(page);
+    await page.addInitScript(() => {
+      localStorage.setItem('aga_api_management', JSON.stringify({
+        apiConfigs: [{ id: 'e2e-envelope', name: 'envelope', apiCategory: 'llm', provider: 'openai',
+          url: 'http://127.0.0.1:1', apiKey: 'k', model: 'noop', temperature: 0, maxTokens: 1000, enabled: true }],
+        apiAssignments: [],
+      }));
+      const ai = JSON.parse(localStorage.getItem('aga_ai_settings') ?? '{}') as Record<string, unknown>;
+      localStorage.setItem('aga_ai_settings', JSON.stringify({ ...ai, splitGen: true, streaming: true, maxRetries: 0 }));
+    });
+    await page.reload();
+    await page.route('http://127.0.0.1:1/**', route => answerSlowStep2(route, step1));
+    await enterSeededGame(page);
+    await page.locator('.message-input').fill('我回到寝室。');
+    await page.locator('.send-btn').click();
+
+    // Step 1 is in, step 2 is still out: the bubble holds the whole story and nothing else.
+    const bubble = page.locator('.message--streaming .message-text');
+    await expect(bubble).toContainText('你轻手轻脚地，推开了寝室那扇门。', { timeout: 60_000 });
+    const live = await bubble.innerText();
+    expect(live).toContain('又"啪"地熄了。');
+    for (const leak of ['<正文>', '</正文>', '短期记忆', '记下这一夜', '剧情规划', '\\"', '\\n', '{"text"']) expect(live).not.toContain(leak);
+
+    await expect.poll(() => page.evaluate(() => {
+      const app = document.querySelector('#app') as unknown as { __vue_app__: { _context: { provides: Record<string, unknown> } } };
+      return (app.__vue_app__._context.provides.gameOrchestrator as { isBusy: boolean }).isBusy;
+    }), { timeout: 60_000 }).toBe(false);
+    const { shown, saved } = await lastStory(page);
+    expect(shown).toContain('又"啪"地熄了。');
+    for (const leak of ['<正文>', '记下这一夜', '\\"', '{"text"']) expect(shown).not.toContain(leak);
+    expect(saved).toBe(TAGGED_STORY);
+  });
+}
+
+test('a round saved still escaped once is healed when the game loads', { tag: ['@regression', '@save'] }, async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-1920', 'one viewport is enough for a load-time repair');
+  await seedSave(page, { tree: makeSeedTree({ 元数据: { 叙事历史: [
+    { role: 'user', content: '我回到寝室。' },
+    { role: 'assistant', content: ONCE, _rawResponse: TWICE_STEP1 },
+  ] } }) });
+  await enterSeededGame(page);
+  await expect(page.getByText('你轻手轻脚地，推开了寝室那扇门。').first()).toBeVisible();
+  const shown = await page.locator('body').innerText();
+  expect(shown).toContain('又"啪"地熄了。');
+  expect(shown).not.toContain('\\"');
+  const live = await page.evaluate(() => {
+    type App = { config: { globalProperties: { $pinia: { _s: Map<string, { tree: Record<string, unknown> }> } } } };
+    const app = (document.querySelector('#app') as { __vue_app__?: App } | null)?.__vue_app__;
+    const tree = app?.config.globalProperties.$pinia._s.get('engineState')?.tree as
+      { 元数据: { 叙事历史: Array<{ content: string; _rawResponse?: string }> } };
+    const last = tree.元数据.叙事历史.at(-1);
+    return { content: last?.content, raw: last?._rawResponse };
+  });
+  expect(live).toEqual({ content: TAGGED_STORY, raw: TWICE_STEP1 });
+});

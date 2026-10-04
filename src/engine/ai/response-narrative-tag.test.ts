@@ -77,7 +77,43 @@ describe('the narrative tag is judged by where it stands', () => {
   });
 });
 
+// 2026-10-03 release check, round 3 (a real reply): the model wrapped its reply in <正文> and escaped the story
+// twice (`\\n`, `\\\"`); one decode left literal `\n` and `\"` on screen and in the save.
+const ONCE = JSON.stringify(STORY).slice(1, -1);
+const TWICE_JSON = JSON.stringify({ text: ONCE });
+
+describe('a story escaped twice', () => {
+  for (const capture of [false, true]) {
+    it(`reads as the story, in the tag or bare (capture=${capture})`, () => {
+      expect(textOf(`<正文>\n${TWICE_JSON}\n</正文>`, capture)).toBe(STORY);
+      expect(textOf(`<thinking>先想一想</thinking>\n<正文>\n${TWICE_JSON}\n</正文>\n\n<短期记忆>\n记下这一夜。\n</短期记忆>`, capture)).toBe(STORY);
+      expect(textOf(TWICE_JSON, capture)).toBe(STORY);
+    });
+  }
+  it('a story escaped once reads as before, and a backslash of the story\'s own stays', () => {
+    expect(textOf(JSON.stringify({ text: STORY }))).toBe(STORY);
+    const own = '他比了个\\(^o^)/，¯\\_(ツ)_/¯。';
+    expect(textOf(JSON.stringify({ text: own }))).toBe(own);
+  });
+  it('only the JSON escapes are read a second time', () => {
+    expect(textOf(JSON.stringify({ text: '他说：\\"走\\"。\\n\\(^o^)/' }))).toBe('他说："走"。\n\\(^o^)/');
+  });
+  it('a story in the tag with the line breaks written as escapes reads with line breaks', () => {
+    expect(textOf(`<正文>${ONCE}</正文>`)).toBe(STORY);
+  });
+  it('a whole reply kept as the text stays exactly the reply (the repair stage tells a missing story by that)', () => {
+    const parsed = parser.parse('好的：\n{text: "她说\\"走\\"", commands: []}');
+    expect(parsed.parseOk).toBe(false);
+    expect(parsed.text).toBe(parsed.raw);
+  });
+});
+
 describe('repairStoredNarrative', () => {
+  it('decodes a story saved still escaped once, and leaves one without escapes alone', () => {
+    expect(repairStoredNarrative(ONCE)).toBe(STORY);
+    expect(repairStoredNarrative(`<正文>${TWICE_JSON}</正文>`)).toBe(STORY);
+    expect(repairStoredNarrative('他比了个\\(^o^)/。')).toBeNull();
+  });
   it('reads the story out of a round saved as its envelope, bare or in the tag', () => {
     expect(repairStoredNarrative(LOOSE)).toBe(STORY);
     expect(repairStoredNarrative(`<正文>${LOOSE}</正文>`)).toBe(STORY);
@@ -108,6 +144,46 @@ describe('the stream shows the story while it arrives', () => {
   it('prose that is not an envelope passes through', () => {
     expect(streamed(STORY)).toBe(STORY);
   });
+  it('a story escaped twice in the tag shows as the story', () => {
+    for (const size of [1, 3, 17]) {
+      expect(streamed(`\n\n<正文>\n${TWICE_JSON}\n</正文>\n\n<短期记忆>\n记下这一夜。\n</短期记忆>`, size)).toBe(STORY);
+      expect(streamed(TWICE_JSON, size)).toBe(STORY);
+    }
+  });
+  // The CoT protocol's own shape (2026-10-03 release check, round 2): the tags and the planning blocks after the
+  // story used to stream into the bubble and stay there while step 2 ran.
+  it('the CoT protocol shape shows only the story: no tags, no planning after it', () => {
+    const cot = `\n\n<正文>\n${STORY}\n</正文>\n\n<短期记忆>\n记下这一夜。\n</短期记忆>\n\n<变量规划>\n锚点+2\n</变量规划>\n\n<剧情规划>\n- 保留：会诊\n</剧情规划>`;
+    for (const size of [1, 3, 17]) expect(streamed(cot, size)).toBe(`${STORY}\n`);
+  });
+  it('a tagged story without its closing tag ends at the next protocol block', () => {
+    for (const size of [1, 3, 17]) expect(streamed(`<正文>${STORY}\n<短期记忆>记下</短期记忆>`, size)).toBe(`${STORY}\n`);
+  });
+  it('a judgement inside a tagged story shows without its tags, as the parser reads it', () => {
+    const raw = `<正文>${STORY}<judge>〖判定：成功〗</judge>后来。</正文>`;
+    for (const size of [1, 3, 17]) expect(streamed(raw, size)).toBe(textOf(raw));
+  });
+  it('a single-call reply with the story in the tag and its JSON after it shows only the story', () => {
+    for (const size of [1, 3, 17]) expect(streamed(`<正文>${STORY}</正文>\n{"commands":[],"action_options":["走"]}`, size)).toBe(STORY);
+  });
+  it('a "<" or a backslash of the story\'s own still shows', () => {
+    const story = '她在纸上画了个<3，又写下《夜航》<未完>，比了个\\(^o^)/。';
+    for (const size of [1, 3, 17]) {
+      expect(streamed(`<正文>${story}</正文>`, size)).toBe(story);
+      expect(streamed(JSON.stringify({ text: story }), size)).toBe(story);
+      expect(streamed(story, size)).toBe(story);
+    }
+  });
+  it('a tagged story that opens with a thought in backticks shows from its first character', () => {
+    const story = `\`又是这样。\`她想。\n\n${STORY}`;
+    for (const size of [1, 3, 17]) expect(streamed(`<正文>\n${story}</正文>`, size)).toBe(story);
+  });
+  it('a reply in a code fence streams its story', () => {
+    for (const size of [1, 3, 17]) expect(streamed('```json\n' + JSON.stringify({ text: STORY }) + '\n```', size)).toBe(STORY);
+  });
+  it('prose without an envelope shows without stray protocol tags', () => {
+    for (const size of [1, 3, 17]) expect(streamed(`${STORY}<judge>〖判定〗</judge>`, size)).toBe(`${STORY}〖判定〗`);
+  });
   it('a quote and a comma in the story do not end it; a quote, a comma and the next key do', () => {
     const prose = '他说"好", 然后走了。';
     for (const size of [1, 3, 17]) {
@@ -118,6 +194,18 @@ describe('the stream shows the story while it arrives', () => {
 });
 
 describe('NarrativeEnvelopeRepairModule', () => {
+  it('heals a round saved still escaped once', () => {
+    const sm = new StateManager();
+    sm.loadTree({
+      元数据: { 叙事历史: [{ role: 'user', content: '我起来了。' }, { role: 'assistant', content: ONCE, _rawResponse: `<正文>${TWICE_JSON}</正文>` }] },
+      记忆: { 短期: [{ round: 3, summary: ONCE }] },
+    } as never);
+    new NarrativeEnvelopeRepairModule('元数据.叙事历史', '记忆.短期', '元数据.收藏楼层').onGameLoad(sm);
+    const last = sm.get<Array<Record<string, unknown>>>('元数据.叙事历史')!.at(-1)!;
+    expect(last.content).toBe(STORY);
+    expect(last._rawResponse).toBe(`<正文>${TWICE_JSON}</正文>`);
+    expect(sm.get('记忆.短期')).toEqual([{ round: 3, summary: STORY }]);
+  });
   it('heals saved rounds and short-term memories, and nothing else', () => {
     const sm = new StateManager();
     sm.loadTree({

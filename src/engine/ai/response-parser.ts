@@ -214,6 +214,21 @@ function decodeLooseJsonString(s: string): string {
     e.length === 5 ? String.fromCharCode(parseInt(e.slice(1), 16)) : (ENVELOPE_ESCAPES[e] ?? e));
 }
 
+/** The JSON escapes a story escaped twice still carries after one decode (the stream's display reads the same). */
+const RESIDUAL_ESCAPE = /\\(u[0-9a-fA-F]{4}|[ntr"\\/])/g;
+
+/**
+ * A story still JSON-escaped once its envelope was decoded: a model that wraps its whole reply in `<正文>` may
+ * escape the story twice (`\\n`, `\\\"` — 2026-10-03 release check, round 3), and one decode left literal `\n` and
+ * `\"` in it. Prose never holds a backslash before `n` or a quote, so a story with either is decoded once more —
+ * the JSON escapes only; any other backslash is the story's own (`\(^o^)/`). Any other text is returned as it is.
+ */
+export function decodeResidualEscapes(text: string): string {
+  if (!/\\[n"]/.test(text)) return text;
+  return text.replace(RESIDUAL_ESCAPE, (_, e: string) =>
+    e.length === 5 ? String.fromCharCode(parseInt(e.slice(1), 16)) : (ENVELOPE_ESCAPES[e] ?? e));
+}
+
 /** Whether a tag's content is a reply object (its narrative under `text`), maybe in a code fence. */
 const REPLY_HEAD = /^(?:```(?:json|JSON)?\s*)?\{\s*"(?:text|叙事文本)"\s*:/;
 
@@ -222,12 +237,16 @@ const STORED_ENVELOPE = /^(?:<正文>\s*)?\{\s*"(?:text|叙事文本)"\s*:/;
 
 /**
  * The narrative a stored round should have shown, when what was stored is the reply's JSON envelope (a parser
- * before 2026-10-03 kept `{"text":"…` as the story when the reply was unparseable or wrapped in `<正文>`); null
- * when the text is not such an envelope or nothing better can be read from it. Used to heal saved rounds on load.
+ * before 2026-10-03 kept `{"text":"…` as the story when the reply was unparseable or wrapped in `<正文>`), or a
+ * story still escaped once (literal `\n` / `\"`: a reply wrapped in `<正文>` that escaped its story twice); null
+ * when the text is neither or nothing better can be read from it. Used to heal saved rounds on load.
  */
 export function repairStoredNarrative(text: string): string | null {
   const trimmed = text.trim();
-  if (!STORED_ENVELOPE.test(trimmed)) return null;
+  if (!STORED_ENVELOPE.test(trimmed)) {
+    const decoded = decodeResidualEscapes(trimmed);
+    return decoded !== trimmed ? decoded : null;
+  }
   const repaired = new ResponseParser().parse(trimmed).text.trim();
   return repaired && repaired !== trimmed && !STORED_ENVELOPE.test(repaired) ? repaired : null;
 }
@@ -348,7 +367,7 @@ export class ResponseParser {
         ? narrativeFromTag
         : (rawText || narrativeFromTag || '');
       return {
-        text: this.stripNarrativeWrapperTags(resolvedText),
+        text: this.stripNarrativeWrapperTags(decodeResidualEscapes(resolvedText)),
         commands: this.normalizeCommands(
           json.commands ?? json.tavern_commands ?? json['指令'] ?? [],
         ),
@@ -374,8 +393,11 @@ export class ResponseParser {
     // repair stage behind it, so this is the only thing between the player and the JSON source); otherwise the
     // full sanitized text.
     // `parseOk: false` 通知下游（如 ResponseRepairStage）走补救路径。
+    // A story read out of a tag or an envelope may still be escaped once; the whole reply as the text stays exactly
+    // the reply (ResponseRepairStage tells "no story could be read" by that sameness).
+    const story = narrativeFromTag ?? salvageEnvelopeText(textForJson);
     return {
-      text: this.stripNarrativeWrapperTags(narrativeFromTag ?? salvageEnvelopeText(textForJson) ?? sanitized),
+      text: this.stripNarrativeWrapperTags(story !== null ? decodeResidualEscapes(story) : sanitized),
       thinking,
       raw: sanitized,
       parseOk: false,
