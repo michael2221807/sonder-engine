@@ -455,7 +455,17 @@ function isPromptActiveByRadio(id: string): boolean | null {
   return null;
 }
 
+// The list reads the page's edits from localStorage, which Vue does not track: every write here bumps this, and so
+// does coming back to the page (it is kept alive; a game card's import writes edits elsewhere). Before 2026-10-04 a
+// switch or a save showed nothing until a reload, and reopening a saved prompt showed the old text.
+const editsVersion = ref(0);
+function reloadEdits(): void {
+  editsVersion.value++;
+}
+onActivated(reloadEdits);
+
 const promptEntries = computed<PromptEntry[]>(() => {
+  void editsVersion.value;
   if (!pack) return [];
   const entries: PromptEntry[] = [];
   for (const [id, defaultContent] of Object.entries(pack.prompts)) {
@@ -580,6 +590,7 @@ function toggleEnabled(entry: PromptEntry): void {
   const newVal = !entry.enabled;
   localStorage.setItem(enabledKey(entry.id), String(newVal));
   promptRegistry?.setEnabled(entry.id, newVal);
+  reloadEdits();
   eventBus.emit('ui:toast', {
     type: newVal ? 'success' : 'warning',
     message: newVal ? t('prompt.toast.enabled', { id: entry.id }) : t('prompt.toast.disabled', { id: entry.id }),
@@ -592,6 +603,7 @@ function toggleEnabled(entry: PromptEntry): void {
 function setWeight(entry: PromptEntry, val: number): void {
   const clamped = Math.min(10, Math.max(1, val));
   localStorage.setItem(weightKey(entry.id), String(clamped));
+  reloadEdits();
 }
 
 function weightColor(w: number): string {
@@ -631,6 +643,7 @@ function savePrompt(): void {
     type: editType.value,
   });
   promptRegistry?.setUserContent(id, editContent.value);
+  reloadEdits();
   showModal.value = false;
   eventBus.emit('ui:toast', { type: 'success', message: t('prompt.toast.saved'), duration: 1500 });
 }
@@ -645,6 +658,7 @@ function resetPrompt(): void {
   localStorage.removeItem(metaKey(id));
   promptRegistry?.resetToDefault(id);
   promptRegistry?.setEnabled(id, true);
+  reloadEdits();
   editScope.value = ['all'];
   editInjectionMode.value = 'always';
   editKeywordsText.value = '';
@@ -710,6 +724,7 @@ function importPrompts(): void {
         }
         count++;
       }
+      reloadEdits();
       eventBus.emit('ui:toast', { type: 'success', message: t('prompt.toast.importCount', { count }), duration: 2000 });
     } catch (err) {
       const msg = err instanceof Error ? err.message : t('prompt.toast.importError');
