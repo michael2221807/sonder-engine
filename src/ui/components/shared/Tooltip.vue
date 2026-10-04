@@ -23,13 +23,17 @@
  *     <button @click="open">⚙</button>
  *   </Tooltip>
  */
-import { computed, ref, useId, watch, onBeforeUnmount } from 'vue';
+import { computed, nextTick, ref, useId, watch, onBeforeUnmount } from 'vue';
+import { placeFixedTip, FIXED_TIP_MARGIN } from './tooltip-placement';
 
 const props = withDefaults(
   defineProps<{
     /** Single-sentence hint (Polanyi: one sentence, ≤ ~100 chars). */
     text: string;
-    /** Bubble side relative to the trigger. */
+    /**
+     * Bubble side relative to the trigger. In `fixed` mode it is the preferred side, above or below only
+     * (`bottom` prefers below, anything else above); the bubble flips when it does not fit there.
+     */
     position?: 'top' | 'bottom' | 'left' | 'right';
     /** Reveal delay in ms (default 800 — appears only on a deliberate hover). */
     delay?: number;
@@ -40,7 +44,9 @@ const props = withDefaults(
      * viewport. Use inside clipping/scrolling containers (overflow:hidden/auto)
      * or under sticky/z-indexed siblings where the in-flow bubble would be cut
      * off or covered (plot timeline track, 2026-08-23). Reveal is still the
-     * CSS delay — only the position is measured in JS, on hover/focus start.
+     * CSS delay — only the position is measured in JS, on hover/focus start,
+     * from the bubble's real size (`tooltip-placement.ts`). Focus shows it
+     * only when it is keyboard focus (`:focus-visible`).
      */
     fixed?: boolean;
     /** Suppress the hint entirely (e.g. while the wrapped control is mid-drag). */
@@ -56,29 +62,42 @@ const styleVars = computed(() => ({ '--tt-delay': `${props.delay}ms` }));
 
 // ─── fixed mode ───
 const wrapEl = ref<HTMLElement | null>(null);
+const bubbleEl = ref<HTMLElement | null>(null);
 const hot = ref(false);
-const fixedSide = ref<'top' | 'bottom'>('top');
-const fixedPos = ref({ x: 0, y: 0 });
-const MARGIN = 8;
-const FIXED_MAX_W = 240;
-/** Room needed above the trigger for a two-line bubble (2 × 12px × 1.45 + padding) plus the gap. */
-const MIN_ROOM_ABOVE = 72;
+const fixedPos = ref({ left: 0, top: 0 });
 function place(): void {
   const r = wrapEl.value?.getBoundingClientRect();
-  if (!r) return;
-  const vw = window.innerWidth;
-  // Horizontal centre on the trigger, kept inside the viewport so the bubble is
-  // never squeezed against an edge (it keeps its natural width).
-  const half = FIXED_MAX_W / 2;
-  const cx = Math.max(MARGIN + half, Math.min(vw - MARGIN - half, r.left + r.width / 2));
-  // Prefer above; drop below when there is no room above.
-  const above = r.top > MIN_ROOM_ABOVE;
-  fixedSide.value = above ? 'top' : 'bottom';
-  fixedPos.value = { x: cx, y: above ? r.top - 6 : r.bottom + 6 };
+  const bubble = bubbleEl.value;
+  if (!r || !bubble) return;
+  // The hidden bubble is laid out already (visibility, not display), so its real size is known before it shows.
+  const size = { width: bubble.offsetWidth, height: bubble.offsetHeight };
+  const viewport = { width: window.innerWidth, height: window.innerHeight };
+  const p = placeFixedTip(r, size, viewport, props.position === 'bottom' ? 'bottom' : 'top');
+  fixedPos.value = { left: p.left, top: p.top };
 }
 function enter(): void { if (!props.fixed) return; place(); hot.value = true; }
 function leave(): void { hot.value = false; }
-function onScroll(): void { if (hot.value) hot.value = false; }
+/**
+ * Keyboard focus shows the hint. Focus a script hands back (a dialog closing onto the control that opened it)
+ * does not: that hint showed with the pointer elsewhere and stayed until the control lost focus (2026-10-04).
+ */
+function focusEnter(e: FocusEvent): void {
+  if (!props.fixed || (e.target instanceof Element && !focusVisible(e.target))) return;
+  enter();
+}
+/** A browser without `:focus-visible` shows the hint on any focus, as before. */
+function focusVisible(el: Element): boolean {
+  try { return el.matches(':focus-visible'); } catch { return true; }
+}
+/**
+ * A scroll that can move the trigger (the page, or a scroller around it) closes the hint; any other scroll
+ * leaves it be. The story keeps scrolling while text streams in, and that closed every status-bar hint
+ * before it could show (2026-10-04).
+ */
+function onScroll(e: Event): void {
+  const scrolled = e.target;
+  if (hot.value && (!(scrolled instanceof Node) || scrolled.contains(wrapEl.value))) hot.value = false;
+}
 function onResize(): void { if (hot.value) place(); }
 watch(hot, (on) => {
   if (!props.fixed) return;
@@ -90,14 +109,18 @@ watch(hot, (on) => {
     window.removeEventListener('resize', onResize);
   }
 });
+// A hint whose words change while it shows is measured again, so it still fits.
+watch(() => props.text, () => { if (hot.value) void nextTick(place); });
 onBeforeUnmount(() => {
   window.removeEventListener('scroll', onScroll, { capture: true });
   window.removeEventListener('resize', onResize);
 });
 const fixedStyle = computed(() => ({
-  left: `${fixedPos.value.x}px`,
-  top: `${fixedPos.value.y}px`,
-  transform: fixedSide.value === 'top' ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
+  left: `${fixedPos.value.left}px`,
+  top: `${fixedPos.value.top}px`,
+  // Never taller than the viewport less its margins, so placement can always keep the bubble whole on screen:
+  // some hints show data with no length cap, such as a plot gauge's description.
+  maxHeight: `calc(100vh - ${2 * FIXED_TIP_MARGIN}px)`,
 }));
 </script>
 
@@ -111,12 +134,12 @@ const fixedStyle = computed(() => ({
     :style="styleVars"
     @pointerenter="enter"
     @pointerleave="leave"
-    @focusin="enter"
+    @focusin="focusEnter"
     @focusout="leave"
   >
     <slot />
     <Teleport v-if="fixed" to="body">
-      <span :id="tipId" class="tt-bubble tt-bubble--fixed" :class="{ 'tt-bubble--hot': hot && !disabled }" :style="[styleVars, fixedStyle]" role="tooltip">{{ text }}</span>
+      <span :id="tipId" ref="bubbleEl" class="tt-bubble tt-bubble--fixed" :class="{ 'tt-bubble--hot': hot && !disabled }" :style="[styleVars, fixedStyle]" role="tooltip">{{ text }}</span>
     </Teleport>
     <span v-else :id="tipId" class="tt-bubble" role="tooltip">{{ text }}</span>
   </span>
@@ -172,6 +195,8 @@ const fixedStyle = computed(() => ({
 .tt-bubble--fixed {
   position: fixed;
   z-index: var(--z-floating, 9100);
+  /* the height cap is set inline with the placement margin (`fixedStyle`); text past it is cut */
+  overflow: hidden;
 }
 .tt-bubble--fixed.tt-bubble--hot {
   opacity: 1;

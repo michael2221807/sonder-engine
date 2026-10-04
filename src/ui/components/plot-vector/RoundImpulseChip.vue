@@ -33,7 +33,7 @@ const text = computed(() => {
 
 <template>
   <Transition name="vimpulse">
-    <Tooltip v-if="impulse" :key="text" :text="t('mainGame.vectorTable.impulse.hint')">
+    <Tooltip v-if="impulse" :key="text" :text="t('mainGame.vectorTable.impulse.hint')" fixed position="bottom">
       <span class="vimpulse" :class="`vimpulse--${impulse.tone}`" data-testid="vector-impulse" :aria-label="`${t('mainGame.vectorTable.impulse.label')}：${text}`">{{ text }}</span>
     </Tooltip>
   </Transition>

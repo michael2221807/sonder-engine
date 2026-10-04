@@ -106,7 +106,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="rootRef" class="voice-quick" @click.stop>
-    <Tooltip :text="$t('mainGame.voice.chipTitle')" interactive>
+    <Tooltip :text="$t('mainGame.voice.chipTitle')" interactive fixed position="bottom" :disabled="open">
       <button
         type="button"
         class="voice-chip"

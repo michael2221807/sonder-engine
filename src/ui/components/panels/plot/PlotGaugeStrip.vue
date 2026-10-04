@@ -31,7 +31,7 @@ const gauges = computed<Array<{ gauge: PlotGauge; pct: number; text: string; thr
 
 <template>
   <div v-if="gauges.length" class="gauge-strip" data-testid="plot-gauge-strip">
-    <Tooltip v-for="g in gauges" :key="g.gauge.id" :text="g.gauge.description || g.thread" class="gauge-strip__item-tt">
+    <Tooltip v-for="g in gauges" :key="g.gauge.id" :text="g.gauge.description || g.thread" class="gauge-strip__item-tt" fixed position="bottom">
       <span class="gauge-strip__item">
         <span class="gauge-strip__name">{{ g.gauge.name }}</span>
         <span class="gauge-strip__track"><span class="gauge-strip__fill" :style="{ width: g.pct + '%', background: g.gauge.color ?? 'var(--color-sage-400)' }" /></span>

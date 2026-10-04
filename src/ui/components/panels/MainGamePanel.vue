@@ -1208,7 +1208,10 @@ watch(
 
 <template>
   <div class="main-game-panel">
-    <!-- Status bar: left cluster [round counter][weather][env chips] / right cluster [festival][generating] -->
+    <!-- Status bar: left cluster [round counter][weather][env chips] / right cluster [festival][generating].
+         It sits right under the top bar, so its hints are `fixed` (CLAUDE.md §8.1) and show below: an in-flow
+         bubble above it went under the top bar, and a long one above it left the screen (2026-10-04). A hint is
+         off while the panel its control opened is open, since it would lie over that panel. -->
     <div class="status-bar">
       <div class="status-bar__left">
         <span class="round-counter">{{ roundDisplay }}</span>
@@ -1219,7 +1222,7 @@ watch(
         <PlotGaugeStrip />
       </div>
       <div class="status-bar__right">
-        <Tooltip :text="$t('mainGame.search.toggleTitle')" interactive>
+        <Tooltip :text="$t('mainGame.search.toggleTitle')" interactive fixed position="bottom" :disabled="showSearch">
           <button
             class="search-toggle-btn"
             :class="{ 'search-toggle-btn--active': showSearch }"
@@ -1232,7 +1235,7 @@ watch(
           </button>
         </Tooltip>
         <!-- 收藏楼层 展开按钮 — 紧邻搜索按钮 (2026-07-18) -->
-        <Tooltip :text="$t('mainGame.bookmark.toggleTitle')" interactive>
+        <Tooltip :text="$t('mainGame.bookmark.toggleTitle')" interactive fixed position="bottom" :disabled="showBookmarks">
           <button
             class="search-toggle-btn bookmark-toggle-btn"
             :class="{ 'bookmark-toggle-btn--active': showBookmarks }"

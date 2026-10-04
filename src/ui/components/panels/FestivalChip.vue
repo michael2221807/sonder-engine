@@ -34,7 +34,7 @@ function open(): void {
 
 <template>
   <template v-if="normalized">
-    <Tooltip :text="$t('mainGame.env.festival.titleTemplate', { name: normalized.名称 })" interactive>
+    <Tooltip :text="$t('mainGame.env.festival.titleTemplate', { name: normalized.名称 })" interactive fixed position="bottom">
       <button
         type="button"
         class="festival-chip"

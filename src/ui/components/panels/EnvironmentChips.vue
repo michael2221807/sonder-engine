@@ -37,6 +37,8 @@ function open(): void {
     <Tooltip
       :text="overflow > 0 ? $t('mainGame.env.environment.overflowTooltip', { n: sanitized.length }) : $t('mainGame.env.environment.defaultTooltip')"
       interactive
+      fixed
+      position="bottom"
     >
       <button
         type="button"
