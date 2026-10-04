@@ -464,6 +464,14 @@ describe('review round 2: the two signs, blocks before the story, and what the t
   it('a block before the story still open when the stream ends shows nothing of it', () => {
     for (const size of [1, 3, 17]) expect(streamed('<think>还在想', size)).toBe('');
   });
+  // Code review round 4: waiting for a long block rebuilt it per character (a 190k block in bulk took 19 s).
+  it('a long thinking block before the story is waited for at little cost', () => {
+    const raw = `<think>${'想'.repeat(300_000)}</think>\n${JSON.stringify({ text: STORY })}`;
+    const t0 = performance.now();
+    const shown = streamed(raw, 50);
+    expect(performance.now() - t0).toBeLessThan(3000);
+    expect(shown).toBe(STORY);
+  });
   it('in a JSON story a pseudo-tag is taken out and what it holds stays, as the parser reads it', () => {
     const raw = JSON.stringify({ text: '前<短期记忆>中</短期记忆>后' });
     expect(textOf(raw)).toBe('前中后');

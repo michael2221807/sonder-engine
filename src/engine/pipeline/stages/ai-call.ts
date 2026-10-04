@@ -290,10 +290,10 @@ const PROTOCOL_BLOCKS = new Set(COT_BLOCKS);
 const THINKING_BLOCKS = new Set(THINKING_TAGS);
 /** A thinking block or a protocol block opening before the story (the provider filters only <thinking>). */
 const LEAD_OPEN_RE = new RegExp(`^\\s*<\\s*(${[...THINKING_TAGS, ...COT_BLOCKS].join('|')})\\s*>`, 'i');
-/** Any thinking tag closes a thinking block, as the parser's pattern takes them (global: scanned from where it left off). */
-const THINKING_CLOSE_RE = new RegExp(`<\\s*\\/\\s*(?:${THINKING_TAGS.join('|')})\\s*>`, 'gi');
-/** A block before the story that never closes is waited for this long, then what came is shown. */
-const LEAD_MAX = 200_000;
+/** Any thinking tag closes a thinking block, as the parser's pattern takes them. */
+const THINKING_CLOSE_RE = new RegExp(`<\\s*\\/\\s*(?:${THINKING_TAGS.join('|')})\\s*>`, 'i');
+/** Of a block before the story, only this much of its end is kept while it is waited for (a closing tag may arrive split). */
+const LEAD_TAIL = 32;
 
 /**
  * How the display reads what comes: `json` — the story is a JSON string whose escapes the envelope reads;
@@ -489,8 +489,6 @@ export function createJsonTextStreamUnwrapper(
     put(seekBuf);
     seekBuf = '';
   };
-  /** How much of an open block before the story has been searched for its closing tag (searched once, not again). */
-  let leadScanned = 0;
   /**
    * What has been buffered so far: a thinking or planning block before the story is skipped (waited for, then
    * dropped — any thinking tag closes a thinking block; a `<正文>` inside it is the model reciting the format), then
@@ -502,16 +500,15 @@ export function createJsonTextStreamUnwrapper(
       if (lead) {
         const name = lead[1].toLowerCase();
         const rest = seekBuf.slice(lead[0].length);
-        const closer = THINKING_BLOCKS.has(name) ? THINKING_CLOSE_RE : new RegExp(`<\\s*\\/\\s*${name}\\s*>`, 'gi');
-        closer.lastIndex = Math.max(0, leadScanned - COT_TAG_MAX);
+        const closer = THINKING_BLOCKS.has(name) ? THINKING_CLOSE_RE : new RegExp(`<\\s*\\/\\s*${name}\\s*>`, 'i');
         const close = closer.exec(rest);
         if (close) {
           seekBuf = rest.slice(close.index + close[0].length);
-          leadScanned = 0;
           continue;
         }
-        leadScanned = rest.length;
-        if (seekBuf.length > LEAD_MAX) passThrough();
+        // The block's body is dropped anyway: keep its opening and a tail that can hold a closing tag arriving split,
+        // so waiting for a long block costs nothing (code review round 4: rebuilding it per character took seconds).
+        if (rest.length > LEAD_TAIL) seekBuf = lead[0] + rest.slice(-LEAD_TAIL);
         return;
       }
       if (PREFIX_RE.test(seekBuf)) {
