@@ -47,6 +47,7 @@ import type { PromptAssembler } from '../../prompt/prompt-assembler';
 import type { GamePack, Command } from '../../types';
 import type { EnginePathConfig, IEngramManager } from '../types';
 import { PREFERENCE_PATHS } from '../types';
+import { createJsonTextStreamUnwrapper } from '../stages/ai-call';
 import type { MemoryManager } from '../../memory/memory-manager';
 import { unset as _unset } from 'lodash-es';
 import {
@@ -268,12 +269,16 @@ export class NpcChatPipeline {
       // CR-R14: 有 onStreamChunk 时走流式；aiService 内部会按 UsageType 查询分配的
       // API 配置，如果该 API 支持流式且全局 streaming 设置开启就真正 SSE，
       // 否则降级为一次性返回（此时 onStreamChunk 不会被调用，但调用方仍能拿到完整响应）。
+      // The reply is a JSON object with the words under `text` (npcChat format): the live bubble shows those words
+      // as the main round's does, not the JSON being written (2026-10-03 release check).
+      const streamFilter = onStreamChunk ? createJsonTextStreamUnwrapper(onStreamChunk) : null;
       rawResponse = await this.aiService.generate({
         messages: finalMessages,
         usageType: 'npc_chat',
-        stream: !!onStreamChunk,
-        onStreamChunk,
+        stream: !!streamFilter,
+        onStreamChunk: streamFilter?.onChunk,
       });
+      streamFilter?.flush();
 
       emitPromptResponseDebug({
         flow: 'npcChat',
