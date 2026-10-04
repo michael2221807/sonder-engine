@@ -246,6 +246,7 @@ interface SourceDisplay {
 const BUILDER_I18N_MAP: Record<string, string> = {
   narrative_contract: 'promptAssembly.builder.narrativeContract',
   character_vectors: 'promptAssembly.builder.characterVectors',
+  jailbreak: 'promptAssembly.builder.jailbreak',
   ai_role: 'promptAssembly.builder.aiRole', world_prompt: 'promptAssembly.builder.worldPrompt',
   world_map: 'promptAssembly.builder.worldMap', npc_away: 'promptAssembly.builder.npcAway',
   other_prompts: 'promptAssembly.builder.otherPrompts', write_style: 'promptAssembly.builder.writeStyle',
@@ -260,6 +261,7 @@ const BUILDER_I18N_MAP: Record<string, string> = {
   state_environment: 'promptAssembly.builder.stateEnvironment', state_role: 'promptAssembly.builder.stateRole',
   state_tasks: 'promptAssembly.builder.stateTasks', state_agreements: 'promptAssembly.builder.stateAgreements',
   narrative_constraints: 'promptAssembly.builder.narrativeConstraints', extra_prompt: 'promptAssembly.builder.extraPrompt',
+  output_protocol: 'promptAssembly.builder.outputProtocol',
   format_prompt: 'promptAssembly.builder.formatPrompt', cot_core: 'promptAssembly.builder.cotCore',
   cot_judge: 'promptAssembly.builder.cotJudge', player_input: 'promptAssembly.builder.playerInput',
   start_task: 'promptAssembly.builder.startTask', cot_masquerade: 'promptAssembly.builder.cotMasquerade',

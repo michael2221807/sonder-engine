@@ -54,6 +54,7 @@ export const GPROXY_CACHE_MAGIC_STRING =
  * reorder preserves each piece's original insertion order.
  */
 export const GPROXY_CACHE_STATIC_PIECE_IDS: ReadonlySet<string> = new Set([
+  'jailbreak',
   'ai_role',
   'write_style',
   'write_anti_cliche',
@@ -62,6 +63,7 @@ export const GPROXY_CACHE_STATIC_PIECE_IDS: ReadonlySet<string> = new Set([
   'perspective_prompt',
   'length_prompt',
   'narrative_constraints',
+  'output_protocol',
   'format_prompt',
   'cot_core',
   'cot_judge',
@@ -337,6 +339,12 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
     contextPieces[id] = trimmed;
     entries.push({ id, title, category, role, content: trimmed, isUserInput: options?.isUserInput });
   };
+
+  // ── 0. Jailbreak (single call) — the pack's own round flows open with it; this builder, ported from a demo
+  // without one, left it out (P13, PO 2026-10-04). Split Step 2 carries it through its flow. ──
+  if (!splitGen) {
+    push('jailbreak', '破限声明', '系统', 'system', renderPackPrompt('jailbreak'));
+  }
 
   // ── 1. AI Role Declaration ──
   push('ai_role', 'AI角色声明', '系统', 'system', slot('narrator_role'));
@@ -687,6 +695,11 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   }
 
   // ── 22. Format/Output Protocol ──
+  // A single call writes the commands too: it needs the output protocol (core), which the format prompt refers to
+  // as the rules above. Without it a single call wrote paths the state tree does not have (P13, PO 2026-10-04).
+  if (!splitGen) {
+    push('output_protocol', '输出结构与指令协议', '系统', 'system', slot('output_protocol'));
+  }
   push('format_prompt', '输出格式提示词', '系统', 'system', slot('format_prompt'));
   // The player turned action options off (PO 2026-10-03): the default format asks for them, so say so right after
   // it. A round-selected format (split Step 1 in the impulse mode) writes the narrative only and needs nothing.

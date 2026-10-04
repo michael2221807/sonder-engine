@@ -26,6 +26,7 @@ const PACK_PROMPTS: Record<string, string> = {
   antiCliche: 'PACK ANTICLICHE',
   emotionGuard: 'PACK EMOTION',
   jailbreak: 'PACK JAILBREAK',
+  core: 'PACK CORE',
   splitGenStep2: 'PACK STEP2',
   splitGenStep2Followup: 'PACK FOLLOWUP',
 };
@@ -106,6 +107,25 @@ describe('ContextAssembly · the prompt page reaches the story request', () => {
       r.setUserContent('splitGenStep1', 'EDITED STEP1 FORMAT');
     }).execute(makeCtx({ splitGen: true, plotVectorPromptMode: true }));
     expect(text(out.messages)).toContain('EDITED STEP1 FORMAT');
+  });
+
+  // P13 (PO 2026-10-04): a single call writes the commands too, so it carries the jailbreak and the protocol.
+  it('the single call carries the jailbreak and the output protocol as the player left them', async () => {
+    const out = await makeStage((r) => r.setUserContent('jailbreak', 'EDITED JAILBREAK')).execute(makeCtx({ splitGen: false }));
+    const story = text(out.messages);
+    expect(story).toContain('EDITED JAILBREAK');
+    expect(story).not.toContain('PACK JAILBREAK');
+    expect(story.indexOf('PACK CORE')).toBeGreaterThan(-1);
+    expect(story.indexOf('PACK CORE')).toBeLessThan(story.indexOf('PACK MAIN FORMAT'));
+    const off = await makeStage((r) => r.setEnabled('core', false)).execute(makeCtx({ splitGen: false }));
+    expect(text(off.messages)).not.toContain('PACK CORE');
+  });
+
+  it('split Step 1 writes only the story: no jailbreak, no protocol (Step 2 has both)', async () => {
+    const out = await makeStage(() => undefined).execute(makeCtx({ splitGen: true }));
+    const story = text(out.messages);
+    expect(story).not.toContain('PACK JAILBREAK');
+    expect(story).not.toContain('PACK CORE');
   });
 
   it('Step 2 keeps reading the page too (the flow assembler), so both steps agree', async () => {

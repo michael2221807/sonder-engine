@@ -232,6 +232,7 @@
   "promptAssembly.memory.engramRules": "Engram · Rules",
   "promptAssembly.memory.lineRange": "Lines {start} – {end}",
 
+  "promptAssembly.builder.jailbreak": "Jailbreak",
   "promptAssembly.builder.aiRole": "AI Role Declaration",
   "promptAssembly.builder.narrativeContract": "Narrative contract",
   "promptAssembly.builder.characterVectors": "Character vectors",
@@ -260,6 +261,7 @@
   "promptAssembly.builder.stateAgreements": "Agreements",
   "promptAssembly.builder.narrativeConstraints": "Narrative Constraints + Style",
   "promptAssembly.builder.extraPrompt": "Extra Requirements",
+  "promptAssembly.builder.outputProtocol": "Core Rules · Output Protocol",
   "promptAssembly.builder.formatPrompt": "Output Format",
   "promptAssembly.builder.cotCore": "COT Protocol",
   "promptAssembly.builder.cotJudge": "COT Judge",

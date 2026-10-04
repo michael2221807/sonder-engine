@@ -241,9 +241,11 @@ describe('real pack judgment transition, zero network', () => {
     for (const edit of rules.replacements) expect(packs.some(p => p.prompts[edit.promptId]?.replace(/\r\n/g, '\n').includes(edit.from))).toBe(true);
     const h = harness(false, false, false, true, false);
     h.registry.setUserContent('mainRound', h.pack.prompts.mainRound + '\n自定义结尾 {{EXTRA}}');
-    const adapted = h.assembler.withTransform(h.policy.transform).renderSingle('mainRound', { EXTRA: oldFormat, GAME_STATE_JSON: oldFormat })!;
+    // A value filled into the module's own placeholder is never edited either (2026-10-04: the format prompt's context
+    // placeholders moved out to splitGenContext; its word count is still filled in).
+    const adapted = h.assembler.withTransform(h.policy.transform).renderSingle('mainRound', { EXTRA: oldFormat, wordCount: oldFormat })!;
     expect(adapted).toContain(`自定义结尾 ${oldFormat}`);
-    expect(adapted).toContain(`\n${oldFormat}\n`);
+    expect(adapted).toContain(`约${oldFormat}字`);
     expect(h.assembler.renderSingle('mainRound', {})!).toContain('必须使用判定');
     expect(h.policy.transform('unrelated', `原样\r\n${oldFormat}`)).toBe(`原样\r\n${oldFormat}`);
   });

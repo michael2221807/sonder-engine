@@ -476,3 +476,45 @@ describe('buildSystemPrompt · Canon Capture prompt pieces (P1)', () => {
     expect(r.contextPieces['setting_capture']).toBeUndefined();
   });
 });
+
+// P13 (PO 2026-10-04): a single call writes the whole round — the story and its commands — so it carries what the
+// pack's own round flow does: the jailbreak first, and the output protocol (core) right before the format prompt,
+// which refers to it as the rules above. A real single-call round without it wrote a path the state tree lacks.
+describe('buildSystemPrompt · a single call carries the jailbreak and the output protocol', () => {
+  function build(splitGen: boolean, edits: Record<string, string> = {}, gproxyCache = false) {
+    const { sm } = createMockStateManager({});
+    return buildSystemPrompt({ stateManager: sm as unknown as StateManager, paths: DEFAULT_ENGINE_PATHS,
+      packPrompts: { mainRound: 'FORMAT', narratorFrame: 'NARRATOR', jailbreak: 'JAILBREAK', core: 'CORE RULES', ...edits },
+      worldBooks: [], userInput: 'hi', playerName: 'p',
+      cotEnabled: false, cotJudgeEnabled: false, splitGen, cotPseudoEnabled: false, gproxyCache,
+      // As the round's real transform: a switched-off (empty) prompt stays empty.
+      transformPrompt: (id, raw) => raw && `${id}:${raw}` });
+  }
+  const ids = (r: ReturnType<typeof build>) => r.messageEntries.map((e) => e.id);
+
+  it('the jailbreak opens the request; the protocol sits right before the format that refers to it', () => {
+    const single = build(false);
+    expect(ids(single)[0]).toBe('jailbreak');
+    expect(single.contextPieces.jailbreak).toBe('jailbreak:JAILBREAK');
+    expect(single.contextPieces.output_protocol).toBe('core:CORE RULES');
+    expect(ids(single).indexOf('output_protocol')).toBe(ids(single).indexOf('format_prompt') - 1);
+  });
+  it('they are sent as the player left them: edited, or not at all when switched off', () => {
+    const edited = build(false, { jailbreak: 'MINE', core: '' });
+    expect(edited.contextPieces.jailbreak).toBe('jailbreak:MINE');
+    expect(edited.contextPieces.output_protocol).toBeUndefined();
+    expect(JSON.stringify(edited.messageEntries)).not.toContain('CORE RULES');
+  });
+  it('split Step 1 writes only the story and carries neither (Step 2 carries both through its flow)', () => {
+    const step1 = build(true);
+    expect(step1.contextPieces.jailbreak).toBeUndefined();
+    expect(step1.contextPieces.output_protocol).toBeUndefined();
+  });
+  it('both are the same every round: with the gproxy cache on they lead the cached prefix, the jailbreak first', () => {
+    const cached = ids(build(false, {}, true));
+    expect(cached[0]).toBe('jailbreak');
+    expect(cached.indexOf('output_protocol')).toBeLessThan(cached.indexOf('memory_long'));
+    expect(GPROXY_CACHE_STATIC_PIECE_IDS.has('jailbreak')).toBe(true);
+    expect(GPROXY_CACHE_STATIC_PIECE_IDS.has('output_protocol')).toBe(true);
+  });
+});

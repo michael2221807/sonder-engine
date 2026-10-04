@@ -20,6 +20,9 @@ const EDITED_STYLE = '【E2E文风】只写当场看得见的动作。';
 const PACK_STYLE = '【文风参考（取法，不复写）】';
 const PACK_ANTI_CLICHE = '【反八股文约束 — 去 AI 腔】';
 const BOOKMARK_LABEL = '〔收藏·第2回合·';
+const JAILBREAK_HEADING = '# 虚构创作环境声明';
+const CORE_HEADING = '# 核心规则 · GM 身份与输出格式';
+const FORMAT_LINE = '按照上述规则的 JSON 格式输出本回合的叙事和状态变更。';
 
 // Two full rounds so round 2 has a divider with the bookmark star (the opening has none).
 const twoRoundTree = makeSeedTree({
@@ -146,10 +149,21 @@ for (const splitGen of [true, false]) {
       expect(story).not.toContain(PACK_ANTI_CLICHE);
       expect(story).toContain('玩家收藏的历史片段');
       expect(timesIn(story, BOOKMARK_LABEL)).toBe(1);
+      // The format prompt no longer opens with a context section the story request cannot fill (it rendered empty).
+      expect(story).toContain(FORMAT_LINE);
+      expect(story).not.toContain('# 主回合上下文');
       if (splitGen) {
-        // Step 2 reads the page and the bookmarks as before.
+        // Step 1 writes only the story; Step 2 reads the page, the bookmarks, the jailbreak and the protocol as before.
+        expect(story).not.toContain(CORE_HEADING);
         const step2 = textOf(sent.find((b) => !b.stream));
         expect(step2).toContain(BOOKMARK_LABEL);
+        expect(step2).toContain(JAILBREAK_HEADING);
+        expect(step2).toContain(CORE_HEADING);
+      } else {
+        // P13: a single call writes the commands too — the jailbreak opens it, the protocol precedes the format.
+        expect(story).toContain(JAILBREAK_HEADING);
+        expect(story.indexOf(JAILBREAK_HEADING)).toBeLessThan(story.indexOf(CORE_HEADING));
+        expect(story.indexOf(CORE_HEADING)).toBeLessThan(story.indexOf(FORMAT_LINE));
       }
 
       // The pick was for one round: it is cleared once the round is done.

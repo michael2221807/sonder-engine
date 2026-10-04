@@ -232,6 +232,7 @@
   "promptAssembly.memory.engramRules": "Engram · 规则",
   "promptAssembly.memory.lineRange": "行 {start} – {end}",
 
+  "promptAssembly.builder.jailbreak": "破限声明",
   "promptAssembly.builder.aiRole": "AI角色声明",
   "promptAssembly.builder.narrativeContract": "叙事契约",
   "promptAssembly.builder.characterVectors": "人物向量",
@@ -260,6 +261,7 @@
   "promptAssembly.builder.stateAgreements": "约定",
   "promptAssembly.builder.narrativeConstraints": "叙事约束+风格",
   "promptAssembly.builder.extraPrompt": "额外要求",
+  "promptAssembly.builder.outputProtocol": "核心规则·输出协议",
   "promptAssembly.builder.formatPrompt": "输出格式",
   "promptAssembly.builder.cotCore": "COT协议",
   "promptAssembly.builder.cotJudge": "COT判定",

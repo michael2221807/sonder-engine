@@ -1,21 +1,3 @@
-# 主回合上下文
-
-## 当前游戏状态
-
-```json
-{{GAME_STATE_JSON}}
-```
-
-{{ENVIRONMENT_BLOCK}}
-
-## 记忆摘要
-
-{{MEMORY_BLOCK}}
-
-{{BOOKMARKED_ROUNDS_BLOCK}}
-
----
-
 按照上述规则的 JSON 格式输出本回合的叙事和状态变更。
 
 ## 本回合要求

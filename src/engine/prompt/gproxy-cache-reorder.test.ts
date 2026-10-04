@@ -131,8 +131,8 @@ describe('applyGproxyCacheReorder', () => {
 
   it('static id set includes exactly the intended pieces', () => {
     expect([...GPROXY_CACHE_STATIC_PIECE_IDS].sort()).toEqual(
-      ['ai_role', 'cot_core', 'cot_judge', 'format_prompt', 'length_prompt',
-       'narrative_constraints', 'perspective_prompt', 'write_anti_cliche',
+      ['ai_role', 'cot_core', 'cot_judge', 'format_prompt', 'jailbreak', 'length_prompt',
+       'narrative_constraints', 'output_protocol', 'perspective_prompt', 'write_anti_cliche',
        'write_emotion_guard', 'write_no_control', 'write_style'].sort(),
     );
   });
@@ -140,7 +140,7 @@ describe('applyGproxyCacheReorder', () => {
   it('static id set excludes volatile/lore-bearing pieces (guards misclassification)', () => {
     // These MUST NOT be cached — misclassifying any as static breaks cache hits.
     for (const volatile of ['world_prompt', 'world_map', 'npc_away', 'memory_long',
-      'memory_mid', 'memory_engram', 'state_environment', 'state_role', 'wb_system_rules']) {
+      'memory_mid', 'memory_engram', 'bookmarked_rounds', 'state_environment', 'state_role', 'wb_system_rules']) {
       expect(GPROXY_CACHE_STATIC_PIECE_IDS.has(volatile)).toBe(false);
     }
     // Core static rules ARE included.

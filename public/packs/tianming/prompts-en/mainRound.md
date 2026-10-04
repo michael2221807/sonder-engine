@@ -1,21 +1,3 @@
-# Main Round Context
-
-## Current Game State
-
-```json
-{{GAME_STATE_JSON}}
-```
-
-{{ENVIRONMENT_BLOCK}}
-
-## Memory Summary
-
-{{MEMORY_BLOCK}}
-
-{{BOOKMARKED_ROUNDS_BLOCK}}
-
----
-
 The player's input will be sent as the **last user message** (appended by the pipeline after the chat history, prefixed with `narratorEnforcement`). Output this round's narrative and state changes in the JSON format defined by the core module.
 
 ## This Round's Requirements

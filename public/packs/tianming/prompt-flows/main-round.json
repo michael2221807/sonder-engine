@@ -1,11 +1,12 @@
 {
   "id": "mainRound",
-  "$comment": "顺序：narratorFrame → cot-preamble(conditional) → mainRound → core → cot-no-thinking-guard(conditional) → cot-judge(conditional) → actionOptions* → historyFraming. CoT 相关模块通过 condition 字段实现 additive plugin 模式（PRINCIPLES §3.9）—— COT_ENABLED 时注入 thinking 指令; COT_DISABLED 时注入 thinking 禁令。narratorEnforcement 由 context-assembly 作为 post-history user message 追加。",
+  "$comment": "顺序：narratorFrame → cot-preamble(conditional) → splitGenContext（状态/记忆/收藏，2026-10-04 从 mainRound 移出：主回合新组装器只用 mainRound 的格式部分）→ mainRound → core → cot-no-thinking-guard(conditional) → cot-judge(conditional) → actionOptions* → historyFraming. CoT 相关模块通过 condition 字段实现 additive plugin 模式（PRINCIPLES §3.9）—— COT_ENABLED 时注入 thinking 指令; COT_DISABLED 时注入 thinking 禁令。narratorEnforcement 由 context-assembly 作为 post-history user message 追加。",
   "modules": [
     { "promptId": "jailbreak", "role": "system", "order": -2, "depth": 0 },
     { "promptId": "narratorFrame", "role": "system", "order": -1, "depth": 0 },
     { "promptId": "cot-preamble", "role": "system", "order": -0.5, "depth": 1, "condition": "COT_ENABLED" },
     { "promptId": "cot-masquerade", "role": "assistant", "order": -0.4, "depth": 1, "condition": "COT_ENABLED" },
+    { "promptId": "splitGenContext", "role": "system", "order": -0.1, "depth": 0 },
     { "promptId": "mainRound", "role": "system", "order": 0, "depth": 0 },
     { "promptId": "wordCountReq", "role": "system", "order": 0.5, "depth": 0 },
     { "promptId": "core", "role": "system", "order": 1, "depth": 0 },
