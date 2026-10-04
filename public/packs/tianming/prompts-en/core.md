@@ -34,7 +34,7 @@ Whatever text describes, commands must update accordingly:
 | Scene / location change | `set 角色.基础信息.当前位置` + `push 世界.地点信息` |
 | Time passes | `add 世界.时间.分钟` (engine auto-carries) |
 | Major world event | `push 社交.事件.事件记录` |
-| NPC interaction | `push 记忆 (NPC)` + `add 社交.关系[名称=X].好感度` (positive when closer, negative when offended or hurt) |
+| NPC interaction | `push 社交.关系[名称=X].记忆` (what this NPC remembers, one sentence) + `add 社交.关系[名称=X].好感度` (positive when closer, negative when offended or hurt) |
 | NPC enters / leaves current scene | `set 社交.关系[名称=X].是否在场` true/false + `set 社交.关系[名称=X].位置` |
 | Conflict / injury | `add 角色.可变属性.体力.当前` (negative value) |
 | Energy expenditure | `add 角色.可变属性.精力.当前` (negative value) |

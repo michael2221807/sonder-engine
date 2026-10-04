@@ -190,6 +190,13 @@ export class CommandExecutor {
           // ── 步骤 4：数组容量限制 ──
           const arr = this.stateManager.get<unknown[]>(cmd.key);
 
+          // A push onto a value that is there but is not a list would replace it with a one-item list (see
+          // StateManager.push). A model's `push 记忆 …` replaced the whole memory object that way, wiping every tier
+          // (paid check, 2026-10-04): refuse it and leave the value as it is.
+          if (arr !== undefined && arr !== null && !Array.isArray(arr)) {
+            return { success: false, command, error: `push target is not a list: ${cmd.key}` };
+          }
+
           // ── 步骤 4b：push 去重/融合守卫 ──
           if (this.pushDedupGuard && Array.isArray(arr)) {
             const verdict = this.pushDedupGuard(cmd.key, cmd.value, arr);

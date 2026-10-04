@@ -378,6 +378,41 @@ describe('CommandExecutor · add on the real state tree', () => {
   });
 });
 
+// Paid check 2026-10-04: a single call's `push 记忆 …` replaced the whole memory object with a one-item list, wiping
+// every tier; the next round's request said 「暂无」 for long- and mid-term memory.
+describe('CommandExecutor · a push never replaces a value that is not a list', () => {
+  it('refuses a push onto an object or a text and leaves it as it was; the rest of the batch still applies', async () => {
+    const { StateManager } = await import('@/engine/core/state-manager');
+    const sm = new StateManager();
+    const memory = { 短期: [{ summary: 's' }], 中期: [{ 记忆主体: 'm' }], 长期: [{ content: 'l' }] };
+    sm.loadTree({ 记忆: memory, 社交: { 关系: [{ 名称: '林晚照', 记忆: '旧的一句', 好感度: 50 }] } });
+    const memoryBefore = JSON.parse(JSON.stringify(memory)) as unknown;
+    const ex = new CommandExecutor(sm, ['记忆', '社交']);
+    const { results } = ex.executeBatch([
+      { action: 'push', key: '记忆', value: { 角色: '林晚照', 内容: '喂粥' } },
+      { action: 'push', key: '社交.关系[名称=林晚照].记忆', value: '新的一句' },
+      { action: 'add', key: '社交.关系[名称=林晚照].好感度', value: 4 },
+    ]);
+    expect(results.map((r) => r.success)).toEqual([false, false, true]);
+    expect(results[0].error).toContain('not a list');
+    expect(sm.get('记忆')).toEqual(memoryBefore);
+    expect(sm.get('社交.关系[名称=林晚照].记忆')).toBe('旧的一句');
+    expect(sm.get('社交.关系[名称=林晚照].好感度')).toBe(54);
+  });
+  it('still starts a list where there is none yet, and appends to one that is there', async () => {
+    const { StateManager } = await import('@/engine/core/state-manager');
+    const sm = new StateManager();
+    sm.loadTree({ 社交: { 关系: [{ 名称: '林晚照', 记忆: ['第一条'], 经历: null }] } });
+    const ex = new CommandExecutor(sm, ['社交']);
+    expect(ex.execute({ action: 'push', key: '社交.关系[名称=林晚照].记忆', value: '第二条' }).success).toBe(true);
+    expect(ex.execute({ action: 'push', key: '社交.关系[名称=林晚照].经历', value: '一次' }).success).toBe(true);
+    expect(ex.execute({ action: 'push', key: '社交.关系[名称=林晚照].新列表', value: 'x' }).success).toBe(true);
+    expect(sm.get('社交.关系[名称=林晚照].记忆')).toEqual(['第一条', '第二条']);
+    expect(sm.get('社交.关系[名称=林晚照].经历')).toEqual(['一次']);
+    expect(sm.get('社交.关系[名称=林晚照].新列表')).toEqual(['x']);
+  });
+});
+
 describe('CommandExecutor · numeric ranges declared by the pack schema', () => {
   it('finds the declared range through filtered and indexed array segments only', async () => {
     const { schemaNumberBounds } = await import('@/engine/core/command-executor');
