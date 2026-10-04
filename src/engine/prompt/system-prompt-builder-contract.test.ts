@@ -1,9 +1,9 @@
 /**
  * `buildSystemPrompt` · narrative_contract piece (plan §3 S1).
  *
- * The block is pre-rendered by the caller; the builder wraps it in the pack slot
- * (player-overridable via builtin overrides), places it right after the narrative
- * constraints, and emits NOTHING when the block is empty.
+ * The block is pre-rendered by the caller; the builder wraps it in the slot's prompt as the player left it on
+ * the prompt page (`packPrompts` carries the edits), places it right after the narrative constraints, and emits
+ * NOTHING when the block is empty or the prompt is switched off.
  */
 import { describe, it, expect } from 'vitest';
 import { buildSystemPrompt, GPROXY_CACHE_STATIC_PIECE_IDS } from './system-prompt-builder';
@@ -11,13 +11,13 @@ import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 import { createMockStateManager } from '../__test-utils__';
 import type { StateManager } from '../core/state-manager';
 
-function build(block: string | undefined, packPrompts: Record<string, string> = {}, overrides: Array<{ slotId: string; userContent?: string; content?: string; enabled?: boolean }> = []) {
+function build(block: string | undefined, packPrompts: Record<string, string> = {}, transformPrompt?: (id: string, raw: string) => string) {
   const { sm } = createMockStateManager({ 系统: { 设置: { prompt: { enableWorldBook: false } } } });
   return buildSystemPrompt({
     stateManager: sm as unknown as StateManager,
     paths: DEFAULT_ENGINE_PATHS,
     packPrompts,
-    builtinOverrides: overrides as never,
+    transformPrompt,
     worldBooks: [],
     userInput: '走路',
     playerName: '主角',
@@ -46,9 +46,20 @@ describe('buildSystemPrompt · narrative_contract piece', () => {
     expect(r.messageEntries.find((e) => e.id === 'narrative_contract')?.content).toBe('BLOCK-TEXT');
   });
 
-  it('honours a player override of the slot text', () => {
-    const r = build('BLOCK-TEXT', { narrativeContract: 'pack' }, [{ slotId: 'narrative_contract', userContent: '自定义 {{NARRATIVE_CONTRACT_BLOCK}}' }]);
+  it('wraps the block in the player\'s edit of the slot text', () => {
+    const r = build('BLOCK-TEXT', { narrativeContract: '自定义 {{NARRATIVE_CONTRACT_BLOCK}}' });
     expect(r.messageEntries.find((e) => e.id === 'narrative_contract')?.content).toBe('自定义 BLOCK-TEXT');
+  });
+
+  it('sends nothing when the player switched the slot\'s prompt off (as Step 2\'s flow does)', () => {
+    const r = build('BLOCK-TEXT', { narrativeContract: '' });
+    expect(r.messageEntries.map((e) => e.id)).not.toContain('narrative_contract');
+  });
+
+  it('applies the round\'s transform to the slot text (the impulse mode\'s rewrites)', () => {
+    const r = build('BLOCK-TEXT', { narrativeContract: '局面与判定 {{NARRATIVE_CONTRACT_BLOCK}}' },
+      (id, raw) => (id === 'narrativeContract' ? raw.replace('局面与判定', '局面') : raw));
+    expect(r.messageEntries.find((e) => e.id === 'narrative_contract')?.content).toBe('局面 BLOCK-TEXT');
   });
 
   it('emits no piece when the block is empty or absent (byte-identical prompt)', () => {

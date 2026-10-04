@@ -756,7 +756,13 @@ async function bootstrap(): Promise<void> {
     if (typeof requestIdleCallback === 'function') requestIdleCallback(() => slice(), { timeout: 5000 });
     else setTimeout(slice, 50);
   });
-  const vectorPromptPolicy = parseVectorPromptPolicy(pack?.rules.plotVectorPrompts, pack?.prompts.plotVectorMode);
+  const parsedVectorPolicy = parseVectorPromptPolicy(pack?.rules.plotVectorPrompts, pack?.prompts.plotVectorMode);
+  // The mode prompt is read when a round sends it, as the player left it on the prompt page (edited, or '' when
+  // switched off); the pack's text only decides whether the pack offers the mode at all.
+  const vectorPromptPolicy = parsedVectorPolicy && {
+    ...parsedVectorPolicy,
+    get mode() { return promptRegistry.getEffectiveContent('plotVectorMode'); },
+  };
   const plotVectorBoard = new VectorBoardAccess(stateManager, saveManager, getActiveSlot,
     () => !orchestrator || orchestrator.isBusy, vectorNativeRules,
     () => orchestrator?.onStateEditSettled(),

@@ -36,6 +36,15 @@ describe('PromptRegistry', () => {
     expect(registry.getEffectiveContent('missing')).toBe('');
   });
 
+  it('getRequiredContent keeps the text of a module switched off: the edit, else the default', () => {
+    registry.register({ id: 'format', content: 'default', enabled: false });
+    expect(registry.getEffectiveContent('format')).toBe('');
+    expect(registry.getRequiredContent('format')).toBe('default');
+    registry.setUserContent('format', 'edited');
+    expect(registry.getRequiredContent('format')).toBe('edited');
+    expect(registry.getRequiredContent('missing')).toBe('');
+  });
+
   it('lists all registered module IDs', () => {
     registry.register({ id: 'a', content: '', enabled: true });
     registry.register({ id: 'b', content: '', enabled: true });

@@ -26,7 +26,7 @@ import { eventBus } from '@/engine/core/event-bus';
 import type { GamePack } from '@/engine/types/game-pack';
 import { useGameState } from '@/ui/composables/useGameState';
 import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio, actionOptionsOn, wordCountOf, type PromptSettings } from '@/engine/prompt/world-book';
-import { BUILTIN_SLOTS } from '@/engine/prompt/builtin-slots';
+import { BUILTIN_SLOTS, ROUND_FORMAT_PROMPT_IDS } from '@/engine/prompt/builtin-slots';
 import { createEmptyHeroinePlan, type HeroinePlan, type HeroineEntry, type HeroineInteractionEvent } from '@/engine/story/heroine-plan';
 import type { PromptRegistry } from '@/engine/prompt/prompt-registry';
 import WorldBookTab from './WorldBookTab.vue';
@@ -431,7 +431,7 @@ function isPromptActiveByRadio(id: string): boolean | null {
   // Perspective prompts — only selected one is active
   const perspectiveMap: Record<string, string> = {
     perspectiveFirst: '第一人称',
-    perspectiveSecond: '第��人称',
+    perspectiveSecond: '第二人称',
     perspectiveThird: '第三人称',
   };
   if (id in perspectiveMap) {
@@ -572,7 +572,11 @@ const filteredPrompts = computed<PromptEntry[]>(() => {
 
 // ─── Toggle enabled ───────────────────────────────────────────
 
+/** The main round's format prompts: every round needs them, so they cannot be switched off here (the round sends them anyway). */
+const REQUIRED_PROMPTS: ReadonlySet<string> = new Set(ROUND_FORMAT_PROMPT_IDS);
+
 function toggleEnabled(entry: PromptEntry): void {
+  if (REQUIRED_PROMPTS.has(entry.id)) return;
   const newVal = !entry.enabled;
   localStorage.setItem(enabledKey(entry.id), String(newVal));
   promptRegistry?.setEnabled(entry.id, newVal);
@@ -1060,10 +1064,12 @@ function previewContent(content: string, maxLen = 100): string {
                       </button>
                     </Tooltip>
                     <!-- Enable toggle -->
-                    <Tooltip :text="entry.enabled ? $t('prompt.entry.enableTitle') : $t('prompt.entry.disableTitle')" interactive>
+                    <Tooltip :text="REQUIRED_PROMPTS.has(entry.id) ? $t('prompt.entry.requiredTitle') : entry.enabled ? $t('prompt.entry.enableTitle') : $t('prompt.entry.disableTitle')" interactive>
                       <AgaToggle
-                        :modelValue="entry.enabled"
-                        :label="entry.enabled ? $t('prompt.entry.enableTitle') : $t('prompt.entry.disableTitle')"
+                        :modelValue="entry.enabled || REQUIRED_PROMPTS.has(entry.id)"
+                        :disabled="REQUIRED_PROMPTS.has(entry.id)"
+                        :data-testid="`prompt-toggle-${entry.id}`"
+                        :label="REQUIRED_PROMPTS.has(entry.id) ? $t('prompt.entry.requiredTitle') : entry.enabled ? $t('prompt.entry.enableTitle') : $t('prompt.entry.disableTitle')"
                         @update:modelValue="() => toggleEnabled(entry)"
                         @click.stop
                       />

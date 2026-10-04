@@ -50,6 +50,7 @@
   "prompt.entry.exportTitle": "导出此 Prompt",
   "prompt.entry.enableTitle": "点击禁用",
   "prompt.entry.disableTitle": "点击启用",
+  "prompt.entry.requiredTitle": "每回合都要用它定输出格式，不能关闭",
 
   "prompt.toast.enabled": "{id} 已启用",
   "prompt.toast.disabled": "{id} 已禁用",

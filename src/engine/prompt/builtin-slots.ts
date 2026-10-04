@@ -1,8 +1,9 @@
 /**
  * Built-in prompt slot definitions.
  *
- * Each slot represents an overridable prompt component. World book entries
- * with a matching `builtinSlotId` will replace the default content.
+ * Each slot names the pack prompt (`defaultPromptId`) a piece of the main round's story request is built from.
+ * What the round sends is that prompt as the player left it on the prompt page — edited or the pack's, or nothing
+ * when switched off (`PromptRegistry`, read through `PromptAssembler.effectivePrompts`).
  *
  * Mapped from the original 世界书本体槽位 — adapted to AGA's scope
  * (no battle, no fandom, no realm system).
@@ -304,6 +305,14 @@ export const BUILTIN_SLOTS: Record<string, BuiltinSlotDefinition> = {
     defaultPromptId: 'characterVectors',
   },
 } as const;
+
+/**
+ * The format prompts the main round's story request is built on: the default one and the split Step 1 narrative
+ * format the impulse mode selects. A round cannot do without them, so they are sent even when switched off
+ * (`PromptRegistry.getRequiredContent`) and the prompt page does not offer to switch them off.
+ */
+export const SPLIT_STEP1_FORMAT_PROMPT_ID = 'splitGenStep1';
+export const ROUND_FORMAT_PROMPT_IDS: readonly string[] = [BUILTIN_SLOTS.format_prompt?.defaultPromptId ?? 'mainRound', SPLIT_STEP1_FORMAT_PROMPT_ID];
 
 /**
  * Get the slot IDs for a given category.

@@ -164,7 +164,6 @@ describe('buildSystemPrompt — gproxyCache gating (control toggle)', () => {
       stateManager: sm as unknown as StateManager,
       paths: DEFAULT_ENGINE_PATHS,
       packPrompts: { narratorFrame: 'ROLE', writeStyle: 'STYLE', antiCliche: 'ANTI', mainRound: 'FORMAT' },
-      builtinOverrides: [],
       worldBooks: [],
       userInput: 'hello',
       playerName: 'P',

@@ -53,8 +53,9 @@ import { hasSettingTag, parseSettingTagNames } from '../../prompt/setting-tag-sc
 import { DEFAULT_PROMPT_SETTINGS, actionOptionsOn, wordCountRangeOf } from '../../prompt/world-book';
 import type { PromptSettings } from '../../prompt/world-book';
 import { buildEnvironmentBlock } from '../../prompt/environment-block';
+import { ROUND_FORMAT_PROMPT_IDS, SPLIT_STEP1_FORMAT_PROMPT_ID } from '../../prompt/builtin-slots';
 import { PlotInjector } from '../../plot/plot-injector';
-import type { WorldBook, BuiltinPromptEntry, SystemPromptBuildResult } from '../../prompt/world-book';
+import type { WorldBook, SystemPromptBuildResult } from '../../prompt/world-book';
 
 /** 状态树中叙事历史条目的结构 — 从 "元数据.叙事历史" 读取 */
 interface NarrativeEntry {
@@ -94,6 +95,9 @@ function appendUserTurn(messages: AIMessage[], sources: string[], content: strin
   sources.push('current_input');
 }
 
+/** The main round's format prompts: sent even when switched off on the prompt page (a round needs its format). */
+const REQUIRED_FORMAT_PROMPTS: ReadonlySet<string> = new Set(ROUND_FORMAT_PROMPT_IDS);
+
 export class ContextAssemblyStage implements PipelineStage {
   name = 'ContextAssembly';
 
@@ -110,8 +114,6 @@ export class ContextAssemblyStage implements PipelineStage {
     private unifiedRetriever?: IUnifiedRetriever,
     /** World book getter: returns current world books (supports live updates) */
     private getWorldBooks?: () => WorldBook[],
-    /** Built-in prompt overrides getter */
-    private getBuiltinOverrides?: () => BuiltinPromptEntry[],
     /** Whether to use the new context-piece builder (default: false for backward compat) */
     private useNewBuilder?: boolean,
     /**
@@ -563,6 +565,9 @@ export class ContextAssemblyStage implements PipelineStage {
         content: typeof e.content === 'string' ? e.content : '',
       }));
 
+      // The pack's prompts as this round sends them (the prompt page's edits and switches); the round's format
+      // prompts are never sent switched off.
+      const roundPrompts = this.promptAssembler.effectivePrompts(this.pack.prompts ?? {}, REQUIRED_FORMAT_PROMPTS);
       const buildResult = buildSystemPrompt({
         transformPrompt,
         historyText,
@@ -574,11 +579,10 @@ export class ContextAssemblyStage implements PipelineStage {
         // Reuse the pack's narrative phase instead of asking Step 1 for data
         // that the split merge discards. Legacy/off and opening stay unchanged.
         formatPromptId: ctx.meta.plotVectorPromptMode && splitGen
-          && !ctx.meta.isEnhancedOpening && !ctx.meta.step1FlowOverride ? 'splitGenStep1' : undefined,
+          && !ctx.meta.isEnhancedOpening && !ctx.meta.step1FlowOverride ? SPLIT_STEP1_FORMAT_PROMPT_ID : undefined,
         stateManager: this.stateManager,
         paths: this.paths,
-        packPrompts: this.pack.prompts,
-        builtinOverrides: this.getBuiltinOverrides?.() ?? [],
+        packPrompts: roundPrompts,
         worldBooks: mergedWorldBooks,
         userInput: ctx.userInput,
         playerName: this.stateManager.get<string>(this.paths.playerName) ?? '',
@@ -636,7 +640,7 @@ export class ContextAssemblyStage implements PipelineStage {
 
       // GAP-08 fix: inject plot directive as system message for new builder path
       if (variables['PLOT_DIRECTIVE']) {
-        const plotDirectivePrompt = this.pack.prompts?.['plotDirective'] ?? '';
+        const plotDirectivePrompt = roundPrompts['plotDirective'] ?? '';
         if (plotDirectivePrompt) {
           const rendered = plotDirectivePrompt.replace(/\{\{(\w+)\}\}/g,
             (_: string, key: string) => key in variables ? variables[key] : '');
@@ -649,7 +653,7 @@ export class ContextAssemblyStage implements PipelineStage {
         }
         // Also inject evaluation prompt in non-split-gen mode
         if (!splitGen && variables['PLOT_COMPLETION_HINT']) {
-          const evalPrompt = this.pack.prompts?.['plotEvaluationStep2'] ?? '';
+          const evalPrompt = roundPrompts['plotEvaluationStep2'] ?? '';
           if (evalPrompt) {
             const rendered = evalPrompt.replace(/\{\{(\w+)\}\}/g,
               (_: string, key: string) => key in variables ? variables[key] : '');

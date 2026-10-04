@@ -78,7 +78,6 @@ function makeStageWithHistory(
     undefined,
     undefined,
     () => [],
-    () => [],
     true, // useNewBuilder — the production configuration (game-orchestrator.ts)
   );
 }

@@ -237,3 +237,17 @@ describe('PromptAssembler', () => {
     });
   });
 });
+
+// P7 (PO 2026-10-04): the story request's builder reads the prompt page through this view.
+describe('PromptAssembler.effectivePrompts', () => {
+  it("gives the edited text, '' for a prompt switched off, the text of a required one anyway, the pack's for one the registry does not know", () => {
+    const registry = createMockPromptRegistry([
+      { id: 'edited', content: 'EDITED' },
+      { id: 'off', content: 'OFF', enabled: false },
+      { id: 'format', content: 'FORMAT', enabled: false },
+    ]);
+    const assembler = new PromptAssembler(registry as never, new TemplateEngine());
+    const out = assembler.effectivePrompts({ edited: 'pack edited', off: 'pack off', format: 'pack format', unknown: 'pack unknown' }, new Set(['format']));
+    expect(out).toEqual({ edited: 'EDITED', off: '', format: 'FORMAT', unknown: 'pack unknown' });
+  });
+});

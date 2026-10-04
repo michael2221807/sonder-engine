@@ -98,7 +98,6 @@ function makeStage(useNewBuilder = true): ContextAssemblyStage {
     undefined,
     undefined,
     () => [],
-    () => [],
     useNewBuilder, // true = production main round; false = the Enhanced Opening legacy path
   );
 }
@@ -223,7 +222,7 @@ describe('ContextAssembly · Context Compiler v1 (split-gen step2 projection)', 
       sm as unknown as StateManager,
       new PromptAssembler(registry as unknown as PromptRegistry, new TemplateEngine()),
       { retrieve: () => '' }, { checkScheduledEvents: () => false, runOnContextAssembly: () => undefined, runAfterCommands: () => undefined, runOnRoundEnd: () => undefined },
-      pack, P, undefined, undefined, () => [], () => [], true,
+      pack, P, undefined, undefined, () => [], true,
     );
     const out = await stage.execute(makeCtx(true));
     const v = step2View(out);

@@ -101,7 +101,6 @@ function makeStage(opts: StageOptions = {}): ContextAssemblyStage {
     undefined,
     undefined,
     () => [],
-    () => [],
     opts.useNewBuilder ?? true,
   );
 }

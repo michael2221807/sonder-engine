@@ -72,7 +72,7 @@ function harness(en: boolean, builder: boolean, split: boolean, cot: boolean, ca
     shortTermCapacity: 5, midTermRefineThreshold: 25, longTermSummaryThreshold: 50, longTermSummarizeCount: 50, midTermKeep: 0, longTermCap: 30 };
   const retriever = new MemoryRetriever(memoryPaths, new MemoryManager(state, memoryPaths));
   const stage = (active?: boolean, adapter?: AgaPlotVectorAdapter) => new ContextAssemblyStage(state, assembler, retriever, behavior,
-    pack, P, undefined, undefined, () => [], () => [], builder, () => cache,
+    pack, P, undefined, undefined, () => [], builder, () => cache,
     active === undefined ? undefined : c => {
       if (!active) return;
       if (adapter) return adapter.promptTransform(c);

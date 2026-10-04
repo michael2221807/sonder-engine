@@ -16,7 +16,6 @@ import type {
   MessageEntry,
   SystemPromptBuildResult,
   WorldBook,
-  BuiltinPromptEntry,
   PromptSettings,
 } from './world-book';
 import { formatHeroinePlanForContext, type HeroinePlan } from '../story/heroine-plan';
@@ -83,14 +82,15 @@ export interface SystemPromptBuildParams {
   historyText?: (text: string) => string;
   /** The rendered action-options module for a single call (the player's mode, pace and request); absent = none. */
   actionOptionsBlock?: string;
-  /** Round-selected pack default for the format slot; explicit user edits still win. */
+  /** Round-selected prompt for the format slot (e.g. the split Step 1 narrative format) instead of the slot's default. */
   formatPromptId?: string;
   stateManager: StateManager;
   paths: EnginePathConfig;
-  /** Pack prompt content by ID (loaded from manifest.prompts) */
+  /**
+   * The pack's prompts by ID as this round sends them: the player's edits from the prompt page, the pack's text
+   * otherwise, '' for a prompt switched off (`PromptAssembler.effectivePrompts`).
+   */
   packPrompts: Record<string, string>;
-  /** User-edited built-in prompt overrides */
-  builtinOverrides: BuiltinPromptEntry[];
   /** User world books (enabled only) */
   worldBooks: WorldBook[];
   /** Current user input for this round */
@@ -153,33 +153,15 @@ export interface SystemPromptBuildParams {
 }
 
 /**
- * Resolve the effective content for a built-in slot.
- *
- * Priority: user override (from builtinOverrides) > pack default > empty
+ * The content of a built-in slot: the prompt it names (or the round's choice), as the round sends it — '' when
+ * the slot names no prompt or the prompt is switched off.
  */
 function resolveSlotContent(
   slotId: string,
-  builtinOverrides: BuiltinPromptEntry[],
   packPrompts: Record<string, string>,
-  defaultPromptId = BUILTIN_SLOTS[slotId]?.defaultPromptId,
+  promptId = BUILTIN_SLOTS[slotId]?.defaultPromptId,
 ): string {
-  // 1. Check user override
-  const override = builtinOverrides.find((e) => e.slotId === slotId && e.enabled !== false);
-  if (override?.userContent != null && override.userContent.trim()) {
-    return override.userContent;
-  }
-
-  // 2. Check pack default
-  if (defaultPromptId && packPrompts[defaultPromptId]) {
-    return packPrompts[defaultPromptId];
-  }
-
-  // 3. Check override content (non-user-edited)
-  if (override?.content?.trim()) {
-    return override.content;
-  }
-
-  return '';
+  return promptId ? packPrompts[promptId] ?? '' : '';
 }
 
 /**
@@ -258,7 +240,7 @@ function filterByFeatureToggles(content: string, settings: PromptSettings): stri
 
 /**
  * Full rendering pipeline for a prompt — 5-step chain:
- * 1. Slot override resolution (done by resolveSlotContent)
+ * 1. Slot content resolution (done by resolveSlotContent: the prompt as the player left it)
  * 2. Template variable replacement
  * 3. Writing settings application (word count)
  * 4. (Realm block replacement — N/A in AGA)
@@ -287,7 +269,7 @@ export function estimateTokens(text: string): number {
  * Build the system prompt as ordered message entries.
  *
  * This is the MAIN entry point. It:
- * 1. Resolves all built-in slot content (with world book overrides)
+ * 1. Resolves all built-in slot content (the player's edits on the prompt page, through `packPrompts`)
  * 2. Reads game state to build dynamic context pieces (NPC, world, player, etc.)
  * 3. Applies prompt settings (perspective, word count)
  * 4. Assembles into ordered MessageEntry[]
@@ -297,7 +279,6 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
     stateManager,
     paths,
     packPrompts,
-    builtinOverrides,
     worldBooks,
     userInput,
     playerName,
@@ -329,10 +310,8 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
     if (slotId === 'format_prompt' && params.formatPromptId && !packPrompts[params.formatPromptId]?.trim()) {
       throw new Error(`Missing format prompt: ${params.formatPromptId}`);
     }
-    const raw = resolveSlotContent(slotId, builtinOverrides, packPrompts, selectedId);
-    const edited = builtinOverrides.find(e => e.slotId === slotId && e.enabled !== false)?.userContent?.trim();
-    const transformId = edited ? BUILTIN_SLOTS[slotId]?.defaultPromptId : selectedId;
-    const adapted = params.transformPrompt?.(transformId ?? slotId, raw) ?? raw;
+    const raw = resolveSlotContent(slotId, packPrompts, selectedId);
+    const adapted = params.transformPrompt?.(selectedId ?? slotId, raw) ?? raw;
     return renderPromptPipeline(slotId, adapted, templateVars, settings);
   };
 
@@ -667,31 +646,28 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   const fullConstraints = [constraintsBase, styleContent ? `\n\n【剧情风格偏好】\n${styleContent}` : ''].filter(Boolean).join('');
   push('narrative_constraints', '叙事总约束 + 风格偏好', '系统', 'system', fullConstraints);
 
+  // A slot text that wraps a block the caller built this round: the slot's prompt as the player left it, through
+  // the round's transform; a pack without the prompt sends the bare block, a prompt switched off sends nothing
+  // (as Step 2's flow does). The block placeholder is rendered here because `slot()` only knows the static vars.
+  const wrapped = (slotId: string, placeholder: string, block: string): string => {
+    const promptId = BUILTIN_SLOTS[slotId]?.defaultPromptId;
+    const own = promptId ? packPrompts[promptId] : undefined;
+    if (own === '') return '';
+    const raw = own ?? `{{${placeholder}}}`;
+    const adapted = promptId ? params.transformPrompt?.(promptId, raw) ?? raw : raw;
+    return renderPromptPipeline(slotId, adapted, { ...templateVars, [placeholder]: block }, settings);
+  };
+
   // ── 20b. Narrative Contract (R2) — DYNAMIC, never in the gproxy static prefix ──
-  // The slot text (pack `narrativeContract.md`, player-overridable) wraps the block
-  // built by the caller; the block placeholder is rendered here because the shared
-  // `slot()` helper only knows the static template vars.
   if (params.narrativeContractBlock) {
-    const contractRaw = resolveSlotContent('narrative_contract', builtinOverrides, packPrompts);
-    const contractContent = renderPromptPipeline(
-      'narrative_contract',
-      contractRaw || '{{NARRATIVE_CONTRACT_BLOCK}}',
-      { ...templateVars, NARRATIVE_CONTRACT_BLOCK: params.narrativeContractBlock },
-      settings,
-    );
-    push('narrative_contract', '叙事契约', '系统', 'system', contractContent);
+    push('narrative_contract', '叙事契约', '系统', 'system',
+      wrapped('narrative_contract', 'NARRATIVE_CONTRACT_BLOCK', params.narrativeContractBlock));
   }
 
   // ── 20c. Character Vectors (R2 second half) — DYNAMIC, projected per turn, never static ──
   if (params.characterVectorsBlock) {
-    const vectorsRaw = resolveSlotContent('character_vectors', builtinOverrides, packPrompts);
-    const vectorsContent = renderPromptPipeline(
-      'character_vectors',
-      vectorsRaw || '{{CHARACTER_VECTORS_BLOCK}}',
-      { ...templateVars, CHARACTER_VECTORS_BLOCK: params.characterVectorsBlock },
-      settings,
-    );
-    push('character_vectors', '人物向量', '系统', 'system', vectorsContent);
+    push('character_vectors', '人物向量', '系统', 'system',
+      wrapped('character_vectors', 'CHARACTER_VECTORS_BLOCK', params.characterVectorsBlock));
   }
 
   // ── 21. Extra Prompt ──
@@ -703,8 +679,8 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   push('format_prompt', '输出格式提示词', '系统', 'system', slot('format_prompt'));
   // The player turned action options off (PO 2026-10-03): the default format asks for them, so say so right after
   // it. A round-selected format (split Step 1 in the impulse mode) writes the narrative only and needs nothing.
-  if (!actionOptionsOn(settings) && !params.formatPromptId && packPrompts['actionOptionsOff']?.trim()) {
-    push('action_options_off', '行动选项（已关闭）', '系统', 'system', packPrompts['actionOptionsOff']);
+  if (!actionOptionsOn(settings) && !params.formatPromptId) {
+    push('action_options_off', '行动选项（已关闭）', '系统', 'system', renderPackPrompt('actionOptionsOff'));
   }
   // A single call writes the options too: the module for the player's mode and pace (PO 2026-10-03).
   if (params.actionOptionsBlock) push('action_options', '行动选项', '系统', 'system', params.actionOptionsBlock);

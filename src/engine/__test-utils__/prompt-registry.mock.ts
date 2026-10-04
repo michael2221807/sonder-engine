@@ -15,6 +15,13 @@ export function createMockPromptRegistry(
       if (!entry || !entry.enabled) return '';
       return entry.content;
     },
+    /** As the real registry: a module the round cannot do without gives its text even when switched off. */
+    getRequiredContent(id: string): string {
+      return store.get(id)?.content ?? '';
+    },
+    has(id: string): boolean {
+      return store.has(id);
+    },
     register(id: string, content: string, enabled = true): void {
       store.set(id, { content, enabled });
     },

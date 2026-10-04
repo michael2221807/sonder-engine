@@ -138,8 +138,6 @@ export interface SubPipelineBundle {
   ttsService?: TtsService;
   /** World book data — loaded from WorldBookStorage at init */
   worldBooks?: import('../prompt/world-book').WorldBook[];
-  /** Built-in prompt overrides — loaded from WorldBookStorage at init */
-  builtinOverrides?: import('../prompt/world-book').BuiltinPromptEntry[];
   /**
    * 记忆管理器 — 供 runRound 在主回合结束后查询中期/长期记忆容量并触发对应子管线。
    *
@@ -309,7 +307,6 @@ export class GameOrchestrator {
         engramManager,    // E.2: 用于读取 retrievalMode
         unifiedRetriever, // E.2: hybrid 路径使用
         () => subPipelines.worldBooks ?? [],    // World book getter (supports live updates)
-        () => subPipelines.builtinOverrides ?? [], // Built-in overrides getter
         true, // useNewBuilder — enable context-piece prompt assembly
         // gproxy cache flag — read live from the resolved main LLM config each round
         () => aiService.getConfigForUsage('main')?.gproxyPromptCache === true,
@@ -1091,7 +1088,6 @@ export class GameOrchestrator {
         this.engramManager,
         this._unifiedRetriever,
         () => this.subPipelines.worldBooks ?? [],
-        () => this.subPipelines.builtinOverrides ?? [],
         // Use legacy flow-based path so step1/step2FlowOverride works
         false,
       ),

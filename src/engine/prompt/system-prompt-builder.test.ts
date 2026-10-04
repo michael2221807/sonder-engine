@@ -3,14 +3,14 @@ import { estimateTokens, buildSystemPrompt, GPROXY_CACHE_STATIC_PIECE_IDS } from
 import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 import { createMockStateManager } from '../__test-utils__';
 import type { StateManager } from '../core/state-manager';
-import type { WorldBook, WorldBookEntry, BuiltinPromptEntry } from './world-book';
+import type { WorldBook, WorldBookEntry } from './world-book';
 
 describe('phase-selected default format', () => {
-  function build(formatPromptId?: string, builtinOverrides: BuiltinPromptEntry[] = []) {
+  function build(formatPromptId?: string, edits: Record<string, string> = {}) {
     const { sm } = createMockStateManager({});
     return buildSystemPrompt({ stateManager: sm as unknown as StateManager,
-      paths: DEFAULT_ENGINE_PATHS, packPrompts: { mainRound: 'single', splitGenStep1: 'narrative' },
-      builtinOverrides, worldBooks: [], userInput: 'hello', playerName: 'player',
+      paths: DEFAULT_ENGINE_PATHS, packPrompts: { mainRound: 'single', splitGenStep1: 'narrative', ...edits },
+      worldBooks: [], userInput: 'hello', playerName: 'player',
       cotEnabled: false, cotJudgeEnabled: false, splitGen: true, cotPseudoEnabled: false,
       formatPromptId, transformPrompt: (id, raw) => `${id}:${raw}` });
   }
@@ -18,9 +18,23 @@ describe('phase-selected default format', () => {
     expect(build().contextPieces.format_prompt).toBe('mainRound:single');
     expect(build('splitGenStep1').contextPieces.format_prompt).toBe('splitGenStep1:narrative');
   });
-  it('preserves an explicit user edit and its original transform identity', () => {
-    expect(build('splitGenStep1', [{ id: 'format', slotId: 'format_prompt', title: '', category: '主剧情',
-      content: 'single', userContent: 'custom' }]).contextPieces.format_prompt).toBe('mainRound:custom');
+  // PO 2026-10-04 (P7): the story request sends the prompt as the player left it on the prompt page.
+  it('sends the player\'s edit of the format the round uses, through that prompt\'s own transform', () => {
+    expect(build('splitGenStep1', { splitGenStep1: 'custom' }).contextPieces.format_prompt).toBe('splitGenStep1:custom');
+    expect(build(undefined, { mainRound: 'custom' }).contextPieces.format_prompt).toBe('mainRound:custom');
+  });
+  it('sends no piece for a slot whose prompt the player switched off', () => {
+    const { sm } = createMockStateManager({});
+    const on = buildSystemPrompt({ stateManager: sm as unknown as StateManager, paths: DEFAULT_ENGINE_PATHS,
+      packPrompts: { mainRound: 'f', narratorFrame: 'NARRATOR', writeStyle: 'STYLE' }, worldBooks: [], userInput: 'hi', playerName: 'p',
+      cotEnabled: false, cotJudgeEnabled: false, splitGen: false, cotPseudoEnabled: false });
+    const off = buildSystemPrompt({ stateManager: sm as unknown as StateManager, paths: DEFAULT_ENGINE_PATHS,
+      packPrompts: { mainRound: 'f', narratorFrame: '', writeStyle: 'STYLE' }, worldBooks: [], userInput: 'hi', playerName: 'p',
+      cotEnabled: false, cotJudgeEnabled: false, splitGen: false, cotPseudoEnabled: false });
+    expect(on.contextPieces.ai_role).toContain('NARRATOR');
+    expect(off.contextPieces.ai_role).toBeUndefined();
+    expect(JSON.stringify(off.messageEntries)).not.toContain('NARRATOR');
+    expect(JSON.stringify(off.messageEntries)).toContain('STYLE');
   });
   it('does not silently drop the format when the selected module is missing', () => {
     expect(() => build('missing')).toThrow('Missing format prompt: missing');
@@ -37,7 +51,7 @@ describe('buildSystemPrompt · action options and word count', () => {
       paths: DEFAULT_ENGINE_PATHS,
       packPrompts: { mainRound: 'format {{wordCount}}', splitGenStep1: 'narrative only', actionOptionsOff: 'OFF NOTE',
         ...(wordCountReq === undefined ? {} : { wordCountReq }) },
-      builtinOverrides: [], worldBooks: [], userInput: 'hello', playerName: 'player',
+      worldBooks: [], userInput: 'hello', playerName: 'player',
       cotEnabled: false, cotJudgeEnabled: false, splitGen: false, cotPseudoEnabled: false, ...rest });
   }
   const ids = (r: ReturnType<typeof build>) => Object.keys(r.contextPieces);
@@ -158,7 +172,6 @@ describe('buildSystemPrompt · world book timeline wiring (B0-2)', () => {
       stateManager: sm as unknown as StateManager,
       paths: DEFAULT_ENGINE_PATHS,
       packPrompts: {},
-      builtinOverrides: [],
       worldBooks: [makeBook()],
       userInput: '我走进夜市。',
       playerName: '林月',
@@ -213,7 +226,6 @@ describe('buildSystemPrompt · world book pools & corpora (P0)', () => {
       stateManager: sm as unknown as StateManager,
       paths: DEFAULT_ENGINE_PATHS,
       packPrompts: {},
-      builtinOverrides: [],
       worldBooks: over.worldBooks,
       userInput: over.userInput ?? '我走进夜市。',
       playerName: '主角',
@@ -253,11 +265,11 @@ describe('buildSystemPrompt · world book pools & corpora (P0)', () => {
     const manual: WorldBook = { id: 'm', title: 'M', enabled: true, entries: [lore({ id: 'man', keywords: ['禁药'], injectionMode: 'match_any' })] };
 
     const { sm: off } = createMockStateManager({ ...plotTree('模拟考异常'), 系统: { 设置: { prompt: { enableWorldBook: true } } }, 世界: { 时间: {}, 信息: {}, 描述: 'w' }, 社交: { 关系: [] }, 角色: { 基础信息: { 姓名: '主角', 当前位置: '城南' } } });
-    const without = buildSystemPrompt({ stateManager: off as unknown as StateManager, paths: DEFAULT_ENGINE_PATHS, packPrompts: {}, builtinOverrides: [], worldBooks: [captured, manual], userInput: '走路', playerName: '主角', cotEnabled: false, cotJudgeEnabled: false, splitGen: false, cotPseudoEnabled: false });
+    const without = buildSystemPrompt({ stateManager: off as unknown as StateManager, paths: DEFAULT_ENGINE_PATHS, packPrompts: {}, worldBooks: [captured, manual], userInput: '走路', playerName: '主角', cotEnabled: false, cotJudgeEnabled: false, splitGen: false, cotPseudoEnabled: false });
     expect(without.worldBookHits?.map((h) => h.entryId) ?? []).toEqual([]);
 
     const { sm: on } = createMockStateManager({ ...plotTree('发现禁药秘密'), 系统: { 设置: { prompt: { enableWorldBook: true } } }, 世界: { 时间: {}, 信息: {}, 描述: 'w' }, 社交: { 关系: [] }, 角色: { 基础信息: { 姓名: '主角', 当前位置: '城南' } } });
-    const withNode = buildSystemPrompt({ stateManager: on as unknown as StateManager, paths: DEFAULT_ENGINE_PATHS, packPrompts: {}, builtinOverrides: [], worldBooks: [captured, manual], userInput: '走路', playerName: '主角', cotEnabled: false, cotJudgeEnabled: false, splitGen: false, cotPseudoEnabled: false });
+    const withNode = buildSystemPrompt({ stateManager: on as unknown as StateManager, paths: DEFAULT_ENGINE_PATHS, packPrompts: {}, worldBooks: [captured, manual], userInput: '走路', playerName: '主角', cotEnabled: false, cotJudgeEnabled: false, splitGen: false, cotPseudoEnabled: false });
     expect([...(withNode.worldBookHits?.map((h) => h.entryId) ?? [])].sort()).toEqual(['cap', 'man']);
   });
 
@@ -371,7 +383,6 @@ describe('buildSystemPrompt · Canon Capture prompt pieces (P1)', () => {
         settingAuthority: '【作者设定】本回合立即生效。',
         settingCapture: '【提取协议】输出 setting_updates。',
       },
-      builtinOverrides: [],
       worldBooks: [],
       userInput: '我走进夜市。<设定>林月怕水</设定>',
       playerName: '主角',
@@ -417,7 +428,6 @@ describe('buildSystemPrompt · Canon Capture prompt pieces (P1)', () => {
         settingAuthority: '【作者设定】本回合立即生效。',
         settingCapture: '【提取协议】输出 setting_updates。',
       },
-      builtinOverrides: [],
       worldBooks: [],
       userInput: '我走进夜市。<设定>林月怕水</设定>',
       playerName: '主角',
@@ -454,7 +464,6 @@ describe('buildSystemPrompt · Canon Capture prompt pieces (P1)', () => {
           '<!-- PROMPT_FEATURE:setting_capture:START -->输出 setting_updates。<!-- PROMPT_FEATURE:setting_capture:END -->',
         settingAuthority: '作者设定',
       },
-      builtinOverrides: [],
       worldBooks: [],
       userInput: 'x',
       playerName: 'p',

@@ -57,6 +57,15 @@ export class PromptRegistry {
     return mod.userContent ?? mod.content;
   }
 
+  /**
+   * The content of a module a round cannot do without (its output format): the player's text, or the pack's.
+   * Switched off, it still gives its text — a round without its format fails or answers in no known shape.
+   */
+  getRequiredContent(id: string): string {
+    const mod = this.modules.get(id);
+    return mod ? mod.userContent ?? mod.content : '';
+  }
+
   /** 设置用户覆盖内容 */
   setUserContent(id: string, content: string): void {
     const mod = this.modules.get(id);
