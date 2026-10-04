@@ -254,6 +254,7 @@ const BUILDER_I18N_MAP: Record<string, string> = {
   perspective_prompt: 'promptAssembly.builder.perspectivePrompt', length_prompt: 'promptAssembly.builder.lengthPrompt',
   memory_long: 'promptAssembly.builder.memoryLong', memory_mid: 'promptAssembly.builder.memoryMid',
   memory_implicit: 'promptAssembly.builder.memoryImplicit', memory_engram: 'promptAssembly.builder.memoryEngram',
+  bookmarked_rounds: 'promptAssembly.builder.bookmarkedRounds',
   story_plan: 'promptAssembly.builder.storyPlan', npc_present: 'promptAssembly.builder.npcPresent',
   heroine_plan: 'promptAssembly.builder.heroinePlan', state_world: 'promptAssembly.builder.stateWorld',
   state_environment: 'promptAssembly.builder.stateEnvironment', state_role: 'promptAssembly.builder.stateRole',

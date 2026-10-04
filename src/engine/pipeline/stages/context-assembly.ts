@@ -583,6 +583,7 @@ export class ContextAssemblyStage implements PipelineStage {
         stateManager: this.stateManager,
         paths: this.paths,
         packPrompts: roundPrompts,
+        bookmarkedRoundsBlock,
         worldBooks: mergedWorldBooks,
         userInput: ctx.userInput,
         playerName: this.stateManager.get<string>(this.paths.playerName) ?? '',

@@ -80,6 +80,11 @@ export interface SystemPromptBuildParams {
   transformPrompt?: import('./raw-prompt-transform').RawPromptTransform;
   /** How recent story text is shown to the model (PipelineMeta.historyStoryOnly); absent = as saved. */
   historyText?: (text: string) => string;
+  /**
+   * The rounds the player bookmarked for this round (收藏楼层, one-shot): the story request is where they are
+   * meant to inform the narrative. Absent or empty = no piece.
+   */
+  bookmarkedRoundsBlock?: string;
   /** The rendered action-options module for a single call (the player's mode, pace and request); absent = none. */
   actionOptionsBlock?: string;
   /** Round-selected prompt for the format slot (e.g. the split Step 1 narrative format) instead of the slot's default. */
@@ -534,6 +539,12 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   // ── 9c. Engram / Unified Retrieval ──
   if (params.engramRetrievalBlock?.trim()) {
     push('memory_engram', 'Engram · 事实/实体/事件', '记忆', 'system', `# Engram 知识图谱检索\n${params.engramRetrievalBlock}`);
+  }
+
+  // ── 11c. Bookmarked rounds (收藏楼层) — the player's picks, one-shot, so never in the gproxy static prefix ──
+  // P15 (2026-10-04): only Step 2's context carried them; the story was written without them.
+  if (params.bookmarkedRoundsBlock?.trim()) {
+    push('bookmarked_rounds', '收藏楼层', '记忆', 'system', params.bookmarkedRoundsBlock);
   }
 
   // ── 10. Story Plan ──

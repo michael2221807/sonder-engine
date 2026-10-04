@@ -249,6 +249,7 @@
   "promptAssembly.builder.memoryMid": "Mid-term Memory",
   "promptAssembly.builder.memoryImplicit": "Implicit Memory",
   "promptAssembly.builder.memoryEngram": "Engram · Facts/Entities/Events",
+  "promptAssembly.builder.bookmarkedRounds": "Bookmarked rounds",
   "promptAssembly.builder.storyPlan": "Story Plan",
   "promptAssembly.builder.npcPresent": "Present Characters",
   "promptAssembly.builder.heroinePlan": "Heroine Plan",
