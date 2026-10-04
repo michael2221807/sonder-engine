@@ -273,8 +273,10 @@ export function repairStoredNarrative(text: string): string | null {
 export function rereadStoredNarrative(stored: string, rawResponse: unknown): string | null {
   if (typeof rawResponse !== 'string' || !rawResponse.trim()) return null;
   const current = stored.trim();
+  // Without the second layer's sign the text decodes to itself and nothing can match: no need to read the reply.
+  if (!escapedTwice(current)) return null;
   const fresh = new ResponseParser().parse(rawResponse).text.trim();
-  return fresh && fresh !== current && decodeResidualEscapes(current) === fresh ? fresh : null;
+  return fresh && fresh !== current && decodeResidualEscapes(current).trim() === fresh ? fresh : null;
 }
 
 export class ResponseParser {

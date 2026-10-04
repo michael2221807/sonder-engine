@@ -288,6 +288,12 @@ const COT_TAG_MAX = 16;
 const COT_TAG = new RegExp(`^<\\s*(\\/?)\\s*(${[...COT_PSEUDO_TAGS, ...THINKING_TAGS].join('|')})\\s*>$`, 'i');
 const PROTOCOL_BLOCKS = new Set(COT_BLOCKS);
 const THINKING_BLOCKS = new Set(THINKING_TAGS);
+/** A thinking block or a protocol block opening before the story (the provider filters only <thinking>). */
+const LEAD_OPEN_RE = new RegExp(`^\\s*<\\s*(${[...THINKING_TAGS, ...COT_BLOCKS].join('|')})\\s*>`, 'i');
+/** Any thinking tag closes a thinking block, as the parser's pattern takes them. */
+const THINKING_CLOSE_RE = new RegExp(`<\\s*\\/\\s*(?:${THINKING_TAGS.join('|')})\\s*>`, 'i');
+/** A block before the story that never closes is waited for this long, then what came is shown. */
+const LEAD_MAX = 20_000;
 
 /**
  * How the display reads what comes: `json` — the story is a JSON string whose escapes the envelope reads;
@@ -304,15 +310,19 @@ type DisplayMode = 'json' | 'tagged' | 'raw';
  * - `raw`: what comes is shown, but a protocol block or a thinking block is hidden whole, the pseudo-tags are taken
  *   out, and an opening `<正文>` makes the rest a tagged story — a reply that plans before its story, or prefaces
  *   it, shows its story (and the preface).
- * The second layer stops at the first real line break or plain quote the story shows of itself: a story escaped
- * once has those, as the parser's `escapedTwice` reads it. A `\` or `<` is held until it is known what it starts;
- * `end` shows what is still held.
+ * The second layer reads the two signs the parser's `escapedTwice` reads: a `\n` is a line break while the story
+ * has shown no real line break of its own, a `\"` a quote while it has shown no plain quote; once one of them is read
+ * the story is escaped twice and every escape in it is read (the parser then decodes them all). A `\` or `<` is held
+ * until it is known what it starts; `end` shows what is still held.
  */
 function storyDisplay(emit: (text: string) => void) {
   let escape = '';
   let tag = '';
-  /** A real line break or a plain quote has come: the story is escaped once, nothing is decoded again. */
-  let plain = false;
+  /** A real line break, a plain quote, has come of the story itself. */
+  let sawBreak = false;
+  let sawQuote = false;
+  /** A second-layer `\n` or `\"` has been read: the story is escaped twice. */
+  let twice = false;
   /** The block being hidden, until its closing tag. */
   let hidden: string | null = null;
   const show = (text: string) => { if (!hidden && text) emit(text); };
@@ -322,12 +332,18 @@ function storyDisplay(emit: (text: string) => void) {
     put(ch: string): void {
       if (display.closed) return;
       if (escape) {
-        if (escape === '\\' && ch in RESIDUAL_ESCAPES) {
+        if (escape === '\\' && ((ch === 'n' && !sawBreak) || (ch === '"' && !sawQuote))) {
+          escape = '';
+          twice = true;
+          toTag(RESIDUAL_ESCAPES[ch]);
+          return;
+        }
+        if (escape === '\\' && twice && ch in RESIDUAL_ESCAPES) {
           escape = '';
           toTag(RESIDUAL_ESCAPES[ch]);
           return;
         }
-        if (escape === '\\' && ch === 'u') {
+        if (escape === '\\' && twice && ch === 'u') {
           escape = '\\u';
           return;
         }
@@ -345,11 +361,12 @@ function storyDisplay(emit: (text: string) => void) {
         escape = '';
         for (const c of held) toTag(c);
       }
-      if (display.mode !== 'raw' && !plain && ch === '\\') {
+      if (display.mode !== 'raw' && ch === '\\') {
         escape = '\\';
         return;
       }
-      if (ch === '\n' || ch === '"') plain = true;
+      if (ch === '\n') sawBreak = true;
+      else if (ch === '"') sawQuote = true;
       toTag(ch);
     },
     end(): void {
@@ -393,8 +410,12 @@ function storyDisplay(emit: (text: string) => void) {
     const closing = m[1] === '/';
     const name = m[2].toLowerCase();
     if (hidden) {
-      if (closing && name === hidden) hidden = null;
-      return;
+      const thinking = THINKING_BLOCKS.has(hidden);
+      // Any thinking tag closes a thinking block (as the parser's pattern takes them); a protocol block closes with
+      // its own tag; a thinking block left open ends where the story begins.
+      if (closing && (name === hidden || (thinking && THINKING_BLOCKS.has(name)))) hidden = null;
+      if (!closing && name === '正文' && thinking) hidden = null;
+      else return;
     }
     if (closing) {
       if (display.mode === 'tagged' && name === '正文') display.closed = true;
@@ -465,6 +486,48 @@ export function createJsonTextStreamUnwrapper(
     put(buffered.replace(TAG_HEAD_RE, ''));
     if (display.closed) state = 'done';
   };
+  const passThrough = () => {
+    state = 'passthrough';
+    put(seekBuf);
+    seekBuf = '';
+  };
+  /**
+   * What has been buffered so far: a thinking or planning block before the story is skipped (waited for, then
+   * dropped — any thinking tag ends a thinking block, and one left open ends where `<正文>` begins), then the
+   * envelope is looked for in what remains.
+   */
+  const seek = () => {
+    for (;;) {
+      const lead = LEAD_OPEN_RE.exec(seekBuf);
+      if (lead) {
+        const name = lead[1].toLowerCase();
+        const rest = seekBuf.slice(lead[0].length);
+        const close = (THINKING_BLOCKS.has(name) ? THINKING_CLOSE_RE : new RegExp(`<\\s*\\/\\s*${name}\\s*>`, 'i')).exec(rest);
+        const story = THINKING_BLOCKS.has(name) ? rest.indexOf('<正文>') : -1;
+        if (close && (story < 0 || close.index < story)) {
+          seekBuf = rest.slice(close.index + close[0].length);
+          continue;
+        }
+        if (story >= 0) {
+          seekBuf = rest.slice(story);
+          continue;
+        }
+        if (seekBuf.length > LEAD_MAX) passThrough();
+        return;
+      }
+      if (PREFIX_RE.test(seekBuf)) {
+        state = 'text';
+        display.mode = 'json';
+        seekBuf = '';
+      } else if (TAGGED_RE.test(seekBuf) || (seekBuf.length > PREFIX_MAX && TAG_HEAD_RE.test(seekBuf))) {
+        startTagged(seekBuf);
+        seekBuf = '';
+      } else if (seekBuf.length > PREFIX_MAX) {
+        passThrough();
+      }
+      return;
+    }
+  };
   const finish = () => {
     state = 'done';
     display.end();
@@ -480,18 +543,7 @@ export function createJsonTextStreamUnwrapper(
         switch (state) {
           case 'seeking':
             seekBuf += ch;
-            if (PREFIX_RE.test(seekBuf)) {
-              state = 'text';
-              display.mode = 'json';
-              seekBuf = '';
-            } else if (TAGGED_RE.test(seekBuf) || (seekBuf.length > PREFIX_MAX && TAG_HEAD_RE.test(seekBuf))) {
-              startTagged(seekBuf);
-              seekBuf = '';
-            } else if (seekBuf.length > PREFIX_MAX) {
-              state = 'passthrough';
-              put(seekBuf);
-              seekBuf = '';
-            }
+            seek();
             break;
 
           case 'tagged':
@@ -577,6 +629,7 @@ export function createJsonTextStreamUnwrapper(
 
     flush() {
       if (state === 'seeking' && seekBuf) {
+        // (A block before the story still open here shows nothing: the display hides it whole.)
         if (TAG_HEAD_RE.test(seekBuf)) startTagged(seekBuf);
         else put(seekBuf);
         seekBuf = '';

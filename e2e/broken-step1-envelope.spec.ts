@@ -149,12 +149,18 @@ const COT_STEP1 = `<thinking>先把这一回合想清楚。</thinking>\n\n<正�
 const ONCE = JSON.stringify(TAGGED_STORY).slice(1, -1);
 const TWICE_STEP1 = `<正文>\n${JSON.stringify({ text: ONCE })}\n</正文>\n\n<短期记忆>\n记下这一夜。\n</短期记忆>`;
 
-/** Step 2 waits a while, so the bubble can be read as it stands between the two steps (step 1 all in). */
-async function answerSlowStep2(route: Route, step1: string, seen: { step2: boolean }): Promise<void> {
+/** Holds step 2 until the test lets it go, so the bubble can be read as it stands between the two steps. */
+interface Step2Gate { asked: boolean; go: () => void; released: Promise<void> }
+function step2Gate(): Step2Gate {
+  let go = () => {};
+  const released = new Promise<void>(resolve => { go = resolve; });
+  return { asked: false, go: () => go(), released };
+}
+async function answerHeldStep2(route: Route, step1: string, gate: Step2Gate): Promise<void> {
   const body = JSON.parse(route.request().postData() ?? '{}') as { stream?: boolean };
   if (!body.stream) {
-    seen.step2 = true;
-    await new Promise(resolve => setTimeout(resolve, 4000));
+    gate.asked = true;
+    await gate.released;
   }
   return answer(route, step1);
 }
@@ -174,17 +180,18 @@ for (const [name, step1] of [['the CoT protocol shape', COT_STEP1], ['a story es
       localStorage.setItem('aga_ai_settings', JSON.stringify({ ...ai, splitGen: true, streaming: true, maxRetries: 0 }));
     });
     await page.reload();
-    const seen = { step2: false };
-    await page.route('http://127.0.0.1:1/**', route => answerSlowStep2(route, step1, seen));
+    const gate = step2Gate();
+    await page.route('http://127.0.0.1:1/**', route => answerHeldStep2(route, step1, gate));
     await enterSeededGame(page);
     await page.locator('.message-input').fill('我回到寝室。');
     await page.locator('.send-btn').click();
 
-    // Step 1 is all in (step 2 has been asked for and is still out): the bubble holds the whole story and nothing else.
-    await expect.poll(() => seen.step2, { timeout: 60_000 }).toBe(true);
+    // Step 1 is all in (step 2 has been asked for and is held): the bubble holds the whole story and nothing else.
+    await expect.poll(() => gate.asked, { timeout: 60_000 }).toBe(true);
     const bubble = page.locator('.message--streaming .message-text');
     await expect(bubble).toContainText('你轻手轻脚地，推开了寝室那扇门。', { timeout: 10_000 });
     const live = await bubble.innerText();
+    gate.go();
     expect(live).toContain('又"啪"地熄了。');
     for (const leak of ['<正文>', '</正文>', '短期记忆', '记下这一夜', '剧情规划', '\\"', '\\n', '{"text"']) expect(live).not.toContain(leak);
 

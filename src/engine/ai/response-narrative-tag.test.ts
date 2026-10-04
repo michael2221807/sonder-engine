@@ -261,7 +261,9 @@ describe('the stream display holds and releases', () => {
     for (const size of [1, 3, 17]) {
       expect(streamed('{"text":"abc\\u4e2dxyz"}', size)).toBe('abc中xyz');
       expect(streamed('{"text":"第一段。\\n\\u4e2d"}', size)).toBe('第一段。\n中');
-      expect(streamed('{"text":"abc\\\\u4e2dxyz\\\\n"}', size)).toBe('abc中xyz\n');
+      // Second layer: read once a sign has shown the story is escaped twice (before it, the live text shows it as
+      // written and the round's final text is the parser's).
+      expect(streamed('{"text":"甲。\\\\n乙\\\\u4e2d丙"}', size)).toBe('甲。\n乙中丙');
       expect(streamed('{"text":"abc\\\\u12 xyz\\\\n"}', size)).toBe('abc\\u12 xyz\n');
     }
   });
@@ -273,7 +275,7 @@ describe('the stream display holds and releases', () => {
     for (const size of [1, 3, 17]) expect(streamed(raw, size)).toBe('第一句。\n第二句。');
   });
   it('a story with a backslash of its own, escaped twice, shows as the story', () => {
-    const story = 'C:\\x\n好';
+    const story = '好。\nC:\\x';
     const twice = JSON.stringify({ text: JSON.stringify(story).slice(1, -1) });
     for (const size of [1, 3, 17]) expect(streamed(`<正文>${twice}</正文>`, size)).toBe(story);
   });
@@ -378,5 +380,99 @@ describe('NarrativeEnvelopeRepairModule', () => {
     new NarrativeEnvelopeRepairModule('元数据.叙事历史', '记忆.短期', '元数据.收藏楼层').onGameLoad(sm);
     expect(changes).toEqual([]);
     expect(JSON.stringify(sm.toSnapshot())).toBe(before);
+  });
+});
+
+// Code review round 2, 2026-10-03 (LOW A–D). `~` stands for a backslash, so the escapes read as written.
+describe('review round 2: the two signs, blocks before the story, and what the tests did not pin', () => {
+  const BS = String.fromCharCode(92);
+  const b = (s: string) => s.split('~').join(BS);
+  const streamed = (raw: string, size = 3) => {
+    let shown = '';
+    const filter = createJsonTextStreamUnwrapper((chunk) => { shown += chunk; });
+    for (const piece of raw.match(new RegExp(`[\\s\\S]{1,${size}}`, 'g')) ?? []) filter.onChunk(piece);
+    filter.flush();
+    return shown;
+  };
+  it('a real line break beside quotes escaped twice: the stream reads what the parser reads', () => {
+    const raw = JSON.stringify({ text: b('第一段。\n他说：~"走~"。') });
+    expect(textOf(raw)).toBe('第一段。\n他说："走"。');
+    for (const size of [1, 3, 17]) expect(streamed(raw, size)).toBe('第一段。\n他说："走"。');
+  });
+  it('once one sign is read the story is escaped twice: its line breaks are read too, though one came first', () => {
+    const raw = JSON.stringify({ text: b('\n他说：~"走~"。~n~n她走了。') });
+    expect(textOf(raw)).toBe('他说："走"。\n\n她走了。');
+    for (const size of [1, 3, 17]) expect(streamed(raw, size).trim()).toBe('他说："走"。\n\n她走了。');
+  });
+  it('a path in one paragraph, with no sign, is not read by the stream either', () => {
+    const own = b('C:~temp~readme.txt 在桌上。');
+    expect(textOf(JSON.stringify({ text: own }))).toBe(own);
+    for (const size of [1, 3, 17]) expect(streamed(JSON.stringify({ text: own }), size)).toBe(own);
+  });
+  it('a plain quote beside a literal backslash-quote keeps the story as it is', () => {
+    const own = b('他说"好"，又写下 a~"b。');
+    expect(textOf(JSON.stringify({ text: own }))).toBe(own);
+  });
+  it('a first-layer backslash-u not followed by four hex digits shows as it was', () => {
+    for (const size of [1, 3, 17]) expect(streamed(b('{"text":"ab~u12 cd"}'), size)).toBe(b('ab~u12 cd'));
+  });
+  it('a thinking block the provider passes on, then the JSON envelope: the stream reads the envelope', () => {
+    for (const raw of [`<think>先想一想。</think>\n${JSON.stringify({ text: STORY })}`,
+      `<剧情规划>\n- 保留\n</剧情规划>\n<正文>${JSON.stringify({ text: STORY })}</正文>`,
+      `<think>先想一想。</think><正文>${JSON.stringify({ text: STORY })}</正文>`]) {
+      expect(textOf(raw)).toBe(STORY);
+      for (const size of [1, 3, 17]) expect(streamed(raw, size).trim()).toBe(STORY);
+    }
+  });
+  it('any thinking tag closes a thinking block, and one left open ends where the story begins', () => {
+    for (const raw of [`<think>先想一想。</thinking>\n${STORY}`, `<think>先想一想\n<正文>${STORY}</正文>`]) {
+      expect(textOf(raw)).toBe(STORY);
+      for (const size of [1, 3, 17]) expect(streamed(raw, size).trim()).toBe(STORY);
+    }
+    for (const size of [1, 3, 17]) {
+      expect(streamed(`前言。<think>想</thinking>后文。${STORY}`, size)).toBe(`前言。后文。${STORY}`);
+      expect(streamed(`前言。${STORY}<think>想<正文>后文。</正文>以下略`, size)).toBe(`前言。${STORY}后文。`);
+    }
+  });
+  it('a thinking block left open ends where the story begins, and the story shows at once', () => {
+    const calls: string[] = [];
+    const filter = createJsonTextStreamUnwrapper((chunk) => { calls.push(chunk); });
+    filter.onChunk('<think>先想一想\n<正文>你好');
+    expect(calls.join('')).toBe('你好');
+  });
+  it('a block before the story still open when the stream ends shows nothing of it', () => {
+    for (const size of [1, 3, 17]) expect(streamed('<think>还在想', size)).toBe('');
+  });
+  it('in a JSON story a pseudo-tag is taken out and what it holds stays, as the parser reads it', () => {
+    const raw = JSON.stringify({ text: '前<短期记忆>中</短期记忆>后' });
+    expect(textOf(raw)).toBe('前中后');
+    for (const size of [1, 3, 17]) expect(streamed(raw, size)).toBe('前中后');
+  });
+});
+
+describe('review round 2: the load-time heal', () => {
+  const BS = String.fromCharCode(92);
+  const b = (s: string) => s.split('~').join(BS);
+  it('a healthy round that carries its raw reply is not written on load', () => {
+    const sm = new StateManager();
+    sm.loadTree({ 元数据: { 叙事历史: [{ role: 'user', content: 'go' }, { role: 'assistant', content: STORY, _rawResponse: JSON.stringify({ text: STORY }) }] },
+      记忆: { 短期: [{ round: 1, summary: STORY }] } } as never);
+    const before = JSON.stringify(sm.toSnapshot());
+    new NarrativeEnvelopeRepairModule('元数据.叙事历史', '记忆.短期', '元数据.收藏楼层').onGameLoad(sm);
+    expect(JSON.stringify(sm.toSnapshot())).toBe(before);
+  });
+  it('a story escaped twice that begins or ends with a line break heals too', () => {
+    const story = b('他说：~"走~"。~n~n她走了。');
+    const raw = `<正文>${JSON.stringify({ text: `${BS}n${story}${BS}n` })}</正文>`;
+    const stored = new ResponseParser().parse(raw).text;
+    const once = b(`~n${story}~n`);
+    expect(rereadStoredNarrative(once, raw)).toBe(stored);
+    expect(stored).toBe('他说："走"。\n\n她走了。');
+  });
+  it('a short-term memory that is an envelope is read for its story even when no round in the history is', () => {
+    const sm = new StateManager();
+    sm.loadTree({ 元数据: { 叙事历史: [{ role: 'assistant', content: STORY }] }, 记忆: { 短期: [{ round: 3, summary: LOOSE }] } } as never);
+    new NarrativeEnvelopeRepairModule('元数据.叙事历史', '记忆.短期', '元数据.收藏楼层').onGameLoad(sm);
+    expect(sm.get('记忆.短期')).toEqual([{ round: 3, summary: STORY }]);
   });
 });
