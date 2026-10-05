@@ -1113,9 +1113,13 @@ const navCategories = computed<NavCategory[]>(() => [
   { id: 'settings-ui', label: t('settings.nav.ui') },
   { id: 'settings-game', label: t('settings.nav.game') },
   ...(!inGame.value || actionOptionsSwitchOn.value ? [{ id: 'settings-action', label: t('settings.nav.action') }] : []),
-  { id: 'settings-heartbeat', label: t('settings.nav.heartbeat') },
-  { id: 'settings-npc', label: t('settings.nav.npc') },
-  { id: 'settings-plot', label: t('settings.nav.plot') },
+  // The save's own settings (P10, 2026-10-04): on the game page only. Back on Home the save is still in memory, but
+  // 继续游戏 loads it again and a change made there would be lost.
+  ...(inGame.value ? [
+    { id: 'settings-heartbeat', label: t('settings.nav.heartbeat') },
+    { id: 'settings-npc', label: t('settings.nav.npc') },
+    { id: 'settings-plot', label: t('settings.nav.plot') },
+  ] : []),
   { id: 'settings-memory', label: t('settings.nav.memory') },
   { id: 'settings-advanced', label: t('settings.nav.advanced') },
   { id: 'settings-scale', label: t('settings.nav.scale') },
@@ -1273,7 +1277,7 @@ onBeforeUnmount(() => {
 
       <div class="setting-subsection-header">{{ $t('settings.aiFeatures.subsection.narrative') }}</div>
 
-      <div v-if="isLoaded" class="setting-row">
+      <div v-if="inGame" class="setting-row">
         <div class="setting-info">
           <span class="setting-label">{{ $t('settings.aiFeatures.cot.label') }}</span>
           <span class="setting-desc">
@@ -1283,7 +1287,7 @@ onBeforeUnmount(() => {
         <AgaToggle :model-value="cotSettings.enabled" @update:model-value="toggleCotSetting('enabled')" />
       </div>
 
-      <template v-if="cotSettings.enabled && isLoaded">
+      <template v-if="cotSettings.enabled && inGame">
         <div class="setting-row setting-row--indent">
           <div class="setting-info">
             <span class="setting-label">{{ $t('settings.aiFeatures.cot.judge.label') }}</span>
@@ -1315,7 +1319,7 @@ onBeforeUnmount(() => {
         </div>
       </template>
 
-      <div v-if="isLoaded" class="setting-row">
+      <div v-if="inGame" class="setting-row">
         <div class="setting-info">
           <span class="setting-label">{{ $t('settings.aiFeatures.bodyPolish.label') }}</span>
           <span class="setting-desc">
@@ -1400,7 +1404,7 @@ onBeforeUnmount(() => {
         <AgaToggle :model-value="featureToggles.location_npc_generation" @update:model-value="toggleFeature('location_npc_generation')" />
       </div>
 
-      <div v-if="isLoaded" class="setting-row">
+      <div v-if="inGame" class="setting-row">
         <div class="setting-info">
           <span class="setting-label">{{ $t('settings.aiFeatures.presence.label') }}</span>
           <span class="setting-desc">
@@ -1436,7 +1440,7 @@ onBeforeUnmount(() => {
 
       <div class="setting-subsection-header">{{ $t('settings.aiFeatures.subsection.image') }}</div>
 
-      <div v-if="isLoaded" class="setting-row">
+      <div v-if="inGame" class="setting-row">
         <div class="setting-info">
           <span class="setting-label">{{ $t('settings.aiFeatures.imageGen.label') }}</span>
           <span class="setting-desc">
@@ -1638,7 +1642,7 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- ─── B.2.2 世界心跳高级设置 ─── -->
-    <section v-if="isLoaded" v-show="visibleCategoryIds.has('settings-heartbeat')" id="settings-heartbeat" class="settings-section">
+    <section v-if="inGame" v-show="visibleCategoryIds.has('settings-heartbeat')" id="settings-heartbeat" class="settings-section">
       <h3 class="section-title">{{ $t('settings.heartbeat.sectionTitle') }}</h3>
 
       <div class="setting-row">
@@ -1673,7 +1677,7 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- ─── B.2.3 NPC 设置 ─── -->
-    <section v-if="isLoaded" v-show="visibleCategoryIds.has('settings-npc')" id="settings-npc" class="settings-section">
+    <section v-if="inGame" v-show="visibleCategoryIds.has('settings-npc')" id="settings-npc" class="settings-section">
       <h3 class="section-title">{{ $t('settings.npc.sectionTitle') }}</h3>
 
       <div class="setting-row">
@@ -1713,7 +1717,7 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- ─── Plot Direction Settings (Sprint Plot-1 P6) ─── -->
-    <section v-if="isLoaded" v-show="visibleCategoryIds.has('settings-plot')" id="settings-plot" class="settings-section">
+    <section v-if="inGame" v-show="visibleCategoryIds.has('settings-plot')" id="settings-plot" class="settings-section">
       <h3 class="section-title">{{ $t('settings.plot.sectionTitle') }}</h3>
 
       <div class="setting-row">
