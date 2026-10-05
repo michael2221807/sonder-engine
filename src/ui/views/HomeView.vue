@@ -67,8 +67,8 @@ const loadError = ref<string | null>(null);
  * 玩家在游戏启动前还没有办法进入 /game/api 或 /game/settings（这些路由都在
  * GameView 下），但玩家又必须先配置 API 才能开局。所以在 HomeView 直接以
  * modal 形式打开 APIPanel / SettingsPanel —— 两个组件本身不强依赖 engine
- * 状态树（APIPanel 纯 localStorage；SettingsPanel 的状态树相关 section 已用
- * `v-if="isLoaded"` 自行隐藏，模态里只显示外观/数据管理等 localStorage 部分）。
+ * 状态树（APIPanel 纯 localStorage；SettingsPanel 里属于存档的 section 只在游戏页
+ * 显示（`inGame`，2026-10-04），模态里只显示外观/数据管理等设备级部分，也不往状态树写）。
  */
 const showApiModal = ref(false);
 const showSettingsModal = ref(false);
@@ -501,8 +501,8 @@ onMounted(async () => {
     <!--
       开局前配置 modal：API / 设置
       APIPanel 完全不依赖 engine 状态树（只读 localStorage + aiService），可以无游戏加载。
-      SettingsPanel 的状态树依赖 section 已用 `v-if="isLoaded"` 自行隐藏，无游戏时只显示
-      外观/数据管理等 localStorage-only 的部分。两者都能在 HomeView 正确渲染。
+      SettingsPanel 里属于存档的 section 只在游戏页显示（`inGame`），首页只显示
+      外观/数据管理等设备级部分。两者都能在 HomeView 正确渲染。
     -->
     <!--
       两个内嵌面板本身都带 panel-header + 标题，所以这里不给 Modal 传 title

@@ -15,6 +15,7 @@ import type { BehaviorModule } from './types';
 import type { StateManager } from '../core/state-manager';
 import type { ChangeLog, StateChange } from '../types';
 import type { EngineNpcFieldNames } from '../pipeline/types';
+import { MAX_ARRAY_CAPACITY } from '../core/command-executor';
 
 type NpcRecord = Record<string, unknown>;
 
@@ -27,9 +28,17 @@ function escapeRegExp(text: string): string {
 }
 
 /**
- * The names of the NPCs a batch of changes touched: through a `[name=X]` path; through an index path (a merged
- * push writes `list[i]`), resolved against the list as it is now; by a push onto the list (the new entry is the
- * last); or by a whole-list write (the entries that differ from before). Pure, for tests.
+ * The names of the NPCs a batch of changes touched. The batch is read from its last change back to its first,
+ * undoing each whole-list or whole-record write as it goes (they carry the value as it was), so an index or filter
+ * path is resolved against the list as it stood when that change was made — not after a later pull in the same
+ * batch shifted it (code review L1). A change counts through:
+ * - a `[name=X]` path: X, matched exactly as StateManager matches it; a rename through it, the new name;
+ * - a whole-record write (`list[i]`, `list[k=v]`): the record written;
+ * - any other index or filter path: the record it resolved to then;
+ * - a push onto the list: the new last entry; a list write: the entries that differ from before.
+ * A no-op — a filter that matched nothing records neither an old nor a new value — touches nobody (review L2). A
+ * push that filled the list to its capacity may have evicted the oldest entry without a change of its own, so the
+ * changes before it count only when they name the NPC themselves. Pure, for tests.
  */
 export function touchedNpcNames(
   changes: readonly StateChange[],
@@ -41,28 +50,63 @@ export function touchedNpcNames(
   const add = (value: unknown) => {
     if (isNpc(value) && typeof value[nameKey] === 'string' && value[nameKey]) names.add(value[nameKey] as string);
   };
-  const rel = escapeRegExp(relationshipsPath);
-  const byName = new RegExp(`^${rel}\\[${escapeRegExp(nameKey)}=([^\\]]+)\\]`);
-  const byIndex = new RegExp(`^${rel}(?:\\[(\\d+)\\]|\\.(\\d+))(?:[.[]|$)`);
-  for (const change of changes) {
+  const matches = (item: unknown, key: string, value: string) => isNpc(item) && String(item[key]) === value;
+  // The list right after the change being read; null once it can no longer be known.
+  let list: readonly unknown[] | null = currentList;
+  const entryPath = new RegExp(`^${escapeRegExp(relationshipsPath)}(?:\\[(\\d+)\\]|\\.(\\d+)|\\[([^=\\]]+)=([^\\]]+)\\])(.*)$`);
+  for (let i = changes.length - 1; i >= 0; i--) {
+    const change = changes[i];
+    if (change.oldValue === undefined && change.newValue === undefined) continue;
     const path = String(change.path ?? '').trim();
-    const named = byName.exec(path);
-    if (named) { names.add(named[1].trim()); continue; }
-    const indexed = byIndex.exec(path);
-    if (indexed) {
-      const index = Number(indexed[1] ?? indexed[2]);
-      add(path === `${relationshipsPath}[${index}]` || path === `${relationshipsPath}.${index}` ? change.newValue : currentList[index]);
+
+    if (path === relationshipsPath) {
+      const after = Array.isArray(change.newValue) ? change.newValue : [];
+      if (change.action === 'push') {
+        add(after[after.length - 1]);
+      } else if (change.action === 'set') {
+        const before = new Map<string, string>();
+        for (const old of Array.isArray(change.oldValue) ? change.oldValue : []) {
+          if (isNpc(old) && typeof old[nameKey] === 'string') before.set(old[nameKey] as string, JSON.stringify(old));
+        }
+        for (const entry of after) {
+          if (isNpc(entry) && typeof entry[nameKey] === 'string' && before.get(entry[nameKey] as string) !== JSON.stringify(entry)) add(entry);
+        }
+      }
+      list = change.action === 'push' && after.length >= MAX_ARRAY_CAPACITY ? null
+        : Array.isArray(change.oldValue) ? change.oldValue : [];
       continue;
     }
-    if (path !== relationshipsPath || !Array.isArray(change.newValue)) continue;
-    if (change.action === 'push') { add(change.newValue[change.newValue.length - 1]); continue; }
-    const before = new Map<string, string>();
-    for (const old of Array.isArray(change.oldValue) ? change.oldValue : []) {
-      if (isNpc(old) && typeof old[nameKey] === 'string') before.set(old[nameKey] as string, JSON.stringify(old));
+
+    const entry = entryPath.exec(path);
+    const rest = entry?.[5] ?? '';
+    if (!entry || (rest !== '' && rest[0] !== '.' && rest[0] !== '[')) continue;
+    const indexText = entry[1] ?? entry[2];
+    const [filterKey, filterValue] = [entry[3], entry[4]];
+    const at = indexText !== undefined ? Number(indexText)
+      : list ? list.findIndex((item) => matches(item, filterKey, filterValue)) : -1;
+
+    if (rest === '') {
+      // The whole record: the one written counts; undo it so the earlier changes see the list as it was.
+      if (change.action === 'set') add(change.newValue);
+      if (list && at !== -1) {
+        const copy = list.slice();
+        copy[at] = change.oldValue;
+        list = copy;
+      } else {
+        list = null;
+      }
+      continue;
     }
-    for (const entry of change.newValue) {
-      if (isNpc(entry) && typeof entry[nameKey] === 'string' && before.get(entry[nameKey] as string) !== JSON.stringify(entry)) add(entry);
+    if (filterKey === nameKey) {
+      names.add(rest === `.${nameKey}` && change.action === 'set' && typeof change.newValue === 'string'
+        ? change.newValue : filterValue);
+      continue;
     }
+    if (!list) continue;
+    // A filter on the field this change rewrote matches the record by its new value.
+    const resolved = at !== -1 ? at : filterKey !== undefined && rest === `.${filterKey}` && change.action === 'set'
+      ? list.findIndex((item) => matches(item, filterKey, String(change.newValue))) : -1;
+    if (resolved !== -1) add(list[resolved]);
   }
   return names;
 }

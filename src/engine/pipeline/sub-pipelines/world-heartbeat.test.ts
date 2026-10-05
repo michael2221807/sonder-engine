@@ -16,7 +16,11 @@ vi.mock('../../prompt/environment-block', () => ({
   buildEnvironmentBlock: vi.fn(() => ''),
 }));
 
-function createPipeline(stateData: Record<string, unknown>, fieldOverrides: Record<string, string> = {}) {
+function createPipeline(
+  stateData: Record<string, unknown>,
+  fieldOverrides: Record<string, string> = {},
+  pathOverrides: Record<string, string> = {},
+) {
   const { sm } = createMockStateManager(stateData);
 
   const paths = {
@@ -44,6 +48,7 @@ function createPipeline(stateData: Record<string, unknown>, fieldOverrides: Reco
       lastMainRoundUpdate: '上次主回合更新回合',
       ...fieldOverrides,
     },
+    ...pathOverrides,
   };
 
   const aiService = { generate: vi.fn().mockResolvedValue('{}') };
@@ -143,6 +148,18 @@ describe('WorldHeartbeatPipeline', () => {
       await pipeline.execute();
       expect(blocks(promptAssembler)).toContain('别处');
       expect(blocks(promptAssembler)).not.toContain('同处一地');
+    });
+
+    // Code review M2: presence counts a place and a room inside it as one; the heartbeat now agrees.
+    it('a place and a room inside it count as the same place, as for presence', async () => {
+      const { pipeline, promptAssembler } = createPipeline({
+        角色: { 当前位置: '青云城·客栈·二楼' },
+        NPC列表: [{ 名称: '楼下掌柜', 当前位置: '青云城·客栈' }, { 名称: '城外樵夫', 当前位置: '青云城外' }],
+        回合数: 1, 心跳历史: [],
+      }, {}, { locationPathSeparator: '·' });
+      await pipeline.execute();
+      expect(blocks(promptAssembler)).toContain('城外樵夫');
+      expect(blocks(promptAssembler)).not.toContain('楼下掌柜');
     });
   });
 

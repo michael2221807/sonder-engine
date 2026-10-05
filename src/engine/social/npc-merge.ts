@@ -22,6 +22,9 @@
  *   typically carries an AI-invented reset value that must not clobber them.
  * - IDENTITY fields (type / gender / age): base non-empty wins — identity is
  *   established at creation and only drifts through hallucination.
+ * - ROUND STAMP (lastMainRoundUpdate): the later round wins — either copy was
+ *   updated then, and keeping the earlier one would let the heartbeat forget
+ *   an NPC the main round touched recently.
  * - DESCRIPTIVE text (description / appearance / bodyDescription /
  *   outfitStyle / background / corePersonality): the LONGER non-empty text
  *   wins (same precedent as location-dedup's 描述取更长) — richer prose is
@@ -131,7 +134,7 @@ function fillMissingObject(
   return out;
 }
 
-type FieldPolicy = 'volatile' | 'progression' | 'identity' | 'longerText';
+type FieldPolicy = 'volatile' | 'progression' | 'identity' | 'longerText' | 'latestRound';
 
 /** Policy maps memoized per field-name config object (static at runtime) */
 const policyMapCache = new WeakMap<EngineNpcFieldNames, Map<string, FieldPolicy>>();
@@ -153,6 +156,7 @@ function buildPolicyMap(f: EngineNpcFieldNames): Map<string, FieldPolicy> {
   for (const key of [f.type, f.gender, f.age]) {
     m.set(key, 'identity');
   }
+  m.set(f.lastMainRoundUpdate, 'latestRound');
   for (const key of [
     f.description, f.appearance, f.bodyDescription,
     f.outfitStyle, f.background, f.corePersonality,
@@ -211,6 +215,11 @@ export function mergeNpcRecords(
       case 'progression':
       case 'identity':
         // base wins (already non-empty)
+        break;
+      case 'latestRound':
+        if (typeof baseValue === 'number' && typeof incomingValue === 'number' && incomingValue > baseValue) {
+          out[key] = incomingValue;
+        }
         break;
       case 'longerText': {
         if (typeof baseValue === 'string' && typeof incomingValue === 'string') {

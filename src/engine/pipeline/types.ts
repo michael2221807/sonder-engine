@@ -1019,6 +1019,11 @@ export interface EngineNpcFieldNames {
   lastMainRoundUpdate: string;
 }
 
+/** 心跳历史保留条数的缺省值（设置页「历史保留条数」显示的就是它；存档里没有这个设置时用它） */
+export const DEFAULT_HEARTBEAT_HISTORY_LIMIT = 20;
+/** 遗忘回合数的缺省值（设置页显示的就是它）；0 = 不遗忘 */
+export const DEFAULT_HEARTBEAT_FORGET_ROUNDS = 30;
+
 /**
  * 默认路径配置 — 与参考 Game Pack（天命 tianming）state schema 对齐
  *

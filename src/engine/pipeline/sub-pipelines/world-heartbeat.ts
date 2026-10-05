@@ -30,6 +30,7 @@ import type { ResponseParser } from '../../ai/response-parser';
 import type { PromptAssembler } from '../../prompt/prompt-assembler';
 import type { GamePack } from '../../types';
 import type { EnginePathConfig, IEngramManager } from '../types';
+import { DEFAULT_HEARTBEAT_HISTORY_LIMIT, DEFAULT_HEARTBEAT_FORGET_ROUNDS } from '../types';
 import type { AIResponse } from '../../ai/types';
 import type { StateChange } from '../../types';
 import {
@@ -38,15 +39,11 @@ import {
   extractThinkingFromRaw,
 } from '../../core/prompt-debug';
 import { appendChangesToLastNarrative } from '../../audit/audit-append';
+import { isColocatedLocation } from '../../social/npc-presence';
 import { buildEnvironmentBlock } from '../../prompt/environment-block';
 
 /** 每次心跳最多处理的 NPC 数量，控制 AI 调用的 token 消耗 */
 const MAX_NPCS_PER_HEARTBEAT = 5;
-
-/** 心跳历史保留条数的缺省值（设置页「历史保留条数」显示的就是它；存档里没有这个设置时用它） */
-export const DEFAULT_HEARTBEAT_HISTORY_LIMIT = 20;
-/** 遗忘回合数的缺省值（设置页显示的就是它）；0 = 不遗忘 */
-export const DEFAULT_HEARTBEAT_FORGET_ROUNDS = 30;
 
 /** A whole number the player set, or the default when it is missing or unusable. */
 function settingOrDefault(value: unknown, fallback: number, min: number): number {
@@ -192,8 +189,9 @@ export class WorldHeartbeatPipeline {
       const npcLocation = String(npc[fields.location] ?? '');
       const isAlive = npc['已死亡'] !== true && npc['isDead'] !== true;
 
-      // 排除与玩家同位置的 NPC
-      if (playerLocation && npcLocation === playerLocation) return false;
+      // 排除与玩家同位置的 NPC — the same test presence uses, so a place and the room inside it (`城·客栈` and
+      // `城·客栈·二楼`) count as one: the heartbeat never moves an NPC the story shows beside the player.
+      if (playerLocation && isColocatedLocation(npcLocation, playerLocation, this.paths.locationPathSeparator)) return false;
       // 排除已死亡的 NPC
       if (!isAlive) return false;
       // Phase 6.2: 排除心跳锁定的 NPC（用户在 UI 中手动锁定，保持其状态不被 AI 修改）

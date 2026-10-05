@@ -334,7 +334,7 @@ export function stripTagFromText(text: string, tag: string): string {
  * - 无变更的 message 保持原引用（减少不必要的对象分配）
  * - 多模态块内容：只处理 text 块，image 块原样保留
  *
- * 泛型约束刻意内联块形状而非 import AIContentBlock（本文件保持零依赖）；
+ * 泛型约束刻意内联块形状而非 import AIContentBlock（本文件只依赖引擎路径常量，不依赖 AI 层类型）；
  * 未来新增块类型会走 `type !== 'text'` 分支被原样透传（安全无操作）。
  */
 export function stripTagFromMessages<

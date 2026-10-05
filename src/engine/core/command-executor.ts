@@ -122,7 +122,7 @@ function listFromMalformed(value: unknown): unknown[] | undefined {
 }
 
 /** push 操作下，单个数组字段的最大容量（超出时自动淘汰最旧元素） */
-const MAX_ARRAY_CAPACITY = 200;
+export const MAX_ARRAY_CAPACITY = 200;
 
 export class CommandExecutor {
   /**

@@ -21,8 +21,9 @@ import type { SaveManager } from '@/engine/persistence/save-manager';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
 import { DEFAULT_MAX_ACTIVE_THREADS } from '@/engine/plot/types';
-import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
-import { DEFAULT_HEARTBEAT_HISTORY_LIMIT, DEFAULT_HEARTBEAT_FORGET_ROUNDS } from '@/engine/pipeline/sub-pipelines/world-heartbeat';
+import {
+  DEFAULT_ENGINE_PATHS, DEFAULT_HEARTBEAT_HISTORY_LIMIT, DEFAULT_HEARTBEAT_FORGET_ROUNDS,
+} from '@/engine/pipeline/types';
 import type { AxisMode as PlotTimelineAxis } from '@/ui/components/panels/plot/scheduler-layout';
 import { writePlotTimelineAxis } from '@/ui/composables/usePlotTimelineAxis';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
@@ -272,7 +273,11 @@ const actionOptionsSwitchOn = computed(() => actionOptionsOn(savedPromptSettings
 const route = useRoute();
 /**
  * A game is being played: a save is loaded and this is the game's page. After 「返回首页」 the store still holds the
- * tree, but 继续游戏 loads the save again, so a switch flipped from Home would be lost (code review 2026-10-03).
+ * tree of the game just left — with whatever the player chose not to keep (不保存退出). A write from Home lands in
+ * that tree: one that also asks for a save writes the left-behind tree over the slot, and one that does not is
+ * dropped when 继续游戏 loads the save again (code review 2026-10-03, corrected 2026-10-04). So the save's own
+ * settings are shown in the game only, and Home writes nothing into the tree: the device settings it still shows
+ * (NSFW, the action options) reach the tree from localStorage when a game is loaded (engine-state.ts loadGame).
  */
 const inGame = computed(() => isLoaded.value && route.path.startsWith('/game'));
 function setActionOptionsSwitch(on: boolean): void {
@@ -291,9 +296,9 @@ function syncActionOptionsToStateTree(): void {
   setValue('系统.actionOptions.customPrompt', actionOptions.value.customPrompt);
 }
 
-// 载入时和任何字段变化时都同步（仅当游戏已加载，否则无状态树可写）
+// 载入时和任何字段变化时都同步（仅在游戏页：首页写的是刚离开的那棵树，见 inGame）
 watch(actionOptions, () => {
-  if (isLoaded.value) syncActionOptionsToStateTree();
+  if (inGame.value) syncActionOptionsToStateTree();
 }, { deep: true });
 
 // 游戏加载后也做一次同步（HomeView modal 里改了 localStorage 但 isLoaded=false
@@ -361,8 +366,8 @@ function loadNsfwSettings(): void {
     nsfwSettings.value = { ...defaultNsfw };
   }
 
-  // 启动时把 localStorage 值同步到状态树（若游戏已加载）
-  if (isLoaded.value) {
+  // 启动时把 localStorage 值同步到状态树（仅在游戏页 — 首页打开设置不能把刚离开的那棵树存回去，见 inGame）
+  if (inGame.value) {
     syncNsfwToStateTree();
   }
 }
@@ -373,8 +378,8 @@ function saveNsfwSettings(): void {
   } catch (e) {
     console.error('[NSFW] 保存失败:', e);
   }
-  // 同时写入状态树 — 立即生效
-  if (isLoaded.value) {
+  // 同时写入状态树 — 立即生效（仅在游戏页；首页改的值在读档时从 localStorage 同步进去）
+  if (inGame.value) {
     syncNsfwToStateTree();
   }
 }
@@ -568,7 +573,7 @@ watch(plotSettings, () => {
     if (onDisk.timelineAxis === 'date' || onDisk.timelineAxis === 'round') plotSettings.value.timelineAxis = onDisk.timelineAxis;
   } catch { /* ignore a corrupt blob; defaults apply */ }
   localStorage.setItem(PLOT_SETTINGS_KEY, JSON.stringify(plotSettings.value));
-  if (isLoaded.value) syncPlotSettingsToStateTree();
+  if (inGame.value) syncPlotSettingsToStateTree();
 }, { deep: true });
 
 watch(() => isLoaded.value, (loaded) => {
@@ -1438,20 +1443,21 @@ onBeforeUnmount(() => {
         <AgaToggle :model-value="featureToggles.field_repair" @update:model-value="toggleFeature('field_repair')" />
       </div>
 
-      <div class="setting-subsection-header">{{ $t('settings.aiFeatures.subsection.image') }}</div>
+      <!-- The image switch belongs to the save: on Home neither it, its hint nor its heading shows (review L5). -->
+      <template v-if="inGame">
+        <div class="setting-subsection-header">{{ $t('settings.aiFeatures.subsection.image') }}</div>
 
-      <div v-if="inGame" class="setting-row">
-        <div class="setting-info">
-          <span class="setting-label">{{ $t('settings.aiFeatures.imageGen.label') }}</span>
-          <span class="setting-desc">
-            {{ $t('settings.aiFeatures.imageGen.desc') }}
-          </span>
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">{{ $t('settings.aiFeatures.imageGen.label') }}</span>
+            <span class="setting-desc">
+              {{ $t('settings.aiFeatures.imageGen.desc') }}
+            </span>
+          </div>
+          <AgaToggle :model-value="imageGenEnabled" @update:model-value="toggleImageGen" />
         </div>
-        <AgaToggle :model-value="imageGenEnabled" @update:model-value="toggleImageGen" />
-      </div>
 
-      <template v-if="imageGenEnabled">
-        <p class="setting-desc setting-row--indent" style="padding: var(--space-sm) 0">
+        <p v-if="imageGenEnabled" class="setting-desc setting-row--indent" style="padding: var(--space-sm) 0">
           {{ $t('settings.aiFeatures.imageGen.migratedHint') }}
           <router-link to="/game?panel=image&tab=settings" class="settings-link">{{ $t('settings.aiFeatures.imageGen.migratedLink') }}</router-link>
         </p>
