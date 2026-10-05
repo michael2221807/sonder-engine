@@ -41,6 +41,9 @@ async function pageFingerprint(page: import('@playwright/test').Page) {
 test('in-page cards cannot reach or change the page: escapes are refused at bind, rewrites fail harmlessly',
   { tag: ['@plot-vector', '@gate-1'] }, async ({ page }) => {
     await seedSave(page);
+    // The app's own boot writes are done first (it notes a prompt split it has applied, 2026-10-05): the fingerprint
+    // is of the settled page, so only what the cards do could change it.
+    await page.getByRole('button', { name: '继续游戏' }).waitFor({ state: 'visible' });
     const before = await pageFingerprint(page);
     const requests: string[] = [];
     page.on('request', request => { if (!request.url().startsWith(new URL(page.url()).origin)) requests.push(request.url()); });
