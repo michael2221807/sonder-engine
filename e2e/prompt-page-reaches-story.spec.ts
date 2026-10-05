@@ -178,6 +178,8 @@ for (const splitGen of [true, false]) {
 test('the prompt page locks the switches that decide nothing, and a save without a change stores nothing',
   { tag: ['@regression', '@prompts'] }, async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-1920', 'one viewport is enough for the prompt page');
+    // About 20 s on a quiet machine, 30 s under load: many dialogs and checks.
+    test.slow();
     await seedSave(page);
     await enterSeededGame(page);
     await goToGameTab(page, 'prompts');
@@ -204,6 +206,7 @@ test('the prompt page locks the switches that decide nothing, and a save without
     await expect(card.locator('.modified-badge')).toHaveCount(0);
     expect(await page.evaluate(() => localStorage.getItem('aga_prompt_tianming_jailbreak'))).toBeNull();
     // An always-on prompt emptied is still sent as the pack's text: saving it empty is a reset, not an edit.
+    await expect(page.getByRole('dialog')).toHaveCount(0);
     const format = page.locator('.prompt-card').filter({ has: page.getByTestId('prompt-toggle-mainRound') });
     await format.locator('.prompt-title-area').click();
     await page.locator('.prompt-editor').fill('');
