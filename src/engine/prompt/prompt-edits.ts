@@ -162,6 +162,82 @@ export function hydratePromptRegistry(registry: PromptRegistry, packId: string, 
   }
 }
 
+/** A prompt a pack split in two (`GamePackManifest.promptSplits`): `to` took some of `from`'s sections. */
+export interface PromptSplit {
+  from: string;
+  to: string;
+}
+
+const HEADING = /^#{2,3} \S/;
+
+/** The section headings of a text (`## ` and `### ` lines), trimmed. */
+function headingsOf(text: string): Set<string> {
+  return new Set(text.replace(/\r\n/g, '\n').split('\n').filter((line) => HEADING.test(line)).map((line) => line.trim()));
+}
+
+/** The same lines, separators (`---`) and blank lines aside. */
+function sameWords(a: string, b: string): boolean {
+  const words = (text: string) => text.replace(/\r\n/g, '\n').split('\n').map((line) => line.trimEnd())
+    .filter((line) => line.trim() !== '' && line.trim() !== '---').join('\n');
+  return words(a) === words(b);
+}
+
+/** A text's lines before its first section heading. */
+function preambleOf(text: string): string {
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const first = lines.findIndex((line) => HEADING.test(line));
+  return (first === -1 ? lines : lines.slice(0, first)).join('\n').trimEnd();
+}
+
+/**
+ * Re-split an edit made before a pack split a prompt in two (code review M1, 2026-10-05: core → coreNarrative).
+ * Such an edit still holds the sections the pack moved to the new prompt, so they were sent twice — the player's
+ * copy in the old prompt and the pack's in the new — and the player's version never reached a request that carries
+ * only the new prompt. Along the pack's own section headings (`## ` / `### ` lines of the two default texts): a
+ * section whose heading is now only in `to` moves to an edit of `to`; one in both (a parent kept on each side) is
+ * copied; any other stays. Nothing happens when the edit holds no moved heading (it is already of the new kind) or
+ * the player has edited `to` already. A switched-off `from` switches `to` off too, as the player meant both off.
+ * Returns how many prompts it rewrote.
+ */
+export function resplitPromptEdits(
+  packId: string,
+  splits: readonly PromptSplit[],
+  defaults: Readonly<Record<string, string>>,
+  storage?: EditStorage,
+): number {
+  const s = storeOf(storage);
+  let rewritten = 0;
+  for (const { from, to } of splits) {
+    const fromDefault = defaults[from], toDefault = defaults[to];
+    if (typeof fromDefault !== 'string' || typeof toDefault !== 'string') continue;
+    const fromOff = s.getItem(promptEnabledKey(packId, from)) === 'false';
+    if (fromOff && s.getItem(promptEnabledKey(packId, to)) === null) s.setItem(promptEnabledKey(packId, to), 'false');
+    const stored = s.getItem(promptContentKey(packId, from));
+    if (stored === null || s.getItem(promptContentKey(packId, to)) !== null) continue;
+    const fromHeadings = headingsOf(fromDefault), toHeadings = headingsOf(toDefault);
+    const lines = stored.replace(/\r\n/g, '\n').split('\n');
+    if (!lines.some((line) => toHeadings.has(line.trim()) && !fromHeadings.has(line.trim()))) continue;
+    const kept: string[] = [], moved: string[] = [];
+    let dest: 'from' | 'to' | 'both' = 'from';
+    for (const line of lines) {
+      if (HEADING.test(line)) {
+        const heading = line.trim();
+        dest = toHeadings.has(heading) ? (fromHeadings.has(heading) ? 'both' : 'to') : 'from';
+      }
+      if (dest !== 'to') kept.push(line);
+      if (dest !== 'from') moved.push(line);
+    }
+    const nextFrom = kept.join('\n').trim();
+    const nextTo = `${preambleOf(toDefault)}\n\n${moved.join('\n').trim()}`;
+    // A part the player left as the pack wrote it is no edit, whatever separators and blank lines it kept.
+    if (sameWords(nextFrom, fromDefault)) s.removeItem(promptContentKey(packId, from));
+    else s.setItem(promptContentKey(packId, from), nextFrom);
+    if (!sameWords(nextTo, toDefault)) s.setItem(promptContentKey(packId, to), nextTo);
+    rewritten++;
+  }
+  return rewritten;
+}
+
 /**
  * The slot overrides a card written before prompt edits had their own copy carried (world-book `builtin-prompts`
  * entries), as edits of the prompts their slots name. The old builder used an override only when it was not

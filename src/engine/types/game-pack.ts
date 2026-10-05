@@ -43,6 +43,11 @@ export interface GamePackManifest {
   promptLocales?: Record<string, string>;
   /** Locale-specific i18n files (key=locale, value=relative path e.g. "i18n/en.json") */
   i18nFiles?: Record<string, string>;
+  /**
+   * Prompts the pack split in two: `to` took some of `from`'s sections. A player's edit of `from` made before the
+   * split is re-split along the two texts' section headings (prompt-edits.ts resplitPromptEdits).
+   */
+  promptSplits?: Array<{ from: string; to: string }>;
 }
 
 /**

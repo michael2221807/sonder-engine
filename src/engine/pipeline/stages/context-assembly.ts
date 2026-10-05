@@ -301,8 +301,10 @@ export class ContextAssemblyStage implements PipelineStage {
       : '';
     // The previous round's thinking for the CoT module's {{PREV_THINKING}} (CoT-2 design, connected 2026-10-05 4A),
     // framed by the pack so the model reads it as continuity, not a script to repeat; bare when a pack has no frame.
+    // A feature-switch comment in the model's own words is defused, so no prompt filter acts on it (review M2).
     const prevThinkingBlock = typeof prevThinking === 'string' && prevThinking.trim()
-      ? (this.pack.engineFragments?.prevThinkingHeader ?? '{content}').replace('{content}', () => prevThinking.trim())
+      ? (this.pack.engineFragments?.prevThinkingHeader ?? '{content}')
+        .replace('{content}', () => prevThinking.trim().replace(/<!--(\s*)PROMPT_FEATURE/gi, '<!-$1PROMPT-FEATURE'))
       : '';
 
     const storyPlanRaw = cotEnabled

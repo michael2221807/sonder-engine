@@ -173,6 +173,9 @@ describe('real pack judgment transition, zero network', () => {
         const phaseSource = split ? 'module:splitGenStep2' : builder ? 'builder:format_prompt' : 'module:mainRound';
         const phase = String(structuredContext[structuredSources.indexOf(phaseSource)]?.content);
         expect(phase).toContain('"commands"');
+        // Since the core split (2026-10-05, 3C) core's writing rules are their own module, coreNarrative, sent beside it.
+        const rules = structuredSources.map((source, index) =>
+          source === 'module:core' || source === 'module:coreNarrative' ? String(structuredContext[index].content) : '').join('\n');
         for (const [index, source] of structuredSources.entries()) if (source === 'module:core') {
           const core = String(structuredContext[index].content);
           // Items and money are written by the original commands again.
@@ -180,7 +183,7 @@ describe('real pack judgment transition, zero network', () => {
           expect(core).not.toMatch(/\{"text":|\| `text` \|/);
           expect(core).toContain('mid_term_memory');
           expect(core).toContain('knowledge_facts');
-          expect(core).toContain(en ? '**The narrative is only the story**' : '**正文只写故事**');
+          expect(rules).toContain(en ? '**The narrative is only the story**' : '**正文只写故事**');
         }
         // PO 2026-10-02 (A, replacing D2 of 2026-09-26): with the mode on the narrative writes no notice at all. No rule
         // names a bracket form or a notice (naming a retired form invites it, I27), and the recent story the model

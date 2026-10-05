@@ -262,6 +262,7 @@
   "promptAssembly.builder.narrativeConstraints": "叙事约束+风格",
   "promptAssembly.builder.extraPrompt": "额外要求",
   "promptAssembly.builder.narrativeRules": "核心规则·写正文",
+  "promptAssembly.builder.prevThinking": "上一回合的思考",
   "promptAssembly.builder.outputProtocol": "核心规则·输出协议",
   "promptAssembly.builder.formatPrompt": "输出格式",
   "promptAssembly.builder.wbSystemRules": "世界书系统规则",

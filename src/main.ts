@@ -63,7 +63,7 @@ import { BehaviorRunner } from './engine/behaviors/behavior-runner';
 import { AIService, applyPersistedAISettings } from './engine/ai/ai-service';
 import { ResponseParser } from './engine/ai/response-parser';
 import { PromptRegistry } from './engine/prompt/prompt-registry';
-import { hydratePromptRegistry, migrateLegacyBuiltinOverrides } from './engine/prompt/prompt-edits';
+import { hydratePromptRegistry, migrateLegacyBuiltinOverrides, resplitPromptEdits } from './engine/prompt/prompt-edits';
 import { ALWAYS_ON_PROMPT_IDS } from './engine/prompt/builtin-slots';
 import { TemplateEngine } from './engine/prompt/template-engine';
 import { PromptAssembler } from './engine/prompt/prompt-assembler';
@@ -295,9 +295,14 @@ async function bootstrap(): Promise<void> {
   // The prompt page's edits (prompt-edits.ts): loaded now, and again whenever something replaces them.
   if (pack) {
     const packId = pack.manifest.id, promptIds = Object.keys(pack.prompts);
-    hydratePromptRegistry(promptRegistry, packId, promptIds);
+    // An edit made before the pack split a prompt in two is re-split first (code review M1, 2026-10-05).
+    const loadEdits = (): void => {
+      resplitPromptEdits(packId, pack.manifest.promptSplits ?? [], pack.prompts);
+      hydratePromptRegistry(promptRegistry, packId, promptIds);
+    };
+    loadEdits();
     eventBus.on<{ packId?: string }>('prompt:edits-replaced', (payload) => {
-      if (!payload?.packId || payload.packId === packId) hydratePromptRegistry(promptRegistry, packId, promptIds);
+      if (!payload?.packId || payload.packId === packId) loadEdits();
     });
     // The retired world-book slot-override store: what a restored backup or an old card import left there joins the
     // page's edits once (P7 A). Async; the registry reloads when anything moved.

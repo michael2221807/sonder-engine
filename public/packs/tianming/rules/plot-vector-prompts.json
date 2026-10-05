@@ -5,7 +5,7 @@
   ],
   "replacements": [
     {
-      "promptId": "core",
+      "promptId": "coreNarrative",
       "to": "## 四、剧情动能\n\n见「本回合使用剧情动能」。\n\n---\n\n",
       "from": "## 四、判定系统\n\n### 判定格式（必须遵守）\n\n```\n〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗\n```\n\n**注意：用`〖〗`不是`【】`；字段间用半角逗号`,`和半角冒号`:`，禁止用全角`，`和`：`**\n\n示例：\n```\n〖探索:成功,判定值:45,难度:35,基础:30,幸运:+8,环境:+5,状态:+2〗\n〖社交:大成功,判定值:68,难度:50,基础:52,幸运:+12,环境:+4,状态:0〗\n〖行动:失败,判定值:42,难度:55,基础:38,幸运:-3,环境:+7,状态:0〗\n```\n\n| 字段 | 说明 | 值域 |\n|------|------|------|\n| 类型 | 判定类型 | 探索/社交/行动/危机/躲避/感知等 |\n| 结果 | 判定结果 | 大失败/失败/成功/大成功/完美 |\n| 判定值 | 最终值 | 数字 |\n| 难度 | 目标值 | 10/20/35/50/70/90 |\n| 基础 | 属性与状态 | 数字 |\n| 幸运 | 运气波动 | +X 或 -X |\n| 环境 | 环境修正 | +X 或 0 |\n| 状态 | 状态修正 | +X 或 -X |\n\n### 判定公式\n\n```\n最终判定值 = 基础 + 幸运 + 环境 + 状态\n```\n\n**难度**：极易 10 | 简单 20 | 普通 35 | 困难 50 | 艰难 70 | 极难 90\n\n| 结果 | 条件 | 后果 |\n|------|------|------|\n| 大失败 | <难度-15 | 重伤/重大损失/关系恶化 |\n| 失败 | <难度 | 轻伤/部分损失/无进展 |\n| 成功 | ≥难度 | 达成目的 |\n| 大成功 | ≥难度+15 | 额外奖励/重创对手/好感大增 |\n| 完美 | ≥难度+30 | 重大转机/关键突破/结为盟友 |\n\n**何时判定**：\n- 必须：冲突攻防、危险探索、社交博弈、躲避逃跑、关键行动\n- 无需：日常行为、纯叙事对话\n\n### 属性对应用途\n\n| 属性 | 用途 |\n|------|------|\n| 体质 | 体力、耐力、受伤耐受、肉体挑战 |\n| 直觉 | 感知、闪避、危险预判、洞察 |\n| 悟性 | 学习、分析、技艺习得、谋略 |\n| 气运 | 随机事件倾向、机缘触发、意外救场 |\n| 魅力 | 社交、说服、印象、威慑 |\n| 心性 | 抗压、意志、情绪稳定、道德选择 |\n\n**判定规则**：相关属性 ≤ 5 → 大概率失败；6–10 → 各半；11–15 → 大概率成功；16–20 → 近乎必成。同时考虑情境修正（装备、状态效果、环境）。\n\n### 反媚俗规则（最高优先级）\n\n结果须基于规则与存档数据，而非玩家愿望。\n1. **禁止偏袒**：换作路人甲结果应相同\n2. **禁止轻描淡写**：大失败=重罚，不是「差点成功」\n3. **禁止主角光环**：对手不会突然变蠢\n4. **禁止巧合救场**：不要「恰好」「正巧」解围\n5. **禁止编造加成**：只使用存档数据\n\n---\n\n"
     },
@@ -15,17 +15,17 @@
       "from": "### 与判定系统联动\n\n§四 的 `〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗` 中 `环境:E` 的数值必须**能与当前 `世界.环境[*].效果` 字段对应**。\n\n- 正例：当前环境里有 `{名称:\"雾气弥漫\", 效果:\"-3感知\"}` → 本回合感知判定写 `环境:-3`\n- 反例：环境为空却写 `环境:+7` → 无出处，属不合规\n\n如果 `环境:E` 非零但 `世界.环境` 为空，说明叙事层面需要即时增加相应标签 —— 在本回合 commands 中一并 set 进 `世界.环境`。\n\n### 节日字段独立使用\n\n`世界.节日.效果` 对判定的贡献也并入 `环境:E`（不额外开新字段）。节日的氛围影响通常与环境标签互斥或叠加 —— 由你裁定。\n\n---\n\n"
     },
     {
-      "promptId": "core",
+      "promptId": "coreNarrative",
       "to": "",
       "from": "| 系统判定 / 状态提示 | `〖…〗` |\n"
     },
     {
-      "promptId": "core",
+      "promptId": "coreNarrative",
       "to": "",
       "from": "- `〖〗` = 系统判定 / 状态变化\n"
     },
     {
-      "promptId": "core",
+      "promptId": "coreNarrative",
       "to": "**正文只写故事**：不加任何提示或标注行；状态与数值的变化只写进 commands，界面会单独显示。",
       "from": "**禁止混用**：\n- `【系统提示】`、`【判定成功】`、`【好感度+10】` 均为错误\n- 正确：`〖系统提示：好感度变化〗`"
     },
@@ -95,7 +95,7 @@
       "from": "\n- `<judge>` 只能作为 `<正文>` 内部子结构。"
     },
     {
-      "promptId": "core",
+      "promptId": "coreNarrative",
       "to": "## IV. Narrative Impulse\n\nSee \"Narrative impulse mode for this round\".\n\n---\n\n",
       "from": "## IV. Judgement System\n\n### Judgement Format (Mandatory)\n\n```\n〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗\n```\n\n**Note: Use `〖〗` not `【】`; fields separated by half-width commas `,` and half-width colons `:`, never use full-width `，` or `：`**\n\nExamples:\n```\n〖探索:成功,判定值:45,难度:35,基础:30,幸运:+8,环境:+5,状态:+2〗\n〖社交:大成功,判定值:68,难度:50,基础:52,幸运:+12,环境:+4,状态:0〗\n〖行动:失败,判定值:42,难度:55,基础:38,幸运:-3,环境:+7,状态:0〗\n```\n\n| Field | Description | Range |\n|-------|-------------|-------|\n| 类型 (Type) | Judgement type | 探索/社交/行动/危机/躲避/感知 (Exploration/Social/Action/Crisis/Evasion/Perception) etc. |\n| 结果 (Result) | Judgement result | 大失败/失败/成功/大成功/完美 (Critical Failure/Failure/Success/Critical Success/Perfect) |\n| 判定值 (Final Value) | Final calculated value | Number |\n| 难度 (Difficulty) | Target value | 10/20/35/50/70/90 |\n| 基础 (Base) | Attribute and status | Number |\n| 幸运 (Luck) | Luck fluctuation | +X or -X |\n| 环境 (Environment) | Environmental modifier | +X or 0 |\n| 状态 (Status) | Status modifier | +X or -X |\n\n### Judgement Formula\n\n```\nFinal Judgement Value = Base + Luck + Environment + Status\n```\n\n**Difficulty**: Trivial 10 | Easy 20 | Normal 35 | Hard 50 | Very Hard 70 | Extreme 90\n\n| Result | Condition | Consequence |\n|--------|-----------|-------------|\n| 大失败 (Critical Failure) | <Difficulty-15 | Severe injury / major loss / relationship deterioration |\n| 失败 (Failure) | <Difficulty | Minor injury / partial loss / no progress |\n| 成功 (Success) | ≥Difficulty | Objective achieved |\n| 大成功 (Critical Success) | ≥Difficulty+15 | Bonus rewards / devastating blow to opponent / major affinity gain |\n| 完美 (Perfect) | ≥Difficulty+30 | Major turning point / critical breakthrough / alliance forged |\n\n**When to roll**:\n- Required: combat attacks/defense, dangerous exploration, social maneuvering, evasion/escape, critical actions\n- Not needed: daily activities, pure narrative dialogue\n\n### Attribute Usage Reference\n\n| Attribute | Usage |\n|-----------|-------|\n| 体质 (Constitution) | Physical strength, endurance, injury tolerance, physical challenges |\n| 直觉 (Intuition) | Perception, dodge, danger sense, insight |\n| 悟性 (Comprehension) | Learning, analysis, skill acquisition, strategy |\n| 气运 (Fortune) | Random event tendencies, serendipity triggers, unexpected saves |\n| 魅力 (Charisma) | Social interaction, persuasion, impression, intimidation |\n| 心性 (Willpower) | Stress resistance, willpower, emotional stability, moral choices |\n\n**Judgement rules**: Relevant attribute ≤ 5 → high probability of failure; 6–10 → coin flip; 11–15 → high probability of success; 16–20 → near-certain success. Also consider situational modifiers (equipment, status effects, environment).\n\n### Anti-Pandering Rule (Highest Priority)\n\nResults must be based on rules and save data, not player wishes.\n1. **No favoritism**: The result should be the same if a random NPC were in this position\n2. **No sugarcoating**: Critical failure = severe penalty, not \"almost succeeded\"\n3. **No plot armor**: Opponents do not suddenly become incompetent\n4. **No convenient rescues**: No \"just happens to\" or \"by coincidence\" bailouts\n5. **No fabricated bonuses**: Only use save data\n\n---\n\n"
     },
@@ -105,17 +105,17 @@
       "from": "### Integration with the Judgement System\n\nIn §IV's `〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗`, the `环境:E` value must be **traceable to the current `世界.环境[*].效果` field**.\n\n- Correct: The current environment includes `{名称:\"Dense Fog\", 效果:\"-3 Perception\"}` → this round's perception roll writes `环境:-3`\n- Incorrect: Environment is empty but the roll writes `环境:+7` → no source, non-compliant\n\nIf `环境:E` is non-zero but `世界.环境` is empty, it means the narrative layer needs to immediately add the corresponding tag — include it in this round's commands via set to `世界.环境`.\n\n### Festival Field Independent Usage\n\n`世界.节日.效果`'s contribution to judgement rolls is also folded into `环境:E` (no new field). A festival's atmospheric effect typically either conflicts with or stacks onto environment tags — adjudicated at your discretion.\n\n---\n\n"
     },
     {
-      "promptId": "core",
+      "promptId": "coreNarrative",
       "to": "",
       "from": "| System judgement / status notification | `〖…〗` |\n"
     },
     {
-      "promptId": "core",
+      "promptId": "coreNarrative",
       "to": "",
       "from": "- `〖〗` = system judgement / status change\n"
     },
     {
-      "promptId": "core",
+      "promptId": "coreNarrative",
       "to": "**The narrative is only the story**: no notice or annotation lines; state and value changes go only into commands, and the interface shows them on its own.",
       "from": "**Never mix them**:\n- `【System Notice】`, `【Judgement: Success】`, `【Affinity +10】` are all incorrect\n- Correct: `〖System Notice: Affinity Changed〗`"
     },

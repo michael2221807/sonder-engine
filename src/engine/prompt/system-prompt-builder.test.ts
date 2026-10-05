@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { estimateTokens, buildSystemPrompt, GPROXY_CACHE_STATIC_PIECE_IDS } from './system-prompt-builder';
+import { estimateTokens, buildSystemPrompt, GPROXY_CACHE_STATIC_PIECE_IDS, GPROXY_CACHE_MAGIC_STRING } from './system-prompt-builder';
 import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 import { createMockStateManager } from '../__test-utils__';
 import type { StateManager } from '../core/state-manager';
@@ -561,16 +561,37 @@ describe('buildSystemPrompt · the writing rules reach every request that writes
 // 4A (PO 2026-10-05): the CoT module ends with {{PREV_THINKING}} — the previous round's thinking (CoT-2 design). This
 // builder knew no such variable and rendered it empty, while the reasoning ring kept filling unread.
 describe('buildSystemPrompt · the previous round\'s thinking reaches the CoT module', () => {
-  function build(prevThinking?: string) {
+  function build(prevThinking?: string, cot = 'THINK FIRST\n{{PREV_THINKING}}', gproxyCache = false) {
     const { sm } = createMockStateManager({});
     return buildSystemPrompt({ stateManager: sm as unknown as StateManager, paths: DEFAULT_ENGINE_PATHS,
-      packPrompts: { mainRound: 'FORMAT', 'cot-preamble': 'THINK FIRST\n{{PREV_THINKING}}' },
-      worldBooks: [], userInput: 'hi', playerName: 'p', prevThinking,
+      packPrompts: { mainRound: 'FORMAT', 'cot-preamble': cot },
+      worldBooks: [], userInput: 'hi', playerName: 'p', prevThinking, gproxyCache,
       cotEnabled: true, cotJudgeEnabled: false, splitGen: true, cotPseudoEnabled: false });
   }
-  it('renders the framed thinking where the module asks for it, and nothing on a first round', () => {
-    expect(build('## LAST ROUND\nthe guard is lying').contextPieces.cot_core).toBe('THINK FIRST\n## LAST ROUND\nthe guard is lying');
-    expect(build().contextPieces.cot_core).toBe('THINK FIRST');
-    expect(build('').contextPieces.cot_core).toBe('THINK FIRST');
+  const ids = (r: ReturnType<typeof build>) => r.messageEntries.map((e) => e.id);
+
+  it('follows the module that asks for it, as its own piece; nothing on a first round', () => {
+    const r = build('## LAST ROUND\nthe guard is lying');
+    expect(r.contextPieces.prev_thinking).toBe('## LAST ROUND\nthe guard is lying');
+    expect(ids(r).indexOf('prev_thinking')).toBe(ids(r).indexOf('cot_core') + 1);
+    expect(build().contextPieces.prev_thinking).toBeUndefined();
+    expect(build('').contextPieces.prev_thinking).toBeUndefined();
+  });
+  it('is left out when the pack\'s module has no place for it', () => {
+    expect(build('the guard is lying', 'THINK FIRST').contextPieces.prev_thinking).toBeUndefined();
+  });
+  // Code review H2 (2026-10-05): the module is part of the cached prefix; rendered into it, the thinking changed the
+  // prefix every round and the cache was rewritten, never read.
+  it('leaves the module byte-stable across rounds and outside the cached prefix', () => {
+    const one = build('round one thinking', undefined, true);
+    const two = build('round two thinking', undefined, true);
+    expect(one.contextPieces.cot_core).toBe('THINK FIRST');
+    expect(two.contextPieces.cot_core).toBe(one.contextPieces.cot_core);
+    expect(GPROXY_CACHE_STATIC_PIECE_IDS.has('prev_thinking')).toBe(false);
+    const marked = one.messageEntries.findIndex((e) => e.content.includes(GPROXY_CACHE_MAGIC_STRING));
+    expect(marked).toBeGreaterThan(-1);
+    expect(ids(one).indexOf('prev_thinking')).toBeGreaterThan(marked);
+    const prefix = (r: ReturnType<typeof build>) => r.messageEntries.slice(0, marked + 1).map((e) => e.content).join('\n');
+    expect(prefix(two)).toBe(prefix(one));
   });
 });

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   promptContentKey, promptEnabledKey, promptEditIds, readPromptEdits, writePromptEdits, restorePromptEdits,
   hydratePromptRegistry, promptEditsFromSlotOverrides, sanitizePromptEdits, migrateLegacyBuiltinOverrides,
-  sameText, MAX_IMPORTED_PROMPT_LENGTH,
+  sameText, MAX_IMPORTED_PROMPT_LENGTH, resplitPromptEdits,
   type EditStorage,
 } from './prompt-edits';
 import { PromptRegistry } from './prompt-registry';
@@ -161,5 +161,60 @@ describe('prompt edits (the prompt page)', () => {
     // Moved once: the store is empty now, and an empty store is left alone.
     expect(await migrateLegacyBuiltinOverrides(library, 'p', s)).toBe(0);
     expect(library.cleared).toBe(1);
+  });
+});
+
+// Code review M1 (2026-10-05): core was split into core and coreNarrative. An edit of core made before still holds
+// the sections now in coreNarrative, so they went out twice and the player's version never reached split Step 1.
+describe('resplitPromptEdits (a prompt the pack split in two)', () => {
+  const OLD = ['# Rules', 'You are the GM.', '---', '## A. Output', 'json only', '---', '## B. Purity', 'camera only',
+    '---', '## C. NPC', '### C1. Names', 'random names', '### C2. Object', 'full object', '---', '## D. Autonomy',
+    'never decide for the player'].join('\n');
+  const DEFAULTS = {
+    core: ['# Rules', 'You are the GM.', '---', '## A. Output', 'json only', '---', '## C. NPC', '### C2. Object',
+      'full object'].join('\n'),
+    coreNarrative: ['# Rules · story', 'You are the GM.', '---', '## B. Purity', 'camera only', '---', '## C. NPC',
+      '### C1. Names', 'random names', '---', '## D. Autonomy', 'never decide for the player'].join('\n'),
+  };
+  const SPLIT = [{ from: 'core', to: 'coreNarrative' }];
+  const key = (id: string) => promptContentKey('p', id);
+
+  it('an old edit left as the pack wrote it becomes no edit at all', () => {
+    const s = memoryStorage({ [key('core')]: OLD });
+    expect(resplitPromptEdits('p', SPLIT, DEFAULTS, s)).toBe(1);
+    expect(s.dump()).toEqual({});
+  });
+
+  it('the player\'s changes land in the prompt their section now belongs to, and nowhere twice', () => {
+    const edited = OLD.replace('camera only', 'camera only, MINE').replace('full object', 'full object, MINE TOO');
+    const s = memoryStorage({ [key('core')]: edited });
+    resplitPromptEdits('p', SPLIT, DEFAULTS, s);
+    const core = s.getItem(key('core'))!, story = s.getItem(key('coreNarrative'))!;
+    expect(core).toContain('full object, MINE TOO');
+    expect(core).not.toContain('camera only');
+    expect(story).toContain('camera only, MINE');
+    expect(story).toContain('random names');
+    expect(story).not.toContain('full object');
+    expect(story.startsWith('# Rules · story')).toBe(true);
+    // The parent heading kept on both sides stays on both.
+    expect(core).toContain('## C. NPC');
+    expect(story).toContain('## C. NPC');
+  });
+
+  it('leaves an edit of the new kind, and a split the player already edited, alone', () => {
+    const fresh = memoryStorage({ [key('core')]: DEFAULTS.core.replace('json only', 'json only!') });
+    expect(resplitPromptEdits('p', SPLIT, DEFAULTS, fresh)).toBe(0);
+    const both = memoryStorage({ [key('core')]: OLD.replace('camera only', 'x'), [key('coreNarrative')]: 'MY STORY RULES' });
+    expect(resplitPromptEdits('p', SPLIT, DEFAULTS, both)).toBe(0);
+    expect(both.getItem(key('coreNarrative'))).toBe('MY STORY RULES');
+  });
+
+  it('a switched-off old prompt switches the new one off too, unless the player chose for it', () => {
+    const off = memoryStorage({ [promptEnabledKey('p', 'core')]: 'false' });
+    resplitPromptEdits('p', SPLIT, DEFAULTS, off);
+    expect(off.getItem(promptEnabledKey('p', 'coreNarrative'))).toBe('false');
+    const chosen = memoryStorage({ [promptEnabledKey('p', 'core')]: 'false', [promptEnabledKey('p', 'coreNarrative')]: 'true' });
+    resplitPromptEdits('p', SPLIT, DEFAULTS, chosen);
+    expect(chosen.getItem(promptEnabledKey('p', 'coreNarrative'))).toBe('true');
   });
 });

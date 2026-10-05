@@ -763,7 +763,9 @@ function importPrompts(): void {
       const msg = err instanceof Error ? err.message : t('prompt.toast.importError');
       eventBus.emit('ui:toast', { type: 'error', message: msg, duration: 3000 });
     } finally {
-      // A file that stopped halfway has still written what came before.
+      // A file that stopped halfway has still written what came before. The store reloads as after any replacement
+      // of the edits: an old export's edit of a prompt the pack has since split is re-split first (main.ts).
+      eventBus.emit('prompt:edits-replaced', { packId: pack?.manifest.id });
       reloadEdits();
     }
   };

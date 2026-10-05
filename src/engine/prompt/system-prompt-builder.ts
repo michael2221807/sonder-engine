@@ -90,7 +90,8 @@ export interface SystemPromptBuildParams {
   bookmarkedRoundsBlock?: string;
   /**
    * The previous round's thinking, framed by the pack (`engineFragments.prevThinkingHeader`), for the CoT module's
-   * `{{PREV_THINKING}}` (CoT-2 design; PO 2026-10-05 4A). Absent or empty on the first round or with CoT off.
+   * `{{PREV_THINKING}}` (CoT-2 design; PO 2026-10-05 4A): sent as its own piece right after the module, which stays
+   * byte-stable for the cache. Absent or empty on the first round or with CoT off.
    */
   prevThinking?: string;
   /** The rendered action-options module for a single call (the player's mode, pace and request); absent = none. */
@@ -314,7 +315,9 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
     wordCount: String(lengthAsked.target),
     wordCountMin: String(lengthAsked.min),
     wordCountMax: String(lengthAsked.max),
-    PREV_THINKING: params.prevThinking ?? '',
+    // The CoT module stays the same every round (it is part of the cached prefix): its {{PREV_THINKING}} is left
+    // empty here and the previous thinking follows it as its own piece (code review 2026-10-05, H2).
+    PREV_THINKING: '',
   };
 
   // Helper to resolve + render a slot through the full 5-step pipeline
@@ -735,6 +738,12 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   // ── 23. CoT ──
   if (cotEnabled) {
     push('cot_core', 'COT提示词', '系统', 'system', slot('main_cot'));
+    // Where the module asks for it ({{PREV_THINKING}}), the previous round's thinking: right after the module, as a
+    // piece of its own, so the module itself stays byte-stable for the cache (PO 4A; code review H2).
+    const cotModule = packPrompts[BUILTIN_SLOTS.main_cot?.defaultPromptId ?? ''] ?? '';
+    if (params.prevThinking?.trim() && cotModule.includes('{{PREV_THINKING}}')) {
+      push('prev_thinking', '上一回合思考', '系统', 'system', params.prevThinking);
+    }
     if (cotJudgeEnabled) {
       push('cot_judge', '判定COT提示词', '系统', 'system', slot('main_cot_judge'));
     }

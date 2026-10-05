@@ -262,6 +262,7 @@ const BUILDER_I18N_MAP: Record<string, string> = {
   state_tasks: 'promptAssembly.builder.stateTasks', state_agreements: 'promptAssembly.builder.stateAgreements',
   narrative_constraints: 'promptAssembly.builder.narrativeConstraints', extra_prompt: 'promptAssembly.builder.extraPrompt',
   narrative_rules: 'promptAssembly.builder.narrativeRules',
+  prev_thinking: 'promptAssembly.builder.prevThinking',
   output_protocol: 'promptAssembly.builder.outputProtocol',
   format_prompt: 'promptAssembly.builder.formatPrompt', cot_core: 'promptAssembly.builder.cotCore',
   cot_judge: 'promptAssembly.builder.cotJudge', player_input: 'promptAssembly.builder.playerInput',

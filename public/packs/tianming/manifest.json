@@ -67,6 +67,9 @@
   "promptLocales": {
     "en": "prompts-en"
   },
+  "promptSplits": [
+    { "from": "core", "to": "coreNarrative" }
+  ],
   "i18nFiles": {
     "zh-CN": "i18n/zh-CN.json",
     "en": "i18n/en.json"
