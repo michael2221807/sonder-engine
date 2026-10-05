@@ -71,6 +71,8 @@ test.describe('Game Card Epic — integration (mock data, zero real API)', () =>
   test('Story 5+6 导出→导入 roundtrip: zero AI, bundle valid, world survives',
     { tag: ['@regression', '@card', '@story-5', '@story-6'] },
     async ({ page, home, gameShell, savePage, cardExport, cardImport }, testInfo) => {
+      // P9: export plus import runs close to 30 s on a loaded machine (2026-10-04: alone it passed once, failed once).
+      test.slow();
       await seedSave(page);
       await enterSeededGame(page);
 

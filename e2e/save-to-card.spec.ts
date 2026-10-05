@@ -21,6 +21,8 @@ test.describe('Save-to-card (转卡) — manual selection, no AI (offline)', () 
   test('convert a save to a .aga-card via manual 全选: card valid, original untouched, zero API',
     { tag: ['@regression', '@card', '@save-to-card', '@story-7'] },
     async ({ page, gameShell, savePage, saveToCard, cardExport }, testInfo) => {
+      // P9: about 22 s alone on desktop (2026-10-04); a full run under load passed 30 s once.
+      test.slow();
       // Seed a NON-core edge (seed-edge-2) so the edge panel shows a candidate to classify.
       const tree = makeSeedTree({
         系统: { 扩展: { engramMemory: { v2Edges: [

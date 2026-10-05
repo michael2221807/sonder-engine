@@ -64,6 +64,8 @@ test.describe('Character Vectors surfaces', () => {
   test('vector card: lines typed + saved on an NPC survive a reload and the contract tab projects the present NPC',
     { tag: ['@regression', '@relationships', '@prompts'] },
     async ({ page, gameShell }) => {
+      // P9: over 30 s while the dev server is still compiling at the start of a full run; alone it passes.
+      test.slow();
       await seedSave(page, { tree: vectorTree() });
       await enterSeededGame(page);
       await openRelations(page, gameShell);

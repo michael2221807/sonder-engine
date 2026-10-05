@@ -69,6 +69,8 @@ test.describe('Plot Direction — node drag-reorder + insert-between (offline)',
   test('drag a node above the first node: chain order changes and persists in the panel',
     { tag: ['@regression', '@plot'] },
     async ({ page, gameShell }) => {
+      // P9: 22-27 s alone on this machine; with 3-4 processes in parallel it passes 30 s.
+      test.slow();
       await seedSave(page, { tree: treeWithDraftArc() });
       await enterSeededGame(page);
       await gameShell.goTab('plot');
