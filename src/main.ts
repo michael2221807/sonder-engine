@@ -369,12 +369,13 @@ async function bootstrap(): Promise<void> {
     DEFAULT_ENGINE_PATHS.npcFieldNames,
   ));
 
-  // NpcDemotionModule：回合结束时，超过「NPC 降级阈值」回合没被主回合更新的重点 NPC 降为普通（demo runNpcMaintenance）。
+  // NpcDemotionModule：回合结束时，超过「NPC 降级阈值」回合没被主回合更新的「重点」（或没写类型的）NPC 降为普通（demo runNpcMaintenance）。
   // 依赖上一个模块记下的「上次主回合更新回合」。
   behaviorRunner.register(new NpcDemotionModule(
     DEFAULT_ENGINE_PATHS.relationships,
     DEFAULT_ENGINE_PATHS.roundNumber,
     DEFAULT_ENGINE_PATHS.npcDemotionThreshold,
+    DEFAULT_ENGINE_PATHS.npcTypeKey,
     DEFAULT_ENGINE_PATHS.npcTypeExclude,
     DEFAULT_ENGINE_PATHS.npcFieldNames,
   ));

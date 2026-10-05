@@ -18,7 +18,8 @@ function game(npcs: Array<Record<string, unknown>>, round: number, threshold?: u
   sm.loadTree({ 元数据: { 回合序号: round }, 社交: { 关系: npcs }, 系统: threshold === undefined ? {} : { npcDemotionThreshold: threshold } });
   return sm;
 }
-const module = () => new NpcDemotionModule(P.relationships, P.roundNumber, P.npcDemotionThreshold, ORDINARY, F);
+const KEY_TYPE = P.npcTypeKey;
+const module = () => new NpcDemotionModule(P.relationships, P.roundNumber, P.npcDemotionThreshold, KEY_TYPE, ORDINARY, F);
 const typeOf = (sm: StateManager, name: string) => sm.get<string>(`${P.relationships}[${F.name}=${name}].${F.type}`);
 
 describe('NpcDemotionModule', () => {
@@ -46,6 +47,22 @@ describe('NpcDemotionModule', () => {
     expect(typeOf(sm, '被关注')).toBe('重点');
     expect(typeOf(sm, '没有记录')).toBe('重点');
     expect(typeOf(sm, '本来普通')).toBe(ORDINARY);
+  });
+
+  // Post-release fix (2026-10-05): only the key type (重点) or no type is demoted, as in the demo; 同伴, 敌对 … are a
+  // classification of their own (the first version turned a hostile NPC ordinary after a few quiet rounds).
+  it('demotes only the key type or an NPC without a type; other types keep theirs', () => {
+    const sm = game([
+      { [F.name]: '敌人', [F.type]: '敌对', [F.lastMainRoundUpdate]: 1 },
+      { [F.name]: '伙伴', [F.type]: '同伴', [F.lastMainRoundUpdate]: 1 },
+      { [F.name]: '空类型', [F.type]: '', [F.lastMainRoundUpdate]: 1 },
+      { [F.name]: '重点人物', [F.type]: KEY_TYPE, [F.lastMainRoundUpdate]: 1 },
+    ], 50);
+    module().onRoundEnd(sm);
+    expect(typeOf(sm, '敌人')).toBe('敌对');
+    expect(typeOf(sm, '伙伴')).toBe('同伴');
+    expect(typeOf(sm, '空类型')).toBe(ORDINARY);
+    expect(typeOf(sm, '重点人物')).toBe(ORDINARY);
   });
 
   it('uses the default threshold when the save has none or an unusable one', () => {

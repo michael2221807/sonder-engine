@@ -12,6 +12,7 @@
  * store once (`migrateLegacyBuiltinOverrides`); full backups still round-trip it, empty. Cards written before this
  * carry their author's edits in that slot form (`promptEditsFromSlotOverrides`).
  */
+// App doc: docs/user-guide/pages/game-prompts.md §1.4（修改和开关在哪里生效）· game-save.md（游戏卡 · 内置提示词改动）
 import type { PromptRegistry } from './prompt-registry';
 import { ALWAYS_ON_PROMPT_IDS, BUILTIN_SLOTS } from './builtin-slots';
 

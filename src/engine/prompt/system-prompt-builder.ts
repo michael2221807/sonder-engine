@@ -1,4 +1,4 @@
-// App doc: docs/user-guide/pages/game-main.md §3.15.3（世界书注入与配额）
+// App doc: docs/user-guide/pages/game-main.md §3.15.3（世界书注入与配额）· game-prompt-assembly.md §5.2（builder 片段）
 /**
  * SystemPromptBuilder — replaces PromptAssembler with context-piece architecture.
  *

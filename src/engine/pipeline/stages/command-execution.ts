@@ -20,6 +20,7 @@
  *
  * 对应 STEP-03B M3.4 CommandExecutionStage + GAP_AUDIT §11.2。
  */
+// App doc: docs/user-guide/pages/game-main.md §3.8.2（被拒绝的指令）
 import type { PipelineStage, PipelineContext, IBehaviorRunner, EnginePathConfig } from '../types';
 import type { BatchCommandResult, CommandResult } from '../../types';
 import type { CommandExecutor } from '../../core/command-executor';

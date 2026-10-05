@@ -798,6 +798,12 @@ export interface EnginePathConfig {
 
   /** NPC type value to exclude from Engram coverage (default: '普通') */
   npcTypeExclude: string;
+  /**
+   * The key-NPC type value (default: '重点'): what the round-end demotion turns into `npcTypeExclude` after
+   * 「NPC 降级阈值」 rounds untouched. Other types (同伴, 敌对 …) are a classification of their own and are never
+   * demoted (demo runNpcMaintenance demotes only 重点; 2026-10-05).
+   */
+  npcTypeKey: string;
 }
 
 /** Location object field name mappings — same pattern as EngineNpcFieldNames */
@@ -1119,6 +1125,7 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
   },
   worldSelection: 'world',
   npcTypeExclude: '普通',
+  npcTypeKey: '重点',
   npcFieldNames: {
     // 基础信息（现有字段；本 sprint 前引擎代码硬编码，本 sprint 起统一走此映射）
     name: '名称',

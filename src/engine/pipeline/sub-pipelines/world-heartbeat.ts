@@ -23,6 +23,7 @@
  *
  * 对应 STEP-02 §3.11 World Heartbeat。
  */
+// App doc: docs/user-guide/pages/game-heartbeat.md §历史保留条数与遗忘回合数
 import type { StateManager } from '../../core/state-manager';
 import type { CommandExecutor } from '../../core/command-executor';
 import type { AIService } from '../../ai/ai-service';
