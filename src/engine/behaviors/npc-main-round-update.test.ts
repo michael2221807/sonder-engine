@@ -58,11 +58,29 @@ describe('touchedNpcNames', () => {
     expect([...names]).toEqual(['程彦之']);
   });
 
-  it('a filter on another field names the record it matched, and one on the field it rewrote matches the new value', () => {
+  it('a filter on another field names the record it matched', () => {
     const now = [{ 名称: '林晚照', 类型: '普通' }, { 名称: '程彦', 类型: '重点' }];
     expect([...touchedNpcNames([change(`${REL}[类型=重点].位置`, 'set', '宿舍')], REL, NAME, now)]).toEqual(['程彦']);
-    expect([...touchedNpcNames([change(`${REL}[类型=重点].类型`, 'set', '普通', '重点')], REL, NAME,
-      [{ 名称: '林晚照', 类型: '普通' }, { 名称: '程彦', 类型: '普通' }])]).toEqual(['林晚照']);
+  });
+
+  // Re-review M1 (2026-10-04): StateManager records the filter path, so after `set [位置=酒馆].位置 = 街` the list no
+  // longer shows which record matched. The first still at 酒馆 (B) did not match first; the changed one came before it.
+  it('a filter whose own field the change rewrote names the record it changed, or nobody when that is unclear', () => {
+    const rewrote = (action: StateChange['action'], newValue: unknown, now: Array<Record<string, unknown>>) =>
+      [...touchedNpcNames([change(`${REL}[位置=酒馆].位置`, action, newValue, '酒馆')], REL, NAME, now)];
+    expect(rewrote('set', '街', [{ 名称: 'A', 位置: '街' }, { 名称: 'C', 位置: 'x' }, { 名称: 'B', 位置: '酒馆' }])).toEqual(['A']);
+    expect(rewrote('delete', undefined, [{ 名称: 'A' }, { 名称: 'C', 位置: 'x' }, { 名称: 'B', 位置: '酒馆' }])).toEqual(['A']);
+    // Both now at 街: either could have been the one at 酒馆.
+    expect(rewrote('set', '街', [{ 名称: 'B', 位置: '街' }, { 名称: 'A', 位置: '街' }])).toEqual([]);
+  });
+
+  it('a later write to the field a filter reads is undone before that filter is read', () => {
+    // A was 重点 when the first change matched it; the second change then made it 普通.
+    const names = touchedNpcNames([
+      change(`${REL}[类型=重点].位置`, 'set', '宿舍', '集市'),
+      change(`${REL}[0].类型`, 'set', '普通', '重点'),
+    ], REL, NAME, [{ 名称: 'A', 类型: '普通', 位置: '宿舍' }, { 名称: 'B', 类型: '重点' }]);
+    expect([...names]).toEqual(['A']);
   });
 
   it('a list that filled to capacity may have dropped its oldest entry, so earlier index paths name nobody', () => {

@@ -96,6 +96,8 @@ describe('mergeNpcRecords', () => {
     const key = F.lastMainRoundUpdate;
     expect(mergeNpcRecords(liveNpc({ [key]: 3 }), repushedNpc({ [key]: 40 }), F)[key]).toBe(40);
     expect(mergeNpcRecords(liveNpc({ [key]: 40 }), repushedNpc({ [key]: 3 }), F)[key]).toBe(40);
+    // A stamp that is no round number on the base yields to one that is.
+    expect(mergeNpcRecords(liveNpc({ [key]: '3' }), repushedNpc({ [key]: 40 }), F)[key]).toBe(40);
   });
 
   it('descriptive text: longer version wins regardless of side', () => {

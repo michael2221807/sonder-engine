@@ -28,17 +28,45 @@ function escapeRegExp(text: string): string {
 }
 
 /**
+ * Where a filter path pointed when its change rewrote the filter's own field, or the whole record, read from the
+ * list right after that change (StateManager records the filter path, not the index it resolved to). The record
+ * changed was the first match then; the records before it did not match and are unchanged. So if the change left it
+ * matching, it is still the first match; if not, it is the one record before the first that still matches which now
+ * holds what the change wrote. -1 when that is not exactly one record — a miss, never a guess (re-review M1).
+ */
+function rewrittenAt(list: readonly unknown[], key: string, value: string, change: StateChange, rest: string): number {
+  const matches = (item: unknown) => isNpc(item) && String(item[key]) === value;
+  let wrote: (item: unknown) => boolean;
+  if (rest === '' && change.action === 'set') wrote = (item) => JSON.stringify(item) === JSON.stringify(change.newValue);
+  else if (rest === '' && change.action === 'delete') wrote = (item) => item === undefined;
+  else if (rest === `.${key}` && change.action === 'set') wrote = (item) => isNpc(item) && String(item[key]) === String(change.newValue);
+  else if (rest === `.${key}` && change.action === 'delete') wrote = (item) => isNpc(item) && item[key] === undefined;
+  else return -1;
+  const first = list.findIndex(matches);
+  const leftMatching = change.action === 'set' && (rest === '' ? matches(change.newValue) : String(change.newValue) === value);
+  if (leftMatching) return first;
+  let found = -1;
+  for (let j = 0; j < (first === -1 ? list.length : first); j++) {
+    if (!wrote(list[j])) continue;
+    if (found !== -1) return -1;
+    found = j;
+  }
+  return found;
+}
+
+/**
  * The names of the NPCs a batch of changes touched. The batch is read from its last change back to its first,
- * undoing each whole-list or whole-record write as it goes (they carry the value as it was), so an index or filter
- * path is resolved against the list as it stood when that change was made — not after a later pull in the same
- * batch shifted it (code review L1). A change counts through:
+ * undoing each write to the list, to a record or to a record's own field as it goes (each carries the value as it
+ * was), so an index or filter path is resolved against the list as it stood when that change was made — not after a
+ * later pull shifted it, or a later write changed the field a filter reads (code review L1). A change counts through:
  * - a `[name=X]` path: X, matched exactly as StateManager matches it; a rename through it, the new name;
  * - a whole-record write (`list[i]`, `list[k=v]`): the record written;
- * - any other index or filter path: the record it resolved to then;
+ * - any other index or filter path: the record it resolved to then (see rewrittenAt for a filter whose own field the
+ *   change rewrote);
  * - a push onto the list: the new last entry; a list write: the entries that differ from before.
- * A no-op — a filter that matched nothing records neither an old nor a new value — touches nobody (review L2). A
- * push that filled the list to its capacity may have evicted the oldest entry without a change of its own, so the
- * changes before it count only when they name the NPC themselves. Pure, for tests.
+ * A no-op — a filter that matched nothing records neither an old nor a new value — touches nobody (review L2). Where
+ * the list can no longer be known — a push that filled it to capacity may have evicted the oldest entry without a
+ * change of its own — the changes before count only when they name the NPC themselves. Pure, for tests.
  */
 export function touchedNpcNames(
   changes: readonly StateChange[],
@@ -82,8 +110,14 @@ export function touchedNpcNames(
     if (!entry || (rest !== '' && rest[0] !== '.' && rest[0] !== '[')) continue;
     const indexText = entry[1] ?? entry[2];
     const [filterKey, filterValue] = [entry[3], entry[4]];
-    const at = indexText !== undefined ? Number(indexText)
-      : list ? list.findIndex((item) => matches(item, filterKey, filterValue)) : -1;
+    // The record's own field this change wrote, when it wrote one directly.
+    const field = /^\.([^.[\]]+)$/.exec(rest)?.[1];
+    const rewritesFilter = filterKey !== undefined && (rest === '' || rest === `.${filterKey}`
+      || rest.startsWith(`.${filterKey}.`) || rest.startsWith(`.${filterKey}[`));
+    let at = -1;
+    if (indexText !== undefined) at = Number(indexText);
+    else if (list) at = rewritesFilter ? rewrittenAt(list, filterKey, filterValue, change, rest)
+      : list.findIndex((item) => matches(item, filterKey, filterValue));
 
     if (rest === '') {
       // The whole record: the one written counts; undo it so the earlier changes see the list as it was.
@@ -98,15 +132,24 @@ export function touchedNpcNames(
       continue;
     }
     if (filterKey === nameKey) {
-      names.add(rest === `.${nameKey}` && change.action === 'set' && typeof change.newValue === 'string'
+      names.add(field === nameKey && change.action === 'set' && typeof change.newValue === 'string'
         ? change.newValue : filterValue);
-      continue;
+    } else if (list && at !== -1) {
+      add(list[at]);
     }
     if (!list) continue;
-    // A filter on the field this change rewrote matches the record by its new value.
-    const resolved = at !== -1 ? at : filterKey !== undefined && rest === `.${filterKey}` && change.action === 'set'
-      ? list.findIndex((item) => matches(item, filterKey, String(change.newValue))) : -1;
-    if (resolved !== -1) add(list[resolved]);
+    if (field !== undefined) {
+      // Undo the field write, so an earlier change whose filter reads this field sees the record as it was.
+      if (at === -1 || !isNpc(list[at])) { list = null; continue; }
+      const record: NpcRecord = { ...(list[at] as NpcRecord) };
+      if (change.oldValue === undefined) delete record[field];
+      else record[field] = change.oldValue;
+      const copy = list.slice();
+      copy[at] = record;
+      list = copy;
+    } else if (rewritesFilter) {
+      list = null; // a write inside the filter's own field: what it matched then is not known
+    }
   }
   return names;
 }

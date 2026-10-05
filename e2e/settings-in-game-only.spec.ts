@@ -72,6 +72,8 @@ test('on Home the content switch leaves the save alone, and the game picks it up
     await page.getByRole('button', { name: '不保存退出' }).click();
     await page.waitForURL(/\/$/);
     const before = await storedSave(page, ids.profileId, ids.slotId);
+    // The slot is really there to compare (a wrong key would compare nothing with nothing).
+    expect(before).toContain('"nsfwMode"');
 
     await page.getByRole('button', { name: '设置', exact: true }).click();
     const nsfw = page.getByRole('switch', { name: '成人内容开关' });

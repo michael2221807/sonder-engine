@@ -217,7 +217,7 @@ export function mergeNpcRecords(
         // base wins (already non-empty)
         break;
       case 'latestRound':
-        if (typeof baseValue === 'number' && typeof incomingValue === 'number' && incomingValue > baseValue) {
+        if (typeof incomingValue === 'number' && (typeof baseValue !== 'number' || incomingValue > baseValue)) {
           out[key] = incomingValue;
         }
         break;
