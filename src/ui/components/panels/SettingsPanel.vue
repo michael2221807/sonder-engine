@@ -21,6 +21,8 @@ import type { SaveManager } from '@/engine/persistence/save-manager';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
 import { DEFAULT_MAX_ACTIVE_THREADS } from '@/engine/plot/types';
+import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
+import { DEFAULT_HEARTBEAT_HISTORY_LIMIT, DEFAULT_HEARTBEAT_FORGET_ROUNDS } from '@/engine/pipeline/sub-pipelines/world-heartbeat';
 import type { AxisMode as PlotTimelineAxis } from '@/ui/components/panels/plot/scheduler-layout';
 import { writePlotTimelineAxis } from '@/ui/composables/usePlotTimelineAxis';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
@@ -404,23 +406,23 @@ watch(() => isLoaded.value, (loaded) => {
 
 watch(nsfwSettings, () => saveNsfwSettings(), { deep: true });
 
-const HEARTBEAT_BASE = '世界.状态.心跳';
-
+// The heartbeat reads both (P8, 2026-10-04): it trims its history to the first and leaves out NPCs the main round
+// has not updated for longer than the second. Shown with the engine's own defaults when the save has none.
 const heartbeatHistoryLimit = computed(() => {
-  const v = get<number>(`${HEARTBEAT_BASE}.历史条数`);
-  return typeof v === 'number' ? v : 20;
+  const v = get<number>(DEFAULT_ENGINE_PATHS.heartbeatHistoryLimit);
+  return typeof v === 'number' ? v : DEFAULT_HEARTBEAT_HISTORY_LIMIT;
 });
 const heartbeatForgetRounds = computed(() => {
-  const v = get<number>(`${HEARTBEAT_BASE}.遗忘回合数`);
-  return typeof v === 'number' ? v : 30;
+  const v = get<number>(DEFAULT_ENGINE_PATHS.heartbeatForgetRounds);
+  return typeof v === 'number' ? v : DEFAULT_HEARTBEAT_FORGET_ROUNDS;
 });
 
 function setHeartbeatHistoryLimit(v: number): void {
-  setValue(`${HEARTBEAT_BASE}.历史条数`, Math.max(5, Math.min(100, v)));
+  setValue(DEFAULT_ENGINE_PATHS.heartbeatHistoryLimit, Math.max(5, Math.min(100, v)));
   eventBus.emit('engine:request-save');
 }
 function setHeartbeatForgetRounds(v: number): void {
-  setValue(`${HEARTBEAT_BASE}.遗忘回合数`, Math.max(0, Math.min(999, v)));
+  setValue(DEFAULT_ENGINE_PATHS.heartbeatForgetRounds, Math.max(0, Math.min(999, v)));
   eventBus.emit('engine:request-save');
 }
 

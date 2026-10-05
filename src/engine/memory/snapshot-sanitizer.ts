@@ -31,6 +31,8 @@
  * 对应 GAP_AUDIT §11.2 C（保留数据 + 不发送给 AI + UI 可见）。
  */
 
+import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
+
 /**
  * 需要被剥离的 NSFW 路径前缀（绝对路径，从根开始）
  *
@@ -158,6 +160,9 @@ const PROMPT_ALWAYS_STRIP_PATHS: readonly string[] = [
   '社交.关系.*.图片档案',
   '社交.关系.*.私聊历史',
   '社交.关系.*.总结记忆',
+  // The engine's own record of the round the main round last updated each NPC (the heartbeat's 遗忘回合数):
+  // bookkeeping, nothing the model should read or write.
+  `${DEFAULT_ENGINE_PATHS.relationships}.*.${DEFAULT_ENGINE_PATHS.npcFieldNames.lastMainRoundUpdate}`,
   'NPC列表',
 ];
 

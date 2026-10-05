@@ -121,6 +121,7 @@ export function buildDefaultCardStripPaths(p: EnginePathConfig = DEFAULT_ENGINE_
       p.worldEvents,                              // 社交.事件.事件记录 (OD6: 全剥离)
       npcField(rel, npc.memory),                  // 社交.关系.*.记忆
       npcField(rel, npc.privateChatHistory),      // 社交.关系.*.私聊历史
+      npcField(rel, npc.lastMainRoundUpdate),     // 社交.关系.*.上次主回合更新回合 — rounds of this game, not the card's
       p.heartbeatHistory,                         // 世界.状态.心跳.历史
       p.lastHeartbeatRound,                       // 世界.状态.心跳.上次心跳回合序号
       p.heartbeatLastRun,                         // 世界.状态.心跳.上次执行时间

@@ -43,6 +43,16 @@ import { buildEnvironmentBlock } from '../../prompt/environment-block';
 /** 每次心跳最多处理的 NPC 数量，控制 AI 调用的 token 消耗 */
 const MAX_NPCS_PER_HEARTBEAT = 5;
 
+/** 心跳历史保留条数的缺省值（设置页「历史保留条数」显示的就是它；存档里没有这个设置时用它） */
+export const DEFAULT_HEARTBEAT_HISTORY_LIMIT = 20;
+/** 遗忘回合数的缺省值（设置页显示的就是它）；0 = 不遗忘 */
+export const DEFAULT_HEARTBEAT_FORGET_ROUNDS = 30;
+
+/** A whole number the player set, or the default when it is missing or unusable. */
+function settingOrDefault(value: unknown, fallback: number, min: number): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= min ? Math.floor(value) : fallback;
+}
+
 export class WorldHeartbeatPipeline {
   constructor(
     private stateManager: StateManager,
@@ -133,6 +143,7 @@ export class WorldHeartbeatPipeline {
           : `无状态变更（${npcNames.join('、')}）`,
         成功: success,
       }, 'system');
+      this.trimHistory();
 
       if (this.engramManager?.isEnabled() && changes.length > 0) {
         try {
@@ -167,9 +178,18 @@ export class WorldHeartbeatPipeline {
     if (!npcList) return [];
 
     const playerLocation = this.getPlayerLocation();
+    const fields = this.paths.npcFieldNames;
+    // 遗忘回合数 (P8, demo worldHeartbeatService.ts:31-54): an NPC the main round has not updated for more than N
+    // rounds sits the heartbeat out; 0 = never forget. An NPC with no record yet is kept (its clock starts at the
+    // next load, NpcMainRoundUpdateModule).
+    const round = settingOrDefault(this.stateManager.get<unknown>(this.paths.roundNumber), 0, 0);
+    const forget = settingOrDefault(this.stateManager.get<unknown>(this.paths.heartbeatForgetRounds),
+      DEFAULT_HEARTBEAT_FORGET_ROUNDS, 0);
 
     const candidates = npcList.filter((npc) => {
-      const npcLocation = String(npc['当前位置'] ?? npc['currentLocation'] ?? '');
+      // The pack's own location field: the old literal ('当前位置') was no NPC field, so the same-place rule never
+      // applied (2026-10-04).
+      const npcLocation = String(npc[fields.location] ?? '');
       const isAlive = npc['已死亡'] !== true && npc['isDead'] !== true;
 
       // 排除与玩家同位置的 NPC
@@ -178,6 +198,8 @@ export class WorldHeartbeatPipeline {
       if (!isAlive) return false;
       // Phase 6.2: 排除心跳锁定的 NPC（用户在 UI 中手动锁定，保持其状态不被 AI 修改）
       if (npc['心跳锁定'] === true) return false;
+      const lastUpdate = npc[fields.lastMainRoundUpdate];
+      if (forget > 0 && typeof lastUpdate === 'number' && round - lastUpdate > forget) return false;
 
       return true;
     });
@@ -275,6 +297,18 @@ export class WorldHeartbeatPipeline {
       }
     }
     return lines.join('\n');
+  }
+
+  /**
+   * Keep the newest N heartbeat records — the settings page's 历史保留条数 (P8, demo worldHeartbeatService.ts:265-268);
+   * the history used to grow without end in the save. A smaller setting takes effect at the next heartbeat.
+   */
+  private trimHistory(): void {
+    const history = this.stateManager.get<unknown[]>(this.paths.heartbeatHistory);
+    if (!Array.isArray(history)) return;
+    const limit = settingOrDefault(this.stateManager.get<unknown>(this.paths.heartbeatHistoryLimit),
+      DEFAULT_HEARTBEAT_HISTORY_LIMIT, 1);
+    if (history.length > limit) this.stateManager.set(this.paths.heartbeatHistory, history.slice(-limit), 'system');
   }
 
   /** 从状态树中查找 NPC 列表（路径由 EnginePathConfig 配置） */

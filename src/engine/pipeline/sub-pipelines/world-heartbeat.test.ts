@@ -16,7 +16,7 @@ vi.mock('../../prompt/environment-block', () => ({
   buildEnvironmentBlock: vi.fn(() => ''),
 }));
 
-function createPipeline(stateData: Record<string, unknown>) {
+function createPipeline(stateData: Record<string, unknown>, fieldOverrides: Record<string, string> = {}) {
   const { sm } = createMockStateManager(stateData);
 
   const paths = {
@@ -25,6 +25,8 @@ function createPipeline(stateData: Record<string, unknown>) {
     gameTime: '世界.时间',
     roundNumber: '回合数',
     heartbeatHistory: '心跳历史',
+    heartbeatHistoryLimit: '心跳历史条数',
+    heartbeatForgetRounds: '心跳遗忘回合数',
     weather: '世界.天气',
     festival: '世界.节日',
     environmentTags: '世界.环境',
@@ -39,6 +41,8 @@ function createPipeline(stateData: Record<string, unknown>) {
       innerThought: '内心想法',
       currentActivity: '在做事项',
       personalityTraits: '性格特征',
+      lastMainRoundUpdate: '上次主回合更新回合',
+      ...fieldOverrides,
     },
   };
 
@@ -71,6 +75,77 @@ function createPipeline(stateData: Record<string, unknown>) {
 }
 
 describe('WorldHeartbeatPipeline', () => {
+  // P8 (PO 2026-10-04): the settings page's 遗忘回合数 and 历史保留条数 now do what they say (demo
+  // worldHeartbeatService.ts:31-54, 265-268).
+  describe('the settings page: forget after N rounds, keep N records', () => {
+    const blocks = (promptAssembler: { assemble: { mock: { calls: unknown[][] } } }) =>
+      (promptAssembler.assemble.mock.calls[0]?.[1] as Record<string, string> | undefined)?.['NPC_BLOCKS'] ?? '';
+
+    it('leaves out an NPC the main round has not updated for more than N rounds (30 by default)', async () => {
+      const { pipeline, promptAssembler } = createPipeline({
+        角色: { 当前位置: '集市' },
+        NPC列表: [
+          { 名称: '久未出场', 当前位置: '酒馆', 上次主回合更新回合: 5 },
+          { 名称: '刚出场', 当前位置: '酒馆', 上次主回合更新回合: 38 },
+          { 名称: '没有记录', 当前位置: '酒馆' },
+        ],
+        回合数: 40,
+        心跳历史: [],
+      });
+      await pipeline.execute();
+      expect(blocks(promptAssembler)).not.toContain('久未出场');
+      expect(blocks(promptAssembler)).toContain('刚出场');
+      expect(blocks(promptAssembler)).toContain('没有记录');
+    });
+
+    it('uses the player\'s own number, and 0 forgets no one', async () => {
+      const strict = createPipeline({
+        角色: { 当前位置: '集市' },
+        NPC列表: [{ 名称: '三回合前', 当前位置: '酒馆', 上次主回合更新回合: 37 }, { 名称: '上回合', 当前位置: '酒馆', 上次主回合更新回合: 39 }],
+        回合数: 40, 心跳历史: [], 心跳遗忘回合数: 2,
+      });
+      await strict.pipeline.execute();
+      expect(blocks(strict.promptAssembler)).not.toContain('三回合前');
+      expect(blocks(strict.promptAssembler)).toContain('上回合');
+      const never = createPipeline({
+        角色: { 当前位置: '集市' },
+        NPC列表: [{ 名称: '很久以前', 当前位置: '酒馆', 上次主回合更新回合: 1 }],
+        回合数: 400, 心跳历史: [], 心跳遗忘回合数: 0,
+      });
+      await never.pipeline.execute();
+      expect(blocks(never.promptAssembler)).toContain('很久以前');
+    });
+
+    it('keeps the newest N records of its history (20 by default), the player\'s N when set', async () => {
+      const old = Array.from({ length: 25 }, (_, i) => ({ 回合: i }));
+      const byDefault = createPipeline({
+        角色: { 当前位置: '集市' }, NPC列表: [{ 名称: '甲', 当前位置: '酒馆' }], 回合数: 30, 心跳历史: old,
+      });
+      await byDefault.pipeline.execute();
+      const kept = byDefault.sm.get<Array<{ 回合: number }>>('心跳历史')!;
+      expect(kept).toHaveLength(20);
+      expect(kept[0].回合).toBe(6);
+      expect(kept[19].回合).toBe(30);
+      const five = createPipeline({
+        角色: { 当前位置: '集市' }, NPC列表: [{ 名称: '甲', 当前位置: '酒馆' }], 回合数: 30, 心跳历史: old, 心跳历史条数: 5,
+      });
+      await five.pipeline.execute();
+      expect(five.sm.get<unknown[]>('心跳历史')).toHaveLength(5);
+    });
+
+    // The pack's NPC location field is 位置; the same-place rule read a literal that is no NPC field (2026-10-04).
+    it('the same-place rule reads the pack\'s own NPC location field', async () => {
+      const { pipeline, promptAssembler } = createPipeline({
+        角色: { 当前位置: '集市' },
+        NPC列表: [{ 名称: '同处一地', 位置: '集市' }, { 名称: '别处', 位置: '酒馆' }],
+        回合数: 1, 心跳历史: [],
+      }, { location: '位置' });
+      await pipeline.execute();
+      expect(blocks(promptAssembler)).toContain('别处');
+      expect(blocks(promptAssembler)).not.toContain('同处一地');
+    });
+  });
+
   describe('NPC candidate selection', () => {
     it('excludes NPCs at player location', async () => {
       const { pipeline, promptAssembler } = createPipeline({

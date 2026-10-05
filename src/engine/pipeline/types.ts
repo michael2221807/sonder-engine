@@ -583,6 +583,10 @@ export interface EnginePathConfig {
   heartbeatHistory: string;
   /** 上次心跳执行时间戳（如 "世界.状态.心跳.上次执行时间"） */
   heartbeatLastRun: string;
+  /** 心跳历史保留条数（如 "世界.状态.心跳.历史条数"）— 设置页「历史保留条数」；心跳写完历史后裁到最近 N 条 */
+  heartbeatHistoryLimit: string;
+  /** 心跳遗忘回合数（如 "世界.状态.心跳.遗忘回合数"）— 超过 N 回合未被主回合更新的 NPC 不参与心跳，0 = 不遗忘 */
+  heartbeatForgetRounds: string;
   /** 世界事件列表（如 "世界.事件"） */
   worldEvents: string;
   /** 社交关系表（如 "社交.关系"） */
@@ -1007,6 +1011,12 @@ export interface EngineNpcFieldNames {
    * 显示 "最后一次互动：X 年前" 让 AI 做时序推演。
    */
   lastInteractionTime: string;
+
+  /**
+   * 主回合最后一次更新这位 NPC 的回合序号 key（默认 '上次主回合更新回合'，demo 同名字段）。
+   * 引擎记录（NpcMainRoundUpdateModule）；心跳的「遗忘回合数」按它计算。不进提示词，不进卡。
+   */
+  lastMainRoundUpdate: string;
 }
 
 /**
@@ -1042,6 +1052,8 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
   lastHeartbeatRound: '世界.状态.心跳.上次心跳回合序号',
   heartbeatHistory: '世界.状态.心跳.历史',
   heartbeatLastRun: '世界.状态.心跳.上次执行时间',
+  heartbeatHistoryLimit: '世界.状态.心跳.历史条数',
+  heartbeatForgetRounds: '世界.状态.心跳.遗忘回合数',
   worldEvents: '社交.事件.事件记录',
   relationships: '社交.关系',
   worldDescription: '世界.描述',
@@ -1127,6 +1139,7 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
     relationshipBreakthrough: '关系突破条件',
     relationshipNetwork: '关系网变量',
     lastInteractionTime: '最后互动时间',
+    lastMainRoundUpdate: '上次主回合更新回合',
   },
 };
 
@@ -1145,8 +1158,8 @@ export const PREFERENCE_PATHS: readonly string[] = [
   '系统.nsfwMode',
   '系统.nsfwGenderFilter',
   DEFAULT_ENGINE_PATHS.heartbeatConfig,
-  '世界.状态.心跳.历史条数',
-  '世界.状态.心跳.遗忘回合数',
+  DEFAULT_ENGINE_PATHS.heartbeatHistoryLimit,
+  DEFAULT_ENGINE_PATHS.heartbeatForgetRounds,
   '系统.扩展.image.enabled',
   '系统.扩展.image.config',
   '世界.状态.事件配置',

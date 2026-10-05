@@ -103,6 +103,7 @@ import { DEFAULT_ENGINE_PATHS } from './engine/pipeline/types';
 import { setBootstrapGamePack } from './engine/bootstrap-pack';
 import { TimeService, gameCalendar } from './engine/behaviors/time-service';
 import { NpcDedupModule } from './engine/behaviors/npc-dedup';
+import { NpcMainRoundUpdateModule } from './engine/behaviors/npc-main-round-update';
 import { NarrativeEnvelopeRepairModule } from './engine/behaviors/narrative-envelope-repair';
 import { MemoryCompilerModule } from './engine/behaviors/memory-compiler';
 import { ComputedFieldsModule } from './engine/behaviors/computed-fields';
@@ -351,6 +352,14 @@ async function bootstrap(): Promise<void> {
   // 兜住整数组 set（助手 replace-array / GameVariablePanel 原始 JSON）与历史脏存档
   behaviorRunner.register(new NpcDedupModule(
     DEFAULT_ENGINE_PATHS.relationships,
+    DEFAULT_ENGINE_PATHS.npcFieldNames,
+  ));
+
+  // NpcMainRoundUpdateModule：记下主回合最后一次更新每位 NPC 的回合（心跳「遗忘回合数」按它算），
+  // 读档时给还没有记录的 NPC 补上当前回合。排在去重之后：给融合后的列表记。
+  behaviorRunner.register(new NpcMainRoundUpdateModule(
+    DEFAULT_ENGINE_PATHS.relationships,
+    DEFAULT_ENGINE_PATHS.roundNumber,
     DEFAULT_ENGINE_PATHS.npcFieldNames,
   ));
 

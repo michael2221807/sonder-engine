@@ -178,6 +178,16 @@ describe('stringifySnapshotForPrompt — image/settings/chat strip paths (2026-0
     expect(out).toContain('75');
   });
 
+  // P8 (2026-10-04): the engine's record of the round the main round last updated each NPC (the heartbeat's
+  // 遗忘回合数) is bookkeeping, never something the model should read or write back.
+  it('strips the engine\'s per-NPC record of the last main-round update', () => {
+    const snap = buildSnapshot({ 社交: { 关系: [{ 名称: '林晚照', 好感度: 60, 上次主回合更新回合: 137 }] } });
+    const out = stringifySnapshotForPrompt(snap, true);
+    expect(out).not.toContain('上次主回合更新回合');
+    expect(out).not.toContain('137');
+    expect(out).toContain('林晚照');
+  });
+
   it('strips 系统.设置 and 系统.actionOptions', () => {
     const snap = buildSnapshot({
       系统: {

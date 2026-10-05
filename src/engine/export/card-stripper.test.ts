@@ -99,6 +99,7 @@ function makeTree(): Record<string, unknown> {
           名称: 'NPC1',
           记忆: ['npc-mem'],
           私聊历史: ['npc-chat'],
+          上次主回合更新回合: 137,
           私密信息: '私密泄露文本XYZ',
           图片档案: {
             已选立绘图片ID: 'npc-portrait',
@@ -143,6 +144,7 @@ describe('stripStateTreeForCard — always-strip subtrees', () => {
     expect(getByPath(out, '社交.事件.事件记录')).toBeUndefined(); // OD6: 世界事件全剥离
     expect(getByPath(out, '社交.关系.0.记忆')).toBeUndefined();
     expect(getByPath(out, '社交.关系.0.私聊历史')).toBeUndefined();
+    expect(getByPath(out, '社交.关系.0.上次主回合更新回合')).toBeUndefined(); // the source game's rounds (P8)
     expect(getByPath(out, '世界.状态.心跳.历史')).toBeUndefined();
     expect(getByPath(out, '世界.状态.心跳.上次心跳回合序号')).toBeUndefined();
     expect(getByPath(out, '世界.状态.心跳.上次执行时间')).toBeUndefined();

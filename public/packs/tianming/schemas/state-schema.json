@@ -384,6 +384,8 @@
                 },
                 "上次心跳回合序号": { "type": "number", "default": 0 },
                 "历史":             { "type": "array",  "default": [] },
+                "历史条数":         { "type": "number", "$comment": "设置页「历史保留条数」（5–100，缺省 20）：心跳写完历史后裁到最近 N 条" },
+                "遗忘回合数":       { "type": "number", "$comment": "设置页「遗忘回合数」（0–999，缺省 30，0 = 不遗忘）：超过 N 回合未被主回合更新的 NPC 不参与心跳" },
                 "上次执行时间":     { "type": "string", "default": "" }
               }
             }
@@ -417,6 +419,7 @@
               "背景":   { "type": "string", "$comment": "NPC 的出身/经历背景，供 NPC 私聊 prompt 引用" },
               "内心想法": { "type": "string", "$comment": "NPC 当前内心想法，供 prompt 引用" },
               "在做事项": { "type": "string", "$comment": "NPC 当前正在做的事情" },
+              "上次主回合更新回合": { "type": "number", "$comment": "引擎记录：主回合最后一次更新这位 NPC 的回合序号（NpcMainRoundUpdateModule），心跳「遗忘回合数」按它算；不进提示词、不进卡，模型不写" },
               "性格特征": { "type": "array", "items": { "type": "string" }, "$comment": "性格标签数组" },
               "是否在场": { "type": "boolean", "default": false, "$comment": "Sprint Social-1 新增契约；Social-2 起 NpcPresenceService 读写，拆分在场/离场 prompt 块。AI 可通过 set 社交.关系[名称=X].是否在场=true/false 切换。schema-only 字段，Social-1 不启用消费逻辑。" },
               "是否主要角色": { "type": "boolean", "default": false, "$comment": "Sprint Social-1: 主要角色标记；UI 可作置顶/筛选依据，prompt 可侧重描写。Social-1 schema-only。" },
