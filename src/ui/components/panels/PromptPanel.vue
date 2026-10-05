@@ -278,6 +278,7 @@ const PROMPT_DISPLAY_KEY_MAP: Record<string, string> = {
   narratorFrame: 'prompt.display.narratorFrame',
   narratorEnforcement: 'prompt.display.narratorEnforcement',
   core: 'prompt.display.core',
+  coreNarrative: 'prompt.display.coreNarrative',
   mainRound: 'prompt.display.mainRound',
   opening: 'prompt.display.opening',
   memorySummary: 'prompt.display.memorySummary',
