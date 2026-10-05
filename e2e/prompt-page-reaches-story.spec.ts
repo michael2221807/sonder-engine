@@ -22,6 +22,7 @@ const PACK_ANTI_CLICHE = '【反八股文约束 — 去 AI 腔】';
 const BOOKMARK_LABEL = '〔收藏·第2回合·';
 const JAILBREAK_HEADING = '# 虚构创作环境声明';
 const CORE_HEADING = '# 核心规则 · GM 身份与输出格式';
+const WRITING_RULES_HEADING = '# 核心规则 · 写正文';
 const FORMAT_LINE = '按照上述规则的 JSON 格式输出本回合的叙事和状态变更。';
 
 // Two full rounds so round 2 has a divider with the bookmark star (the opening has none).
@@ -152,17 +153,23 @@ for (const splitGen of [true, false]) {
       // The format prompt no longer opens with a context section the story request cannot fill (it rendered empty).
       expect(story).toContain(FORMAT_LINE);
       expect(story).not.toContain('# 主回合上下文');
+      // 2A + 3C (PO 2026-10-05): every request that writes the story opens with the jailbreak and carries core's
+      // writing rules (coreNarrative).
+      expect(story).toContain(JAILBREAK_HEADING);
+      expect(story).toContain(WRITING_RULES_HEADING);
+      expect(story.indexOf(JAILBREAK_HEADING)).toBeLessThan(story.indexOf(WRITING_RULES_HEADING));
       if (splitGen) {
-        // Step 1 writes only the story; Step 2 reads the page, the bookmarks, the jailbreak and the protocol as before.
+        // Step 1 writes only the story: not the data and command rules. Step 2 reads the page, the bookmarks, the
+        // jailbreak and both halves of core as before.
         expect(story).not.toContain(CORE_HEADING);
         const step2 = textOf(sent.find((b) => !b.stream));
         expect(step2).toContain(BOOKMARK_LABEL);
         expect(step2).toContain(JAILBREAK_HEADING);
+        expect(step2).toContain(WRITING_RULES_HEADING);
         expect(step2).toContain(CORE_HEADING);
       } else {
-        // P13: a single call writes the commands too — the jailbreak opens it, the protocol precedes the format.
-        expect(story).toContain(JAILBREAK_HEADING);
-        expect(story.indexOf(JAILBREAK_HEADING)).toBeLessThan(story.indexOf(CORE_HEADING));
+        // P13: a single call writes the commands too — the writing rules, then the protocol, precede the format.
+        expect(story.indexOf(WRITING_RULES_HEADING)).toBeLessThan(story.indexOf(CORE_HEADING));
         expect(story.indexOf(CORE_HEADING)).toBeLessThan(story.indexOf(FORMAT_LINE));
       }
 
@@ -214,4 +221,29 @@ test('the prompt page locks the switches that decide nothing, and a save without
     await expect(page.locator('.prompt-editor')).toHaveCount(0);
     await expect(format.locator('.modified-badge')).toHaveCount(0);
     expect(await page.evaluate(() => localStorage.getItem('aga_prompt_tianming_mainRound'))).toBeNull();
+  });
+
+// PO 2026-10-05: core's writing rules are their own prompt, shown by name with their own switch (3C); a builtin
+// prompt's editor offers only its text — the weight, type, injection mode, scope and keywords never did anything (6A).
+test('the writing rules show by name with their own switch; a builtin prompt edits only its text',
+  { tag: ['@regression', '@prompts'] }, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-1920', 'one viewport is enough for the prompt page');
+    test.slow();
+    await seedSave(page);
+    await enterSeededGame(page);
+    await goToGameTab(page, 'prompts');
+    await page.getByRole('button', { name: '内置提示词', exact: true }).click();
+    await page.getByRole('button', { name: '展开', exact: true }).click();
+    const rules = page.locator('.prompt-card').filter({ has: page.getByTestId('prompt-toggle-coreNarrative') });
+    await expect(rules.locator('.prompt-id')).toHaveText('核心规则·写正文');
+    await expect(page.getByTestId('prompt-toggle-coreNarrative')).toBeEnabled();
+    await expect(page.locator('.prompt-card input[type="number"]')).toHaveCount(0);
+    await rules.locator('.prompt-title-area').click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.locator('.prompt-editor')).toBeVisible();
+    await expect(dialog.locator('.prompt-editor')).toHaveValue(/## 三、叙事纯净规则/);
+    for (const label of ['类型', '注入模式', '适用范围', '关键词']) {
+      await expect(dialog.getByText(label, { exact: true })).toHaveCount(0);
+    }
+    await expect(dialog.locator('input')).toHaveCount(0);
   });

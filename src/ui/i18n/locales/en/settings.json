@@ -182,8 +182,6 @@
   "settings.npc.demotionThreshold.label": "NPC Demotion Threshold",
   "settings.npc.demotionThreshold.desc": "Important NPCs inactive for N rounds are demoted to regular NPCs",
   "settings.npc.demotionThreshold.unit": "rounds",
-  "settings.npc.generationRange.label": "Important NPC Generation Range",
-  "settings.npc.generationRange.desc": "Number of important NPCs generated when arriving at a new location (min <= max, range 0-10)",
 
   "settings.plot.sectionTitle": "Plot Direction",
   "settings.plot.enabled.label": "Enable Plot Direction",

@@ -45,8 +45,6 @@
   "prompt.filter.ariaLabel": "过滤方式",
 
   "prompt.entry.modifiedBadge": "已修改",
-  "prompt.entry.weightTitle": "优先级权重 1–10",
-  "prompt.entry.weightAriaLabel": "权重",
   "prompt.entry.exportTitle": "导出此 Prompt",
   "prompt.entry.enableTitle": "点击禁用",
   "prompt.entry.disableTitle": "点击启用",
@@ -67,12 +65,8 @@
   "prompt.empty.noPack": "未加载 GamePack — 无 Prompt 数据",
 
   "prompt.modal.editPrefix": "编辑: {name}",
-  "prompt.modal.type": "类型",
-  "prompt.modal.injectionMode": "注入模式",
   "prompt.modal.injectionAlways": "始终注入",
   "prompt.modal.injectionKeyword": "关键词匹配",
-  "prompt.modal.scope": "适用范围",
-  "prompt.modal.keywords": "关键词",
   "prompt.modal.keywordsPlaceholder": "逗号分隔，如：天剑门, 李明阳, 苍穹峰",
   "prompt.modal.editorAriaLabel": "Prompt 内容编辑器",
   "prompt.modal.resetDefault": "重置为默认",

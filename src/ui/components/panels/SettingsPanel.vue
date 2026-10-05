@@ -22,7 +22,7 @@ import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
 import { DEFAULT_MAX_ACTIVE_THREADS } from '@/engine/plot/types';
 import {
-  DEFAULT_ENGINE_PATHS, DEFAULT_HEARTBEAT_HISTORY_LIMIT, DEFAULT_HEARTBEAT_FORGET_ROUNDS,
+  DEFAULT_ENGINE_PATHS, DEFAULT_HEARTBEAT_HISTORY_LIMIT, DEFAULT_HEARTBEAT_FORGET_ROUNDS, DEFAULT_NPC_DEMOTION_THRESHOLD,
 } from '@/engine/pipeline/types';
 import type { AxisMode as PlotTimelineAxis } from '@/ui/components/panels/plot/scheduler-layout';
 import { writePlotTimelineAxis } from '@/ui/composables/usePlotTimelineAxis';
@@ -432,32 +432,16 @@ function setHeartbeatForgetRounds(v: number): void {
 }
 
 // ─── B.2.3 NPC settings (game state) ─────────────────────────
+// Round end demotes a key NPC the main round has not updated for longer than this (NpcDemotionModule, PO 2026-10-05
+// 5A). The 「重点 NPC 生成范围」 row was removed: no flow generated key NPCs by count, and the PO does not want one.
 
 const npcDemotionThreshold = computed(() => {
-  const v = get<number>('系统.npcDemotionThreshold');
-  return typeof v === 'number' ? v : 5;
-});
-const npcRangeMin = computed(() => {
-  const v = get<number>('系统.importantNpcGenerationRange.min');
-  return typeof v === 'number' ? v : 0;
-});
-const npcRangeMax = computed(() => {
-  const v = get<number>('系统.importantNpcGenerationRange.max');
-  return typeof v === 'number' ? v : 1;
+  const v = get<number>(DEFAULT_ENGINE_PATHS.npcDemotionThreshold);
+  return typeof v === 'number' ? v : DEFAULT_NPC_DEMOTION_THRESHOLD;
 });
 
 function setNpcDemotion(v: number): void {
-  setValue('系统.npcDemotionThreshold', Math.max(1, Math.min(999, v)));
-  eventBus.emit('engine:request-save');
-}
-function setNpcRangeMin(v: number): void {
-  const clamped = Math.max(0, Math.min(npcRangeMax.value, v));
-  setValue('系统.importantNpcGenerationRange.min', clamped);
-  eventBus.emit('engine:request-save');
-}
-function setNpcRangeMax(v: number): void {
-  const clamped = Math.max(npcRangeMin.value, Math.min(10, v));
-  setValue('系统.importantNpcGenerationRange.max', clamped);
+  setValue(DEFAULT_ENGINE_PATHS.npcDemotionThreshold, Math.max(1, Math.min(999, v)));
   eventBus.emit('engine:request-save');
 }
 
@@ -1701,25 +1685,6 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="setting-row">
-        <div class="setting-info">
-          <span class="setting-label">{{ $t('settings.npc.generationRange.label') }}</span>
-          <span class="setting-desc">{{ $t('settings.npc.generationRange.desc') }}</span>
-        </div>
-        <div class="range-pair">
-          <input
-            type="number" class="number-input" min="0" max="10"
-            :value="npcRangeMin"
-            @change="setNpcRangeMin(Number(($event.target as HTMLInputElement).value))"
-          />
-          <span class="range-sep">–</span>
-          <input
-            type="number" class="number-input" min="0" max="10"
-            :value="npcRangeMax"
-            @change="setNpcRangeMax(Number(($event.target as HTMLInputElement).value))"
-          />
-        </div>
-      </div>
     </section>
 
     <!-- ─── Plot Direction Settings (Sprint Plot-1 P6) ─── -->
@@ -2632,17 +2597,6 @@ onBeforeUnmount(() => {
   background: rgba(255,255,255,0.02);
   border-radius: 7px;
   margin: -4px 0 4px;
-}
-
-.range-pair {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.range-sep {
-  font-size: 0.88rem;
-  color: var(--color-text-secondary, #8888a0);
 }
 
 /* ── Text replace modal ── */

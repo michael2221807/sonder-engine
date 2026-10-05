@@ -45,8 +45,6 @@
   "prompt.filter.ariaLabel": "Filter mode",
 
   "prompt.entry.modifiedBadge": "Modified",
-  "prompt.entry.weightTitle": "Priority weight 1-10",
-  "prompt.entry.weightAriaLabel": "Weight",
   "prompt.entry.exportTitle": "Export this Prompt",
   "prompt.entry.enableTitle": "Click to disable",
   "prompt.entry.disableTitle": "Click to enable",
@@ -67,12 +65,8 @@
   "prompt.empty.noPack": "No GamePack loaded — no Prompt data",
 
   "prompt.modal.editPrefix": "Edit: {name}",
-  "prompt.modal.type": "Type",
-  "prompt.modal.injectionMode": "Injection Mode",
   "prompt.modal.injectionAlways": "Always Inject",
   "prompt.modal.injectionKeyword": "Keyword Match",
-  "prompt.modal.scope": "Scope",
-  "prompt.modal.keywords": "Keywords",
   "prompt.modal.keywordsPlaceholder": "Comma-separated, e.g., Sword Sect, Li Mingyang, Peak",
   "prompt.modal.editorAriaLabel": "Prompt content editor",
   "prompt.modal.resetDefault": "Reset to Default",

@@ -182,8 +182,6 @@
   "settings.npc.demotionThreshold.label": "NPC 降级阈值",
   "settings.npc.demotionThreshold.desc": "重点 NPC 超过 N 回合未活跃降为普通 NPC",
   "settings.npc.demotionThreshold.unit": "回合",
-  "settings.npc.generationRange.label": "重点 NPC 生成范围",
-  "settings.npc.generationRange.desc": "到达新地点时生成的重点 NPC 数量（min ≤ max，范围 0–10）",
 
   "settings.plot.sectionTitle": "剧情导向",
   "settings.plot.enabled.label": "启用剧情导向",

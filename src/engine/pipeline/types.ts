@@ -587,6 +587,8 @@ export interface EnginePathConfig {
   heartbeatHistoryLimit: string;
   /** 心跳遗忘回合数（如 "世界.状态.心跳.遗忘回合数"）— 超过 N 回合未被主回合更新的 NPC 不参与心跳，0 = 不遗忘 */
   heartbeatForgetRounds: string;
+  /** NPC 降级阈值（如 "系统.npcDemotionThreshold"）— 重点 NPC 超过 N 回合未被主回合更新，回合结束时降为普通 */
+  npcDemotionThreshold: string;
   /** 世界事件列表（如 "世界.事件"） */
   worldEvents: string;
   /** 社交关系表（如 "社交.关系"） */
@@ -1023,6 +1025,8 @@ export interface EngineNpcFieldNames {
 export const DEFAULT_HEARTBEAT_HISTORY_LIMIT = 20;
 /** 遗忘回合数的缺省值（设置页显示的就是它）；0 = 不遗忘 */
 export const DEFAULT_HEARTBEAT_FORGET_ROUNDS = 30;
+/** NPC 降级阈值的缺省值（设置页显示的就是它；demo runNpcMaintenance 同为 5） */
+export const DEFAULT_NPC_DEMOTION_THRESHOLD = 5;
 
 /**
  * 默认路径配置 — 与参考 Game Pack（天命 tianming）state schema 对齐
@@ -1059,6 +1063,7 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
   heartbeatLastRun: '世界.状态.心跳.上次执行时间',
   heartbeatHistoryLimit: '世界.状态.心跳.历史条数',
   heartbeatForgetRounds: '世界.状态.心跳.遗忘回合数',
+  npcDemotionThreshold: '系统.npcDemotionThreshold',
   worldEvents: '社交.事件.事件记录',
   relationships: '社交.关系',
   worldDescription: '世界.描述',
@@ -1167,9 +1172,7 @@ export const PREFERENCE_PATHS: readonly string[] = [
   DEFAULT_ENGINE_PATHS.heartbeatForgetRounds,
   '系统.扩展.image.enabled',
   '系统.扩展.image.config',
-  '世界.状态.事件配置',
-  '系统.npcDemotionThreshold',
-  '系统.importantNpcGenerationRange',
+  DEFAULT_ENGINE_PATHS.npcDemotionThreshold,
 ];
 
 // ═══════════════════════════════════════════════════════════════

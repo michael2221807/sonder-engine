@@ -6,11 +6,12 @@
  * 新增：
  * - 分类折叠分组（category-based grouping）
  * - 展开全部 / 折叠全部
- * - 每条 prompt 权重编辑（1–10），颜色区分（≥9红/≥6黄/其余绿）
  * - 导出单条 prompt（JSON 下载）
  * - 导出全部（仅已修改条目）
  * - 导入（选择 JSON，合并不清空）
- * - 权重持久化到 localStorage
+ *
+ * 2026-10-05（PO 6A）：去掉了每条的权重和编辑框里的类型 / 注入方式 / 作用范围 / 关键词——只有本页自己读写，
+ * 引擎从没读过。内置提示词只剩内容、开关、恢复默认。
  */
 import { ref, computed, inject, watch, onActivated } from 'vue';
 import { useRoute } from 'vue-router';
@@ -112,12 +113,6 @@ const actionPaceOptions = computed(() => [
   { value: 'slow', label: t('prompt.settings.actionPaceSlow') },
 ]);
 
-// ─── Edit-modal injection mode select options ───────────────
-const injectionModeOptions = computed(() => [
-  { value: 'always', label: t('prompt.modal.injectionAlways') },
-  { value: 'match_any', label: t('prompt.modal.injectionKeyword') },
-]);
-
 // ─── Heroine Plan state ─────────────────────────────────────
 const heroinePlan = computed<HeroinePlan>(() => {
   const raw = get<HeroinePlan>('元数据.女主规划');
@@ -216,24 +211,7 @@ interface PromptEntry {
   defaultContent: string;
   enabled: boolean;
   modified: boolean;
-  weight: number;
-  scope: string[];
-  injectionMode: 'always' | 'match_any';
-  keywords: string[];
-  type: 'world_lore' | 'system_rule' | 'command_rule' | 'output_rule';
 }
-
-const SCOPE_OPTION_KEYS = ['main', 'opening', 'all', 'world_evolution', 'story_plan', 'heroine_plan', 'recall'] as const;
-const scopeOptions = computed(() => SCOPE_OPTION_KEYS.map((value) => ({
-  value,
-  label: t(`prompt.scope.${({ main: 'main', opening: 'opening', all: 'all', world_evolution: 'worldEvolution', story_plan: 'storyPlan', heroine_plan: 'heroinePlan', recall: 'recall' } as const)[value]}`),
-})));
-
-const TYPE_OPTION_KEYS = ['system_rule', 'world_lore', 'command_rule', 'output_rule'] as const;
-const typeOptions = computed(() => TYPE_OPTION_KEYS.map((value) => ({
-  value,
-  label: t(`prompt.type.${({ system_rule: 'systemRule', world_lore: 'worldLore', command_rule: 'commandRule', output_rule: 'outputRule' } as const)[value]}`),
-})));
 
 // The edits' one store (prompt-edits.ts): the registry, game cards and imports read the same keys.
 function storageKey(id: string): string {
@@ -242,35 +220,10 @@ function storageKey(id: string): string {
 function enabledKey(id: string): string {
   return promptEnabledKey(pack?.manifest.id ?? 'unknown', id);
 }
-function weightKey(id: string): string {
+/** Keys an older page wrote for the weight and the scope/injection/keywords/type fields (removed 2026-10-05). */
+function legacyFieldKeys(id: string): string[] {
   const packId = pack?.manifest.id ?? 'unknown';
-  return `aga_prompt_weight_${packId}_${id}`;
-}
-function metaKey(id: string): string {
-  const packId = pack?.manifest.id ?? 'unknown';
-  return `aga_prompt_meta_${packId}_${id}`;
-}
-
-/** 读取高级字段（scope/injectionMode/keywords/type） */
-function loadMeta(id: string): { scope: string[]; injectionMode: 'always' | 'match_any'; keywords: string[]; type: PromptEntry['type'] } {
-  try {
-    const raw = localStorage.getItem(metaKey(id));
-    if (raw) {
-      const parsed = JSON.parse(raw) as Record<string, unknown>;
-      return {
-        scope: Array.isArray(parsed.scope) ? parsed.scope as string[] : ['all'],
-        injectionMode: parsed.injectionMode === 'match_any' ? 'match_any' : 'always',
-        keywords: Array.isArray(parsed.keywords) ? parsed.keywords as string[] : [],
-        type: (['world_lore', 'system_rule', 'command_rule', 'output_rule'].includes(parsed.type as string)
-          ? parsed.type : 'system_rule') as PromptEntry['type'],
-      };
-    }
-  } catch { /* ignore */ }
-  return { scope: ['all'], injectionMode: 'always', keywords: [], type: 'system_rule' };
-}
-
-function saveMeta(id: string, meta: { scope: string[]; injectionMode: string; keywords: string[]; type: string }): void {
-  localStorage.setItem(metaKey(id), JSON.stringify(meta));
+  return [`aga_prompt_weight_${packId}_${id}`, `aga_prompt_meta_${packId}_${id}`];
 }
 
 /** Prompt ID → i18n key mapping for display names */
@@ -477,7 +430,6 @@ const promptEntries = computed<PromptEntry[]>(() => {
   for (const [id, defaultContent] of Object.entries(pack.prompts)) {
     const savedContent = localStorage.getItem(storageKey(id));
     const savedEnabled = localStorage.getItem(enabledKey(id));
-    const savedWeight = localStorage.getItem(weightKey(id));
     const content = savedContent ?? defaultContent;
 
     // Radio-group override: if this prompt is part of a mutually-exclusive group,
@@ -487,8 +439,6 @@ const promptEntries = computed<PromptEntry[]>(() => {
       ? radioState
       : REQUIRED_PROMPTS.has(id) || (savedEnabled !== null ? savedEnabled === 'true' : true);
 
-    const weight = savedWeight !== null ? Math.min(10, Math.max(1, Number(savedWeight))) : 5;
-    const meta = loadMeta(id);
     entries.push({
       id,
       category: inferCategoryKey(id),
@@ -496,11 +446,6 @@ const promptEntries = computed<PromptEntry[]>(() => {
       defaultContent,
       enabled,
       modified: !sameText(content, defaultContent),
-      weight,
-      scope: meta.scope,
-      injectionMode: meta.injectionMode,
-      keywords: meta.keywords,
-      type: meta.type,
     });
   }
   return entries.sort((a, b) => a.id.localeCompare(b.id));
@@ -631,37 +576,15 @@ function toggleEnabled(entry: PromptEntry): void {
   });
 }
 
-// ─── Weight editing ───────────────────────────────────────────
-
-function setWeight(entry: PromptEntry, val: number): void {
-  const clamped = Math.min(10, Math.max(1, val));
-  localStorage.setItem(weightKey(entry.id), String(clamped));
-  reloadEdits();
-}
-
-function weightColor(w: number): string {
-  if (w >= 9) return 'var(--color-danger, #ef4444)';
-  if (w >= 6) return 'var(--color-warning, #f59e0b)';
-  return 'var(--color-success, #22c55e)';
-}
-
 // ─── View/edit modal ─────────────────────────────────────────
 
 const showModal = ref(false);
 const editingPrompt = ref<PromptEntry | null>(null);
 const editContent = ref('');
-const editScope = ref<string[]>(['all']);
-const editInjectionMode = ref<'always' | 'match_any'>('always');
-const editKeywordsText = ref('');
-const editType = ref<PromptEntry['type']>('system_rule');
 
 function openPrompt(entry: PromptEntry): void {
   editingPrompt.value = entry;
   editContent.value = entry.content;
-  editScope.value = [...entry.scope];
-  editInjectionMode.value = entry.injectionMode;
-  editKeywordsText.value = entry.keywords.join(', ');
-  editType.value = entry.type;
   showModal.value = true;
 }
 
@@ -669,12 +592,6 @@ function savePrompt(): void {
   if (!editingPrompt.value) return;
   const id = editingPrompt.value.id;
   storeContent(id, editContent.value);
-  saveMeta(id, {
-    scope: editScope.value,
-    injectionMode: editInjectionMode.value,
-    keywords: editKeywordsText.value.split(',').map((s) => s.trim()).filter(Boolean),
-    type: editType.value,
-  });
   reloadEdits();
   showModal.value = false;
   eventBus.emit('ui:toast', { type: 'success', message: t('prompt.toast.saved'), duration: 1500 });
@@ -686,37 +603,26 @@ function resetPrompt(): void {
   editContent.value = editingPrompt.value.defaultContent;
   localStorage.removeItem(storageKey(id));
   localStorage.removeItem(enabledKey(id));
-  localStorage.removeItem(weightKey(id));
-  localStorage.removeItem(metaKey(id));
+  for (const key of legacyFieldKeys(id)) localStorage.removeItem(key);
   promptRegistry?.resetToDefault(id);
   promptRegistry?.setEnabled(id, true);
   reloadEdits();
-  editScope.value = ['all'];
-  editInjectionMode.value = 'always';
-  editKeywordsText.value = '';
-  editType.value = 'system_rule';
   showModal.value = false;
   eventBus.emit('ui:toast', { type: 'info', message: t('prompt.toast.reset'), duration: 1500 });
-}
-
-function toggleScope(val: string): void {
-  const idx = editScope.value.indexOf(val);
-  if (idx >= 0) editScope.value.splice(idx, 1);
-  else editScope.value.push(val);
 }
 
 // ─── Export single prompt ─────────────────────────────────────
 
 function exportSingle(entry: PromptEntry, event: Event): void {
   event.stopPropagation();
-  const data = { id: entry.id, content: entry.content, weight: entry.weight, enabled: entry.enabled, exportedAt: new Date().toISOString() };
+  const data = { id: entry.id, content: entry.content, enabled: entry.enabled, exportedAt: new Date().toISOString() };
   downloadJson(data, `prompt-${entry.id}-${Date.now()}.json`);
 }
 
 // ─── Export all modified prompts ──────────────────────────────
 
 function exportAll(): void {
-  const modified = promptEntries.value.filter((p) => p.modified || (!p.enabled && !switchLocked(p.id)) || p.weight !== 5);
+  const modified = promptEntries.value.filter((p) => p.modified || (!p.enabled && !switchLocked(p.id)));
   if (!modified.length) {
     eventBus.emit('ui:toast', { type: 'info', message: t('prompt.toast.noModified'), duration: 2000 });
     return;
@@ -727,7 +633,6 @@ function exportAll(): void {
     prompts: modified.map((p) => ({
       id: p.id,
       ...(p.modified ? { content: p.content } : {}),
-      weight: p.weight,
       ...(switchLocked(p.id) ? {} : { enabled: p.enabled }),
     })),
     exportedAt: new Date().toISOString(),
@@ -746,13 +651,13 @@ function importPrompts(): void {
     const file = input.files?.[0];
     if (!file) return;
     try {
-      const raw = JSON.parse(await file.text()) as { prompts?: Array<{ id: string; content?: string; weight?: number; enabled?: boolean }> };
+      // An older export may carry a weight per prompt: it never did anything and is ignored.
+      const raw = JSON.parse(await file.text()) as { prompts?: Array<{ id: string; content?: string; enabled?: boolean }> };
       if (!Array.isArray(raw.prompts)) throw new Error(t('prompt.toast.importInvalidFormat'));
       let count = 0;
       for (const item of raw.prompts) {
         if (typeof item?.id !== 'string' || !item.id) continue;
         if (typeof item.content === 'string') storeContent(item.id, item.content);
-        if (typeof item.weight === 'number') localStorage.setItem(weightKey(item.id), String(item.weight));
         if (typeof item.enabled === 'boolean' && !switchLocked(item.id)) {
           localStorage.setItem(enabledKey(item.id), String(item.enabled));
           promptRegistry?.setEnabled(item.id, item.enabled);
@@ -1092,23 +997,6 @@ function previewContent(content: string, maxLen = 100): string {
                     <span v-if="entry.modified" class="modified-badge">{{ $t('prompt.entry.modifiedBadge') }}</span>
                   </div>
                   <div class="prompt-controls">
-                    <!-- Weight input -->
-                    <Tooltip :text="$t('prompt.entry.weightTitle')" interactive>
-                      <div class="weight-control">
-                        <span class="weight-label" :style="{ color: weightColor(entry.weight) }">W</span>
-                        <input
-                          type="number"
-                          min="1"
-                          max="10"
-                          :value="entry.weight"
-                          class="weight-input"
-                          :style="{ color: weightColor(entry.weight) }"
-                          @change="setWeight(entry, Number(($event.target as HTMLInputElement).value))"
-                          @click.stop
-                          :aria-label="$t('prompt.entry.weightAriaLabel')"
-                        />
-                      </div>
-                    </Tooltip>
                     <!-- Export single -->
                     <Tooltip :text="$t('prompt.entry.exportTitle')" interactive>
                       <button class="icon-btn" :aria-label="$t('prompt.entry.exportTitle')" @click="exportSingle(entry, $event)">
@@ -1151,43 +1039,7 @@ function previewContent(content: string, maxLen = 100): string {
 
     <!-- ─── Edit Modal ─── -->
     <Modal v-model="showModal" :title="editingPrompt ? $t('prompt.modal.editPrefix', { name: getDisplayName(editingPrompt.id) }) : ''" width="720px">
-      <!-- 高级字段区域 -->
-      <div class="meta-fields">
-        <div class="meta-row">
-          <label class="meta-label">{{ $t('prompt.modal.type') }}</label>
-          <AgaSelect
-            :modelValue="editType"
-            class="meta-select-control"
-            :options="typeOptions"
-            @update:modelValue="v => editType = v as PromptEntry['type']"
-          />
-
-          <label class="meta-label">{{ $t('prompt.modal.injectionMode') }}</label>
-          <AgaSelect
-            :modelValue="editInjectionMode"
-            class="meta-select-control"
-            :options="injectionModeOptions"
-            @update:modelValue="v => editInjectionMode = v as 'always' | 'match_any'"
-          />
-        </div>
-
-        <div class="meta-row">
-          <label class="meta-label">{{ $t('prompt.modal.scope') }}</label>
-          <div class="scope-checks">
-            <label v-for="opt in scopeOptions" :key="opt.value" class="scope-check">
-              <input type="checkbox" :checked="editScope.includes(opt.value)" @change="toggleScope(opt.value)" />
-              {{ opt.label }}
-            </label>
-          </div>
-        </div>
-
-        <div v-if="editInjectionMode === 'match_any'" class="meta-row">
-          <label class="meta-label">{{ $t('prompt.modal.keywords') }}</label>
-          <input v-model="editKeywordsText" class="meta-input" :placeholder="$t('prompt.modal.keywordsPlaceholder')" />
-        </div>
-      </div>
-
-      <!-- 内容编辑 -->
+      <!-- 内容编辑（内置提示词只有内容、开关、恢复默认：权重 / 类型 / 注入方式 / 作用范围 / 关键词从没被读过，2026-10-05 去掉） -->
       <div class="edit-area">
         <textarea
           v-model="editContent"
@@ -1266,7 +1118,6 @@ function previewContent(content: string, maxLen = 100): string {
 .settings-select-control { flex: 0 1 160px; min-width: 0; max-width: 300px; }
 .heroine-type-select { width: 130px; }
 .filter-select-control { min-width: 140px; }
-.meta-select-control { min-width: 140px; }
 
 /* Style radio group */
 .style-radio-group { display: flex; flex-direction: column; gap: 4px; }
@@ -1472,36 +1323,6 @@ function previewContent(content: string, maxLen = 100): string {
   flex-shrink: 0;
 }
 
-.weight-control {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.weight-label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  width: 14px;
-}
-
-.weight-input {
-  width: 34px;
-  height: 24px;
-  padding: 0 4px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  background: var(--color-bg, #0f0f14);
-  border: 1px solid var(--color-border, #2a2a3a);
-  border-radius: 4px;
-  outline: none;
-  text-align: center;
-  -moz-appearance: textfield;
-}
-.weight-input::-webkit-inner-spin-button,
-.weight-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-.weight-input:focus { border-color: var(--color-sage-400); text-shadow: 0 0 4px currentColor; }
-
 .icon-btn {
   width: 24px;
   height: 24px;
@@ -1525,54 +1346,6 @@ function previewContent(content: string, maxLen = 100): string {
   line-height: 1.5;
   cursor: pointer;
 }
-
-/* ── Meta fields (advanced world book fields) ── */
-.meta-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
-  background: color-mix(in oklch, var(--color-sage-400) 4%, transparent);
-  border: 1px solid color-mix(in oklch, var(--color-sage-400) 15%, transparent);
-  border-radius: 8px;
-}
-.meta-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.meta-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-text-secondary, #8888a0);
-  flex-shrink: 0;
-}
-.meta-input {
-  flex: 1;
-  padding: 4px 8px;
-  font-size: 0.75rem;
-  background: rgba(255,255,255,0.06);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: 5px;
-  min-width: 200px;
-}
-.scope-checks {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.scope-check {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.72rem;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-}
-.scope-check input { accent-color: var(--color-sage-400); }
 
 /* ── Edit area ── */
 .edit-area {

@@ -43,6 +43,9 @@ test('the save\'s own settings show on the game page, and not on Home while the 
     await goToGameTab(page, 'settings');
     for (const section of SECTIONS) await expect(page.locator(section)).toHaveCount(1);
     for (const row of ROWS) await expect(page.getByText(row, { exact: true })).toBeVisible();
+    // PO 2026-10-05 (5A): the demotion threshold does something now; the key-NPC generation range is gone.
+    await expect(page.locator('#settings-npc').getByText('NPC 降级阈值', { exact: true })).toHaveCount(1);
+    await expect(page.locator('#settings-npc').getByText('重点 NPC 生成范围')).toHaveCount(0);
 
     // Back to Home without reloading: the save stays in memory.
     await page.getByRole('button', { name: '返回首页' }).click();

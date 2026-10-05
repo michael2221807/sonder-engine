@@ -719,6 +719,10 @@
           "enum": ["all", "male", "female"],
           "$comment": "NSFW 性别过滤：哪些性别的 NPC 需要生成 私密信息。值移植自 demo nsfw.ts NsfwGenderFilter。仅影响生成/校验规则；不影响玩家 角色.身体（玩家始终生成，与 nsfwMode 同步）。"
         },
+        "npcDemotionThreshold": {
+          "type": "number",
+          "$comment": "设置页「NPC 降级阈值」（2026-10-05 接上）：回合结束时，重点 NPC 超过这么多回合没被主回合更新就降为普通（NpcDemotionModule，demo runNpcMaintenance）。不设缺省值：没有时按引擎缺省 5。"
+        },
         "actionOptions": {
           "type": "object",
           "$comment": "行动选项生成模式。mode=action → 简短行为指令（actionOptions.md，8-20字）；mode=story → 剧情叙述分支（actionOptionsStory.md，150-450字）。pace=fast/slow 调节节奏倾向。SettingsPanel 将 localStorage 'aga_action_options_settings' 同步写入此字段；context-assembly 读取后派生 ACTION_OPTIONS_MODE_IS_* 条件变量，main-round / split-gen flows 据此加载对应 prompt。",
