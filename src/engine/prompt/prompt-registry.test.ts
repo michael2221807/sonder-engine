@@ -36,13 +36,22 @@ describe('PromptRegistry', () => {
     expect(registry.getEffectiveContent('missing')).toBe('');
   });
 
-  it('getRequiredContent keeps the text of a module switched off: the edit, else the default', () => {
-    registry.register({ id: 'format', content: 'default', enabled: false });
-    expect(registry.getEffectiveContent('format')).toBe('');
-    expect(registry.getRequiredContent('format')).toBe('default');
+  // Code review M1/H2 (2026-10-04): what a round cannot do without, or a setting chooses, is never switched off.
+  it('an always-on module gives its text even switched off: the edit, else the default (also for an emptied edit)', () => {
+    registry.register({ id: 'format', content: 'default', enabled: false, alwaysOn: true });
+    expect(registry.getEffectiveContent('format')).toBe('default');
     registry.setUserContent('format', 'edited');
-    expect(registry.getRequiredContent('format')).toBe('edited');
-    expect(registry.getRequiredContent('missing')).toBe('');
+    expect(registry.getEffectiveContent('format')).toBe('edited');
+    registry.setUserContent('format', '  ');
+    expect(registry.getEffectiveContent('format')).toBe('default');
+    registry.register({ id: 'plain', content: 'p', enabled: false });
+    expect(registry.getEffectiveContent('plain')).toBe('');
+  });
+
+  it('registerPack registers every prompt on, the always-on ones marked', () => {
+    registry.registerPack({ a: 'A', b: 'B' }, new Set(['b']));
+    expect(registry.get('a')).toMatchObject({ content: 'A', enabled: true, alwaysOn: false });
+    expect(registry.get('b')).toMatchObject({ content: 'B', enabled: true, alwaysOn: true });
   });
 
   it('lists all registered module IDs', () => {

@@ -53,7 +53,7 @@ import { hasSettingTag, parseSettingTagNames } from '../../prompt/setting-tag-sc
 import { DEFAULT_PROMPT_SETTINGS, actionOptionsOn, wordCountRangeOf } from '../../prompt/world-book';
 import type { PromptSettings } from '../../prompt/world-book';
 import { buildEnvironmentBlock } from '../../prompt/environment-block';
-import { ROUND_FORMAT_PROMPT_IDS, SPLIT_STEP1_FORMAT_PROMPT_ID } from '../../prompt/builtin-slots';
+import { SPLIT_STEP1_FORMAT_PROMPT_ID, SPLIT_STEP2_FOLLOWUP_PROMPT_ID } from '../../prompt/builtin-slots';
 import { PlotInjector } from '../../plot/plot-injector';
 import type { WorldBook, SystemPromptBuildResult } from '../../prompt/world-book';
 
@@ -94,9 +94,6 @@ function appendUserTurn(messages: AIMessage[], sources: string[], content: strin
   messages.push({ role: 'user', content });
   sources.push('current_input');
 }
-
-/** The main round's format prompts: sent even when switched off on the prompt page (a round needs its format). */
-const REQUIRED_FORMAT_PROMPTS: ReadonlySet<string> = new Set(ROUND_FORMAT_PROMPT_IDS);
 
 export class ContextAssemblyStage implements PipelineStage {
   name = 'ContextAssembly';
@@ -565,9 +562,9 @@ export class ContextAssemblyStage implements PipelineStage {
         content: typeof e.content === 'string' ? e.content : '',
       }));
 
-      // The pack's prompts as this round sends them (the prompt page's edits and switches); the round's format
-      // prompts are never sent switched off.
-      const roundPrompts = this.promptAssembler.effectivePrompts(this.pack.prompts ?? {}, REQUIRED_FORMAT_PROMPTS);
+      // The pack's prompts as this round sends them (the prompt page's edits and switches); the registry never
+      // switches off what the round cannot do without (its formats, its length rule) or what a setting chooses.
+      const roundPrompts = this.promptAssembler.effectivePrompts(this.pack.prompts ?? {});
       const buildResult = buildSystemPrompt({
         transformPrompt,
         historyText,
@@ -899,7 +896,7 @@ export class ContextAssemblyStage implements PipelineStage {
 
     let splitStep2Followup: string | undefined;
     if (ctx.meta.plotVectorPromptMode && splitStep2Messages && !ctx.meta.isEnhancedOpening) {
-      splitStep2Followup = assembler.renderSingle('splitGenStep2Followup', variables)?.trim();
+      splitStep2Followup = assembler.renderSingle(SPLIT_STEP2_FOLLOWUP_PROMPT_ID, variables)?.trim();
       if (!splitStep2Followup) throw new Error('Missing splitGenStep2Followup prompt');
     }
     return {

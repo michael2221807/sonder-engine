@@ -72,15 +72,14 @@ export class PromptAssembler {
   }
 
   /**
-   * The pack's prompts as a round sends them: the player's edited text or the pack's, '' when switched off; a
-   * `required` prompt keeps its text even when switched off, and one the registry does not know keeps the pack's
-   * text. Untransformed: the story request's builder applies the round's transform itself.
+   * The pack's prompts as a round sends them, as the registry gives them: the player's edited text or the pack's,
+   * '' when switched off (an always-on prompt never is); one the registry does not know keeps the pack's text.
+   * Untransformed: the story request's builder applies the round's transform itself.
    */
-  effectivePrompts(packPrompts: Readonly<Record<string, string>>, required: ReadonlySet<string>): Record<string, string> {
+  effectivePrompts(packPrompts: Readonly<Record<string, string>>): Record<string, string> {
     const out: Record<string, string> = {};
     for (const [id, text] of Object.entries(packPrompts)) {
-      out[id] = !this.registry.has(id) ? text
-        : required.has(id) ? this.registry.getRequiredContent(id) : this.registry.getEffectiveContent(id);
+      out[id] = this.registry.has(id) ? this.registry.getEffectiveContent(id) : text;
     }
     return out;
   }

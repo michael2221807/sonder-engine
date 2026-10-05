@@ -26,7 +26,7 @@ import { eventBus } from '@/engine/core/event-bus';
 import type { GamePack } from '@/engine/types/game-pack';
 import { useGameState } from '@/ui/composables/useGameState';
 import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio, actionOptionsOn, wordCountOf, type PromptSettings } from '@/engine/prompt/world-book';
-import { BUILTIN_SLOTS, ROUND_FORMAT_PROMPT_IDS } from '@/engine/prompt/builtin-slots';
+import { BUILTIN_SLOTS, ROUND_REQUIRED_PROMPT_IDS } from '@/engine/prompt/builtin-slots';
 import { promptContentKey, promptEnabledKey } from '@/engine/prompt/prompt-edits';
 import { createEmptyHeroinePlan, type HeroinePlan, type HeroineEntry, type HeroineInteractionEvent } from '@/engine/story/heroine-plan';
 import type { PromptRegistry } from '@/engine/prompt/prompt-registry';
@@ -455,6 +455,9 @@ function isPromptActiveByRadio(id: string): boolean | null {
   return null;
 }
 
+/** What every round needs (its formats, its length rule): edited here, never switched off. */
+const REQUIRED_PROMPTS: ReadonlySet<string> = new Set(ROUND_REQUIRED_PROMPT_IDS);
+
 // The list reads the page's edits from localStorage, which Vue does not track: every write here bumps this, and so
 // does coming back to the page (it is kept alive; a game card's import writes edits elsewhere). Before 2026-10-04 a
 // switch or a save showed nothing until a reload, and reopening a saved prompt showed the old text.
@@ -479,7 +482,7 @@ const promptEntries = computed<PromptEntry[]>(() => {
     const radioState = isPromptActiveByRadio(id);
     const enabled = radioState !== null
       ? radioState
-      : (savedEnabled !== null ? savedEnabled === 'true' : true);
+      : REQUIRED_PROMPTS.has(id) || (savedEnabled !== null ? savedEnabled === 'true' : true);
 
     const weight = savedWeight !== null ? Math.min(10, Math.max(1, Number(savedWeight))) : 5;
     const meta = loadMeta(id);
@@ -582,11 +585,36 @@ const filteredPrompts = computed<PromptEntry[]>(() => {
 
 // ─── Toggle enabled ───────────────────────────────────────────
 
-/** The main round's format prompts: every round needs them, so they cannot be switched off here (the round sends them anyway). */
-const REQUIRED_PROMPTS: ReadonlySet<string> = new Set(ROUND_FORMAT_PROMPT_IDS);
+/**
+ * A row whose switch decides nothing: a prompt every round needs, or one a setting chooses (perspective, story
+ * style — the 「游戏设定」 tab picks it). The engine sends these as the registry's always-on modules (code review H2).
+ */
+function switchLocked(id: string): boolean {
+  return REQUIRED_PROMPTS.has(id) || isPromptActiveByRadio(id) !== null;
+}
+
+function switchTitle(entry: PromptEntry): string {
+  if (REQUIRED_PROMPTS.has(entry.id)) return t('prompt.entry.requiredTitle');
+  if (isPromptActiveByRadio(entry.id) !== null) return t('prompt.entry.radioTitle');
+  return entry.enabled ? t('prompt.entry.enableTitle') : t('prompt.entry.disableTitle');
+}
+
+/**
+ * Store a prompt's text as the player's edit — unless it is the pack's own text, which is no edit: kept, it would
+ * freeze the pack's text of today when the pack's own changes, and travel in cards as an edit (code review M2).
+ */
+function storeContent(id: string, content: string): void {
+  if (content === pack?.prompts[id]) {
+    localStorage.removeItem(storageKey(id));
+    promptRegistry?.resetToDefault(id);
+  } else {
+    localStorage.setItem(storageKey(id), content);
+    promptRegistry?.setUserContent(id, content);
+  }
+}
 
 function toggleEnabled(entry: PromptEntry): void {
-  if (REQUIRED_PROMPTS.has(entry.id)) return;
+  if (switchLocked(entry.id)) return;
   const newVal = !entry.enabled;
   localStorage.setItem(enabledKey(entry.id), String(newVal));
   promptRegistry?.setEnabled(entry.id, newVal);
@@ -635,14 +663,13 @@ function openPrompt(entry: PromptEntry): void {
 function savePrompt(): void {
   if (!editingPrompt.value) return;
   const id = editingPrompt.value.id;
-  localStorage.setItem(storageKey(id), editContent.value);
+  storeContent(id, editContent.value);
   saveMeta(id, {
     scope: editScope.value,
     injectionMode: editInjectionMode.value,
     keywords: editKeywordsText.value.split(',').map((s) => s.trim()).filter(Boolean),
     type: editType.value,
   });
-  promptRegistry?.setUserContent(id, editContent.value);
   reloadEdits();
   showModal.value = false;
   eventBus.emit('ui:toast', { type: 'success', message: t('prompt.toast.saved'), duration: 1500 });
@@ -684,14 +711,20 @@ function exportSingle(entry: PromptEntry, event: Event): void {
 // ─── Export all modified prompts ──────────────────────────────
 
 function exportAll(): void {
-  const modified = promptEntries.value.filter((p) => p.modified || !p.enabled || p.weight !== 5);
+  const modified = promptEntries.value.filter((p) => p.modified || (!p.enabled && !switchLocked(p.id)) || p.weight !== 5);
   if (!modified.length) {
     eventBus.emit('ui:toast', { type: 'info', message: t('prompt.toast.noModified'), duration: 2000 });
     return;
   }
   const data = {
     packId: pack?.manifest.id ?? 'unknown',
-    prompts: modified.map((p) => ({ id: p.id, content: p.content, weight: p.weight, enabled: p.enabled })),
+    // Text only when edited (the pack's own text is no edit); on/off only where the switch decides it.
+    prompts: modified.map((p) => ({
+      id: p.id,
+      ...(p.modified ? { content: p.content } : {}),
+      weight: p.weight,
+      ...(switchLocked(p.id) ? {} : { enabled: p.enabled }),
+    })),
     exportedAt: new Date().toISOString(),
   };
   downloadJson(data, `prompts-export-${Date.now()}.json`);
@@ -712,23 +745,22 @@ function importPrompts(): void {
       if (!Array.isArray(raw.prompts)) throw new Error(t('prompt.toast.importInvalidFormat'));
       let count = 0;
       for (const item of raw.prompts) {
-        if (!item.id) continue;
-        if (item.content !== undefined) {
-          localStorage.setItem(storageKey(item.id), item.content);
-          promptRegistry?.setUserContent(item.id, item.content);
-        }
-        if (item.weight !== undefined) localStorage.setItem(weightKey(item.id), String(item.weight));
-        if (item.enabled !== undefined) {
+        if (typeof item?.id !== 'string' || !item.id) continue;
+        if (typeof item.content === 'string') storeContent(item.id, item.content);
+        if (typeof item.weight === 'number') localStorage.setItem(weightKey(item.id), String(item.weight));
+        if (typeof item.enabled === 'boolean' && !switchLocked(item.id)) {
           localStorage.setItem(enabledKey(item.id), String(item.enabled));
           promptRegistry?.setEnabled(item.id, item.enabled);
         }
         count++;
       }
-      reloadEdits();
       eventBus.emit('ui:toast', { type: 'success', message: t('prompt.toast.importCount', { count }), duration: 2000 });
     } catch (err) {
       const msg = err instanceof Error ? err.message : t('prompt.toast.importError');
       eventBus.emit('ui:toast', { type: 'error', message: msg, duration: 3000 });
+    } finally {
+      // A file that stopped halfway has still written what came before.
+      reloadEdits();
     }
   };
   input.click();
@@ -1079,12 +1111,12 @@ function previewContent(content: string, maxLen = 100): string {
                       </button>
                     </Tooltip>
                     <!-- Enable toggle -->
-                    <Tooltip :text="REQUIRED_PROMPTS.has(entry.id) ? $t('prompt.entry.requiredTitle') : entry.enabled ? $t('prompt.entry.enableTitle') : $t('prompt.entry.disableTitle')" interactive>
+                    <Tooltip :text="switchTitle(entry)" interactive>
                       <AgaToggle
-                        :modelValue="entry.enabled || REQUIRED_PROMPTS.has(entry.id)"
-                        :disabled="REQUIRED_PROMPTS.has(entry.id)"
+                        :modelValue="entry.enabled"
+                        :disabled="switchLocked(entry.id)"
                         :data-testid="`prompt-toggle-${entry.id}`"
-                        :label="REQUIRED_PROMPTS.has(entry.id) ? $t('prompt.entry.requiredTitle') : entry.enabled ? $t('prompt.entry.enableTitle') : $t('prompt.entry.disableTitle')"
+                        :label="switchTitle(entry)"
                         @update:modelValue="() => toggleEnabled(entry)"
                         @click.stop
                       />

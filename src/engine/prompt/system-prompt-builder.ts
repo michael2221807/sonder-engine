@@ -21,7 +21,7 @@ import type {
 import { formatHeroinePlanForContext, type HeroinePlan } from '../story/heroine-plan';
 import { buildPlotFocusCorpusTexts } from '../plot/plot-corpus';
 import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio, actionOptionsOn, wordCountRangeOf, type WordCountRange } from './world-book';
-import { BUILTIN_SLOTS } from './builtin-slots';
+import { BUILTIN_SLOTS, STORY_STYLE_PROMPT_IDS } from './builtin-slots';
 import type { EnginePathConfig } from '../pipeline/types';
 import {
   buildCorpus,
@@ -652,15 +652,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
 
   // ── 20. Narrative Constraints + Story Style (radio group: one active at a time) ──
   const constraintsBase = slot('narrative_constraints');
-  const storyStyleMap: Record<string, string> = {
-    general: 'storyStyleGeneral',
-    harem: 'storyStyleHarem',
-    pureLove: 'storyStylePureLove',
-    cultivation: 'storyStyleCultivation',
-    shura: 'storyStyleShura',
-    ntlHarem: 'storyStyleNtlHarem',
-  };
-  const stylePromptId = storyStyleMap[settings.storyStyle] ?? 'storyStyleGeneral';
+  const stylePromptId = STORY_STYLE_PROMPT_IDS[settings.storyStyle] ?? STORY_STYLE_PROMPT_IDS.general;
   const styleContent = renderPackPrompt(stylePromptId);
   const fullConstraints = [constraintsBase, styleContent ? `\n\n【剧情风格偏好】\n${styleContent}` : ''].filter(Boolean).join('');
   push('narrative_constraints', '叙事总约束 + 风格偏好', '系统', 'system', fullConstraints);

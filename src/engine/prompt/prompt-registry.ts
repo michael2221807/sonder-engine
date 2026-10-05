@@ -20,6 +20,11 @@ export interface PromptModule {
   userContent?: string;
   /** 是否启用（禁用的模块在组装时跳过） */
   enabled: boolean;
+  /**
+   * Sent whenever a request uses it: the player's text applies, being switched off does not (a round cannot do
+   * without it, or a setting chooses it). Empty text falls back to the pack's.
+   */
+  alwaysOn?: boolean;
   /** 模块元数据（用于 UI 展示） */
   metadata?: {
     name?: string;
@@ -36,6 +41,16 @@ export class PromptRegistry {
     this.modules.set(module.id, module);
   }
 
+  /**
+   * Register a pack's prompts (its default texts), each on; the ids in `alwaysOn` can never be switched off. The one
+   * place a pack's prompts become modules, so the app and its tests build the same registry.
+   */
+  registerPack(prompts: Readonly<Record<string, string>>, alwaysOn: ReadonlySet<string>): void {
+    for (const [id, content] of Object.entries(prompts)) {
+      this.register({ id, content, enabled: true, alwaysOn: alwaysOn.has(id) });
+    }
+  }
+
   /** 按 ID 获取模块 */
   get(id: string): PromptModule | undefined {
     return this.modules.get(id);
@@ -49,21 +64,14 @@ export class PromptRegistry {
   /**
    * 获取模块的生效内容
    * 优先返回用户覆盖内容，否则返回默认内容
-   * 模块被禁用时返回空字符串
+   * 模块被禁用时返回空字符串；always-on 模块不看开关，用户内容为空时用默认内容
    */
   getEffectiveContent(id: string): string {
     const mod = this.modules.get(id);
-    if (!mod || !mod.enabled) return '';
+    if (!mod) return '';
+    if (mod.alwaysOn) return mod.userContent?.trim() ? mod.userContent : mod.content;
+    if (!mod.enabled) return '';
     return mod.userContent ?? mod.content;
-  }
-
-  /**
-   * The content of a module a round cannot do without (its output format): the player's text, or the pack's.
-   * Switched off, it still gives its text — a round without its format fails or answers in no known shape.
-   */
-  getRequiredContent(id: string): string {
-    const mod = this.modules.get(id);
-    return mod ? mod.userContent ?? mod.content : '';
   }
 
   /** 设置用户覆盖内容 */

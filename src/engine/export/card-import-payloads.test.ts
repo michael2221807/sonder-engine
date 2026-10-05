@@ -5,7 +5,7 @@
  * configOverlays·settings·promptOverrides·builtinOverrides / SC-9 denylist 永不写 /
  * OD-L ledger。store 用最小 mock；localStorage 走 createMockLocalStorage。
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, onTestFinished } from 'vitest';
 import { createMockLocalStorage } from '@/engine/__test-utils__/local-storage.mock';
 import {
   namespaceImageEntries,
@@ -202,6 +202,7 @@ describe('applyGlobalPromptOverrides + applyGlobalPromptEdits (opt-in)', () => {
 
   it('the author\'s prompt edits go where the prompt page keeps them, and the registry is told to reload', () => {
     const emit = vi.spyOn(eventBus, 'emit');
+    onTestFinished(() => emit.mockRestore());
     localStorage.setItem('aga_prompt_tianming_writeStyle', 'mine, kept');
     const n = applyGlobalPromptEdits('tianming', { promptEdits: { version: 1, packId: 'tianming', entries: [
       { id: 'jailbreak', content: 'AUTHOR' }, { id: 'antiCliche', enabled: false },
@@ -211,16 +212,32 @@ describe('applyGlobalPromptOverrides + applyGlobalPromptEdits (opt-in)', () => {
     expect(localStorage.getItem('aga_prompt_enabled_tianming_antiCliche')).toBe('false');
     expect(localStorage.getItem('aga_prompt_tianming_writeStyle')).toBe('mine, kept');
     expect(emit).toHaveBeenCalledWith('prompt:edits-replaced', { packId: 'tianming' });
-    emit.mockRestore();
   });
 
-  it('a card from before 2026-10-04 carries them as slot overrides: read as edits of the slots\' prompts', () => {
+  it('a card from before 2026-10-04 carries them as slot overrides: the ones the old builder applied become edits', () => {
     const n = applyGlobalPromptEdits('tianming', { builtinPromptOverrides: { version: 1, exportedAt: 'x', entries: [
       { slotId: 'narrator_role', userContent: '旁白' }, { slotId: 'write_style', enabled: false },
     ] } as never });
-    expect(n).toBe(2);
+    expect(n).toBe(1);
     expect(localStorage.getItem('aga_prompt_tianming_narratorFrame')).toBe('旁白');
-    expect(localStorage.getItem('aga_prompt_enabled_tianming_writeStyle')).toBe('false');
+    // A switched-off override never applied (the pack text was used), so it switches nothing off now.
+    expect(localStorage.getItem('aga_prompt_enabled_tianming_writeStyle')).toBeNull();
+  });
+
+  // Code review M3: a damaged card stores nothing malformed, breaks nothing, and asks for no reload.
+  it('a card\'s malformed edits are skipped one by one; with nothing to write there is no reload', () => {
+    const emit = vi.spyOn(eventBus, 'emit');
+    onTestFinished(() => emit.mockRestore());
+    const n = applyGlobalPromptEdits('tianming', { promptEdits: { version: 1, packId: 'tianming', entries: [
+      { id: 'jailbreak', content: 5 }, { content: 'no id' }, { id: 'writeStyle', content: '好的' },
+    ] } as never });
+    expect(n).toBe(1);
+    expect(localStorage.getItem('aga_prompt_tianming_jailbreak')).toBeNull();
+    expect(localStorage.getItem('aga_prompt_tianming_writeStyle')).toBe('好的');
+    emit.mockClear();
+    expect(applyGlobalPromptEdits('tianming', { promptEdits: { version: 1, packId: 'tianming', entries: 'oops' } as never })).toBe(0);
+    expect(applyGlobalPromptEdits('tianming', { builtinPromptOverrides: 7 as never })).toBe(0);
+    expect(emit).not.toHaveBeenCalledWith('prompt:edits-replaced', expect.anything());
   });
 
   it('缺失 → 0', async () => {

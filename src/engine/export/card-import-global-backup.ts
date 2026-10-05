@@ -2,9 +2,8 @@
 /**
  * Global-settings backup for card import (Story 6 — reversibility, user request 2026-06-04).
  *
- * The import's GLOBAL opt-in payloads (configOverlays / promptOverrides / builtinPromptOverrides — the
- * prompt-page edits / 
- * settings) and the NSFW gate write app-wide localStorage/IDB IMMEDIATELY. That is irreversible by
+ * The import's GLOBAL opt-in payloads (configOverlays / promptOverrides / builtinPromptOverrides, i.e. the
+ * prompt-page edits / settings) and the NSFW gate write app-wide localStorage/IDB IMMEDIATELY. That is irreversible by
  * design otherwise — so before any global write we SNAPSHOT the affected stores, and the import flow:
  *   - restores the snapshot if the import FAILS (a failed import must not leave globals clobbered), and
  *   - lets a SUCCESSFUL import offer a one-click "undo global changes" (restore to pre-import state).
@@ -121,9 +120,11 @@ export async function restoreGlobalSettingsBackup(
   if (backup.promptEdits) {
     try {
       restorePromptEdits(backup.promptEdits.packId, backup.promptEdits.entries);
-      eventBus.emit('prompt:edits-replaced', { packId: backup.promptEdits.packId });
     } catch {
       failed.push('builtinPromptOverrides');
+    } finally {
+      // Even a restore stopped halfway (storage full) changed the store: the registry reads it again.
+      eventBus.emit('prompt:edits-replaced', { packId: backup.promptEdits.packId });
     }
   }
 

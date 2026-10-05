@@ -265,6 +265,15 @@ const BUILDER_I18N_MAP: Record<string, string> = {
   format_prompt: 'promptAssembly.builder.formatPrompt', cot_core: 'promptAssembly.builder.cotCore',
   cot_judge: 'promptAssembly.builder.cotJudge', player_input: 'promptAssembly.builder.playerInput',
   start_task: 'promptAssembly.builder.startTask', cot_masquerade: 'promptAssembly.builder.cotMasquerade',
+  wb_system_rules: 'promptAssembly.builder.wbSystemRules',
+  wb_command_rules: 'promptAssembly.builder.wbCommandRules',
+  wb_output_rules: 'promptAssembly.builder.wbOutputRules',
+  action_options: 'promptAssembly.builder.actionOptions',
+  action_options_off: 'promptAssembly.builder.actionOptionsOff',
+  setting_authority: 'promptAssembly.builder.settingAuthority',
+  setting_capture: 'promptAssembly.builder.settingCapture',
+  plot_directive: 'promptAssembly.builder.plotDirective',
+  plot_evaluation_step2: 'promptAssembly.builder.plotEvaluationStep2',
   bodyPolish_system: 'promptAssembly.builder.bodyPolishSystem', bodyPolish_user: 'promptAssembly.builder.bodyPolishUser',
 };
 

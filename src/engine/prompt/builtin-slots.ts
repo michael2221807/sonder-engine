@@ -3,7 +3,7 @@
  *
  * Each slot names the pack prompt (`defaultPromptId`) a piece of the main round's story request is built from.
  * What the round sends is that prompt as the player left it on the prompt page — edited or the pack's, or nothing
- * when switched off (`PromptRegistry`, read through `PromptAssembler.effectivePrompts`).
+ * when switched off, unless it is always on (`PromptRegistry`, read through `PromptAssembler.effectivePrompts`).
  *
  * Mapped from the original 世界书本体槽位 — adapted to AGA's scope
  * (no battle, no fandom, no realm system).
@@ -21,8 +21,9 @@ export interface BuiltinSlotDefinition {
 /**
  * All overridable prompt slots.
  *
- * The key is used as the slot ID throughout the system.
- * World book entries reference these via `builtinSlotId`.
+ * The key is used as the slot ID throughout the system. Cards written before 2026-10-04 carried their author's prompt
+ * edits keyed by slot ID (`promptEditsFromSlotOverrides`); world-book entries can still name a slot
+ * (`builtinSlotId`), though nothing reads that link at runtime.
  */
 export const BUILTIN_SLOTS: Record<string, BuiltinSlotDefinition> = {
   // ─── Core Identity ────────────────────────────────────────
@@ -306,13 +307,46 @@ export const BUILTIN_SLOTS: Record<string, BuiltinSlotDefinition> = {
   },
 } as const;
 
-/**
- * The format prompts the main round's story request is built on: the default one and the split Step 1 narrative
- * format the impulse mode selects. A round cannot do without them, so they are sent even when switched off
- * (`PromptRegistry.getRequiredContent`) and the prompt page does not offer to switch them off.
- */
+/** The split Step 1 narrative format the impulse mode selects for the story request. */
 export const SPLIT_STEP1_FORMAT_PROMPT_ID = 'splitGenStep1';
-export const ROUND_FORMAT_PROMPT_IDS: readonly string[] = [BUILTIN_SLOTS.format_prompt?.defaultPromptId ?? 'mainRound', SPLIT_STEP1_FORMAT_PROMPT_ID];
+/** The follow-up turn split Step 2 sends after the story in the impulse mode (context-assembly). */
+export const SPLIT_STEP2_FOLLOWUP_PROMPT_ID = 'splitGenStep2Followup';
+
+/**
+ * The main round's own structure: its formats (the story's, Step 1's, Step 2's), Step 2's follow-up turn and the
+ * length rule that carries the player's word count. A round cannot do without them: the player can edit their text
+ * but not switch them off (PO 2026-10-04, code review M1).
+ */
+export const ROUND_REQUIRED_PROMPT_IDS: readonly string[] = [
+  BUILTIN_SLOTS.format_prompt?.defaultPromptId ?? 'mainRound',
+  SPLIT_STEP1_FORMAT_PROMPT_ID,
+  'splitGenStep2',
+  SPLIT_STEP2_FOLLOWUP_PROMPT_ID,
+  BUILTIN_SLOTS.write_req?.defaultPromptId ?? 'wordCountReq',
+];
+
+/** Story style setting → its prompt. A radio group: the setting picks one, the story request sends that one. */
+export const STORY_STYLE_PROMPT_IDS: Readonly<Record<string, string>> = {
+  general: 'storyStyleGeneral',
+  harem: 'storyStyleHarem',
+  pureLove: 'storyStylePureLove',
+  cultivation: 'storyStyleCultivation',
+  shura: 'storyStyleShura',
+  ntlHarem: 'storyStyleNtlHarem',
+};
+
+/**
+ * Prompts a setting chooses among (the perspective, the story style): the chosen one is sent and the others never,
+ * so a switch on the prompt page has nothing to decide for them (code review H2).
+ */
+export const RADIO_PROMPT_IDS: readonly string[] = [
+  ...['write_perspective_first', 'write_perspective_second', 'write_perspective_third']
+    .map((slot) => BUILTIN_SLOTS[slot]?.defaultPromptId ?? ''),
+  ...Object.values(STORY_STYLE_PROMPT_IDS),
+].filter(Boolean);
+
+/** Sent whenever a request uses them: the player's text applies, a stored "off" never does (PromptModule.alwaysOn). */
+export const ALWAYS_ON_PROMPT_IDS: ReadonlySet<string> = new Set([...ROUND_REQUIRED_PROMPT_IDS, ...RADIO_PROMPT_IDS]);
 
 /**
  * Get the slot IDs for a given category.

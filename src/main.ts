@@ -63,7 +63,8 @@ import { BehaviorRunner } from './engine/behaviors/behavior-runner';
 import { AIService, applyPersistedAISettings } from './engine/ai/ai-service';
 import { ResponseParser } from './engine/ai/response-parser';
 import { PromptRegistry } from './engine/prompt/prompt-registry';
-import { hydratePromptRegistry } from './engine/prompt/prompt-edits';
+import { hydratePromptRegistry, migrateLegacyBuiltinOverrides } from './engine/prompt/prompt-edits';
+import { ALWAYS_ON_PROMPT_IDS } from './engine/prompt/builtin-slots';
 import { TemplateEngine } from './engine/prompt/template-engine';
 import { PromptAssembler } from './engine/prompt/prompt-assembler';
 import { CharacterInitPipeline } from './engine/pipeline/sub-pipelines/character-init';
@@ -288,15 +289,7 @@ async function bootstrap(): Promise<void> {
   }
 
   const promptRegistry = new PromptRegistry();
-  if (pack) {
-    for (const [id, content] of Object.entries(pack.prompts)) {
-      promptRegistry.register({
-        id,
-        content,
-        enabled: true,
-      });
-    }
-  }
+  if (pack) promptRegistry.registerPack(pack.prompts, ALWAYS_ON_PROMPT_IDS);
 
   // The prompt page's edits (prompt-edits.ts): loaded now, and again whenever something replaces them.
   if (pack) {
@@ -305,6 +298,11 @@ async function bootstrap(): Promise<void> {
     eventBus.on<{ packId?: string }>('prompt:edits-replaced', (payload) => {
       if (!payload?.packId || payload.packId === packId) hydratePromptRegistry(promptRegistry, packId, promptIds);
     });
+    // The retired world-book slot-override store: what a restored backup or an old card import left there joins the
+    // page's edits once (P7 A). Async; the registry reloads when anything moved.
+    void migrateLegacyBuiltinOverrides(worldBookStorage, packId)
+      .then((moved) => { if (moved > 0) eventBus.emit('prompt:edits-replaced', { packId }); })
+      .catch((err: unknown) => console.warn('[PromptEdits] Moving old built-in prompt overrides failed:', err));
   }
 
   const templateEngine = new TemplateEngine();

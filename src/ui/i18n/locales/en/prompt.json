@@ -50,7 +50,8 @@
   "prompt.entry.exportTitle": "Export this Prompt",
   "prompt.entry.enableTitle": "Click to disable",
   "prompt.entry.disableTitle": "Click to enable",
-  "prompt.entry.requiredTitle": "Every round needs it for its output format; it cannot be switched off",
+  "prompt.entry.requiredTitle": "Every round needs it, so it cannot be switched off; its text can be edited",
+  "prompt.entry.radioTitle": "Turned on by your choice in Game Settings",
 
   "prompt.toast.enabled": "{id} enabled",
   "prompt.toast.disabled": "{id} disabled",

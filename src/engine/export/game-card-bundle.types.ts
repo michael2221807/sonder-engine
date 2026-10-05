@@ -234,5 +234,13 @@ export function isValidCardBundleShape(data: unknown): data is GameCardBundle {
   const e = engram as Record<string, unknown>;
   if (!Array.isArray(e['entities']) || !Array.isArray(e['knowledgeEdges'])) return false;
 
+  // The author's prompt edits (and an old card's slot overrides), when carried, are a list of entries; a single bad
+  // entry is skipped when applied (prompt-edits.ts), a container that is no list means a damaged card.
+  for (const key of ['promptEdits', 'builtinPromptOverrides'] as const) {
+    const carried = o[key];
+    if (carried === undefined) continue;
+    if (typeof carried !== 'object' || carried === null || !Array.isArray((carried as Record<string, unknown>)['entries'])) return false;
+  }
+
   return true;
 }

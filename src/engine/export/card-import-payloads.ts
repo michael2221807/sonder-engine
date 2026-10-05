@@ -204,16 +204,17 @@ export async function applyGlobalPromptOverrides(
  * Apply the card author's built-in prompt edits (global, per pack). Opt-in only. They go where the prompt page
  * keeps the player's own edits (prompt-edits.ts) and the registry reloads them, so the next round sends them.
  * A card written before 2026-10-04 carries them as world-book slot overrides, read as edits of the slots' prompts.
+ * The card's data is taken as it comes: entries that are no edit are skipped, nothing malformed is stored.
  * @returns number of prompts written.
  */
 export function applyGlobalPromptEdits(
   packId: string,
   card: { promptEdits?: PromptEditsExport; builtinPromptOverrides?: BuiltinPromptExportData },
 ): number {
-  const edits = card.promptEdits?.entries ?? promptEditsFromSlotOverrides(card.builtinPromptOverrides?.entries ?? []);
-  if (edits.length === 0) return 0;
+  const carried: unknown = card.promptEdits && typeof card.promptEdits === 'object' ? card.promptEdits.entries : undefined;
+  const edits = Array.isArray(carried) ? carried : promptEditsFromSlotOverrides(card.builtinPromptOverrides?.entries);
   const written = writePromptEdits(packId, edits);
-  eventBus.emit('prompt:edits-replaced', { packId });
+  if (written > 0) eventBus.emit('prompt:edits-replaced', { packId });
   return written;
 }
 

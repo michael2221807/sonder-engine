@@ -192,6 +192,15 @@ const counts = computed(() => {
   };
 });
 
+/**
+ * The author's prompt edits the card carries (a card from before 2026-10-04: its slot overrides). Both the chip and
+ * the opt-in row follow what is really there: a newer card carries `promptEdits` only (code review H1).
+ */
+const carriesPromptEdits = computed(() => {
+  const b = bundle.value;
+  return !!(b?.promptEdits?.entries?.length || b?.builtinPromptOverrides?.entries?.length);
+});
+
 /** Export-flag chips (only TRUE flags surface), each with a plain-language Tooltip. */
 const flagChips = computed(() => {
   const f = bundle.value?.exportFlags;
@@ -207,7 +216,7 @@ const flagChips = computed(() => {
   add(f.includedNarrativeContract, 'narrativeContract');
   add(f.includedCharacterVectors, 'characterVectors');
   add(f.includedEngineConfig, 'engineConfig');
-  add(f.includedBuiltinOverrides, 'builtinOverrides');
+  add(f.includedBuiltinOverrides && carriesPromptEdits.value, 'builtinOverrides');
   add(f.includedSettings, 'settings');
   add(f.includedApiTemplate, 'apiTemplate');
   if (counts.value.img > 0) out.push({ key: 'images', label: t('save.import.card.flag.images', { n: counts.value.img }), hint: t('save.import.card.flag.imagesHint') });
@@ -303,7 +312,7 @@ const optInRows = computed(() => {
   add(b?.configOverlays?.length, 'configOverlays');
   add(b?.settings, 'settings');
   add(b?.promptOverrides?.length, 'promptOverrides');
-  add(b?.builtinPromptOverrides, 'builtinPromptOverrides');
+  add(carriesPromptEdits.value, 'builtinPromptOverrides');
   // authorGameplaySettings draws from the same settings payload — offer it whenever settings exist.
   add(b?.settings, 'authorGameplaySettings');
   return rows;

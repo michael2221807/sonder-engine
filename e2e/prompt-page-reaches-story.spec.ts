@@ -172,3 +172,35 @@ for (const splitGen of [true, false]) {
       await expect(page.getByTestId('bookmark-row').locator('.bookmark-check')).not.toBeChecked();
     });
 }
+
+// Code review H2/M1/M2 (2026-10-04): a switch that decides nothing is not offered, and a save without a change is no
+// edit (kept, it would freeze the pack's text of today and travel in cards).
+test('the prompt page locks the switches that decide nothing, and a save without a change stores nothing',
+  { tag: ['@regression', '@prompts'] }, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-1920', 'one viewport is enough for the prompt page');
+    await seedSave(page);
+    await enterSeededGame(page);
+    await goToGameTab(page, 'prompts');
+    await page.getByRole('button', { name: '内置提示词', exact: true }).click();
+    await page.getByRole('button', { name: '展开', exact: true }).click();
+    // Every round needs these: on, locked.
+    for (const id of ['mainRound', 'splitGenStep1', 'splitGenStep2', 'splitGenStep2Followup', 'wordCountReq']) {
+      await expect(page.getByTestId(`prompt-toggle-${id}`)).toBeDisabled();
+      await expect(page.getByTestId(`prompt-toggle-${id}`)).toHaveAttribute('aria-checked', 'true');
+    }
+    // A setting chooses these (second person by default): they show the choice, locked.
+    await expect(page.getByTestId('prompt-toggle-perspectiveSecond')).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('prompt-toggle-perspectiveFirst')).toHaveAttribute('aria-checked', 'false');
+    for (const id of ['perspectiveFirst', 'perspectiveSecond', 'storyStyleGeneral']) {
+      await expect(page.getByTestId(`prompt-toggle-${id}`)).toBeDisabled();
+    }
+    // An ordinary prompt keeps its switch.
+    await expect(page.getByTestId('prompt-toggle-jailbreak')).toBeEnabled();
+    // Opened and saved without a change: no edit.
+    const card = page.locator('.prompt-card').filter({ has: page.getByTestId('prompt-toggle-jailbreak') });
+    await card.locator('.prompt-title-area').click();
+    await page.getByRole('button', { name: '保存修改' }).click();
+    await expect(page.locator('.prompt-editor')).toHaveCount(0);
+    await expect(card.locator('.modified-badge')).toHaveCount(0);
+    expect(await page.evaluate(() => localStorage.getItem('aga_prompt_tianming_jailbreak'))).toBeNull();
+  });

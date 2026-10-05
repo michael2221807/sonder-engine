@@ -64,4 +64,14 @@ describe('isValidCardBundleShape', () => {
     delete b.stateTree;
     expect(isValidCardBundleShape(b)).toBe(false);
   });
+
+  // Code review M3 (2026-10-04): the author's prompt edits, when carried, are a list; a single bad entry is skipped
+  // when applied, a container that is no list means a damaged card.
+  it('accepts carried prompt edits as a list of entries, and rejects a damaged container', () => {
+    expect(isValidCardBundleShape({ ...makeValid(), promptEdits: { version: 1, packId: 'tianming', entries: [{ id: 'x', content: 'y' }] } })).toBe(true);
+    expect(isValidCardBundleShape({ ...makeValid(), builtinPromptOverrides: { version: 1, exportedAt: 'x', entries: [] } })).toBe(true);
+    expect(isValidCardBundleShape({ ...makeValid(), promptEdits: { entries: 'oops' } })).toBe(false);
+    expect(isValidCardBundleShape({ ...makeValid(), promptEdits: null })).toBe(false);
+    expect(isValidCardBundleShape({ ...makeValid(), builtinPromptOverrides: [] })).toBe(false);
+  });
 });

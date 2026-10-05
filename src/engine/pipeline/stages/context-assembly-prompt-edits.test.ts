@@ -5,12 +5,13 @@
  * pack's text directly, so an edit or a switch on the prompt page reached Step 2 (the flow assembler reads the
  * registry) but never the story: a marker experiment on real requests showed every builder prompt sent as the pack
  * wrote it, switched-off prompts sent anyway. The stage now hands the builder the registry's view.
- * Registry set up as main.ts does: every pack prompt registered, the page's edits and switches applied on top.
+ * Registry set up as main.ts does (registerPack with the always-on prompts), the page's edits and switches on top.
  */
 import { describe, it, expect } from 'vitest';
 import { ContextAssemblyStage } from './context-assembly';
 import { PromptAssembler } from '../../prompt/prompt-assembler';
 import { PromptRegistry } from '../../prompt/prompt-registry';
+import { ALWAYS_ON_PROMPT_IDS } from '../../prompt/builtin-slots';
 import { TemplateEngine } from '../../prompt/template-engine';
 import { DEFAULT_ENGINE_PATHS } from '../types';
 import type { PipelineContext, IMemoryRetriever, IBehaviorRunner } from '../types';
@@ -29,6 +30,8 @@ const PACK_PROMPTS: Record<string, string> = {
   core: 'PACK CORE',
   splitGenStep2: 'PACK STEP2',
   splitGenStep2Followup: 'PACK FOLLOWUP',
+  perspectiveSecond: 'PACK PERSPECTIVE',
+  wordCountReq: 'PACK LENGTH',
 };
 
 function makeStage(edit: (registry: PromptRegistry) => void): ContextAssemblyStage {
@@ -39,7 +42,7 @@ function makeStage(edit: (registry: PromptRegistry) => void): ContextAssemblySta
     系统: { 设置: { prompt: { enableWorldBook: false } } },
   });
   const registry = new PromptRegistry();
-  for (const [id, content] of Object.entries(PACK_PROMPTS)) registry.register({ id, content, enabled: true });
+  registry.registerPack(PACK_PROMPTS, ALWAYS_ON_PROMPT_IDS);
   edit(registry);
   const pack = {
     id: 'test-pack',
@@ -126,6 +129,20 @@ describe('ContextAssembly · the prompt page reaches the story request', () => {
     const story = text(out.messages);
     expect(story).not.toContain('PACK JAILBREAK');
     expect(story).not.toContain('PACK CORE');
+  });
+
+  // Code review H2/M1 (2026-10-04): what a setting chooses and what the round needs is never dropped by a stored
+  // "off" (an older page let players switch them off; a card or a prompt file can still carry one).
+  it('the perspective the setting chose, the length rule and the Step 2 follow-up are sent despite a stored off', async () => {
+    const out = await makeStage((r) => {
+      r.setEnabled('perspectiveSecond', false);
+      r.setEnabled('wordCountReq', false);
+      r.setEnabled('splitGenStep2Followup', false);
+    }).execute(makeCtx({ splitGen: true, plotVectorPromptMode: true }));
+    const story = text(out.messages);
+    expect(story).toContain('PACK PERSPECTIVE');
+    expect(story).toContain('PACK LENGTH');
+    expect(String(out.meta.splitStep2Followup)).toContain('PACK FOLLOWUP');
   });
 
   it('Step 2 keeps reading the page too (the flow assembler), so both steps agree', async () => {
