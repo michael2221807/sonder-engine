@@ -99,7 +99,8 @@ const LS_DEVICE_LOCAL_KEYS: ReadonlySet<string> = new Set([
  * - collect: only the sync exports (`exportForSync`, `exportGlobalForSync`) carry them; `exportAll` does not;
  * - wipe: no import wipes them (the device keeps its value);
  * - restore: written back only by a download from the player's own sync (`importAll(…, { fromOwnSync: true })`);
- * - rollback: the pre-import snapshot records them (absent too), so a failed import puts them back exactly.
+ * - rollback: the snapshot of an own-sync download records them (absent too), so a failed download puts them back
+ *   exactly; any other import's snapshot leaves them out, and its rollback leaves them as they are now.
  */
 const LS_OWN_SYNC_KEYS: ReadonlySet<string> = new Set([PLOT_VECTOR_CONTROL_KEY]);
 
@@ -356,7 +357,8 @@ export class BackupService {
    * @returns 包含 JSON 数据的 Blob（MIME: application/json）
    */
   async exportAll(options?: { includeReferenceAssets?: boolean }): Promise<Blob> {
-    return (await this.buildFullBundle(options)).blob;
+    // Only this option: a manual backup never carries the own-sync keys, whatever object a caller passes in.
+    return (await this.buildFullBundle({ includeReferenceAssets: options?.includeReferenceAssets })).blob;
   }
 
   /**
@@ -599,7 +601,7 @@ export class BackupService {
     const imagesLookDropped = bundleImagesLookDropped(bundle);
 
     /* ── 1. 捕获当前状态快照，供失败时回滚 ── */
-    const snapshot = await this.captureCurrentState();
+    const snapshot = await this.captureCurrentState(source);
 
     // Every save is about to be replaced, its rollback included: nothing else writes a save meanwhile (§13.1).
     eventBus.emit('engine:save-replaced', { phase: 'begin' } satisfies SaveReplacedEvent);
@@ -865,7 +867,7 @@ export class BackupService {
       throw new Error(`importGlobal 只接受 bundleType='global' 的包，实际 '${bundle.bundleType}'`);
     }
 
-    const snapshot = await this.captureGlobalState();
+    const snapshot = await this.captureGlobalState(source);
 
     try {
       /* ── 擦除全局区（保持设备本地键；绝不碰档案数据） ── */
@@ -1070,12 +1072,13 @@ export class BackupService {
   }
 
   /** 全局区快照 — configs/prompts/localStorage/customPresets/builtinOverrides。 */
-  private async captureGlobalState(): Promise<GlobalSnapshot> {
+  private async captureGlobalState(source: ImportSource): Promise<GlobalSnapshot> {
     let configOverlays: unknown = null;
     let promptEntries: unknown = null;
     try { configOverlays = await this.configStore.exportAll(); } catch { /* best effort */ }
     try { promptEntries = await this.promptStorage.exportAll(); } catch { /* best effort */ }
-    const ls = collectLocalStorageSettings({ ownSync: true, recordAbsentOwnSync: true });
+    // Own-sync keys only when this import may write them: a failed file import leaves the switch as it is now.
+    const ls = collectLocalStorageSettings({ snapshot: source.fromOwnSync === true });
     const customPresets = await this.collectCustomPresets();
 
     const builtinOverrides: Record<string, import('../prompt/world-book').BuiltinPromptEntry[]> = {};
@@ -1133,7 +1136,7 @@ export class BackupService {
   /**
    * 捕获当前完整持久化状态到内存对象，供失败回滚使用
    */
-  private async captureCurrentState(): Promise<PreImportSnapshot> {
+  private async captureCurrentState(source: ImportSource): Promise<PreImportSnapshot> {
     const idbKeys = await idbAdapter.keys();
     const idb: Record<string, unknown> = {};
     for (const key of idbKeys) {
@@ -1143,7 +1146,8 @@ export class BackupService {
       }
     }
 
-    const ls: Record<string, string | null> = collectLocalStorageSettings({ ownSync: true, recordAbsentOwnSync: true });
+    // Own-sync keys only when this import may write them (see captureGlobalState).
+    const ls: Record<string, string | null> = collectLocalStorageSettings({ snapshot: source.fromOwnSync === true });
 
     // ConfigStore 和 PromptStorage 可能使用独立 IDB store，
     // 通过各自的 exportAll 接口抓取当前完整状态
@@ -1957,16 +1961,18 @@ function isValidBundleShape(data: unknown): data is BackupBundle {
  * 避免采集其他库或应用的无关数据。
  */
 function collectLocalStorageSettings(
-  opts: { ownSync?: boolean; recordAbsentOwnSync?: boolean } = {},
+  opts: { ownSync?: boolean; snapshot?: boolean } = {},
 ): Record<string, string | null> {
   const settings: Record<string, string | null> = {};
-  // A rollback snapshot records an own-sync key that is not there too (null), so it is removed again.
-  if (opts.recordAbsentOwnSync) for (const key of LS_OWN_SYNC_KEYS) settings[key] = null;
+  // `snapshot`: a rollback snapshot of an own-sync download. It carries the own-sync keys, one that is not there
+  // too (null), so a failed download puts each back exactly — removed again when it was absent.
+  const ownSync = opts.ownSync === true || opts.snapshot === true;
+  if (opts.snapshot) for (const key of LS_OWN_SYNC_KEYS) settings[key] = null;
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (!key) continue;
     if (LS_DEVICE_LOCAL_KEYS.has(key)) continue; // device-local sync state never travels
-    if (LS_OWN_SYNC_KEYS.has(key) && !opts.ownSync) continue; // only the player's own sync carries these
+    if (LS_OWN_SYNC_KEYS.has(key) && !ownSync) continue; // only the player's own sync carries these
     if (LS_KEY_PREFIXES.some((p) => key.startsWith(p))) {
       settings[key] = localStorage.getItem(key);
     }

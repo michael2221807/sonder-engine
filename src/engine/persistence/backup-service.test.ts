@@ -185,9 +185,11 @@ describe('collectLocalStorageSettings', () => {
     expect(localStorage.getItem('aga_plot_vector_control')).toBe('{"enabled":true,"epoch":"mine"}');
     restoreLocalStorageSettings({ aga_plot_vector_control: '{"enabled":false,"epoch":"other"}' }, { ownSync: true });
     expect(localStorage.getItem('aga_plot_vector_control')).toBe('{"enabled":false,"epoch":"other"}');
-    // A rollback snapshot records it absent too, so a value a failed import wrote is removed again.
+    // An own-sync rollback snapshot carries it — present, or absent as null so a value a failed download wrote is
+    // removed again.
+    expect(collectLocalStorageSettings({ snapshot: true })).toHaveProperty('aga_plot_vector_control', '{"enabled":false,"epoch":"other"}');
     localStorage.removeItem('aga_plot_vector_control');
-    expect(collectLocalStorageSettings({ ownSync: true, recordAbsentOwnSync: true })).toHaveProperty('aga_plot_vector_control', null);
+    expect(collectLocalStorageSettings({ snapshot: true })).toHaveProperty('aga_plot_vector_control', null);
   });
 
   it('collects aga_tts_settings (配音偏好 travels with the backup)', () => {

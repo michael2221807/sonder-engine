@@ -492,6 +492,10 @@ describe('backup-service save-slot primitives', () => {
       expect(v1.engineSettings[KEY]).toBe(ON);
       const manual = JSON.parse(await (await service.exportAll()).text()) as BackupBundle;
       expect(manual.engineSettings).not.toHaveProperty(KEY);
+      // Review L2: an options object that happens to carry more (a typed variable, not a literal) changes nothing.
+      const wider = { includeReferenceAssets: false, ownSync: true };
+      const passed = JSON.parse(await (await service.exportAll(wider)).text()) as BackupBundle;
+      expect(passed.engineSettings).not.toHaveProperty(KEY);
     });
 
     it('a file never switches it; a download from the player\'s own sync does', async () => {
@@ -519,6 +523,56 @@ describe('backup-service save-slot primitives', () => {
       localStorage.setItem(KEY, OFF);
       await expect(service.importAll(toBlob(failing), { fromOwnSync: true })).rejects.toThrow('已回滚');
       expect(localStorage.getItem(KEY)).toBe(OFF);
+    });
+
+    // Code review 2026-10-04 (M1): the full-replace path (a v2 download, an un-migrated repo) had no test of its own.
+    const BOOM = { version: 1, exportedAt: 'x', books: [{ id: 'boom', _exportProfileId: 'p1' } as never] };
+    const fullWith = (settings: Record<string, string | null>, worldBooks?: BackupBundle['worldBooks']): BackupBundle => ({
+      ...bundleBase(), bundleType: 'full',
+      profiles: { p1: makeMeta('p1', ['s1']) }, saves: { 'p1/s1': makeSaveTree('imgA') }, vectors: {},
+      configs: { overlays: [] }, prompts: { entries: [] }, engineSettings: settings, worldBooks,
+    });
+
+    it('a full restore writes it for the player\'s own sync, and a full file import does not', async () => {
+      await seedTwoProfiles();
+      localStorage.setItem(KEY, OFF);
+      await service.importAll(toBlob(fullWith({ [KEY]: ON, aga_other: 'x' })));
+      expect(localStorage.getItem(KEY)).toBe(OFF);
+      expect(localStorage.getItem('aga_other')).toBe('x');
+      await service.importAll(toBlob(fullWith({ [KEY]: ON })), { fromOwnSync: true });
+      expect(localStorage.getItem(KEY)).toBe(ON);
+    });
+
+    it('a failed full download puts it back exactly, absent included', async () => {
+      await seedTwoProfiles();
+      // The world books are restored after the settings, so the switch has been written when this step fails.
+      worldBooks.failSaveWorldBook = true;
+      const failing = fullWith({ [KEY]: ON }, BOOM);
+      await expect(service.importAll(toBlob(failing), { fromOwnSync: true })).rejects.toThrow(/回滚/);
+      expect(localStorage.getItem(KEY)).toBeNull();
+      localStorage.setItem(KEY, OFF);
+      await expect(service.importAll(toBlob(failing), { fromOwnSync: true })).rejects.toThrow(/回滚/);
+      expect(localStorage.getItem(KEY)).toBe(OFF);
+    });
+
+    // Review L3: an import that never writes the switch never rolls it back either — a toggle the player made while a
+    // file import ran survives that import's failure.
+    it('a failed file import leaves the switch as the player set it meanwhile', async () => {
+      await seedTwoProfiles();
+      localStorage.setItem(KEY, OFF);
+      const save = worldBooks.saveWorldBook.bind(worldBooks);
+      worldBooks.saveWorldBook = async (pid: string, book: FakeBook) => {
+        if (book.id === 'boom') { localStorage.setItem(KEY, ON); throw new Error('worldbook boom'); }
+        return save(pid, book);
+      };
+      await expect(service.importAll(toBlob(fullWith({}, BOOM)))).rejects.toThrow(/回滚/);
+      expect(localStorage.getItem(KEY)).toBe(ON);
+
+      localStorage.setItem(KEY, OFF);
+      presets.packs.set('local-pack', { worlds: [] });
+      presets.clear = async () => { localStorage.setItem(KEY, ON); throw new Error('preset clear boom'); };
+      await expect(service.importAll(toBlob(globalWith({ aga_other: 'x' })))).rejects.toThrow('已回滚');
+      expect(localStorage.getItem(KEY)).toBe(ON);
     });
   });
 
