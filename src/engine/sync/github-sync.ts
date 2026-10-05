@@ -585,7 +585,7 @@ export class GitHubSyncService {
 
     emit('downloading', '正在校验并恢复…');
     const json = await unpack(manifest, chunks);
-    await this.backup.importAll(new Blob([json], { type: 'application/json' }));
+    await this.backup.importAll(new Blob([json], { type: 'application/json' }), { fromOwnSync: true });
     // Local now equals this cloud manifest. importAll's wipe preserves the
     // device-local baseline (backup-service LS_DEVICE_LOCAL_KEYS), so overwrite it
     // here with the cloud's createdAt — a later unchanged auto-upload sees no conflict.
@@ -611,7 +611,7 @@ export class GitHubSyncService {
 
     emit('downloading', '正在恢复本地数据…');
     const json = base64ToUtf8(blob.content);
-    await this.backup.importAll(new Blob([json], { type: 'application/json' }));
+    await this.backup.importAll(new Blob([json], { type: 'application/json' }), { fromOwnSync: true });
     emit('done', '下载并恢复完成');
   }
 
@@ -880,7 +880,7 @@ export class GitHubSyncService {
     if (parsed.bundleType !== 'global') {
       throw new Error(`云端设置插槽内容异常（bundleType='${parsed.bundleType ?? '(无)'}'），已中止恢复`);
     }
-    await this.backup.importAll(new Blob([json], { type: 'application/json' }));
+    await this.backup.importAll(new Blob([json], { type: 'application/json' }), { fromOwnSync: true });
     this.setSlotBaseline(GLOBAL_SLOT_KEY, manifest.createdAt);
     emit('done', '设置下载并恢复完成');
   }

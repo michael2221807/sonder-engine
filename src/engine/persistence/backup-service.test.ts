@@ -177,6 +177,19 @@ describe('collectLocalStorageSettings', () => {
     expect(localStorage.getItem('aga_plot_vector_control')).toBe('{"enabled":false,"epoch":"local"}');
   });
 
+  // P3 (PO 2026-10-04 A): the switch follows the player's own sync, and only it.
+  it('the player\'s own sync carries the switch: collected and written back for it, never wiped by any import', () => {
+    localStorage.setItem('aga_plot_vector_control', '{"enabled":true,"epoch":"mine"}');
+    expect(collectLocalStorageSettings({ ownSync: true })['aga_plot_vector_control']).toBe('{"enabled":true,"epoch":"mine"}');
+    wipeLocalStorageSettings();
+    expect(localStorage.getItem('aga_plot_vector_control')).toBe('{"enabled":true,"epoch":"mine"}');
+    restoreLocalStorageSettings({ aga_plot_vector_control: '{"enabled":false,"epoch":"other"}' }, { ownSync: true });
+    expect(localStorage.getItem('aga_plot_vector_control')).toBe('{"enabled":false,"epoch":"other"}');
+    // A rollback snapshot records it absent too, so a value a failed import wrote is removed again.
+    localStorage.removeItem('aga_plot_vector_control');
+    expect(collectLocalStorageSettings({ ownSync: true, recordAbsentOwnSync: true })).toHaveProperty('aga_plot_vector_control', null);
+  });
+
   it('collects aga_tts_settings (配音偏好 travels with the backup)', () => {
     // TTS global voice prefs (speaker/dialect/rate/auto-narrate) live in this key;
     // they must ride the engineSettings snapshot so backup + cloud-sync carry them.

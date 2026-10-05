@@ -474,6 +474,54 @@ describe('backup-service save-slot primitives', () => {
     });
   });
 
+  // ── P3（PO 2026-10-04 A）：剧情动能开关只随自己的云同步 ──
+
+  describe('the plot-momentum switch follows the player\'s own sync only (P3)', () => {
+    const KEY = 'aga_plot_vector_control';
+    const ON = '{"enabled":true,"epoch":"phone"}';
+    const OFF = '{"enabled":false,"epoch":"pc"}';
+    const globalWith = (settings: Record<string, string | null>): BackupBundle => ({
+      ...bundleBase(), bundleType: 'global', engineSettings: settings,
+    });
+
+    it('the sync exports carry it; a manual backup export does not', async () => {
+      localStorage.setItem(KEY, ON);
+      const global = JSON.parse(await (await service.exportGlobalForSync()).blob.text()) as BackupBundle;
+      expect(global.engineSettings[KEY]).toBe(ON);
+      const v1 = JSON.parse(await (await service.exportForSync()).blob.text()) as BackupBundle;
+      expect(v1.engineSettings[KEY]).toBe(ON);
+      const manual = JSON.parse(await (await service.exportAll()).text()) as BackupBundle;
+      expect(manual.engineSettings).not.toHaveProperty(KEY);
+    });
+
+    it('a file never switches it; a download from the player\'s own sync does', async () => {
+      localStorage.setItem(KEY, OFF);
+      await service.importAll(toBlob(globalWith({ [KEY]: ON, aga_other: 'x' })));
+      expect(localStorage.getItem(KEY)).toBe(OFF);
+      expect(localStorage.getItem('aga_other')).toBe('x');
+      await service.importAll(toBlob(globalWith({ [KEY]: ON })), { fromOwnSync: true });
+      expect(localStorage.getItem(KEY)).toBe(ON);
+    });
+
+    it('a sync bundle without it (an older client) leaves the device\'s switch as it is', async () => {
+      localStorage.setItem(KEY, ON);
+      await service.importAll(toBlob(globalWith({ aga_other: 'x' })), { fromOwnSync: true });
+      expect(localStorage.getItem(KEY)).toBe(ON);
+    });
+
+    it('a failed download puts it back exactly, absent included', async () => {
+      // A step after the settings are written fails: clearing a local preset pack the bundle does not have.
+      presets.packs.set('local-pack', { worlds: [] });
+      presets.clear = async () => { throw new Error('preset clear boom'); };
+      const failing = globalWith({ [KEY]: ON });
+      await expect(service.importAll(toBlob(failing), { fromOwnSync: true })).rejects.toThrow('已回滚');
+      expect(localStorage.getItem(KEY)).toBeNull();
+      localStorage.setItem(KEY, OFF);
+      await expect(service.importAll(toBlob(failing), { fromOwnSync: true })).rejects.toThrow('已回滚');
+      expect(localStorage.getItem(KEY)).toBe(OFF);
+    });
+  });
+
   // ── importAll（full）× 世界书（2026-09-09 数据丢失修复）──
 
   describe('importAll (full) — world books', () => {

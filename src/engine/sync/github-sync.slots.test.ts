@@ -482,6 +482,8 @@ describe('downloadGlobal', () => {
     await sync.downloadGlobal();
 
     expect(backup.importAll).toHaveBeenCalledOnce();
+    // P3 (PO 2026-10-04 A): a download from the player's own sync brings the plot-momentum switch along.
+    expect(backup.importAll.mock.calls[0][1]).toEqual({ fromOwnSync: true });
     const baselines = JSON.parse(storage.get('aga_github_sync_baselines')!) as Record<string, string>;
     expect(baselines[GLOBAL_SLOT_KEY]).toBe(manifest.createdAt);
   });

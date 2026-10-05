@@ -30,6 +30,7 @@ import type { ProfileMeta } from '../types';
 import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 import { computeWorldBookIntegrity, type WorldBookIntegrity } from './save-health-baseline';
 import { deriveProfileSaveStamp } from '../sync/save-freshness';
+import { PLOT_VECTOR_CONTROL_KEY } from '../plot-vector/feature-control';
 
 // ─── 常量 ───
 
@@ -79,7 +80,6 @@ const REFERENCE_LIBRARY_WARN_BYTES = 200 * 1024 * 1024;
  *   (survives across sessions so a failed tail-flush is retried next session)
  */
 const LS_DEVICE_LOCAL_KEYS: ReadonlySet<string> = new Set([
-  'aga_plot_vector_control', // Experimental execution opt-in must not travel with a save/import.
   'aga_github_sync_baseline',
   'aga_github_sync_pending',
   // 存档插槽 epic（2026-07-23）：插槽化后基线/待传标志变为 per-slot JSON map，
@@ -91,6 +91,23 @@ const LS_DEVICE_LOCAL_KEYS: ReadonlySet<string> = new Set([
   // 若随备份迁移，恢复方会继承源设备的指纹，"这个存档是哪台设备传的"就失去意义。
   'aga_device_id',
 ]);
+
+/**
+ * Keys that travel with the player's own cloud sync and nothing else (P3, PO 2026-10-04 A): the plot-momentum
+ * switch follows the player from device to device, but a backup file, a game card or another player's bundle never
+ * switches it.
+ * - collect: only the sync exports (`exportForSync`, `exportGlobalForSync`) carry them; `exportAll` does not;
+ * - wipe: no import wipes them (the device keeps its value);
+ * - restore: written back only by a download from the player's own sync (`importAll(…, { fromOwnSync: true })`);
+ * - rollback: the pre-import snapshot records them (absent too), so a failed import puts them back exactly.
+ */
+const LS_OWN_SYNC_KEYS: ReadonlySet<string> = new Set([PLOT_VECTOR_CONTROL_KEY]);
+
+/** How an import was reached: from the player's own cloud sync, or anything else (a file, a card). */
+export interface ImportSource {
+  /** A download from the player's own GitHub sync: own-sync keys in the bundle are written back. */
+  fromOwnSync?: boolean;
+}
 
 // ─── 类型 ───
 
@@ -349,12 +366,12 @@ export class BackupService {
   async exportForSync(
     options?: { includeReferenceAssets?: boolean },
   ): Promise<{ blob: Blob; imageIntegrity: ExportImageIntegrity; worldBookIntegrity?: WorldBookIntegrity }> {
-    return this.buildFullBundle(options);
+    return this.buildFullBundle({ ...options, ownSync: true });
   }
 
   /** 组装完整备份包，返回 Blob 及本次导出的图片完整性（referenced vs exported）。 */
   private async buildFullBundle(
-    options?: { includeReferenceAssets?: boolean },
+    options?: { includeReferenceAssets?: boolean; ownSync?: boolean },
   ): Promise<{ blob: Blob; imageIntegrity: ExportImageIntegrity; worldBookIntegrity?: WorldBookIntegrity }> {
     const root = this.profileManager.getRoot();
 
@@ -399,8 +416,8 @@ export class BackupService {
       entries: structuredClone(promptExport),
     };
 
-    /* ── 6. localStorage 引擎设置 ── */
-    const engineSettings = collectLocalStorageSettings();
+    /* ── 6. localStorage 引擎设置（own-sync keys only for the player's own sync） ── */
+    const engineSettings = collectLocalStorageSettings({ ownSync: options?.ownSync });
 
     /* ── 7. 用户自定义创角预设（按 packId 索引） ── */
     // 2026-04-14：遍历所有有 user 数据的 pack，导出每个的全量 customPresets
@@ -507,7 +524,7 @@ export class BackupService {
    * @param blob 由 exportAll() 或 exportProfile() 生成的 JSON Blob
    * @throws 备份包无效、版本不兼容、或导入失败时抛出
    */
-  async importAll(blob: Blob): Promise<void> {
+  async importAll(blob: Blob, source: ImportSource = {}): Promise<void> {
     const text = await blob.text();
     const raw: unknown = JSON.parse(text);
 
@@ -532,7 +549,7 @@ export class BackupService {
     // bundleType 显式标记优先，否则根据 configs/prompts/engineSettings 是否为空推断。
     // 'global' 包（云端设置插槽）只替换全局区；'full'/'profile' 路径行为不变。
     if (bundle.bundleType === 'global') {
-      await this.importGlobal(bundle);
+      await this.importGlobal(bundle, source);
       return;
     }
     const isFull =
@@ -540,7 +557,7 @@ export class BackupService {
       (bundle.bundleType === undefined && this.hasGlobalData(bundle));
 
     if (isFull) {
-      await this.importFullReplace(bundle);
+      await this.importFullReplace(bundle, source);
     } else {
       await this.importProfileMerge(bundle);
     }
@@ -577,7 +594,7 @@ export class BackupService {
    * 4. 任一步失败 → 从快照回滚
    * 5. 成功则更新 ProfileManager.activeProfile
    */
-  private async importFullReplace(bundle: BackupBundle): Promise<void> {
+  private async importFullReplace(bundle: BackupBundle, source: ImportSource = {}): Promise<void> {
     /* ── 0. 反放大检测：来档引用了图片却不含图片数据 → 保留本地现有图片，不连锁清空 ── */
     const imagesLookDropped = bundleImagesLookDropped(bundle);
 
@@ -596,7 +613,7 @@ export class BackupService {
       await this.restoreVectors(bundle.vectors);
       await this.restoreConfigs(bundle.configs);
       await this.restorePrompts(bundle.prompts);
-      restoreLocalStorageSettings(bundle.engineSettings);
+      restoreLocalStorageSettings(bundle.engineSettings, { ownSync: source.fromOwnSync });
 
       /* ── 4. 恢复用户自定义创角预设（2026-04-14 新增） ── */
       await this.restoreCustomPresets(bundle.customPresets);
@@ -843,7 +860,7 @@ export class BackupService {
    * builtinPromptOverrides），**不触碰**任何档案数据（profiles/saves/vectors/
    * worldBooks/图片/activeProfile）。失败时从全局区快照回滚。
    */
-  async importGlobal(bundle: BackupBundle): Promise<void> {
+  async importGlobal(bundle: BackupBundle, source: ImportSource = {}): Promise<void> {
     if (bundle.bundleType !== 'global') {
       throw new Error(`importGlobal 只接受 bundleType='global' 的包，实际 '${bundle.bundleType}'`);
     }
@@ -859,7 +876,7 @@ export class BackupService {
       /* ── 恢复 ── */
       await this.restoreConfigs(bundle.configs);
       await this.restorePrompts(bundle.prompts);
-      restoreLocalStorageSettings(bundle.engineSettings);
+      restoreLocalStorageSettings(bundle.engineSettings, { ownSync: source.fromOwnSync });
 
       // 自定义预设：来包各 pack 整组替换；本地有、来包没有的 pack 清空（真替换）。
       // 本地 pack 清单必须在清理**之前**捕获——清理后 listPackIds 不再返回被清的
@@ -1058,7 +1075,7 @@ export class BackupService {
     let promptEntries: unknown = null;
     try { configOverlays = await this.configStore.exportAll(); } catch { /* best effort */ }
     try { promptEntries = await this.promptStorage.exportAll(); } catch { /* best effort */ }
-    const ls = collectLocalStorageSettings();
+    const ls = collectLocalStorageSettings({ ownSync: true, recordAbsentOwnSync: true });
     const customPresets = await this.collectCustomPresets();
 
     const builtinOverrides: Record<string, import('../prompt/world-book').BuiltinPromptEntry[]> = {};
@@ -1126,7 +1143,7 @@ export class BackupService {
       }
     }
 
-    const ls: Record<string, string | null> = collectLocalStorageSettings();
+    const ls: Record<string, string | null> = collectLocalStorageSettings({ ownSync: true, recordAbsentOwnSync: true });
 
     // ConfigStore 和 PromptStorage 可能使用独立 IDB store，
     // 通过各自的 exportAll 接口抓取当前完整状态
@@ -1697,7 +1714,7 @@ export class BackupService {
     const promptExport = await this.promptStorage.exportAll();
     const prompts: Record<string, unknown> = { entries: structuredClone(promptExport) };
 
-    const engineSettings = collectLocalStorageSettings();
+    const engineSettings = collectLocalStorageSettings({ ownSync: true });
     const customPresets = await this.collectCustomPresets();
 
     // Builtin prompt overrides — 沿用全量导出的单 pack 现状（BuiltinPromptExportData
@@ -1939,12 +1956,17 @@ function isValidBundleShape(data: unknown): data is BackupBundle {
  * 收集以 `aga_` 或 `aga-` 开头的 key，
  * 避免采集其他库或应用的无关数据。
  */
-function collectLocalStorageSettings(): Record<string, string | null> {
+function collectLocalStorageSettings(
+  opts: { ownSync?: boolean; recordAbsentOwnSync?: boolean } = {},
+): Record<string, string | null> {
   const settings: Record<string, string | null> = {};
+  // A rollback snapshot records an own-sync key that is not there too (null), so it is removed again.
+  if (opts.recordAbsentOwnSync) for (const key of LS_OWN_SYNC_KEYS) settings[key] = null;
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (!key) continue;
     if (LS_DEVICE_LOCAL_KEYS.has(key)) continue; // device-local sync state never travels
+    if (LS_OWN_SYNC_KEYS.has(key) && !opts.ownSync) continue; // only the player's own sync carries these
     if (LS_KEY_PREFIXES.some((p) => key.startsWith(p))) {
       settings[key] = localStorage.getItem(key);
     }
@@ -1964,6 +1986,7 @@ function wipeLocalStorageSettings(): void {
     const key = localStorage.key(i);
     if (!key) continue;
     if (LS_DEVICE_LOCAL_KEYS.has(key)) continue; // keep this device's own sync bookkeeping across a foreign restore
+    if (LS_OWN_SYNC_KEYS.has(key)) continue; // no import wipes these; only an own-sync download replaces them
     if (LS_KEY_PREFIXES.some((p) => key.startsWith(p))) {
       keysToRemove.push(key);
     }
@@ -1984,10 +2007,12 @@ function wipeLocalStorageSettings(): void {
  */
 function restoreLocalStorageSettings(
   settings: Record<string, string | null>,
+  opts: { ownSync?: boolean } = {},
 ): void {
   for (const [key, value] of Object.entries(settings)) {
     if (!LS_KEY_PREFIXES.some((p) => key.startsWith(p))) continue;
     if (LS_DEVICE_LOCAL_KEYS.has(key)) continue; // a bundle must never overwrite device-local sync state
+    if (LS_OWN_SYNC_KEYS.has(key) && !opts.ownSync) continue; // a file or a card never switches these
     if (value === null) {
       localStorage.removeItem(key);
     } else {

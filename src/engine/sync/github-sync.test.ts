@@ -682,6 +682,8 @@ describe('download — v2 chunked pipeline', () => {
     await sync.download();
 
     expect(backup.importAll).toHaveBeenCalledOnce();
+    // P3 (PO 2026-10-04 A): a download from the player's own sync brings the plot-momentum switch along.
+    expect(backup.importAll.mock.calls[0][1]).toEqual({ fromOwnSync: true });
     const importedBlob = backup.importAll.mock.calls[0][0] as Blob;
     const importedText = await importedBlob.text();
     expect(importedText).toBe(json);
