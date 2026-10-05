@@ -50,6 +50,13 @@ export const BUILTIN_SLOTS: Record<string, BuiltinSlotDefinition> = {
     description: '定义 AI 的输出标签结构（<正文>、<judge> 等）和指令场景规则',
     defaultPromptId: 'core',
   },
+  narrative_rules: {
+    id: 'narrative_rules',
+    title: '写正文规则',
+    category: '主剧情',
+    description: '叙事纯净、判定、NPC 取名与独立性、玩家自主权、合理性审查（写故事的每一步都带）',
+    defaultPromptId: 'coreNarrative',
+  },
   setting_authority: {
     id: 'setting_authority',
     title: '作者设定标记',

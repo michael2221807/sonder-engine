@@ -132,7 +132,7 @@ describe('applyGproxyCacheReorder', () => {
   it('static id set includes exactly the intended pieces', () => {
     expect([...GPROXY_CACHE_STATIC_PIECE_IDS].sort()).toEqual(
       ['ai_role', 'cot_core', 'cot_judge', 'format_prompt', 'jailbreak', 'length_prompt',
-       'narrative_constraints', 'output_protocol', 'perspective_prompt', 'write_anti_cliche',
+       'narrative_constraints', 'narrative_rules', 'output_protocol', 'perspective_prompt', 'write_anti_cliche',
        'write_emotion_guard', 'write_no_control', 'write_style'].sort(),
     );
   });

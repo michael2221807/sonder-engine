@@ -63,6 +63,7 @@ export const GPROXY_CACHE_STATIC_PIECE_IDS: ReadonlySet<string> = new Set([
   'perspective_prompt',
   'length_prompt',
   'narrative_constraints',
+  'narrative_rules',
   'output_protocol',
   'format_prompt',
   'cot_core',
@@ -87,6 +88,11 @@ export interface SystemPromptBuildParams {
    * meant to inform the narrative. Absent or empty = no piece.
    */
   bookmarkedRoundsBlock?: string;
+  /**
+   * The previous round's thinking, framed by the pack (`engineFragments.prevThinkingHeader`), for the CoT module's
+   * `{{PREV_THINKING}}` (CoT-2 design; PO 2026-10-05 4A). Absent or empty on the first round or with CoT off.
+   */
+  prevThinking?: string;
   /** The rendered action-options module for a single call (the player's mode, pace and request); absent = none. */
   actionOptionsBlock?: string;
   /** Round-selected prompt for the format slot (e.g. the split Step 1 narrative format) instead of the slot's default. */
@@ -308,6 +314,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
     wordCount: String(lengthAsked.target),
     wordCountMin: String(lengthAsked.min),
     wordCountMax: String(lengthAsked.max),
+    PREV_THINKING: params.prevThinking ?? '',
   };
 
   // Helper to resolve + render a slot through the full 5-step pipeline
@@ -340,11 +347,10 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
     entries.push({ id, title, category, role, content: trimmed, isUserInput: options?.isUserInput });
   };
 
-  // ── 0. Jailbreak (single call) — the pack's own round flows open with it; this builder, ported from a demo
-  // without one, left it out (P13, PO 2026-10-04). Split Step 2 carries it through its flow. ──
-  if (!splitGen) {
-    push('jailbreak', '破限声明', '系统', 'system', renderPackPrompt('jailbreak'));
-  }
+  // ── 0. Jailbreak — the pack's own round flows open with it; this builder, ported from a demo without one, left it
+  // out: the single call since P13 (PO 2026-10-04), split Step 1 too since 2A (PO 2026-10-05). Step 2 carries it
+  // through its flow. ──
+  push('jailbreak', '破限声明', '系统', 'system', renderPackPrompt('jailbreak'));
 
   // ── 1. AI Role Declaration ──
   push('ai_role', 'AI角色声明', '系统', 'system', slot('narrator_role'));
@@ -686,7 +692,11 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
     push('extra_prompt', '额外要求提示词', '用户', 'user', settings.customSystemPrompt.trim());
   }
 
-  // ── 22. Format/Output Protocol ──
+  // ── 22. Writing rules + Format/Output Protocol ──
+  // Every request that writes the story gets the pack's writing rules (narrative purity, judgements, NPC names and
+  // independence, player autonomy, plausibility): split Step 1 and the single call alike (PO 2026-10-05 3C; they
+  // were half of `core`, which Step 1 never had).
+  push('narrative_rules', '写正文规则', '系统', 'system', slot('narrative_rules'));
   // A single call writes the commands too: it needs the output protocol (core), which the format prompt refers to
   // as the rules above. Without it a single call wrote paths the state tree does not have (P13, PO 2026-10-04).
   if (!splitGen) {

@@ -505,9 +505,12 @@ describe('buildSystemPrompt · a single call carries the jailbreak and the outpu
     expect(edited.contextPieces.output_protocol).toBeUndefined();
     expect(JSON.stringify(edited.messageEntries)).not.toContain('CORE RULES');
   });
-  it('split Step 1 writes only the story and carries neither (Step 2 carries both through its flow)', () => {
+  // 2A (PO 2026-10-05): split Step 1 writes the story — it opens with the jailbreak too; the output protocol, which is
+  // about commands, stays with Step 2's flow.
+  it('split Step 1 opens with the jailbreak and leaves the output protocol to Step 2', () => {
     const step1 = build(true);
-    expect(step1.contextPieces.jailbreak).toBeUndefined();
+    expect(ids(step1)[0]).toBe('jailbreak');
+    expect(step1.contextPieces.jailbreak).toBe('jailbreak:JAILBREAK');
     expect(step1.contextPieces.output_protocol).toBeUndefined();
   });
   it('both are the same every round: with the gproxy cache on they lead the cached prefix, the jailbreak first', () => {
@@ -516,5 +519,58 @@ describe('buildSystemPrompt · a single call carries the jailbreak and the outpu
     expect(cached.indexOf('output_protocol')).toBeLessThan(cached.indexOf('memory_long'));
     expect(GPROXY_CACHE_STATIC_PIECE_IDS.has('jailbreak')).toBe(true);
     expect(GPROXY_CACHE_STATIC_PIECE_IDS.has('output_protocol')).toBe(true);
+  });
+});
+
+// 3C (PO 2026-10-05): core's rules for writing the story (narrative purity, judgements, NPC names, player autonomy,
+// plausibility) are their own prompt, `coreNarrative`. Every request that writes the story carries it — split Step 1
+// and the single call — right before the protocol; the data and command rules stay in `core`.
+describe('buildSystemPrompt · the writing rules reach every request that writes the story', () => {
+  function build(splitGen: boolean, edits: Record<string, string> = {}) {
+    const { sm } = createMockStateManager({});
+    return buildSystemPrompt({ stateManager: sm as unknown as StateManager, paths: DEFAULT_ENGINE_PATHS,
+      packPrompts: { mainRound: 'FORMAT', jailbreak: 'JAILBREAK', core: 'COMMAND RULES', coreNarrative: 'WRITING RULES', ...edits },
+      worldBooks: [], userInput: 'hi', playerName: 'p',
+      cotEnabled: false, cotJudgeEnabled: false, splitGen, cotPseudoEnabled: false,
+      transformPrompt: (id, raw) => raw && `${id}:${raw}` });
+  }
+  const ids = (r: ReturnType<typeof build>) => r.messageEntries.map((e) => e.id);
+
+  it('split Step 1 carries the writing rules and not the command rules', () => {
+    const step1 = build(true);
+    expect(step1.contextPieces.narrative_rules).toBe('coreNarrative:WRITING RULES');
+    expect(JSON.stringify(step1.messageEntries)).not.toContain('COMMAND RULES');
+    expect(ids(step1).indexOf('narrative_rules')).toBe(ids(step1).indexOf('format_prompt') - 1);
+  });
+  it('a single call carries both, the writing rules first', () => {
+    const single = build(false);
+    expect(single.contextPieces.narrative_rules).toBe('coreNarrative:WRITING RULES');
+    expect(single.contextPieces.output_protocol).toBe('core:COMMAND RULES');
+    expect(ids(single).indexOf('narrative_rules')).toBe(ids(single).indexOf('output_protocol') - 1);
+    expect(single.runtimePromptStates.narrative_rules).toBe(true);
+  });
+  it('they are sent as the player left them: edited, or not at all when switched off', () => {
+    expect(build(true, { coreNarrative: 'MINE' }).contextPieces.narrative_rules).toBe('coreNarrative:MINE');
+    expect(build(true, { coreNarrative: '' }).contextPieces.narrative_rules).toBeUndefined();
+  });
+  it('they are the same every round, so they belong to the cached prefix', () => {
+    expect(GPROXY_CACHE_STATIC_PIECE_IDS.has('narrative_rules')).toBe(true);
+  });
+});
+
+// 4A (PO 2026-10-05): the CoT module ends with {{PREV_THINKING}} — the previous round's thinking (CoT-2 design). This
+// builder knew no such variable and rendered it empty, while the reasoning ring kept filling unread.
+describe('buildSystemPrompt · the previous round\'s thinking reaches the CoT module', () => {
+  function build(prevThinking?: string) {
+    const { sm } = createMockStateManager({});
+    return buildSystemPrompt({ stateManager: sm as unknown as StateManager, paths: DEFAULT_ENGINE_PATHS,
+      packPrompts: { mainRound: 'FORMAT', 'cot-preamble': 'THINK FIRST\n{{PREV_THINKING}}' },
+      worldBooks: [], userInput: 'hi', playerName: 'p', prevThinking,
+      cotEnabled: true, cotJudgeEnabled: false, splitGen: true, cotPseudoEnabled: false });
+  }
+  it('renders the framed thinking where the module asks for it, and nothing on a first round', () => {
+    expect(build('## LAST ROUND\nthe guard is lying').contextPieces.cot_core).toBe('THINK FIRST\n## LAST ROUND\nthe guard is lying');
+    expect(build().contextPieces.cot_core).toBe('THINK FIRST');
+    expect(build('').contextPieces.cot_core).toBe('THINK FIRST');
   });
 });

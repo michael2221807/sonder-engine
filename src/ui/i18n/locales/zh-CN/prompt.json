@@ -112,7 +112,8 @@
 
   "prompt.display.narratorFrame": "叙事者身份框架",
   "prompt.display.narratorEnforcement": "执行强化提醒",
-  "prompt.display.core": "核心规则·输出格式",
+  "prompt.display.core": "核心规则·输出格式与指令",
+  "prompt.display.coreNarrative": "核心规则·写正文",
   "prompt.display.mainRound": "主回合生成指令",
   "prompt.display.opening": "开局场景",
   "prompt.display.memorySummary": "记忆总结",

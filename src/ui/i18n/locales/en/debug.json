@@ -261,6 +261,7 @@
   "promptAssembly.builder.stateAgreements": "Agreements",
   "promptAssembly.builder.narrativeConstraints": "Narrative Constraints + Style",
   "promptAssembly.builder.extraPrompt": "Extra Requirements",
+  "promptAssembly.builder.narrativeRules": "Core Rules · Writing the Story",
   "promptAssembly.builder.outputProtocol": "Core Rules · Output Protocol",
   "promptAssembly.builder.formatPrompt": "Output Format",
   "promptAssembly.builder.wbSystemRules": "World book · system rules",

@@ -112,7 +112,8 @@
 
   "prompt.display.narratorFrame": "Narrator Identity Framework",
   "prompt.display.narratorEnforcement": "Enforcement Reminder",
-  "prompt.display.core": "Core Rules · Output Format",
+  "prompt.display.core": "Core Rules · Output Format & Commands",
+  "prompt.display.coreNarrative": "Core Rules · Writing the Story",
   "prompt.display.mainRound": "Main Round Instructions",
   "prompt.display.opening": "Opening Scene",
   "prompt.display.memorySummary": "Memory Summary",

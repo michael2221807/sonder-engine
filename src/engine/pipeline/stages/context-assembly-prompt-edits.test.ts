@@ -28,18 +28,23 @@ const PACK_PROMPTS: Record<string, string> = {
   emotionGuard: 'PACK EMOTION',
   jailbreak: 'PACK JAILBREAK',
   core: 'PACK CORE',
+  coreNarrative: 'PACK WRITING RULES',
+  'cot-preamble': 'PACK COT\n{{PREV_THINKING}}',
   splitGenStep2: 'PACK STEP2',
   splitGenStep2Followup: 'PACK FOLLOWUP',
   perspectiveSecond: 'PACK PERSPECTIVE',
   wordCountReq: 'PACK LENGTH',
 };
 
-function makeStage(edit: (registry: PromptRegistry) => void): ContextAssemblyStage {
+function makeStage(
+  edit: (registry: PromptRegistry) => void,
+  opts: { cot?: boolean; reasoning?: string[]; fragments?: Record<string, string> } = {},
+): ContextAssemblyStage {
   const { sm } = createMockStateManager({
-    元数据: { 回合序号: 12, 叙事历史: [] },
+    元数据: { 回合序号: 12, 叙事历史: [], 推理历史: opts.reasoning ?? [] },
     世界: { 时间: { 年: 1, 月: 1, 日: 1, 小时: 8, 分钟: 0 }, 信息: {}, 描述: 'w' },
     角色: { 基础信息: { 姓名: '主角' } },
-    系统: { 设置: { prompt: { enableWorldBook: false } } },
+    系统: { 设置: { prompt: { enableWorldBook: false }, cot: { enabled: opts.cot === true } } },
   });
   const registry = new PromptRegistry();
   registry.registerPack(PACK_PROMPTS, ALWAYS_ON_PROMPT_IDS);
@@ -56,7 +61,7 @@ function makeStage(edit: (registry: PromptRegistry) => void): ContextAssemblySta
         ],
       },
     },
-    engineFragments: {},
+    engineFragments: opts.fragments ?? {},
   } as unknown as GamePack;
   const memoryRetriever: IMemoryRetriever = { retrieve: () => '' };
   const behaviorRunner: IBehaviorRunner = {
@@ -124,11 +129,32 @@ describe('ContextAssembly · the prompt page reaches the story request', () => {
     expect(text(off.messages)).not.toContain('PACK CORE');
   });
 
-  it('split Step 1 writes only the story: no jailbreak, no protocol (Step 2 has both)', async () => {
-    const out = await makeStage(() => undefined).execute(makeCtx({ splitGen: true }));
+  // 2A + 3C (PO 2026-10-05): split Step 1 writes the story: it opens with the jailbreak and carries core's writing
+  // rules (coreNarrative), as the player left them; the data and command rules (core) stay with Step 2.
+  it('split Step 1 carries the jailbreak and the writing rules as the player left them, not the command rules', async () => {
+    const out = await makeStage((r) => r.setUserContent('jailbreak', 'EDITED JAILBREAK')).execute(makeCtx({ splitGen: true }));
     const story = text(out.messages);
+    expect(story).toContain('EDITED JAILBREAK');
     expect(story).not.toContain('PACK JAILBREAK');
+    expect(story).toContain('PACK WRITING RULES');
     expect(story).not.toContain('PACK CORE');
+    const off = await makeStage((r) => r.setEnabled('coreNarrative', false)).execute(makeCtx({ splitGen: true }));
+    expect(text(off.messages)).not.toContain('PACK WRITING RULES');
+  });
+
+  // 4A (PO 2026-10-05): the CoT module's {{PREV_THINKING}} carries the last thinking in the reasoning ring, framed by
+  // the pack; it rendered empty in the story request before.
+  it('the previous round thinking reaches the CoT module, framed by the pack; none on a first round or with CoT off', async () => {
+    const fragments = { prevThinkingHeader: '## LAST ROUND (do not copy)\n{content}' };
+    const out = await makeStage(() => undefined, { cot: true, reasoning: ['older', 'the guard is lying $1'], fragments })
+      .execute(makeCtx({ splitGen: true }));
+    expect(text(out.messages)).toContain('PACK COT\n## LAST ROUND (do not copy)\nthe guard is lying $1');
+    expect(text(out.messages)).not.toContain('older');
+    const first = await makeStage(() => undefined, { cot: true, reasoning: [], fragments }).execute(makeCtx({ splitGen: true }));
+    expect(text(first.messages)).not.toContain('LAST ROUND');
+    const off = await makeStage(() => undefined, { cot: false, reasoning: ['the guard is lying'], fragments })
+      .execute(makeCtx({ splitGen: true }));
+    expect(text(off.messages)).not.toContain('the guard is lying');
   });
 
   // Code review H2/M1 (2026-10-04): what a setting chooses and what the round needs is never dropped by a stored

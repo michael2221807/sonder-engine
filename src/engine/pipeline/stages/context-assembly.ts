@@ -299,6 +299,11 @@ export class ContextAssemblyStage implements PipelineStage {
     const prevThinking = reasoningHistory.length > 0
       ? reasoningHistory[reasoningHistory.length - 1]
       : '';
+    // The previous round's thinking for the CoT module's {{PREV_THINKING}} (CoT-2 design, connected 2026-10-05 4A),
+    // framed by the pack so the model reads it as continuity, not a script to repeat; bare when a pack has no frame.
+    const prevThinkingBlock = typeof prevThinking === 'string' && prevThinking.trim()
+      ? (this.pack.engineFragments?.prevThinkingHeader ?? '{content}').replace('{content}', () => prevThinking.trim())
+      : '';
 
     const storyPlanRaw = cotEnabled
       ? (this.stateManager.get<string>(this.paths.storyPlan) ?? '')
@@ -434,7 +439,7 @@ export class ContextAssemblyStage implements PipelineStage {
       COT_DISABLED: cotEnabled ? '' : '1',
       COT_JUDGE_ENABLED: cotJudgeEnabled ? '1' : '',
       COT_INJECT_STEP2_ENABLED: cotInjectStep2 ? '1' : '',
-      PREV_THINKING: prevThinking,
+      PREV_THINKING: prevThinkingBlock,
       PREV_STORY_PLAN: prevStoryPlan,
 
       // ── NPC Presence plugin variables (Sprint Social-2) ──
@@ -581,6 +586,7 @@ export class ContextAssemblyStage implements PipelineStage {
         paths: this.paths,
         packPrompts: roundPrompts,
         bookmarkedRoundsBlock,
+        prevThinking: prevThinkingBlock,
         worldBooks: mergedWorldBooks,
         userInput: ctx.userInput,
         playerName: this.stateManager.get<string>(this.paths.playerName) ?? '',

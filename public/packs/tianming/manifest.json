@@ -32,7 +32,7 @@
   },
   "prompts": [
       "narratorFrame", "narratorEnforcement", "plotVectorMode", "splitGenStep2Followup", "jailbreak", "creationGenJailbreak", "assistantJailbreak",
-    "assistantInjectionContract", "historyFraming", "core", "worldGen", "opening", "mainRound",
+    "assistantInjectionContract", "historyFraming", "core", "coreNarrative", "worldGen", "opening", "mainRound",
     "memorySummary", "memorySummaryInput", "midTermRefine", "midTermRefineInput",
     "longTermCompact", "longTermCompactInput", "splitGenStep1", "splitGenStep2",
     "splitGenContext", "settingAuthority", "settingCapture", "worldHeartbeat", "worldHeartbeatInput",
