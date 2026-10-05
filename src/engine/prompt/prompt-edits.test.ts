@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   promptContentKey, promptEnabledKey, promptEditIds, readPromptEdits, writePromptEdits, restorePromptEdits,
   hydratePromptRegistry, promptEditsFromSlotOverrides, sanitizePromptEdits, migrateLegacyBuiltinOverrides,
-  sameText, MAX_IMPORTED_PROMPT_LENGTH, resplitPromptEdits,
+  sameText, MAX_IMPORTED_PROMPT_LENGTH, resplitPromptEdits, promptSplitsDoneKey,
   type EditStorage,
 } from './prompt-edits';
 import { PromptRegistry } from './prompt-registry';
@@ -178,11 +178,13 @@ describe('resplitPromptEdits (a prompt the pack split in two)', () => {
   };
   const SPLIT = [{ from: 'core', to: 'coreNarrative' }];
   const key = (id: string) => promptContentKey('p', id);
+  const upgradedNote = { [promptSplitsDoneKey('p')]: JSON.stringify(['core>coreNarrative']) };
 
   it('an old edit left as the pack wrote it becomes no edit at all', () => {
     const s = memoryStorage({ [key('core')]: OLD });
     expect(resplitPromptEdits('p', SPLIT, DEFAULTS, s)).toBe(1);
-    expect(s.dump()).toEqual({});
+    // No edit left — only the note that this device has had the upgrade.
+    expect(s.dump()).toEqual(upgradedNote);
   });
 
   it('the player\'s changes land in the prompt their section now belongs to, and nowhere twice', () => {
@@ -201,20 +203,53 @@ describe('resplitPromptEdits (a prompt the pack split in two)', () => {
     expect(story).toContain('## C. NPC');
   });
 
-  it('leaves an edit of the new kind, and a split the player already edited, alone', () => {
-    const fresh = memoryStorage({ [key('core')]: DEFAULTS.core.replace('json only', 'json only!') });
+  const upgraded = { [promptSplitsDoneKey('p')]: JSON.stringify(['core>coreNarrative']) };
+
+  it('after the upgrade leaves an edit of the new kind alone', () => {
+    const fresh = memoryStorage({ ...upgraded, [key('core')]: DEFAULTS.core.replace('json only', 'json only!') });
     expect(resplitPromptEdits('p', SPLIT, DEFAULTS, fresh)).toBe(0);
-    const both = memoryStorage({ [key('core')]: OLD.replace('camera only', 'x'), [key('coreNarrative')]: 'MY STORY RULES' });
-    expect(resplitPromptEdits('p', SPLIT, DEFAULTS, both)).toBe(0);
-    expect(both.getItem(key('coreNarrative'))).toBe('MY STORY RULES');
+    expect(fresh.getItem(key('core'))).toContain('json only!');
+    expect(fresh.getItem(promptEnabledKey('p', 'coreNarrative'))).toBeNull();
   });
 
-  it('a switched-off old prompt switches the new one off too, unless the player chose for it', () => {
+  // Re-review L2: the player's own edit of the new prompt wins; the old copies of its sections are only dropped.
+  it('when the player edited the new prompt already, keeps it and drops the copies from the old one', () => {
+    const both = memoryStorage({ [key('core')]: OLD.replace('json only', 'json only!'), [key('coreNarrative')]: 'MY STORY RULES' });
+    expect(resplitPromptEdits('p', SPLIT, DEFAULTS, both)).toBe(1);
+    expect(both.getItem(key('coreNarrative'))).toBe('MY STORY RULES');
+    expect(both.getItem(key('core'))).toContain('json only!');
+    expect(both.getItem(key('core'))).not.toContain('camera only');
+  });
+
+  // Re-review M1: the switch is carried over once, on the upgrade; a later "off" of the old prompt is only that.
+  it('a switched-off old prompt switches the new one off on the upgrade only, unless the player chose for it', () => {
     const off = memoryStorage({ [promptEnabledKey('p', 'core')]: 'false' });
     resplitPromptEdits('p', SPLIT, DEFAULTS, off);
     expect(off.getItem(promptEnabledKey('p', 'coreNarrative'))).toBe('false');
     const chosen = memoryStorage({ [promptEnabledKey('p', 'core')]: 'false', [promptEnabledKey('p', 'coreNarrative')]: 'true' });
     resplitPromptEdits('p', SPLIT, DEFAULTS, chosen);
     expect(chosen.getItem(promptEnabledKey('p', 'coreNarrative'))).toBe('true');
+    const later = memoryStorage({ ...upgraded, [promptEnabledKey('p', 'core')]: 'false' });
+    resplitPromptEdits('p', SPLIT, DEFAULTS, later);
+    expect(later.getItem(promptEnabledKey('p', 'coreNarrative'))).toBeNull();
+  });
+
+  // Re-review M2: an old edit that deleted every moved section keeps them out: the new prompt is switched off.
+  it('an old edit without any of the moved sections switches the new prompt off', () => {
+    const deleted = ['# Rules', 'You are the GM.', '---', '## A. Output', 'json only', '---', '## C. NPC', '### C2. Object', 'full object'].join('\n')
+      + '\nMY EXTRA';
+    const s = memoryStorage({ [key('core')]: deleted });
+    expect(resplitPromptEdits('p', SPLIT, DEFAULTS, s)).toBe(1);
+    expect(s.getItem(promptEnabledKey('p', 'coreNarrative'))).toBe('false');
+    expect(s.getItem(key('core'))).toContain('MY EXTRA');
+  });
+
+  // Re-review M3: a sub-section the player added under a moved section moves with it.
+  it('a sub-section the player added follows its section', () => {
+    const added = OLD.replace('camera only', 'camera only\n### B9. My addition\nmy own rule');
+    const s = memoryStorage({ [key('core')]: added });
+    resplitPromptEdits('p', SPLIT, DEFAULTS, s);
+    expect(s.getItem(key('coreNarrative'))).toContain('### B9. My addition\nmy own rule');
+    expect(s.getItem(key('core')) ?? '').not.toContain('My addition');
   });
 });

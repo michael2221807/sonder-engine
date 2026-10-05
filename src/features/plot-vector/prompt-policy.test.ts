@@ -241,7 +241,12 @@ describe('real pack judgment transition, zero network', () => {
   it('all literal edits match a current pack module; other text and interpolation remain intact', () => {
     const editKeys = rules.replacements.map(e => JSON.stringify([e.promptId, e.from]));
     expect(new Set(editKeys).size).toBe(editKeys.length);
-    for (const edit of rules.replacements) expect(packs.some(p => p.prompts[edit.promptId]?.replace(/\r\n/g, '\n').includes(edit.from))).toBe(true);
+    // Exactly once, in exactly one locale's copy of the prompt it names: a rule whose text moved to another prompt
+    // (the core split, 2026-10-05) matched nothing and silently stopped working (re-review L1).
+    for (const edit of rules.replacements) {
+      const matches = packs.map(p => (p.prompts[edit.promptId] ?? '').replace(/\r\n/g, '\n').split(edit.from).length - 1);
+      expect(matches.reduce((a, b) => a + b, 0), `${edit.promptId}: ${edit.from.slice(0, 40)}`).toBe(1);
+    }
     const h = harness(false, false, false, true, false);
     h.registry.setUserContent('mainRound', h.pack.prompts.mainRound + '\n自定义结尾 {{EXTRA}}');
     // A value filled into the module's own placeholder is never edited either (2026-10-04: the format prompt's context

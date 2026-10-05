@@ -189,14 +189,26 @@ function preambleOf(text: string): string {
   return (first === -1 ? lines : lines.slice(0, first)).join('\n').trimEnd();
 }
 
+/** The splits already applied on this device, per pack (`from>to`): the first load after a split is the upgrade. */
+export function promptSplitsDoneKey(packId: string): string {
+  return `aga_prompt_splits_${packId}`;
+}
+
 /**
  * Re-split an edit made before a pack split a prompt in two (code review M1, 2026-10-05: core → coreNarrative).
  * Such an edit still holds the sections the pack moved to the new prompt, so they were sent twice — the player's
  * copy in the old prompt and the pack's in the new — and the player's version never reached a request that carries
- * only the new prompt. Along the pack's own section headings (`## ` / `### ` lines of the two default texts): a
- * section whose heading is now only in `to` moves to an edit of `to`; one in both (a parent kept on each side) is
- * copied; any other stays. Nothing happens when the edit holds no moved heading (it is already of the new kind) or
- * the player has edited `to` already. A switched-off `from` switches `to` off too, as the player meant both off.
+ * only the new prompt.
+ *
+ * Along the pack's own section headings (`## ` / `### ` lines of the two default texts): a section whose heading is
+ * now only in `to` moves to an edit of `to`; one in both (a parent kept on each side) is copied; a sub-section the
+ * player added follows its section; any other stays. When the player has edited `to` already, that edit wins and
+ * the copies in `from` are only dropped.
+ *
+ * The first load after the split (per device, `promptSplitsDoneKey`) is the upgrade: whatever edit of `from` is
+ * stored then predates the split. A switched-off `from` switches `to` off too, and an edit that kept none of the
+ * moved sections (the player deleted them) switches `to` off rather than let the pack's copy back in. Later loads
+ * re-split only an edit that still holds a moved heading (an old card or export) and leave the switches alone.
  * Returns how many prompts it rewrote.
  */
 export function resplitPromptEdits(
@@ -206,35 +218,54 @@ export function resplitPromptEdits(
   storage?: EditStorage,
 ): number {
   const s = storeOf(storage);
+  let done: string[] = [];
+  try {
+    const parsed: unknown = JSON.parse(s.getItem(promptSplitsDoneKey(packId)) ?? '[]');
+    done = Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
+  } catch { /* a broken marker counts as none */ }
   let rewritten = 0;
   for (const { from, to } of splits) {
     const fromDefault = defaults[from], toDefault = defaults[to];
     if (typeof fromDefault !== 'string' || typeof toDefault !== 'string') continue;
-    const fromOff = s.getItem(promptEnabledKey(packId, from)) === 'false';
-    if (fromOff && s.getItem(promptEnabledKey(packId, to)) === null) s.setItem(promptEnabledKey(packId, to), 'false');
+    const tag = `${from}>${to}`;
+    const upgrade = !done.includes(tag);
+    if (upgrade) done.push(tag);
+    const offTo = () => { if (s.getItem(promptEnabledKey(packId, to)) === null) s.setItem(promptEnabledKey(packId, to), 'false'); };
+    if (upgrade && s.getItem(promptEnabledKey(packId, from)) === 'false') offTo();
     const stored = s.getItem(promptContentKey(packId, from));
-    if (stored === null || s.getItem(promptContentKey(packId, to)) !== null) continue;
+    if (stored === null) continue;
     const fromHeadings = headingsOf(fromDefault), toHeadings = headingsOf(toDefault);
     const lines = stored.replace(/\r\n/g, '\n').split('\n');
-    if (!lines.some((line) => toHeadings.has(line.trim()) && !fromHeadings.has(line.trim()))) continue;
+    const holdsMoved = lines.some((line) => toHeadings.has(line.trim()) && !fromHeadings.has(line.trim()));
+    if (!holdsMoved && !upgrade) continue;
     const kept: string[] = [], moved: string[] = [];
     let dest: 'from' | 'to' | 'both' = 'from';
+    let sectionDest: 'from' | 'to' | 'both' = 'from';
     for (const line of lines) {
       if (HEADING.test(line)) {
         const heading = line.trim();
-        dest = toHeadings.has(heading) ? (fromHeadings.has(heading) ? 'both' : 'to') : 'from';
+        const known = toHeadings.has(heading) ? (fromHeadings.has(heading) ? 'both' : 'to') : fromHeadings.has(heading) ? 'from' : undefined;
+        if (heading.startsWith('## ')) sectionDest = dest = known ?? 'from';
+        else dest = known ?? (sectionDest === 'to' ? 'to' : 'from');
       }
       if (dest !== 'to') kept.push(line);
       if (dest !== 'from') moved.push(line);
     }
     const nextFrom = kept.join('\n').trim();
-    const nextTo = `${preambleOf(toDefault)}\n\n${moved.join('\n').trim()}`;
     // A part the player left as the pack wrote it is no edit, whatever separators and blank lines it kept.
     if (sameWords(nextFrom, fromDefault)) s.removeItem(promptContentKey(packId, from));
     else s.setItem(promptContentKey(packId, from), nextFrom);
-    if (!sameWords(nextTo, toDefault)) s.setItem(promptContentKey(packId, to), nextTo);
+    const movedSections = moved.some((line) => HEADING.test(line) && !fromHeadings.has(line.trim()));
+    if (s.getItem(promptContentKey(packId, to)) === null) {
+      if (!movedSections) offTo();
+      else {
+        const nextTo = `${preambleOf(toDefault)}\n\n${moved.join('\n').trim()}`;
+        if (!sameWords(nextTo, toDefault)) s.setItem(promptContentKey(packId, to), nextTo);
+      }
+    }
     rewritten++;
   }
+  s.setItem(promptSplitsDoneKey(packId), JSON.stringify(done));
   return rewritten;
 }
 
