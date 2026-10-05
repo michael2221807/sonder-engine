@@ -358,7 +358,10 @@ export class GameCardImportService {
       // 3. Global opt-in payloads (only when ticked; default OFF). apiTemplate NEVER applied.
       if (opt.has('configOverlays')) await applyGlobalConfigOverlays(d.configStore, bundle.configOverlays);
       if (opt.has('promptOverrides')) await applyGlobalPromptOverrides(d.promptStorage, bundle.promptOverrides);
-      if (opt.has('builtinPromptOverrides')) applyGlobalPromptEdits(packId, bundle);
+      if (opt.has('builtinPromptOverrides')) {
+        const prompts = this.getPack()?.prompts;
+        applyGlobalPromptEdits(packId, bundle, prompts ? new Set(Object.keys(prompts)) : undefined);
+      }
       if (opt.has('settings')) applyGlobalSettings(bundle.settings);
 
       // 4. NSFW gate: write localStorage BEFORE activation (P0-2 — loadGame's

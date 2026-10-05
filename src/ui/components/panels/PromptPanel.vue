@@ -26,8 +26,8 @@ import { eventBus } from '@/engine/core/event-bus';
 import type { GamePack } from '@/engine/types/game-pack';
 import { useGameState } from '@/ui/composables/useGameState';
 import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio, actionOptionsOn, wordCountOf, type PromptSettings } from '@/engine/prompt/world-book';
-import { BUILTIN_SLOTS, ROUND_REQUIRED_PROMPT_IDS } from '@/engine/prompt/builtin-slots';
-import { promptContentKey, promptEnabledKey } from '@/engine/prompt/prompt-edits';
+import { BUILTIN_SLOTS, ROUND_REQUIRED_PROMPT_IDS, RADIO_PROMPT_IDS } from '@/engine/prompt/builtin-slots';
+import { promptContentKey, promptEnabledKey, sameText } from '@/engine/prompt/prompt-edits';
 import { createEmptyHeroinePlan, type HeroinePlan, type HeroineEntry, type HeroineInteractionEvent } from '@/engine/story/heroine-plan';
 import type { PromptRegistry } from '@/engine/prompt/prompt-registry';
 import WorldBookTab from './WorldBookTab.vue';
@@ -457,6 +457,8 @@ function isPromptActiveByRadio(id: string): boolean | null {
 
 /** What every round needs (its formats, its length rule): edited here, never switched off. */
 const REQUIRED_PROMPTS: ReadonlySet<string> = new Set(ROUND_REQUIRED_PROMPT_IDS);
+/** The prompts a setting chooses (the engine's list: the registry keeps them always on). */
+const RADIO_PROMPTS: ReadonlySet<string> = new Set(RADIO_PROMPT_IDS);
 
 // The list reads the page's edits from localStorage, which Vue does not track: every write here bumps this, and so
 // does coming back to the page (it is kept alive; a game card's import writes edits elsewhere). Before 2026-10-04 a
@@ -492,7 +494,7 @@ const promptEntries = computed<PromptEntry[]>(() => {
       content,
       defaultContent,
       enabled,
-      modified: content !== defaultContent,
+      modified: !sameText(content, defaultContent),
       weight,
       scope: meta.scope,
       injectionMode: meta.injectionMode,
@@ -590,12 +592,12 @@ const filteredPrompts = computed<PromptEntry[]>(() => {
  * style — the 「游戏设定」 tab picks it). The engine sends these as the registry's always-on modules (code review H2).
  */
 function switchLocked(id: string): boolean {
-  return REQUIRED_PROMPTS.has(id) || isPromptActiveByRadio(id) !== null;
+  return REQUIRED_PROMPTS.has(id) || RADIO_PROMPTS.has(id);
 }
 
 function switchTitle(entry: PromptEntry): string {
   if (REQUIRED_PROMPTS.has(entry.id)) return t('prompt.entry.requiredTitle');
-  if (isPromptActiveByRadio(entry.id) !== null) return t('prompt.entry.radioTitle');
+  if (RADIO_PROMPTS.has(entry.id)) return t('prompt.entry.radioTitle');
   return entry.enabled ? t('prompt.entry.enableTitle') : t('prompt.entry.disableTitle');
 }
 
@@ -604,7 +606,9 @@ function switchTitle(entry: PromptEntry): string {
  * freeze the pack's text of today when the pack's own changes, and travel in cards as an edit (code review M2).
  */
 function storeContent(id: string, content: string): void {
-  if (content === pack?.prompts[id]) {
+  const packText = pack?.prompts[id] ?? '';
+  // An always-on prompt emptied is sent as the pack's text anyway: that is a reset, not an edit (code review L3).
+  if (sameText(content, packText) || (switchLocked(id) && !content.trim())) {
     localStorage.removeItem(storageKey(id));
     promptRegistry?.resetToDefault(id);
   } else {

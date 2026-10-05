@@ -51,7 +51,7 @@
   "prompt.entry.enableTitle": "Click to disable",
   "prompt.entry.disableTitle": "Click to enable",
   "prompt.entry.requiredTitle": "Every round needs it, so it cannot be switched off; its text can be edited",
-  "prompt.entry.radioTitle": "Turned on by your choice in Game Settings",
+  "prompt.entry.radioTitle": "Whether it is used is decided by your choice in Game Settings",
 
   "prompt.toast.enabled": "{id} enabled",
   "prompt.toast.disabled": "{id} disabled",

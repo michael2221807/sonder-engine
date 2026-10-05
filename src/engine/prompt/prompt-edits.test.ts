@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   promptContentKey, promptEnabledKey, promptEditIds, readPromptEdits, writePromptEdits, restorePromptEdits,
   hydratePromptRegistry, promptEditsFromSlotOverrides, sanitizePromptEdits, migrateLegacyBuiltinOverrides,
+  sameText, MAX_IMPORTED_PROMPT_LENGTH,
   type EditStorage,
 } from './prompt-edits';
 import { PromptRegistry } from './prompt-registry';
@@ -98,6 +99,27 @@ describe('prompt edits (the prompt page)', () => {
     expect(registry.get('jailbreak')?.userContent).toBeUndefined();
     expect(registry.getEffectiveContent('mainRound')).toBe('my format');
     expect(registry.get('mainRound')?.enabled).toBe(true);
+  });
+
+  // Code review L2 (2026-10-04): a Windows working copy serves the pack with CRLF, a textarea gives LF back.
+  it('line endings alone are no edit: a copy differing only in them is dropped while loading', () => {
+    expect(sameText('一\r\n二', '一\n二')).toBe(true);
+    expect(sameText('一\n二', '一\n三')).toBe(false);
+    const registry = new PromptRegistry();
+    registry.registerPack({ jailbreak: '第一行\r\n第二行' }, new Set());
+    const s = memoryStorage({ [promptContentKey('p', 'jailbreak')]: '第一行\n第二行' });
+    hydratePromptRegistry(registry, 'p', ['jailbreak'], s);
+    expect(s.dump()).toEqual({});
+  });
+
+  // Code review L5: a card only brings edits of the pack's own prompts, each within a size.
+  it('takes only the pack\'s own prompts from a card, each within a size', () => {
+    const known = new Set(['jailbreak', 'writeStyle']);
+    expect(sanitizePromptEdits([
+      { id: 'jailbreak', content: 'ok' },
+      { id: 'aga_junk_1', content: 'x' },
+      { id: 'writeStyle', content: 'x'.repeat(MAX_IMPORTED_PROMPT_LENGTH + 1) },
+    ], known)).toEqual([{ id: 'jailbreak', content: 'ok' }]);
   });
 
   // Code review L4: the old builder used an override only when it was not switched off and had text.

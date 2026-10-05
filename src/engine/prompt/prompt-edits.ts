@@ -40,6 +40,17 @@ export interface LegacyOverrideStore {
   clearBuiltinOverrides(packId: string): Promise<void>;
 }
 
+/**
+ * The same text whatever its line endings: a Windows working copy serves the pack's prompts with CRLF while a
+ * textarea gives LF back, so a text typed in and deleted again must not count as an edit (code review L2).
+ */
+export function sameText(a: string, b: string): boolean {
+  return a.replace(/\r\n/g, '\n') === b.replace(/\r\n/g, '\n');
+}
+
+/** The longest prompt text a card may bring (the longest pack prompt, core, is about 30 000 characters). */
+export const MAX_IMPORTED_PROMPT_LENGTH = 200_000;
+
 export function promptContentKey(packId: string, id: string): string {
   return `aga_prompt_${packId}_${id}`;
 }
@@ -94,13 +105,15 @@ function storeEdit(s: EditStorage, packId: string, edit: PromptEdit): void {
  * Prompt edits as they come in from a card or a file: an entry that is no edit — no id, text that is not text,
  * nothing to change — is skipped, never stored; "off" counts only for a prompt that can be off (code review M3).
  */
-export function sanitizePromptEdits(raw: unknown): PromptEdit[] {
+export function sanitizePromptEdits(raw: unknown, knownIds?: ReadonlySet<string>): PromptEdit[] {
   if (!Array.isArray(raw)) return [];
   const out: PromptEdit[] = [];
   for (const item of raw as unknown[]) {
     if (!item || typeof item !== 'object') continue;
     const { id, content, enabled } = item as Record<string, unknown>;
     if (typeof id !== 'string' || !id || (content !== undefined && typeof content !== 'string')) continue;
+    // Only the pack's own prompts, within a size: a card must not fill the device's storage (code review L5).
+    if ((knownIds && !knownIds.has(id)) || (typeof content === 'string' && content.length > MAX_IMPORTED_PROMPT_LENGTH)) continue;
     const off = enabled === false && !ALWAYS_ON_PROMPT_IDS.has(id);
     if (content === undefined && !off) continue;
     out.push({ id, ...(typeof content === 'string' ? { content } : {}), ...(off ? { enabled: false as const } : {}) });
@@ -113,9 +126,9 @@ export function sanitizePromptEdits(raw: unknown): PromptEdit[] {
  * on or off); every other prompt keeps the player's own edit. Entries that are no edit are skipped. Returns how
  * many prompts were written.
  */
-export function writePromptEdits(packId: string, edits: readonly unknown[], storage?: EditStorage): number {
+export function writePromptEdits(packId: string, edits: readonly unknown[], storage?: EditStorage, knownIds?: ReadonlySet<string>): number {
   const s = storeOf(storage);
-  const valid = sanitizePromptEdits(edits);
+  const valid = sanitizePromptEdits(edits, knownIds);
   for (const edit of valid) storeEdit(s, packId, edit);
   return valid.length;
 }
@@ -138,7 +151,7 @@ export function hydratePromptRegistry(registry: PromptRegistry, packId: string, 
     const mod = registry.get(id);
     const contentKey = promptContentKey(packId, id), enabledKey = promptEnabledKey(packId, id);
     let content = s.getItem(contentKey);
-    if (content !== null && mod && content === mod.content) {
+    if (content !== null && mod && sameText(content, mod.content)) {
       s.removeItem(contentKey);
       content = null;
     }

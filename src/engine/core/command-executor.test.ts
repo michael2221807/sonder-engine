@@ -399,6 +399,40 @@ describe('CommandExecutor · a push never replaces a value that is not a list', 
     expect(sm.get('社交.关系[名称=林晚照].记忆')).toBe('旧的一句');
     expect(sm.get('社交.关系[名称=林晚照].好感度')).toBe(54);
   });
+  // Code review M-A: refusing everything that is not a list would leave a declared list stuck forever once malformed
+  // data sat there (an NPC's memory written as one string); the pack schema tells the two apart.
+  it('repairs a declared list that malformed data left as text or an empty object, the text kept; refuses the rest', async () => {
+    const { StateManager } = await import('@/engine/core/state-manager');
+    const { schemaDeclaresArray } = await import('@/engine/core/command-executor');
+    const schema = { type: 'object', properties: {
+      社交: { type: 'object', properties: { 关系: { type: 'array', items: { type: 'object', properties: {
+        名称: { type: 'string' }, 记忆: { type: 'array' }, 位置: { type: 'string' } } } } } },
+    } };
+    expect(schemaDeclaresArray(schema, '社交.关系[名称=林晚照].记忆')).toBe(true);
+    expect(schemaDeclaresArray(schema, '社交.关系[名称=林晚照].位置')).toBe(false);
+    const sm = new StateManager();
+    sm.loadTree({ 社交: { 关系: [
+      { 名称: '林晚照', 记忆: '旧的一句', 位置: '宿舍' },
+      { 名称: '程彦', 记忆: '' },
+      { 名称: '白诗雅', 记忆: {} },
+      { 名称: '沈墨琛', 记忆: { 内容: '一条' } },
+    ] } });
+    const ex = new CommandExecutor(sm, ['社交'], undefined, undefined, (path) => schemaDeclaresArray(schema, path));
+    const results = ex.executeBatch([
+      { action: 'push', key: '社交.关系[名称=林晚照].记忆', value: '新的一句' },
+      { action: 'push', key: '社交.关系[名称=程彦].记忆', value: '第一句' },
+      { action: 'push', key: '社交.关系[名称=白诗雅].记忆', value: '第一句' },
+      { action: 'push', key: '社交.关系[名称=沈墨琛].记忆', value: '第二条' },
+      { action: 'push', key: '社交.关系[名称=林晚照].位置', value: '食堂' },
+    ]).results;
+    expect(results.map((r) => r.success)).toEqual([true, true, true, false, false]);
+    expect(sm.get('社交.关系[名称=林晚照].记忆')).toEqual(['旧的一句', '新的一句']);
+    expect(sm.get('社交.关系[名称=程彦].记忆')).toEqual(['第一句']);
+    expect(sm.get('社交.关系[名称=白诗雅].记忆')).toEqual(['第一句']);
+    expect(sm.get('社交.关系[名称=沈墨琛].记忆')).toEqual({ 内容: '一条' });
+    expect(sm.get('社交.关系[名称=林晚照].位置')).toBe('宿舍');
+  });
+
   it('still starts a list where there is none yet, and appends to one that is there', async () => {
     const { StateManager } = await import('@/engine/core/state-manager');
     const sm = new StateManager();

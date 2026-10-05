@@ -203,4 +203,12 @@ test('the prompt page locks the switches that decide nothing, and a save without
     await expect(page.locator('.prompt-editor')).toHaveCount(0);
     await expect(card.locator('.modified-badge')).toHaveCount(0);
     expect(await page.evaluate(() => localStorage.getItem('aga_prompt_tianming_jailbreak'))).toBeNull();
+    // An always-on prompt emptied is still sent as the pack's text: saving it empty is a reset, not an edit.
+    const format = page.locator('.prompt-card').filter({ has: page.getByTestId('prompt-toggle-mainRound') });
+    await format.locator('.prompt-title-area').click();
+    await page.locator('.prompt-editor').fill('');
+    await page.getByRole('button', { name: '保存修改' }).click();
+    await expect(page.locator('.prompt-editor')).toHaveCount(0);
+    await expect(format.locator('.modified-badge')).toHaveCount(0);
+    expect(await page.evaluate(() => localStorage.getItem('aga_prompt_tianming_mainRound'))).toBeNull();
   });

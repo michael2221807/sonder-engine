@@ -21,6 +21,7 @@
  * 对应 STEP-03B M3.4 CommandExecutionStage + GAP_AUDIT §11.2。
  */
 import type { PipelineStage, PipelineContext, IBehaviorRunner, EnginePathConfig } from '../types';
+import type { BatchCommandResult, CommandResult } from '../../types';
 import type { CommandExecutor } from '../../core/command-executor';
 import type { StateManager } from '../../core/state-manager';
 import { findIncompletePrivacy, readNsfwSettings } from '../../validators/privacy-profile-validator';
@@ -47,9 +48,18 @@ export class CommandExecutionStage implements PipelineStage {
     // CommandExecutor.executeBatch 按顺序执行每条指令，
     // 即使某条失败也会继续执行剩余指令（fail-soft 策略）。
     // 返回值包含每条指令的成功/失败状态和完整的变更日志。
-    const commandResults = this.commandExecutor.executeBatch(
-      ctx.parsedResponse.commands,
-    );
+    const refused: CommandResult[] = [];
+    const allowed = ctx.parsedResponse.commands.filter((command) => {
+      const hit = this.protectedPathOf(String(command.key ?? ''));
+      if (hit) refused.push({ success: false, command, error: `the engine keeps this path: ${hit}` });
+      return !hit;
+    });
+    if (refused.length > 0) {
+      console.warn('[CommandExecution] Refused commands on paths the engine keeps:', refused.map((r) => r.command.key));
+    }
+    const executed = this.commandExecutor.executeBatch(allowed);
+    const commandResults: BatchCommandResult = refused.length === 0 ? executed
+      : { ...executed, results: [...refused, ...executed.results], hasErrors: true };
 
     // ── 2. 行为模块 afterCommands 钩子 ──
     // 传入变更日志（而非指令列表），让行为模块关注"发生了什么变化"
@@ -76,6 +86,20 @@ export class CommandExecutionStage implements PipelineStage {
     this.runPrivacyValidation(ctx);
 
     return { ...ctx, commandResults };
+  }
+
+  /**
+   * The paths the engine keeps and a round's commands never write (code review M-B): a paid round's `push 记忆 …`
+   * once wiped every memory tier, and a `set` or `delete` there would do the same. The round counter, the story
+   * history, the pre-round snapshot, the reasoning ring, the bookmarks and the whole memory tree — and the roots
+   * they live under, written whole. Returns the protected path a command key would write, or undefined.
+   */
+  private protectedPathOf(key: string): string | undefined {
+    const memoryRoot = this.paths.memoryMidTerm.slice(0, Math.max(0, this.paths.memoryMidTerm.lastIndexOf('.')));
+    const kept = [this.paths.roundNumber, this.paths.narrativeHistory, this.paths.preRoundSnapshot,
+      this.paths.reasoningHistory, this.paths.bookmarkedRounds, memoryRoot].filter(Boolean);
+    const k = key.trim();
+    return kept.find((p) => k === p || k.startsWith(`${p}.`) || k.startsWith(`${p}[`) || p.startsWith(`${k}.`));
   }
 
   /**

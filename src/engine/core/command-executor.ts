@@ -87,6 +87,14 @@ interface SchemaNodeLike {
  * array's items. Returns undefined when the path is not a declared number field or declares no range.
  */
 export function schemaNumberBounds(schema: unknown, path: string): NumericBounds | undefined {
+  const node = schemaNodeAt(schema, path);
+  if (!node || (node.type !== 'number' && node.type !== 'integer')) return undefined;
+  if (node.minimum === undefined && node.maximum === undefined) return undefined;
+  return { min: node.minimum, max: node.maximum };
+}
+
+/** The schema node a state path points at; filtered or indexed array segments step into the array's items. */
+function schemaNodeAt(schema: unknown, path: string): SchemaNodeLike | undefined {
   let node = schema as SchemaNodeLike | undefined;
   for (const segment of splitPathSegments(path)) {
     if (!node) return undefined;
@@ -95,9 +103,22 @@ export function schemaNumberBounds(schema: unknown, path: string): NumericBounds
     node = node.properties?.[key];
     if (node && segment.includes('[') && node.type === 'array') node = node.items;
   }
-  if (!node || (node.type !== 'number' && node.type !== 'integer')) return undefined;
-  if (node.minimum === undefined && node.maximum === undefined) return undefined;
-  return { min: node.minimum, max: node.maximum };
+  return node;
+}
+
+/** Whether the pack's state-schema declares the field a state path points at as a list. */
+export function schemaDeclaresArray(schema: unknown, path: string): boolean {
+  return schemaNodeAt(schema, path)?.type === 'array';
+}
+
+/**
+ * The list malformed data in a declared list field should have been: text becomes its first entry (blank text, no
+ * entry), an empty object an empty list. Anything else is not repaired (undefined): it may be real data.
+ */
+function listFromMalformed(value: unknown): unknown[] | undefined {
+  if (typeof value === 'string') return value.trim() ? [value] : [];
+  if (value !== null && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) return [];
+  return undefined;
 }
 
 /** push 操作下，单个数组字段的最大容量（超出时自动淘汰最旧元素） */
@@ -134,6 +155,8 @@ export class CommandExecutor {
     private pushDedupGuard?: PushDedupGuard,
     /** Declared numeric ranges from the pack schema (see schemaNumberBounds); undefined keeps the defaults. */
     private numericBounds?: (path: string) => NumericBounds | undefined,
+    /** Whether the pack schema declares a path a list (see schemaDeclaresArray); lets a push repair malformed data. */
+    private declaresArray?: (path: string) => boolean,
   ) {}
 
   /** 执行单条指令 — 返回执行结果 */
@@ -188,13 +211,18 @@ export class CommandExecutor {
 
         case 'push': {
           // ── 步骤 4：数组容量限制 ──
-          const arr = this.stateManager.get<unknown[]>(cmd.key);
+          let arr = this.stateManager.get<unknown>(cmd.key);
 
           // A push onto a value that is there but is not a list would replace it with a one-item list (see
           // StateManager.push). A model's `push 记忆 …` replaced the whole memory object that way, wiping every tier
-          // (paid check, 2026-10-04): refuse it and leave the value as it is.
+          // (paid check, 2026-10-04): refuse it and leave the value as it is. Unless the pack declares the field a
+          // list and what is there is text or an empty object — malformed data, e.g. an NPC's memory written as one
+          // string: it becomes the list it should have been (the text kept) and the push goes on (code review M-A).
           if (arr !== undefined && arr !== null && !Array.isArray(arr)) {
-            return { success: false, command, error: `push target is not a list: ${cmd.key}` };
+            const repaired = this.declaresArray?.(cmd.key) ? listFromMalformed(arr) : undefined;
+            if (!repaired) return { success: false, command, error: `push target is not a list: ${cmd.key}` };
+            this.stateManager.set(cmd.key, repaired, 'command');
+            arr = repaired;
           }
 
           // ── 步骤 4b：push 去重/融合守卫 ──

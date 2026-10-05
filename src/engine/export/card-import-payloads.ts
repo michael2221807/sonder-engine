@@ -210,10 +210,12 @@ export async function applyGlobalPromptOverrides(
 export function applyGlobalPromptEdits(
   packId: string,
   card: { promptEdits?: PromptEditsExport; builtinPromptOverrides?: BuiltinPromptExportData },
+  /** The pack's prompt ids: edits of anything else are skipped (undefined: no pack known, nothing filtered). */
+  knownIds?: ReadonlySet<string>,
 ): number {
   const carried: unknown = card.promptEdits && typeof card.promptEdits === 'object' ? card.promptEdits.entries : undefined;
   const edits = Array.isArray(carried) ? carried : promptEditsFromSlotOverrides(card.builtinPromptOverrides?.entries);
-  const written = writePromptEdits(packId, edits);
+  const written = writePromptEdits(packId, edits, undefined, knownIds);
   if (written > 0) eventBus.emit('prompt:edits-replaced', { packId });
   return written;
 }

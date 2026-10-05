@@ -56,7 +56,7 @@ import { eventBus } from './engine/core/event-bus';
 import { GamePackLoader } from './engine/core/pack-loader';
 import { ConfigRegistry, ConfigStore, ConfigResolver } from './engine/core/config-system';
 import { StateManager } from './engine/core/state-manager';
-import { CommandExecutor, composePushGuards, schemaNumberBounds } from './engine/core/command-executor';
+import { CommandExecutor, composePushGuards, schemaNumberBounds, schemaDeclaresArray } from './engine/core/command-executor';
 import { buildMemoryPushDedupGuard } from './engine/social/memory-dedup';
 import { buildRelationshipMergeGuard } from './engine/social/relationship-merge-guard';
 import { BehaviorRunner } from './engine/behaviors/behavior-runner';
@@ -332,7 +332,8 @@ async function bootstrap(): Promise<void> {
   );
   // Numeric ranges the pack schema declares (e.g. an affinity of -100~100) bound set/add writes.
   const commandExecutor = new CommandExecutor(stateManager, schemaRoots, pushDedupGuard,
-    pack ? (path => schemaNumberBounds(pack.stateSchema, path)) : undefined);
+    pack ? (path => schemaNumberBounds(pack.stateSchema, path)) : undefined,
+    pack ? (path => schemaDeclaresArray(pack.stateSchema, path)) : undefined);
 
   const behaviorRunner = new BehaviorRunner();
 

@@ -224,6 +224,14 @@ describe('applyGlobalPromptOverrides + applyGlobalPromptEdits (opt-in)', () => {
     expect(localStorage.getItem('aga_prompt_enabled_tianming_writeStyle')).toBeNull();
   });
 
+  it('with the pack\'s prompt ids given, edits of anything else are skipped', () => {
+    const n = applyGlobalPromptEdits('tianming', { promptEdits: { version: 1, packId: 'tianming', entries: [
+      { id: 'jailbreak', content: 'AUTHOR' }, { id: 'not_a_prompt', content: 'junk' },
+    ] } }, new Set(['jailbreak']));
+    expect(n).toBe(1);
+    expect(localStorage.getItem('aga_prompt_tianming_not_a_prompt')).toBeNull();
+  });
+
   // Code review M3: a damaged card stores nothing malformed, breaks nothing, and asks for no reload.
   it('a card\'s malformed edits are skipped one by one; with nothing to write there is no reload', () => {
     const emit = vi.spyOn(eventBus, 'emit');
