@@ -14,8 +14,9 @@
  *    can surface the hint.
  *  - interactive: wraps a focusable control (button / a / input). The wrapper does
  *    NOT add its own tabindex (avoids a nested-focusable a11y anti-pattern) and
- *    inherits the trigger's cursor; the hint reveals on :focus-within so focusing
- *    the inner control still shows it. Use this when wrapping any clickable element.
+ *    inherits the trigger's cursor; the hint reveals when the inner control has keyboard
+ *    focus (`:has(:focus-visible)`), not when a click or a closing dialog left focus there
+ *    (P14, 2026-10-04). Use this when wrapping any clickable element.
  *
  * Usage:
  *   <Tooltip :text="$t('save.export.nsfw.hint')"><InfoIcon /></Tooltip>
@@ -181,8 +182,17 @@ const fixedStyle = computed(() => ({
 }
 
 .tt-wrap:hover .tt-bubble,
-.tt-wrap:focus-visible .tt-bubble,
-.tt-wrap--interactive:focus-within .tt-bubble {
+.tt-wrap:focus-visible .tt-bubble {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.14s var(--ease-out) var(--tt-delay, 800ms),
+    visibility 0s linear var(--tt-delay, 800ms);
+}
+/* An interactive hint shows for keyboard focus on its control only: focus a click or a closing dialog left there
+   no longer brings the hint up (P14, as the fixed hints since d45f91f). Its own rule: a browser without :has()
+   drops only this one, never the hover rule above. */
+.tt-wrap--interactive:has(:focus-visible) .tt-bubble {
   opacity: 1;
   visibility: visible;
   transition:
@@ -217,8 +227,10 @@ const fixedStyle = computed(() => ({
   .tt-bubble,
   .tt-wrap:hover .tt-bubble,
   .tt-wrap:focus-visible .tt-bubble,
-  .tt-wrap--interactive:focus-within .tt-bubble,
   .tt-bubble--fixed.tt-bubble--hot {
+    transition: none;
+  }
+  .tt-wrap--interactive:has(:focus-visible) .tt-bubble {
     transition: none;
   }
 }
