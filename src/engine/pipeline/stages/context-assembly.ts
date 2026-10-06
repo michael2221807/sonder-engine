@@ -574,10 +574,14 @@ export class ContextAssemblyStage implements PipelineStage {
         actionOptionsBlock: !splitGen && actionOptionsEnabled
           ? assembler.renderSingle(actionMode === 'story' ? 'actionOptionsStory' : 'actionOptions', variables) ?? undefined
           : undefined,
-        // Reuse the pack's narrative phase instead of asking Step 1 for data
-        // that the split merge discards. Legacy/off and opening stay unchanged.
-        formatPromptId: ctx.meta.plotVectorPromptMode && splitGen
-          && !ctx.meta.isEnhancedOpening && !ctx.meta.step1FlowOverride ? SPLIT_STEP1_FORMAT_PROMPT_ID : undefined,
+        // Split Step 1 writes the story only, with plot momentum on or off: the pack's story-only format. Off used to
+        // send the single call's format, which asks for commands, options and memory: Step 1 wrote them without the
+        // command rules, the merge kept only Step 2's, and Step 2 read Step 1's draft as already done (item 3, PO
+        // 2026-10-05). The enhanced opening keeps its own Step 1 flow. A pack without that format keeps the single
+        // call's with plot momentum off; plot momentum requires it (the builder stops the round).
+        formatPromptId: splitGen && !ctx.meta.isEnhancedOpening && !ctx.meta.step1FlowOverride
+          && (ctx.meta.plotVectorPromptMode || !!roundPrompts[SPLIT_STEP1_FORMAT_PROMPT_ID]?.trim())
+          ? SPLIT_STEP1_FORMAT_PROMPT_ID : undefined,
         stateManager: this.stateManager,
         paths: this.paths,
         packPrompts: roundPrompts,

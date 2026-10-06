@@ -176,4 +176,27 @@ describe('ContextAssembly · the prompt page reaches the story request', () => {
     expect(step2).toContain('EDITED JAILBREAK');
     expect(step2).not.toContain('PACK JAILBREAK');
   });
+
+  // Item 3 (PO 2026-10-05): split Step 1 writes the story only. With plot momentum off it was sent the single
+  // call's format (mainRound), which asks for commands, options and memory that the merge then threw away.
+  it('split Step 1 is sent the story-only format with plot momentum on or off', async () => {
+    for (const meta of [{ splitGen: true }, { splitGen: true, plotVectorPromptMode: true }]) {
+      const story = text((await makeStage(() => undefined).execute(makeCtx(meta))).messages);
+      expect(story).toContain('PACK STEP1 FORMAT');
+      expect(story).not.toContain('PACK MAIN FORMAT');
+    }
+  });
+
+  it('with plot momentum off, a pack without the story-only format keeps the single call format', async () => {
+    const step1 = PACK_PROMPTS.splitGenStep1;
+    delete PACK_PROMPTS.splitGenStep1;
+    try {
+      const story = text((await makeStage(() => undefined).execute(makeCtx({ splitGen: true }))).messages);
+      expect(story).toContain('PACK MAIN FORMAT');
+      await expect(makeStage(() => undefined).execute(makeCtx({ splitGen: true, plotVectorPromptMode: true })))
+        .rejects.toThrow('Missing format prompt: splitGenStep1');
+    } finally {
+      PACK_PROMPTS.splitGenStep1 = step1;
+    }
+  });
 });
