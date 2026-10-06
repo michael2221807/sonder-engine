@@ -589,7 +589,6 @@ export class GameOrchestrator {
       stateSnapshot: {},
       chatHistory: [],
       messages: [],
-      worldEventTriggered: false,
       roundNumber: 0,
       generationId: generateId(),
       meta: { splitGen, contextCompiler, roundOwnership: ownership },

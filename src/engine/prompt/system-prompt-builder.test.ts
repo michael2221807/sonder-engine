@@ -207,7 +207,6 @@ describe('buildSystemPrompt · world book pools & corpora (P0)', () => {
     npcs?: Array<Record<string, unknown>>;
     userInput?: string;
     ratio?: number;
-    triggeredEventTexts?: string[];
   }) {
     const { sm } = createMockStateManager({
       世界: { 时间: { 年: 1, 月: 1, 日: 1, 小时: 8, 分钟: 0 }, 信息: {}, 描述: 'w' },
@@ -233,7 +232,6 @@ describe('buildSystemPrompt · world book pools & corpora (P0)', () => {
       cotJudgeEnabled: false,
       splitGen: false,
       cotPseudoEnabled: false,
-      triggeredEventTexts: over.triggeredEventTexts,
     });
   }
 
@@ -294,18 +292,6 @@ describe('buildSystemPrompt · world book pools & corpora (P0)', () => {
 
     const present = build({ worldBooks: [captured], npcs: [{ 名称: '林月', 是否在场: true }] });
     expect(present.worldBookHits?.map((h) => h.entryId)).toContain('cap');
-  });
-
-  it('the round\'s triggered event feeds the focused corpus', () => {
-    const captured = capturedBookOf([{
-      ...lore({ id: 'cap', injectionMode: 'match_any', keywords: ['灯节'] }),
-      matchSource: 'focused',
-    }]);
-    const without = build({ worldBooks: [captured] });
-    expect(without.worldBookHits?.map((h) => h.entryId) ?? []).not.toContain('cap');
-
-    const withEvent = build({ worldBooks: [captured], triggeredEventTexts: ['城中灯节开幕'] });
-    expect(withEvent.worldBookHits?.map((h) => h.entryId)).toContain('cap');
   });
 
   it('surfaces capturedHits, skip reasons, budget accounting and hit provenance', () => {

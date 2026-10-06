@@ -68,24 +68,6 @@ export class BehaviorRunner {
     this.dispatch('onContextAssembly', (mod) => mod.onContextAssembly?.(stateManager, variables));
   }
 
-  /** 定时事件检查 — 分发 checkScheduledEvents 钩子，返回是否有事件触发 */
-  checkScheduledEvents(stateManager: StateManager): boolean {
-    let anyTriggered = false;
-    for (const mod of this.modules) {
-      if (!mod.checkScheduledEvents) continue;
-      try {
-        const triggered = mod.checkScheduledEvents(stateManager);
-        if (triggered) anyTriggered = true;
-      } catch (err) {
-        console.error(
-          `[BehaviorRunner] checkScheduledEvents error in "${mod.id}":`,
-          err,
-        );
-      }
-    }
-    return anyTriggered;
-  }
-
   /** 清空所有模块 — 切换 Game Pack 或重置引擎时调用 */
   clear(): void {
     this.modules = [];

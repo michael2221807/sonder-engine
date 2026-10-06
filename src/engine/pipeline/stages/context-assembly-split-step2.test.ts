@@ -62,7 +62,6 @@ function makeStageWithHistory(
 
   const memoryRetriever: IMemoryRetriever = { retrieve: () => '' };
   const behaviorRunner: IBehaviorRunner = {
-    checkScheduledEvents: () => false,
     runOnContextAssembly: () => undefined,
     runAfterCommands: () => undefined,
     runOnRoundEnd: () => undefined,
@@ -90,7 +89,6 @@ function makeCtx(): PipelineContext {
     stateSnapshot: {},
     chatHistory: [],
     messages: [],
-    worldEventTriggered: false,
     roundNumber: 62,
     generationId: 'gen-ctx-1',
     meta: { splitGen: true },

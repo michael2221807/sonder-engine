@@ -32,7 +32,6 @@ function makeCtx(overrides: Partial<PipelineContext> = {}): PipelineContext {
     messages: [],
     generationId: 'test-gen',
     roundNumber: 5,
-    worldEventTriggered: false,
     meta: {},
     ...overrides,
   };

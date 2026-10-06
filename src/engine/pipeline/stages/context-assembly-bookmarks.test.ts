@@ -55,7 +55,6 @@ function makeStage(bookmarks: BookmarkedRound[]): ContextAssemblyStage {
   } as unknown as GamePack;
   const memoryRetriever: IMemoryRetriever = { retrieve: () => '' };
   const behaviorRunner: IBehaviorRunner = {
-    checkScheduledEvents: () => false,
     runOnContextAssembly: () => undefined,
     runAfterCommands: () => undefined,
     runOnRoundEnd: () => undefined,
@@ -67,7 +66,7 @@ function makeStage(bookmarks: BookmarkedRound[]): ContextAssemblyStage {
 function makeCtx(meta: Record<string, unknown>): PipelineContext {
   return {
     userInput: '走两步', originalUserInput: '走两步', actionQueuePrompt: '', stateSnapshot: {}, chatHistory: [],
-    messages: [], worldEventTriggered: false, roundNumber: 12, generationId: 'gen-bookmarks', meta,
+    messages: [], roundNumber: 12, generationId: 'gen-bookmarks', meta,
   } as unknown as PipelineContext;
 }
 

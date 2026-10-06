@@ -65,7 +65,7 @@ describe('ResponseParser with sidecars', () => {
 
 function ctx(split: boolean, sidecars?: string[]): PipelineContext {
   return { userInput: 'u', actionQueuePrompt: '', stateSnapshot: {}, chatHistory: [], messages: [{ role: 'user', content: 'u' }],
-    worldEventTriggered: false, roundNumber: 1, generationId: 'g',
+    roundNumber: 1, generationId: 'g',
     meta: { ...(split ? { splitGen: true, splitStep2Messages: [{ role: 'system', content: 'step2' }] } : {}), ...(sidecars ? { responseSidecars: sidecars } : {}) } } as unknown as PipelineContext;
 }
 

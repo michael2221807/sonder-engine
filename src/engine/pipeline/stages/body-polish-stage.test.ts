@@ -53,7 +53,6 @@ function makeCtx(overrides: Partial<PipelineContext> = {}): PipelineContext {
     } as AIResponse,
     generationId: 'test-gen',
     roundNumber: 5,
-    worldEventTriggered: false,
     meta: {},
     ...overrides,
   };

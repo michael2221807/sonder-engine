@@ -140,11 +140,6 @@ export interface SystemPromptBuildParams {
   /** Raw narrative history (last 12 entries, NO XML wrapping) for world book corpus */
   narrativeHistoryForCorpus?: Array<{ content: string }>;
   /**
-   * Text of the world event triggered THIS round, if any — part of the focused
-   * world-book corpus. Absent when no event fired.
-   */
-  triggeredEventTexts?: string[];
-  /**
    * True when this round carries a well-formed `<设定>` tag AND capture is enabled.
    *
    * Gates the two Canon Capture prompt pieces. When false, not one extra character
@@ -430,7 +425,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
         paths.npcFieldNames?.name ?? '名称',
         paths.npcFieldNames?.isPresent ?? '是否在场',
       ),
-      triggeredEventTexts: [...(params.triggeredEventTexts ?? []), ...plotFocusTexts],
+      plotFocusTexts,
     });
 
     const selection = selectActiveEntriesDetailed({

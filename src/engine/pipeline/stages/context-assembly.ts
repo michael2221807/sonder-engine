@@ -134,9 +134,6 @@ export class ContextAssemblyStage implements PipelineStage {
     // ── 1. 冻结状态树快照 ──
     const stateSnapshot = this.stateManager.toSnapshot();
 
-    // ── 2. 检查世界事件触发 ──
-    const worldEventTriggered = this.behaviorRunner.checkScheduledEvents(this.stateManager);
-
     // ── 3. 记忆检索（E.2：按 retrievalMode 选择检索路径） ──
     // 参照 ming: 短期记忆单独作为 assistant 消息注入 chat history (depth=2)
     // MEMORY_BLOCK 只包含中期/长期/隐式中期（避免重复注入短期）
@@ -394,9 +391,6 @@ export class ContextAssemblyStage implements PipelineStage {
       CURRENT_LOCATION: this.stateManager.get<string>(this.paths.playerLocation) ?? '',
       GAME_STATE_JSON: gameStateJson,
       MEMORY_BLOCK: memoryBlock,
-      WORLD_EVENT_CONTEXT: worldEventTriggered
-        ? (ctx.meta['worldEventContext'] as string | undefined) ?? ''
-        : '',
       USER_INPUT: ctx.userInput,
       // The player's target length and its band, which the length module and the format prompts state (the builder
       // fills the same names).
@@ -600,11 +594,6 @@ export class ContextAssemblyStage implements PipelineStage {
         implicitMidTermBlock: implicitMidBlock,
         narrativeHistoryForCorpus: rawHistoryForCorpus,
         gproxyCache: this.getGproxyCacheEnabled?.() ?? false,
-        // Focused world-book corpus input: only THIS round's event, not the whole
-        // event log (the log already feeds the broad corpus).
-        triggeredEventTexts: worldEventTriggered
-          ? [String(ctx.meta['worldEventContext'] ?? '')].filter(Boolean)
-          : [],
         settingCaptureActive,
         narrativeContractBlock,
         characterVectorsBlock,
@@ -913,7 +902,6 @@ export class ContextAssemblyStage implements PipelineStage {
       chatHistory,
       messages,
       messageSources,
-      worldEventTriggered,
       meta: {
         ...ctx.meta,
         splitStep2Followup,

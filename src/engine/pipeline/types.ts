@@ -133,7 +133,6 @@ export interface PipelineMeta {
 
   // ── 环境块（ContextAssembly → BodyPolish） ──
   environmentBlock?: string;
-  worldEventContext?: string;
 
   // ── 身体润色结果（BodyPolishStage） ──
   polishApplied?: boolean;
@@ -275,14 +274,9 @@ export interface PipelineContext {
    */
   preRoundSnapshot?: Record<string, unknown>;
   /**
-   * 当回合是否触发了世界事件
-   * ContextAssemblyStage 通过 BehaviorRunner 检查，影响心跳和子管线决策
-   */
-  worldEventTriggered: boolean;
-  /**
    * 自由扩展字段 — 用于阶段间传递临时数据
    * 例如：pendingSummary（标记需要执行记忆总结子管线）、
-   * pendingHeartbeat（标记需要执行世界心跳）、worldEventContext（事件上下文文本）、
+   * pendingHeartbeat（标记需要执行世界心跳）、
    * splitGen（分步生成开关）、splitStep2Messages（第2步预组装消息列表）
    *
    * Enhanced Opening 新增字段（Story 0）：
@@ -362,8 +356,6 @@ export interface IMemoryRetriever {
  * 这使得新增行为模块只需注册到 Runner，无需修改管线代码。
  */
 export interface IBehaviorRunner {
-  /** 检查是否有定时世界事件到期（返回 true 表示本回合有事件触发） */
-  checkScheduledEvents(stateManager: StateManager): boolean;
   /** 上下文组装阶段钩子 — MemoryCompiler、ContentFilter 等在此注入/修改模板变量 */
   runOnContextAssembly(stateManager: StateManager, variables: Record<string, string>): void;
   /** 指令执行后钩子 — CrossRefSync、ThresholdTriggers、NpcBehavior 在此响应状态变更 */

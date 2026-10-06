@@ -170,7 +170,6 @@ export type UsageType =
   | 'cot'                      // 思维链
   | 'instruction_generation'   // 指令生成
   | 'world_generation'         // 世界生成
-  | 'event_generation'         // 世界事件生成
   | 'world_heartbeat'          // 世界心跳
   | 'location_npc_generation'  // 新地点 NPC 生成
   | 'privacy_repair'           // NSFW 私密信息自动修复（§11.2 B）— 独立于 instruction_generation

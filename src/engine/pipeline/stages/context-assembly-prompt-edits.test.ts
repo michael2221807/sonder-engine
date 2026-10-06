@@ -65,7 +65,6 @@ function makeStage(
   } as unknown as GamePack;
   const memoryRetriever: IMemoryRetriever = { retrieve: () => '' };
   const behaviorRunner: IBehaviorRunner = {
-    checkScheduledEvents: () => false,
     runOnContextAssembly: () => undefined,
     runAfterCommands: () => undefined,
     runOnRoundEnd: () => undefined,
@@ -77,7 +76,7 @@ function makeStage(
 function makeCtx(meta: Record<string, unknown>): PipelineContext {
   return {
     userInput: '走两步', originalUserInput: '走两步', actionQueuePrompt: '', stateSnapshot: {}, chatHistory: [],
-    messages: [], worldEventTriggered: false, roundNumber: 12, generationId: 'gen-edits', meta,
+    messages: [], roundNumber: 12, generationId: 'gen-edits', meta,
   } as unknown as PipelineContext;
 }
 

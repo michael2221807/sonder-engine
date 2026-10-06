@@ -97,7 +97,6 @@ function makeEngramManager(): IEngramManager {
 
 function makeBehaviorRunner(): IBehaviorRunner {
   return {
-    checkScheduledEvents: vi.fn(() => false),
     runOnContextAssembly: vi.fn(),
     runAfterCommands: vi.fn(),
     runOnRoundEnd: vi.fn(),
@@ -131,7 +130,6 @@ function makeCtx(overrides: Partial<PipelineContext> = {}): PipelineContext {
     },
     generationId: 'test-gen-id',
     roundNumber: 5,
-    worldEventTriggered: false,
     meta: {},
     ...overrides,
   };

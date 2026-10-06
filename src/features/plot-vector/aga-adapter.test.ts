@@ -63,7 +63,7 @@ function setup(opts: { supply?: boolean } = {}) {
   let revision = 0;
   cleanups.push(eventBus.on<{ type?: string }>('engine:state-changed', e => { if (e.type === 'load' || e.type === 'rollback') revision++; }));
   const ctx = (): PipelineContext => ({ generationId: crypto.randomUUID(), roundNumber: 1, stateSnapshot: state.toSnapshot(),
-    userInput: '继续', actionQueuePrompt: '', chatHistory: [], worldEventTriggered: false, messages: [{ role: 'user', content: '继续' }],
+    userInput: '继续', actionQueuePrompt: '', chatHistory: [], messages: [{ role: 'user', content: '继续' }],
     meta: { roundOwnership: new RoundOwnership(() => slot, () => revision, new AbortController().signal) } });
   return { state, ai, saveGame, adapter, ctx, changeSlot: () => { slot = { ...slot, slotId: 'other' }; },
     setSlot: (slotId: string) => { slot = { ...slot, slotId }; }, disk: () => disk };

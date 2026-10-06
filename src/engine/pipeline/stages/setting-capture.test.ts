@@ -40,7 +40,6 @@ function makeCtx(over: {
     stateSnapshot: {},
     chatHistory: [],
     messages: [],
-    worldEventTriggered: false,
     roundNumber: 3,
     generationId: 'test-gen',
     meta: over.capturedHits ? { capturedHits: over.capturedHits } : {},

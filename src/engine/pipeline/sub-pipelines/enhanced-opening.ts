@@ -837,7 +837,6 @@ export class EnhancedOpeningPipeline {
       messages: [],
       roundNumber: 0,
       generationId: `enhancedOpening_E_${Date.now()}`,
-      worldEventTriggered: false,
       onStreamChunk: phaseCtx.options.onStreamChunk,
       abortSignal: phaseCtx.options.abortSignal,
       onProgress: (msg) => {

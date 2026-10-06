@@ -51,7 +51,6 @@ function splitCtx(): PipelineContext {
     stateSnapshot: {},
     chatHistory: [],
     messages: [{ role: 'system', content: 'step1 prompt' }],
-    worldEventTriggered: false,
     roundNumber: 2,
     generationId: 'gen-1',
     meta: {

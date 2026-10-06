@@ -47,11 +47,11 @@ const packsWithFragments = [packFor(false, true), packFor(true, true)];
 const oldFormat = '〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗';
 const history = `历史原文保留 ${oldFormat}`;
 const input = `玩家引用原文 ${oldFormat}`;
-const behavior = { checkScheduledEvents: () => false, runOnContextAssembly: () => undefined,
+const behavior = { runOnContextAssembly: () => undefined,
   runAfterCommands: () => undefined, runOnRoundEnd: () => undefined };
 function ctx(split: boolean): PipelineContext {
   return { userInput: input, originalUserInput: input, actionQueuePrompt: '', stateSnapshot: {}, chatHistory: [],
-    messages: [], worldEventTriggered: false, roundNumber: 3, generationId: 'policy',
+    messages: [], roundNumber: 3, generationId: 'policy',
     meta: { splitGen: split, roundOwnership: new RoundOwnership(() => ({ profileId: 'p', slotId: 's' }), () => 0, new AbortController().signal) } };
 }
 function harness(en: boolean, builder: boolean, split: boolean, cot: boolean, cache: boolean, fragments = false) {

@@ -86,7 +86,6 @@ function makeStage(opts: StageOptions = {}): ContextAssemblyStage {
   } as unknown as GamePack;
   const memoryRetriever: IMemoryRetriever = { retrieve: () => '' };
   const behaviorRunner: IBehaviorRunner = {
-    checkScheduledEvents: () => false,
     runOnContextAssembly: () => undefined,
     runAfterCommands: () => undefined,
     runOnRoundEnd: () => undefined,
@@ -113,7 +112,6 @@ function makeCtx(contextCompiler?: boolean): PipelineContext {
     stateSnapshot: {},
     chatHistory: [],
     messages: [],
-    worldEventTriggered: false,
     roundNumber: 91,
     generationId: 'gen-contract',
     meta: contextCompiler === undefined ? { splitGen: true } : { splitGen: true, contextCompiler },

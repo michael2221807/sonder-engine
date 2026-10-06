@@ -46,7 +46,7 @@ const PER_BACKEND_USAGE_TYPES: UsageType[] = [
 /** 所有支持的 UsageType — static part must match the union in ai/types.ts */
 const ALL_USAGE_TYPES: UsageType[] = [
   'main', 'memory_summary', 'text_optimization', 'cot',
-  'instruction_generation', 'world_generation', 'event_generation',
+  'instruction_generation', 'world_generation',
   'world_heartbeat', 'location_npc_generation', 'privacy_repair',
   'field_repair',
   'npc_chat', 'embedding', 'rerank',

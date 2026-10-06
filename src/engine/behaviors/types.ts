@@ -52,10 +52,4 @@ export interface BehaviorModule {
    * （如 memory-compiler 将记忆数据编译为 prompt 文本）
    */
   onContextAssembly?(stateManager: StateManager, variables: Record<string, string>): void;
-
-  /**
-   * 检查是否有定时事件需要触发
-   * 返回 true 表示有事件被触发（用于日志记录）
-   */
-  checkScheduledEvents?(stateManager: StateManager): boolean;
 }

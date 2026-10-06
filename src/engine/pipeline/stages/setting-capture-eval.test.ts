@@ -75,7 +75,6 @@ async function runFixture(f: CaptureFixture): Promise<{
     stateSnapshot: {},
     chatHistory: [],
     messages: [],
-    worldEventTriggered: false,
     roundNumber: 5,
     generationId: f.id,
     meta: {},

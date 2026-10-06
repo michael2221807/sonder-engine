@@ -82,7 +82,6 @@ function makeStage(useNewBuilder = true): ContextAssemblyStage {
 
   const memoryRetriever: IMemoryRetriever = { retrieve: () => ENGRAM_BLOCK };
   const behaviorRunner: IBehaviorRunner = {
-    checkScheduledEvents: () => false,
     runOnContextAssembly: () => undefined,
     runAfterCommands: () => undefined,
     runOnRoundEnd: () => undefined,
@@ -110,7 +109,6 @@ function makeCtx(contextCompiler: boolean | undefined): PipelineContext {
     stateSnapshot: {},
     chatHistory: [],
     messages: [],
-    worldEventTriggered: false,
     roundNumber: 83,
     generationId: 'gen-compiler',
     meta: contextCompiler === undefined ? { splitGen: true } : { splitGen: true, contextCompiler },
@@ -221,7 +219,7 @@ describe('ContextAssembly · Context Compiler v1 (split-gen step2 projection)', 
     const stage = new ContextAssemblyStage(
       sm as unknown as StateManager,
       new PromptAssembler(registry as unknown as PromptRegistry, new TemplateEngine()),
-      { retrieve: () => '' }, { checkScheduledEvents: () => false, runOnContextAssembly: () => undefined, runAfterCommands: () => undefined, runOnRoundEnd: () => undefined },
+      { retrieve: () => '' }, { runOnContextAssembly: () => undefined, runAfterCommands: () => undefined, runOnRoundEnd: () => undefined },
       pack, P, undefined, undefined, () => [], true,
     );
     const out = await stage.execute(makeCtx(true));

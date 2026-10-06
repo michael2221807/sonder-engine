@@ -132,45 +132,4 @@ describe('BehaviorRunner', () => {
       expect(fn).toHaveBeenCalledOnce();
     });
   });
-
-  describe('checkScheduledEvents', () => {
-    it('returns false when no modules trigger', () => {
-      const runner = new BehaviorRunner();
-      runner.register(makeMockModule('a', {
-        checkScheduledEvents: () => false,
-      }));
-      expect(runner.checkScheduledEvents(null as never)).toBe(false);
-    });
-
-    it('returns true when any module triggers', () => {
-      const runner = new BehaviorRunner();
-      runner.register(makeMockModule('a', {
-        checkScheduledEvents: () => false,
-      }));
-      runner.register(makeMockModule('b', {
-        checkScheduledEvents: () => true,
-      }));
-      expect(runner.checkScheduledEvents(null as never)).toBe(true);
-    });
-
-    it('skips modules without checkScheduledEvents', () => {
-      const runner = new BehaviorRunner();
-      runner.register(makeMockModule('no-check'));
-      runner.register(makeMockModule('has-check', {
-        checkScheduledEvents: () => true,
-      }));
-      expect(runner.checkScheduledEvents(null as never)).toBe(true);
-    });
-
-    it('isolates errors in checkScheduledEvents', () => {
-      const runner = new BehaviorRunner();
-      runner.register(makeMockModule('bad', {
-        checkScheduledEvents: () => { throw new Error('boom'); },
-      }));
-      runner.register(makeMockModule('good', {
-        checkScheduledEvents: () => true,
-      }));
-      expect(runner.checkScheduledEvents(null as never)).toBe(true);
-    });
-  });
 });

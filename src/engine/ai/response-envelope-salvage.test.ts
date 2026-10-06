@@ -100,7 +100,7 @@ describe('single call: the repair stage cannot rescue anything, the story is sti
     const generate = vi.fn(async () => '抱歉，我无法修复。');
     const stage = new ResponseRepairStage({ generate } as unknown as AIService, parser);
     const parsed = parser.parse(ENVELOPED);
-    const ctx = { userInput: 'u', actionQueuePrompt: '', stateSnapshot: {}, chatHistory: [], messages: [], worldEventTriggered: false,
+    const ctx = { userInput: 'u', actionQueuePrompt: '', stateSnapshot: {}, chatHistory: [], messages: [], 
       roundNumber: 1, generationId: 'g', meta: {}, rawResponse: ENVELOPED, parsedResponse: parsed } as unknown as PipelineContext;
     const out = await stage.execute(ctx);
     expect(generate).toHaveBeenCalledTimes(1);
@@ -114,7 +114,7 @@ describe('split-gen: a broken step1 never reaches the story as JSON', () => {
     const step2 = JSON.stringify({ commands: [{ action: 'set', key: 'a.b', value: 1 }], action_options: ['x', 'y', 'z'] });
     const ai = { generate: async (o: GenerateOptions) => { seen.push(o); return o.generationId?.endsWith('_step2') ? step2 : ENVELOPED; } } as unknown as AIService;
     const ctx = { userInput: 'u', actionQueuePrompt: '', stateSnapshot: {}, chatHistory: [], messages: [{ role: 'user', content: 'u' }],
-      worldEventTriggered: false, roundNumber: 1, generationId: 'g',
+      roundNumber: 1, generationId: 'g',
       meta: { splitGen: true, splitStep2Messages: [{ role: 'system', content: 'step2' }], plotVectorPromptMode: true } } as unknown as PipelineContext;
     const out = await new AICallStage(ai, parser).execute(ctx);
     expect(out.parsedResponse).toMatchObject({ text: STORY, parseOk: true });

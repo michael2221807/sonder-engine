@@ -48,7 +48,7 @@ export interface CorpusSources {
 export interface WorldBookCorpora {
   /** Location, ALL social NPCs, last 12 narrative entries, world events, current input. */
   broad: string;
-  /** Current input, current location, PRESENT NPCs only, this round's triggered event. */
+  /** Current input, current location, PRESENT NPCs only, the focus plot node. */
   focused: string;
 }
 
@@ -60,8 +60,8 @@ export interface FocusedCorpusSources {
   location?: string;
   /** Names of NPCs actually present in the scene this round. */
   presentNpcNames?: string[];
-  /** Title/name of the world event triggered this round, if any. */
-  triggeredEventTexts?: string[];
+  /** Text of the focus plot thread's active node (Plot Threads §7.3), if any. */
+  plotFocusTexts?: string[];
 }
 
 /** Build the focused corpus — deliberately narrow. See {@link WorldBookCorpora}. */
@@ -71,7 +71,7 @@ export function buildFocusedCorpus(sources: FocusedCorpusSources): string {
     textOf(sources.location).trim(),
     ...(Array.isArray(sources.presentNpcNames) ? sources.presentNpcNames : [])
       .map((n) => textOf(n).trim()),
-    ...(Array.isArray(sources.triggeredEventTexts) ? sources.triggeredEventTexts : [])
+    ...(Array.isArray(sources.plotFocusTexts) ? sources.plotFocusTexts : [])
       .map((t) => textOf(t).trim()),
   ].filter(Boolean);
   return parts.join('\n').toLowerCase();

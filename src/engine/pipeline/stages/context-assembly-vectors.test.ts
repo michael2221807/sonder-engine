@@ -89,7 +89,6 @@ function makeStage(opts: StageOptions = {}): ContextAssemblyStage {
   } as unknown as GamePack;
   const memoryRetriever: IMemoryRetriever = { retrieve: () => '' };
   const behaviorRunner: IBehaviorRunner = {
-    checkScheduledEvents: () => false,
     runOnContextAssembly: () => undefined,
     runAfterCommands: () => undefined,
     runOnRoundEnd: () => undefined,
@@ -116,7 +115,6 @@ function makeCtx(input = '我回头看他。', contextCompiler?: boolean): Pipel
     stateSnapshot: {},
     chatHistory: [],
     messages: [],
-    worldEventTriggered: false,
     roundNumber: 91,
     generationId: 'gen-vectors',
     meta: contextCompiler === undefined ? { splitGen: true } : { splitGen: true, contextCompiler },

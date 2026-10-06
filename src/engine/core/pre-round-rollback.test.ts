@@ -34,7 +34,6 @@ function makeCtx(overrides: Partial<PipelineContext> = {}): PipelineContext {
     stateSnapshot: {},
     chatHistory: [],
     messages: [],
-    worldEventTriggered: false,
     roundNumber: 0,
     meta: {},
     ...overrides,

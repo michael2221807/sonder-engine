@@ -695,7 +695,7 @@ describe('broad / focused corpora (P0)', () => {
       userInput: '我带她去码头',
       location: '城南',
       presentNpcNames: ['林月'],
-      triggeredEventTexts: ['灯节开幕'],
+      plotFocusTexts: ['灯节开幕'],
     });
     expect(focused).toContain('码头');
     expect(focused).toContain('城南');

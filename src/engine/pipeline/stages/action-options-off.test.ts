@@ -14,7 +14,7 @@ import type { AIResponse, GenerateOptions } from '../../ai/types';
 const STEP2 = JSON.stringify({ commands: [], action_options: ['走', '停', '回头'], mid_term_memory: null, knowledge_facts: [] });
 function splitCtx(meta: Record<string, unknown>): PipelineContext {
   return { userInput: 'u', actionQueuePrompt: '', stateSnapshot: {}, chatHistory: [], messages: [{ role: 'user', content: 'u' }],
-    worldEventTriggered: false, roundNumber: 1, generationId: 'g',
+    roundNumber: 1, generationId: 'g',
     meta: { splitGen: true, splitStep2Messages: [{ role: 'system', content: 'step2' }], ...meta } } as unknown as PipelineContext;
 }
 async function step2Followup(meta: Record<string, unknown>): Promise<string> {

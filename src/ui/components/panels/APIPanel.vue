@@ -59,7 +59,6 @@ const STATIC_USAGE_CATEGORIES: Record<Exclude<UsageType, PerBackendUsage>, Assig
   text_optimization: 'narrative',
   memory_summary: 'world_memory',
   world_generation: 'world_memory',
-  event_generation: 'world_memory',
   world_heartbeat: 'world_memory',
   npc_chat: 'npc_social',
   location_npc_generation: 'npc_social',
