@@ -2,7 +2,7 @@
 
 ## Output Format (must be strictly followed)
 
-Output only a single JSON object — no prefix or suffix text, no ` ``` ` code blocks:
+Output only a single JSON object — no prefix or suffix text, no ` ``` ` code blocks (except with chain-of-thought on: the thinking its protocol asks for goes before it):
 
 ```
 {"text":"narrative body text"}
@@ -43,7 +43,7 @@ Use the following markers to enhance narrative expressiveness:
 ## Forbidden
 
 - ❌ `mid_term_memory` / `commands` / `action_options` fields (generated in Step 2)
-- ❌ `<thinking>` tags
+- ❌ `<thinking>` tags (except with chain-of-thought on: the thinking goes before the JSON, as its protocol says, never inside it)
 - ❌ Any command/instruction-related content
 
 ---

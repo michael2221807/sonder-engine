@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// App doc: docs/user-guide/pages/game-prompts.md
+// App doc: docs/user-guide/pages/game-prompts.md §1.4（卡片 · 开关与锁）
 /**
  * PromptPanel — 提示词管理面板（B.4 全功能版）
  *

@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-prompts.md §1.4（哪些能关 · 锁）
 /**
  * Built-in prompt slot definitions.
  *
@@ -371,12 +372,14 @@ export const SETTING_PICKED_PROMPT_IDS: readonly string[] = [
  * The prompts a player may switch off on the prompt page: a request works without each (they frame, style or loosen
  * the story). Every other prompt has no switch (PO 2026-10-05, item 1): a request needs it (its task, its format), or
  * a setting decides whether it is sent. A prompt a pack adds later has no switch until it is listed here, so a new
- * task can never be switched off by mistake.
+ * task can never be switched off by mistake. `core` (the data and command rules) is not here: Step 2, the single call
+ * and field repair write their commands by it, and without it they write paths the save does not have (P13); its
+ * other half, the writing rules (`coreNarrative`), can be switched off.
  */
 export const SWITCHABLE_PROMPT_IDS: ReadonlySet<string> = new Set([
   'jailbreak', 'creationGenJailbreak', 'assistantJailbreak',
   'narratorFrame', 'narratorEnforcement', 'historyFraming',
-  'core', 'coreNarrative',
+  'coreNarrative',
   'writeStyle', 'antiCliche', 'emotionGuard', 'narrativeConstraints',
   'openingEnhancedCNsfw',
 ]);

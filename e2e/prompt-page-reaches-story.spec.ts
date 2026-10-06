@@ -206,7 +206,7 @@ test('the prompt page has no switch where a request needs the prompt or a settin
     const locked: Array<[string, string]> = [
       ...['mainRound', 'splitGenStep1', 'splitGenStep2', 'splitGenStep2Followup', 'wordCountReq'].map((id): [string, string] => [id, why.round]),
       // another feature's request needs these (private chat, memory, heartbeat, the opening, images, plot):
-      ...['npcChat', 'memorySummary', 'worldHeartbeat', 'opening', 'imageSceneTokenizer', 'plotDecompose'].map((id): [string, string] => [id, why.task]),
+      ...['npcChat', 'memorySummary', 'worldHeartbeat', 'opening', 'imageSceneTokenizer', 'plotDecompose', 'core'].map((id): [string, string] => [id, why.task]),
       // a setting switches these on and off (CoT, action options, no-control):
       ...['cot-preamble', 'actionOptions', 'noControl'].map((id): [string, string] => [id, why.setting]),
       // a setting chooses among these:
@@ -234,7 +234,7 @@ test('the prompt page has no switch where a request needs the prompt or a settin
       return getComputedStyle(el).opacity === '1' && r.left >= 0 && r.right <= window.innerWidth;
     })).toBe(true);
     // A prompt a request works without keeps its switch.
-    for (const id of ['jailbreak', 'writeStyle', 'core', 'coreNarrative']) {
+    for (const id of ['jailbreak', 'writeStyle', 'coreNarrative']) {
       await expect(page.getByTestId(`prompt-toggle-${id}`)).toBeEnabled();
     }
     // Opened and saved without a change: no edit.

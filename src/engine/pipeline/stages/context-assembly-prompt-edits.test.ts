@@ -124,8 +124,9 @@ describe('ContextAssembly · the prompt page reaches the story request', () => {
     expect(story).not.toContain('PACK JAILBREAK');
     expect(story.indexOf('PACK CORE')).toBeGreaterThan(-1);
     expect(story.indexOf('PACK CORE')).toBeLessThan(story.indexOf('PACK MAIN FORMAT'));
+    // The command rules are always on (code review 2026-10-05): a stored "off" never takes them out.
     const off = await makeStage((r) => r.setEnabled('core', false)).execute(makeCtx({ splitGen: false }));
-    expect(text(off.messages)).not.toContain('PACK CORE');
+    expect(text(off.messages)).toContain('PACK CORE');
   });
 
   // 2A + 3C (PO 2026-10-05): split Step 1 writes the story: it opens with the jailbreak and carries core's writing

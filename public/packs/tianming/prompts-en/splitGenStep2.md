@@ -107,6 +107,8 @@ Logical consistency: `是否为处女/处男=true` → `性交总次数=0`, `性
 {"action": "set", "path": "社交.关系[名称=Zhang San].关系.Li Si", "value": "Master-disciple"}
 ```
 
+**Real-time tracked NPCs**: If any NPC field in the save data is flagged for real-time tracking, even if that NPC is not near the player, you must project their dynamics based on this round's plot and update their location/status/current activity.
+
 ---
 
 ## Location & Exploration (mandatory)

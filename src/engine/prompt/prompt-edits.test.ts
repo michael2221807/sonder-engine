@@ -71,7 +71,7 @@ describe('prompt edits (the prompt page)', () => {
   // decides and one a pack adds later are always on, so a stored or imported "off" never reaches them.
   it('only the switchable prompts can be off: task prompts, setting-picked ones and unknown ones never are', () => {
     for (const id of ['memorySummary', 'npcChat', 'worldHeartbeatInput', 'imageSceneTokenizer', 'plotDecompose',
-      'assistantInjectionContract', 'cot-preamble', 'actionOptions', 'noControl', 'plotVectorMode', 'aNewTaskPrompt']) {
+      'assistantInjectionContract', 'cot-preamble', 'actionOptions', 'noControl', 'plotVectorMode', 'core', 'aNewTaskPrompt']) {
       expect(isPromptAlwaysOn(id)).toBe(true);
     }
     for (const id of SETTING_PICKED_PROMPT_IDS) expect(isPromptAlwaysOn(id)).toBe(true);

@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-prompts.md §1.4（修改和开关在哪里生效）
 /**
  * Prompt 组装器 — 按 PromptFlowConfig 组装最终的 AIMessage[]
  *
