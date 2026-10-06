@@ -86,7 +86,7 @@ import type {
   PipelineContext,
   CompileTrace,
 } from '../pipeline/types';
-import { PREFERENCE_PATHS } from '../pipeline/types';
+import { DEFAULT_ENGINE_PATHS, PREFERENCE_PATHS } from '../pipeline/types';
 import type { GamePack } from '../types';
 import type { GameTime } from '../image/scene-context';
 import type { ImageBackendType, StylePreset } from '../image/types';
@@ -972,7 +972,9 @@ export class GameOrchestrator {
       const imageEnabled = stateManager.get<boolean>('系统.扩展.image.enabled') === true;
       if (autoPortrait && imageEnabled) {
         try {
-          const relations = stateManager.get<Array<Record<string, unknown>>>(this.subPipelines.paths?.relationships ?? '社交.关系') ?? [];
+          const portraitPaths = this.subPipelines.paths ?? DEFAULT_ENGINE_PATHS;
+          const npcFields = portraitPaths.npcFieldNames;
+          const relations = stateManager.get<Array<Record<string, unknown>>>(portraitPaths.relationships) ?? [];
           const genderFilter = stateManager.get<string>('系统.扩展.image.config.auto.genderFilter') ?? 'all';
           const importanceFilter = stateManager.get<string>('系统.扩展.image.config.auto.importanceFilter') ?? 'major';
           const defaultBackend = (stateManager.get<string>('系统.扩展.image.config.defaultBackend') ?? 'novelai') as ImageBackendType;
@@ -982,11 +984,11 @@ export class GameOrchestrator {
           const npcArtStyle = ART_STYLE_PROMPT_LABELS[npcStyleKey] ?? ART_STYLE_PROMPT_LABELS.generic;
 
           for (const npc of relations) {
-            const name = String(npc['名称'] ?? '');
+            const name = String(npc[npcFields.name] ?? '');
             if (!name) continue;
-            const isMajor = npc['是否主要角色'] === true;
+            const isMajor = npc[npcFields.isMajorRole] === true;
             if (importanceFilter === 'major' && !isMajor) continue;
-            const gender = String(npc['性别'] ?? '');
+            const gender = String(npc[npcFields.gender] ?? '');
             if (genderFilter === 'male' && gender !== '男') continue;
             if (genderFilter === 'female' && gender !== '女') continue;
 

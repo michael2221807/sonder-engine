@@ -18,6 +18,7 @@
  * 6. 写入状态树 + 异步向量化
  */
 import type { StateManager } from '../../core/state-manager';
+import { DEFAULT_ENGINE_PATHS } from '../../pipeline/types';
 import type { AIService } from '../../ai/ai-service';
 import type { AIResponse } from '../../ai/types';
 import { EventBuilder } from './event-builder';
@@ -132,6 +133,8 @@ export class EngramManager {
   private readonly gameTimePath: string;
   private readonly npcNameField: string;
   private readonly npcTypeField: string;
+  /** The NPC type that counts as key (重点); an NPC of this type or with no type is always in the entity set. */
+  private readonly npcTypeKey: string;
   /** NPC summary 来源字段名（M-3：注入给 EntityBuilder，避免硬编码中文字段名） */
   private readonly npcBackgroundField: string;
   private readonly npcAppearanceField: string;
@@ -157,23 +160,27 @@ export class EngramManager {
       gameTime?: string;
       npcNameField?: string;
       npcTypeField?: string;
+      npcTypeKey?: string;
       npcBackgroundField?: string;
       npcAppearanceField?: string;
       npcDescriptionField?: string;
     },
     getActiveSlot?: () => { profileId: string; slotId: string } | null,
   ) {
-    this.engramPath = pathOverrides?.engramMemory ?? '系统.扩展.engramMemory';
-    this.roundNumberPath = pathOverrides?.roundNumber ?? '元数据.回合序号';
-    this.relationshipsPath = pathOverrides?.relationships ?? '社交.关系';
-    this.playerNamePath = pathOverrides?.playerName ?? '角色.基础信息.姓名';
-    this.playerLocationPath = pathOverrides?.playerLocation ?? '角色.基础信息.当前位置';
-    this.gameTimePath = pathOverrides?.gameTime ?? '世界.时间';
-    this.npcNameField = pathOverrides?.npcNameField ?? '名称';
-    this.npcTypeField = pathOverrides?.npcTypeField ?? '类型';
-    this.npcBackgroundField = pathOverrides?.npcBackgroundField ?? '背景';
-    this.npcAppearanceField = pathOverrides?.npcAppearanceField ?? '外貌描述';
-    this.npcDescriptionField = pathOverrides?.npcDescriptionField ?? '描述';
+    const paths = DEFAULT_ENGINE_PATHS;
+    const fields = paths.npcFieldNames;
+    this.engramPath = pathOverrides?.engramMemory ?? paths.engramMemory;
+    this.roundNumberPath = pathOverrides?.roundNumber ?? paths.roundNumber;
+    this.relationshipsPath = pathOverrides?.relationships ?? paths.relationships;
+    this.playerNamePath = pathOverrides?.playerName ?? paths.playerName;
+    this.playerLocationPath = pathOverrides?.playerLocation ?? paths.playerLocation;
+    this.gameTimePath = pathOverrides?.gameTime ?? paths.gameTime;
+    this.npcNameField = pathOverrides?.npcNameField ?? fields.name;
+    this.npcTypeField = pathOverrides?.npcTypeField ?? fields.type;
+    this.npcTypeKey = pathOverrides?.npcTypeKey ?? paths.npcTypeKey;
+    this.npcBackgroundField = pathOverrides?.npcBackgroundField ?? fields.background;
+    this.npcAppearanceField = pathOverrides?.npcAppearanceField ?? fields.appearance;
+    this.npcDescriptionField = pathOverrides?.npcDescriptionField ?? fields.description;
     this.vectorStore = new VectorStore();
     this.embedder = new Embedder(aiService);
     this.getActiveSlot = getActiveSlot ?? (() => null);
@@ -1064,7 +1071,7 @@ export class EngramManager {
       const name = npc[this.npcNameField];
       if (typeof name !== 'string' || !name) continue;
       const npcType = npc[this.npcTypeField];
-      if (npcType === '重点' || !npcType) {
+      if (npcType === this.npcTypeKey || !npcType) {
         names.add(name);
       }
     }

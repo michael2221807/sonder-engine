@@ -500,6 +500,7 @@ async function bootstrap(): Promise<void> {
     {
       npcNameField: DEFAULT_ENGINE_PATHS.npcFieldNames.name,
       npcTypeField: DEFAULT_ENGINE_PATHS.npcFieldNames.type,
+      npcTypeKey: DEFAULT_ENGINE_PATHS.npcTypeKey,
       // M-3: NPC entity summary source fields (生平+外貌), sourced from the central path config
       // so a future pack-level npcFieldNames override flows through to EntityBuilder.
       npcBackgroundField: DEFAULT_ENGINE_PATHS.npcFieldNames.background,

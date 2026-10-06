@@ -22,7 +22,7 @@ import { formatHeroinePlanForContext, type HeroinePlan } from '../story/heroine-
 import { buildPlotFocusCorpusTexts } from '../plot/plot-corpus';
 import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio, actionOptionsOn, wordCountRangeOf, type WordCountRange } from './world-book';
 import { BUILTIN_SLOTS, STORY_STYLE_PROMPT_IDS } from './builtin-slots';
-import type { EnginePathConfig } from '../pipeline/types';
+import { DEFAULT_ENGINE_PATHS, type EnginePathConfig } from '../pipeline/types';
 import {
   buildCorpus,
   buildFocusedCorpus,
@@ -364,7 +364,8 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   // Shared state reads (used by world book corpus + NPC sections + environment)
   const relationships = stateManager.get<Array<Record<string, unknown>>>(paths.relationships) ?? [];
   const currentLocation = stateManager.get<string>(paths.playerLocation) ?? '';
-  const npcNameKey = paths.npcFieldNames?.name ?? '名称';
+  const npcFields = paths.npcFieldNames ?? DEFAULT_ENGINE_PATHS.npcFieldNames;
+  const npcNameKey = npcFields.name;
 
   // World Book injection (all 4 types) — gated by enableWorldBook
   const worldBookEnabled = settings.enableWorldBook !== false && worldBooks.length > 0;
@@ -422,8 +423,8 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
       location: currentLocation,
       presentNpcNames: extractPresentNpcNames(
         relationships,
-        paths.npcFieldNames?.name ?? '名称',
-        paths.npcFieldNames?.isPresent ?? '是否在场',
+        npcFields.name,
+        npcFields.isPresent,
       ),
       plotFocusTexts,
     });
@@ -469,22 +470,22 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   push('world_prompt', '世界观提示词', '系统', 'system', worldPrompt);
 
   // ── 3. Map & Buildings ──
-  const locationInfo = stateManager.get<unknown[]>('世界.地点信息');
+  const locationInfo = stateManager.get<unknown[]>(paths.locations);
   if (Array.isArray(locationInfo) && locationInfo.length > 0) {
     const mapText = `【地图与建筑】\n当前具体地点: ${currentLocation}\n地图列表:\n${locationInfo.map((l) => `- ${JSON.stringify(l)}`).join('\n')}`;
     push('world_map', '地图与建筑', '系统', 'system', mapText);
   }
 
   // ── 4. Off-scene NPCs ──
-  const offSceneNpcs = relationships.filter((npc) => npc['是否在场'] !== true);
+  const offSceneNpcs = relationships.filter((npc) => npc[npcFields.isPresent] !== true);
   if (offSceneNpcs.length > 0) {
     const offSceneText = `【以下为不在场角色】(源于社交)\n${offSceneNpcs.map((npc, i) => {
       const name = npc[npcNameKey] ?? '?';
-      const gender = npc['性别'] ?? '';
+      const gender = npc[npcFields.gender] ?? '';
       const relation = npc['与玩家关系'] ?? '';
-      const affinity = npc['好感度'] ?? 50;
-      const desc = npc['描述'] ?? '';
-      const isMajor = npc['是否主要角色'] ? '是' : '否';
+      const affinity = npc[npcFields.affinity] ?? 50;
+      const desc = npc[npcFields.description] ?? '';
+      const isMajor = npc[npcFields.isMajorRole] ? '是' : '否';
       return `- [${i}] 姓名: ${name}\n  性别: ${gender}\n  关系状态: ${relation}\n  好感度: ${affinity}\n  简介: ${String(desc).slice(0, 100)}\n  是否主要角色: ${isMajor}`;
     }).join('\n')}`;
     push('npc_away', '以下为不在场角色', '系统', 'system', offSceneText);
@@ -521,7 +522,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   push('length_prompt', '字数要求提示词', '系统', 'system', wordCountContent);
 
   // ── 8. Long-term Memory ──
-  const longTerm = stateManager.get<Array<{ content: string; category?: string }>>('记忆.长期') ?? [];
+  const longTerm = stateManager.get<Array<{ content: string; category?: string }>>(paths.memoryLongTerm) ?? [];
   if (longTerm.length > 0) {
     const longText = `【长期记忆】\n${longTerm.map((e) => `${e.category ? `[${e.category}] ` : ''}${e.content}`).join('\n')}`;
     push('memory_long', '长期记忆', '记忆', 'system', longText);
@@ -530,7 +531,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   }
 
   // ── 9. Mid-term Memory ──
-  const midTerm = stateManager.get<Array<Record<string, unknown>>>('记忆.中期') ?? [];
+  const midTerm = stateManager.get<Array<Record<string, unknown>>>(paths.memoryMidTerm) ?? [];
   if (midTerm.length > 0) {
     const midText = `【中期记忆】\n${midTerm.map((e) => {
       const roles = Array.isArray(e['相关角色']) ? `【相关角色: ${(e['相关角色'] as string[]).join('、')}】` : '';
@@ -565,18 +566,20 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
     storyPlan ? `【剧情安排】\n${storyPlan}` : '【剧情安排】\n暂无');
 
   // ── 11. On-scene NPCs ──
-  const onSceneNpcs = relationships.filter((npc) => npc['是否在场'] === true);
+  const onSceneNpcs = relationships.filter((npc) => npc[npcFields.isPresent] === true);
   if (onSceneNpcs.length > 0) {
     const onSceneText = `【以下为在场角色】(源于社交)\n${onSceneNpcs.map((npc, i) => {
       const name = npc[npcNameKey] ?? '?';
-      const gender = npc['性别'] ?? '';
-      const identity = npc['身份'] ?? npc['描述'] ?? '';
+      const gender = npc[npcFields.gender] ?? '';
+      const identity = npc['身份'] ?? npc[npcFields.description] ?? '';
       const relation = npc['与玩家关系'] ?? '';
-      const affinity = npc['好感度'] ?? 50;
-      const desc = npc['描述'] ?? '';
-      const personality = Array.isArray(npc['性格特征']) ? (npc['性格特征'] as string[]).join('、') : '';
-      const isMajor = npc['是否主要角色'] ? '是' : '否';
-      const memory = Array.isArray(npc['记忆']) ? (npc['记忆'] as Array<string | Record<string, unknown>>).slice(-3).map((m) => typeof m === 'string' ? m : (m as Record<string, unknown>)['内容'] ?? m).join('\n    ') : '';
+      const affinity = npc[npcFields.affinity] ?? 50;
+      const desc = npc[npcFields.description] ?? '';
+      const traits = npc[npcFields.personalityTraits];
+      const personality = Array.isArray(traits) ? (traits as string[]).join('、') : '';
+      const isMajor = npc[npcFields.isMajorRole] ? '是' : '否';
+      const memoryList = npc[npcFields.memory];
+      const memory = Array.isArray(memoryList) ? (memoryList as Array<string | Record<string, unknown>>).slice(-3).map((m) => typeof m === 'string' ? m : (m as Record<string, unknown>)['内容'] ?? m).join('\n    ') : '';
       return `- [${i}] 姓名: ${name}\n  性别: ${gender}\n  身份: ${identity}\n  关系状态: ${relation}\n  好感度: ${affinity}\n  简介: ${String(desc).slice(0, 200)}\n  核心性格特征: ${personality}\n  是否主要角色: ${isMajor}${memory ? `\n  记忆 (最近3条):\n    ${memory}` : ''}`;
     }).join('\n')}`;
     push('npc_present', '以下为在场角色', '系统', 'system', onSceneText);
@@ -593,7 +596,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
 
   // ── 13. World State ──
   {
-    const worldDesc = stateManager.get<string>('世界.描述') ?? '';
+    const worldDesc = stateManager.get<string>(paths.worldDescription) ?? '';
     const weather = stateManager.get<unknown>(paths.weather);
     const festival = stateManager.get<unknown>(paths.festival);
     const worldEvents = stateManager.get<unknown[]>(paths.worldEvents) ?? [];
@@ -621,10 +624,10 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   }
 
   // ── 15. Player State ──
-  const playerIdentity = stateManager.get<Record<string, unknown>>('角色.基础信息') ?? {};
-  const playerAttrs = stateManager.get<Record<string, unknown>>('角色.属性');
+  const playerIdentity = stateManager.get<Record<string, unknown>>(paths.characterBaseInfo) ?? {};
+  const playerAttrs = stateManager.get<Record<string, unknown>>(paths.characterAttributes);
   const playerBody = stateManager.get<unknown>('角色.身体');
-  const playerEffects = stateManager.get<unknown>('角色.效果');
+  const playerEffects = stateManager.get<unknown>(paths.statusEffects);
   const roleParts = [];
   roleParts.push(`姓名: ${playerName}`);
   if (playerIdentity['性别']) roleParts.push(`性别: ${playerIdentity['性别']}`);

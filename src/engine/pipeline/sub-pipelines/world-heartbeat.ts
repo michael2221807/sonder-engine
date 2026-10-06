@@ -188,7 +188,7 @@ export class WorldHeartbeatPipeline {
       // The pack's own location field: the old literal ('当前位置') was no NPC field, so the same-place rule never
       // applied (2026-10-04).
       const npcLocation = String(npc[fields.location] ?? '');
-      const isAlive = npc['已死亡'] !== true && npc['isDead'] !== true;
+      const isAlive = npc[fields.deceased] !== true && npc['isDead'] !== true;
 
       // 排除与玩家同位置的 NPC — the same test presence uses, so a place and the room inside it (`城·客栈` and
       // `城·客栈·二楼`) count as one: the heartbeat never moves an NPC the story shows beside the player.
@@ -196,7 +196,7 @@ export class WorldHeartbeatPipeline {
       // 排除已死亡的 NPC
       if (!isAlive) return false;
       // Phase 6.2: 排除心跳锁定的 NPC（用户在 UI 中手动锁定，保持其状态不被 AI 修改）
-      if (npc['心跳锁定'] === true) return false;
+      if (npc[fields.heartbeatLock] === true) return false;
       const lastUpdate = npc[fields.lastMainRoundUpdate];
       if (forget > 0 && typeof lastUpdate === 'number' && round - lastUpdate > forget) return false;
 

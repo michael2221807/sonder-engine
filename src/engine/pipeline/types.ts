@@ -1017,6 +1017,10 @@ export interface EngineNpcFieldNames {
    * 引擎记录（NpcMainRoundUpdateModule）；心跳的「遗忘回合数」按它计算。不进提示词，不进卡。
    */
   lastMainRoundUpdate: string;
+  /** 已死亡标记 key（默认 '已死亡'）：为 true 的 NPC 不进世界心跳 */
+  deceased: string;
+  /** 心跳锁定标记 key（默认 '心跳锁定'，关系面板的锁图标写它）：为 true 的 NPC 不进世界心跳 */
+  heartbeatLock: string;
 }
 
 /** 心跳历史保留条数的缺省值（设置页「历史保留条数」显示的就是它；存档里没有这个设置时用它） */
@@ -1149,6 +1153,8 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
     relationshipNetwork: '关系网变量',
     lastInteractionTime: '最后互动时间',
     lastMainRoundUpdate: '上次主回合更新回合',
+    deceased: '已死亡',
+    heartbeatLock: '心跳锁定',
   },
 };
 

@@ -46,6 +46,8 @@ function createPipeline(
       currentActivity: '在做事项',
       personalityTraits: '性格特征',
       lastMainRoundUpdate: '上次主回合更新回合',
+      deceased: '已死亡',
+      heartbeatLock: '心跳锁定',
       ...fieldOverrides,
     },
     ...pathOverrides,
