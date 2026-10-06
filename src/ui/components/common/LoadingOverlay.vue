@@ -93,7 +93,7 @@ withDefaults(defineProps<LoadingOverlayProps>(), {
   gap: 14px;
 }
 
-/* ── Spinner: three sage dots orbiting with a breathing rhythm ─��� */
+/* ── Spinner: three sage dots orbiting with a breathing rhythm ── */
 .spinner {
   position: relative;
   width: 48px;

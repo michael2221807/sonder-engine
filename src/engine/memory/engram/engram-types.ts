@@ -250,7 +250,7 @@ export interface EngramWriteSnapshot {
   };
 }
 
-/** 读取路径——完整快��（以候选列表为核心） */
+/** 读取路径——完整快照（以候选列表为核心） */
 export interface EngramReadSnapshot {
   query: string;
   capturedAt: number;

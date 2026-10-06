@@ -23,7 +23,7 @@
 {{ANCHOR_INSTRUCTION}}
 {{COMPAT_MODE_INSTRUCTION}}
 
-## ���景数据
+## 场景数据
 
 **场景描述**: {{SCENE_DESCRIPTION}}
 **大地点（远景）**: {{LOCATION}}
