@@ -66,6 +66,15 @@ describe('ModelStoryOptions (the model’s recent story only)', () => {
     expect(storyText('人性锚点回升至28', { dropBracketsAfterSystemLines: true })).toBe('人性锚点回升至28');
   });
 
+  it('a short gauge name or a line that ends as a sentence is story, not a status line', () => {
+    const short = { gaugeNames: new Set(['体力', '信任', '钱']) };
+    expect(storyText('体力只剩下20%了，她咬牙往前走。', short)).toBe('体力只剩下20%了，她咬牙往前走。');
+    expect(storyText('信任，她只剩下这一点了——3年。', short)).toBe('信任，她只剩下这一点了——3年。');
+    expect(storyText('钱少了20', short)).toBe('钱少了20');
+    expect(storyText('体力降至20', short)).toBe('');
+    expect(storyText('外婆治疗费缺口缓解：先到账150万', opts)).toBe('');
+  });
+
   it('memory blocks too, line by line, bullets included', () => {
     expect(storyLines('### 最近\n- 人性锚点微降至25，档案热度升至315\n- 她笑了。', opts)).toBe('### 最近\n- 她笑了。');
   });

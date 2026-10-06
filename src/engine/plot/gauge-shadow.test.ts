@@ -106,6 +106,12 @@ describe('CommandExecutionStage · a gauge changes only through gauge_updates', 
     expect(sm.get('角色.身体.身高')).toBe('171');
   });
 
+  it('a delete that clears an old shadow away is let through', async () => {
+    const { sm, results } = await run([{ action: 'delete', key: '系统.人性锚点' }]);
+    expect(results.every((r) => r.success)).toBe(true);
+    expect(sm.get('系统.人性锚点')).toBeUndefined();
+  });
+
   it('without the pack schema nothing is refused (a real field could not be told apart)', async () => {
     const { results } = await run([{ action: 'set', key: '系统.人性锚点', value: 31 }], false);
     expect(results.every((r) => r.success)).toBe(true);

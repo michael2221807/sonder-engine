@@ -77,11 +77,25 @@ export interface ModelStoryOptions {
 
 /** The longest line read as a gauge status line; a longer one is story that happens to open with a gauge's name. */
 const MAX_STATUS_LINE_LENGTH = 40;
+/** How far after the gauge's name its number comes in a status line (「…回升至28」, 「…缓解：先到账150万」). */
+const MAX_NAME_TO_DIGIT = 12;
+/** A one-character gauge name opens too many story lines to read a line by it. */
+const MIN_GAUGE_NAME_LENGTH = 2;
+/** A line that ends as a sentence does is story: status lines seen in saves end on the number or its unit. */
+const SENTENCE_END = /[。！？!?…」』”"）)]$/;
 
+/**
+ * A gauge status line: on its own, short, opening with a gauge's name, its number close after the name, and not
+ * ending as a sentence (code review 2026-10-05: 「体力只剩下20%了，她咬牙往前走。」 is story, even with a gauge 体力).
+ */
 function isGaugeStatusLine(line: string, gaugeNames: ReadonlySet<string>): boolean {
   const t = line.trim().replace(/^[-*•]\s*/, '');
-  if (!t || t.length > MAX_STATUS_LINE_LENGTH || !/\d/.test(t)) return false;
-  for (const name of gaugeNames) if (name && t.startsWith(name)) return true;
+  if (!t || t.length > MAX_STATUS_LINE_LENGTH || SENTENCE_END.test(t)) return false;
+  for (const name of gaugeNames) {
+    if (name.length < MIN_GAUGE_NAME_LENGTH || !t.startsWith(name)) continue;
+    const digit = t.slice(name.length).search(/\d/);
+    if (digit !== -1 && digit <= MAX_NAME_TO_DIGIT) return true;
+  }
   return false;
 }
 

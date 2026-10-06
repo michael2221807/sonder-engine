@@ -55,7 +55,9 @@ export class CommandExecutionStage implements PipelineStage {
     const allowed = ctx.parsedResponse.commands.filter((command) => {
       const key = String(command.key ?? '');
       const hit = this.protectedPathOf(key);
-      const shadow = !hit && gaugeShadow(key);
+      // Only writes are refused: a delete (or pull) that clears an old shadow away is let through (code review).
+      const writes = command.action === 'set' || command.action === 'add' || command.action === 'push';
+      const shadow = !hit && writes && gaugeShadow(key);
       if (hit) refused.push({ success: false, command, error: `the engine keeps this path: ${hit}` });
       else if (shadow) refused.push({ success: false, command, error: `a plot gauge changes only through gauge_updates: ${key}` });
       return !hit && !shadow;
