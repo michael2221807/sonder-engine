@@ -482,7 +482,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
     const offSceneText = `【以下为不在场角色】(源于社交)\n${offSceneNpcs.map((npc, i) => {
       const name = npc[npcNameKey] ?? '?';
       const gender = npc[npcFields.gender] ?? '';
-      const relation = npc['与玩家关系'] ?? '';
+      const relation = npc[npcFields.relationshipStatus] ?? '';
       const affinity = npc[npcFields.affinity] ?? 50;
       const desc = npc[npcFields.description] ?? '';
       const isMajor = npc[npcFields.isMajorRole] ? '是' : '否';
@@ -572,7 +572,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
       const name = npc[npcNameKey] ?? '?';
       const gender = npc[npcFields.gender] ?? '';
       const identity = npc['身份'] ?? npc[npcFields.description] ?? '';
-      const relation = npc['与玩家关系'] ?? '';
+      const relation = npc[npcFields.relationshipStatus] ?? '';
       const affinity = npc[npcFields.affinity] ?? 50;
       const desc = npc[npcFields.description] ?? '';
       const traits = npc[npcFields.personalityTraits];

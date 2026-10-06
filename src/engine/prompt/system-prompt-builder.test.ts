@@ -581,3 +581,26 @@ describe('buildSystemPrompt · the previous round\'s thinking reaches the CoT mo
     expect(prefix(two)).toBe(prefix(one));
   });
 });
+
+// PO 2026-10-05 (3A): the NPC lines' 关系状态 read the demo's field 与玩家关系, which this pack never writes, so the line
+// was always blank. They read the pack's own relationship field (npcFieldNames.relationshipStatus).
+describe('buildSystemPrompt · NPC relationship line', () => {
+  it('shows the 关系状态 of each NPC, present and away', () => {
+    const { sm } = createMockStateManager({
+      世界: { 时间: { 年: 1, 月: 1, 日: 1, 小时: 8, 分钟: 0 }, 信息: {}, 描述: 'w' },
+      社交: { 关系: [
+        { 名称: '林月', 是否在场: true, 关系状态: '旧识', 与玩家关系: '不该出现' },
+        { 名称: '张三', 是否在场: false, 关系状态: '敌对' },
+      ] },
+      角色: { 基础信息: { 姓名: '主角', 当前位置: '城南' } },
+      系统: { 设置: { prompt: { enableWorldBook: false } } },
+    });
+    const r = buildSystemPrompt({
+      stateManager: sm as unknown as StateManager, paths: DEFAULT_ENGINE_PATHS, packPrompts: {}, worldBooks: [],
+      userInput: '走', playerName: '主角', cotEnabled: false, cotJudgeEnabled: false, splitGen: false, cotPseudoEnabled: false,
+    });
+    expect(r.contextPieces.npc_present).toContain('关系状态: 旧识');
+    expect(r.contextPieces.npc_present).not.toContain('不该出现');
+    expect(r.contextPieces.npc_away).toContain('关系状态: 敌对');
+  });
+});
