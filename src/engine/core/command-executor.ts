@@ -106,6 +106,11 @@ function schemaNodeAt(schema: unknown, path: string): SchemaNodeLike | undefined
   return node;
 }
 
+/** Whether the pack's state-schema declares the field a state path points at (any type). */
+export function schemaDeclaresPath(schema: unknown, path: string): boolean {
+  return schemaNodeAt(schema, path) !== undefined;
+}
+
 /** Whether the pack's state-schema declares the field a state path points at as a list. */
 export function schemaDeclaresArray(schema: unknown, path: string): boolean {
   return schemaNodeAt(schema, path)?.type === 'array';
@@ -157,7 +162,19 @@ export class CommandExecutor {
     private numericBounds?: (path: string) => NumericBounds | undefined,
     /** Whether the pack schema declares a path a list (see schemaDeclaresArray); lets a push repair malformed data. */
     private declaresArray?: (path: string) => boolean,
+    /** Whether the pack schema declares a path at all (see schemaDeclaresPath); undefined when there is no schema. */
+    private declares?: (path: string) => boolean,
   ) {}
+
+  /** Whether the executor was given the pack schema's path lookup. */
+  get knowsSchema(): boolean {
+    return this.declares !== undefined;
+  }
+
+  /** Whether the pack schema declares a path (false without a schema). */
+  declaresPath(path: string): boolean {
+    return this.declares?.(path) === true;
+  }
 
   /** 执行单条指令 — 返回执行结果 */
   execute(command: Command): CommandResult {
@@ -418,7 +435,7 @@ function pathRootSegment(path: string): string {
 }
 
 /** 按 `.` 拆段，方括号内的 `.` 不拆（`社交.关系[名称=张.三].好感度` → 3 段）。 */
-function splitPathSegments(path: string): string[] {
+export function splitPathSegments(path: string): string[] {
   const out: string[] = [];
   let cur = '';
   let depth = 0;
@@ -433,7 +450,7 @@ function splitPathSegments(path: string): string[] {
 }
 
 /** 段的键名（去掉过滤/索引后缀）：`部位[名称=X]` → `部位`。 */
-function segmentKey(segment: string): string {
+export function segmentKey(segment: string): string {
   const b = segment.indexOf('[');
   return (b === -1 ? segment : segment.slice(0, b)).trim();
 }

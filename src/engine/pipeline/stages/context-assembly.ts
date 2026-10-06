@@ -55,6 +55,8 @@ import type { PromptSettings } from '../../prompt/world-book';
 import { buildEnvironmentBlock } from '../../prompt/environment-block';
 import { SPLIT_STEP1_FORMAT_PROMPT_ID, SPLIT_STEP2_FOLLOWUP_PROMPT_ID } from '../../prompt/builtin-slots';
 import { PlotInjector } from '../../plot/plot-injector';
+import { plotGaugeNames, findGaugeShadowPaths } from '../../plot/gauge-shadow';
+import { schemaDeclaresPath } from '../../core/command-executor';
 import type { WorldBook, SystemPromptBuildResult } from '../../prompt/world-book';
 
 /** 状态树中叙事历史条目的结构 — 从 "元数据.叙事历史" 读取 */
@@ -129,7 +131,11 @@ export class ContextAssemblyStage implements PipelineStage {
     // The model's view of recent story, without system lines when the active component asks for it
     // (PipelineMeta.historyStoryOnly, set by the transform above). Player input is never changed.
     const storyOnly = ctx.meta.historyStoryOnly === true;
-    const historyText = storyOnly ? storyText : undefined;
+    // The save's plot gauges: their status lines are left out of that view (ModelStoryOptions), and copies of them
+    // written elsewhere in the save are never shown (gauge shadows, below).
+    const gaugeNames = plotGaugeNames(this.stateManager, this.paths.plotDirection);
+    const modelStory = { dropBracketsAfterSystemLines: true, gaugeNames };
+    const historyText = storyOnly ? (text: string): string => storyText(text, modelStory) : undefined;
     const story = (text: string): string => (historyText ? historyText(text) : text);
     // ── 1. 冻结状态树快照 ──
     const stateSnapshot = this.stateManager.toSnapshot();
@@ -140,7 +146,7 @@ export class ContextAssemblyStage implements PipelineStage {
     const retrieved = await this.retrieveMemory(ctx.userInput, ctx);
     // The memory block quotes recent story too (the keyword retriever's short-term section; event snippets): the
     // same view applies to it, line by line, so a snippet cut inside a bracket never takes the next bullets along.
-    const memoryBlock = storyOnly && retrieved ? storyLines(retrieved) : retrieved;
+    const memoryBlock = storyOnly && retrieved ? storyLines(retrieved, modelStory) : retrieved;
 
     // 读取短期记忆用于单独注入（参照 ming: 短期记忆作为独立 assistant 消息注入 chat history 末端）
     // 路径来自 memoryPathConfig，默认 '记忆.短期'
@@ -168,9 +174,16 @@ export class ContextAssemblyStage implements PipelineStage {
     // 见 `snapshot-sanitizer.ts` 的 `PROMPT_ALWAYS_STRIP_PATHS` 注释。
     // 2026-05-28: When presenceEnabled, NPC data is injected via presencePartition
     // template (tiered by relevance). Strip from GAME_STATE_JSON to avoid duplication.
+    // Gauge shadows (gauge-shadow.ts): copies of a plot gauge an older round wrote elsewhere in the save drifted from
+    // the real value; the model reads the gauge from the plot directive only. The save keeps them (PO 2026-10-05).
+    const schema = this.pack.stateSchema;
+    const gaugeShadowPaths = schema
+      ? findGaugeShadowPaths(stateSnapshot, gaugeNames, (path) => schemaDeclaresPath(schema, path), this.paths.plotDirection)
+      : [];
+    const stateStripPaths = [...(presenceEnabled ? ['社交.关系'] : []), ...gaugeShadowPaths];
     const gameStateJson = stringifySnapshotForPrompt(
       stateSnapshot, nsfwMode, 0,
-      presenceEnabled ? ['社交.关系'] : undefined,
+      stateStripPaths.length > 0 ? stateStripPaths : undefined,
     );
 
     // ── 4a. 行动选项模式 (bugfix 2026-04-11) ──
@@ -586,6 +599,7 @@ export class ContextAssemblyStage implements PipelineStage {
         paths: this.paths,
         packPrompts: roundPrompts,
         bookmarkedRoundsBlock,
+        hiddenStatePaths: gaugeShadowPaths,
         prevThinking: prevThinkingBlock,
         worldBooks: mergedWorldBooks,
         userInput: ctx.userInput,
@@ -702,7 +716,9 @@ export class ContextAssemblyStage implements PipelineStage {
           const compiled = compileStep2Context({
             snapshot: stateSnapshot,
             nsfwMode,
-            additionalStripPaths: presenceEnabled ? [this.paths.relationships] : undefined,
+            additionalStripPaths: presenceEnabled || gaugeShadowPaths.length > 0
+              ? [...(presenceEnabled ? [this.paths.relationships] : []), ...gaugeShadowPaths]
+              : undefined,
             registry: buildSentRegistry(Object.keys(buildResult.contextPieces)),
             paths: this.paths,
             presentNpcNames,

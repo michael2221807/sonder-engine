@@ -20,6 +20,7 @@ import type {
 } from './world-book';
 import { formatHeroinePlanForContext, type HeroinePlan } from '../story/heroine-plan';
 import { buildPlotFocusCorpusTexts } from '../plot/plot-corpus';
+import { withoutStatePaths } from '../plot/gauge-shadow';
 import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio, actionOptionsOn, wordCountRangeOf, type WordCountRange } from './world-book';
 import { BUILTIN_SLOTS, STORY_STYLE_PROMPT_IDS } from './builtin-slots';
 import { DEFAULT_ENGINE_PATHS, type EnginePathConfig } from '../pipeline/types';
@@ -88,6 +89,8 @@ export interface SystemPromptBuildParams {
    * meant to inform the narrative. Absent or empty = no piece.
    */
   bookmarkedRoundsBlock?: string;
+  /** State paths the model must not read (gauge shadows, gauge-shadow.ts): left out of the state blocks. */
+  hiddenStatePaths?: readonly string[];
   /**
    * The previous round's thinking, framed by the pack (`engineFragments.prevThinkingHeader`), for the CoT module's
    * `{{PREV_THINKING}}` (CoT-2 design; PO 2026-10-05 4A): sent as its own piece right after the module, which stays
@@ -625,8 +628,10 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
 
   // ── 15. Player State ──
   const playerIdentity = stateManager.get<Record<string, unknown>>(paths.characterBaseInfo) ?? {};
-  const playerAttrs = stateManager.get<Record<string, unknown>>(paths.characterAttributes);
-  const playerBody = stateManager.get<unknown>('角色.身体');
+  const hidden = params.hiddenStatePaths ?? [];
+  const playerAttrs = withoutStatePaths(stateManager.get<Record<string, unknown>>(paths.characterAttributes),
+    paths.characterAttributes, hidden) as Record<string, unknown> | undefined;
+  const playerBody = withoutStatePaths(stateManager.get<unknown>('角色.身体'), '角色.身体', hidden);
   const playerEffects = stateManager.get<unknown>(paths.statusEffects);
   const roleParts = [];
   roleParts.push(`姓名: ${playerName}`);

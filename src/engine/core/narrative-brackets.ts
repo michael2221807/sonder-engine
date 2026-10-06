@@ -28,19 +28,25 @@ export function isSystemBracket(inner: string): boolean {
  *    that colon form, so `【环境】`, `【判定日快到了】` or `【任务】难度:高` stay.
  * 4. A stray 〖 or 〗 left by an unclosed bracket.
  */
-export function withoutSystemLines(raw: string): string {
+export function withoutSystemLines(raw: string, opts: Pick<ModelStoryOptions, 'dropBracketsAfterSystemLines'> = {}): string {
   if (!raw) return '';
   let t = raw.replace(/<\s*judge\s*>[\s\S]*?<\s*\/\s*judge\s*>/gi, '');
   let out = '';
   let cursor = 0;
+  // Where the last left-out bracket ended: a bracket that follows it with only spaces between is part of it.
+  let afterLeftOut = -1;
   while (cursor < t.length) {
     const open = t.indexOf('〖', cursor);
     if (open === -1) break;
     const close = t.indexOf('〗', open + 1);
     if (close === -1) break;
     const inner = t.slice(open + 1, close);
-    out += t.slice(cursor, open) + (isSystemBracket(inner) ? '' : inner);
+    const between = t.slice(cursor, open);
+    const trailing = opts.dropBracketsAfterSystemLines === true && afterLeftOut === cursor && /^[ \t]*$/.test(between);
+    const leaveOut = trailing || isSystemBracket(inner);
+    out += between + (leaveOut ? '' : inner);
     cursor = close + 1;
+    afterLeftOut = leaveOut ? cursor : -1;
   }
   t = out + t.slice(cursor);
   t = t.replace(/【([^【】]*)】/g, (whole, inner: string) => {
@@ -53,15 +59,47 @@ export function withoutSystemLines(raw: string): string {
   return t.replace(/[〖〗]/g, '');
 }
 
+/**
+ * What the model's recent story also leaves out when its rounds write no system lines (plot momentum; PO 2026-10-05,
+ * docs/research/numeric-status-lines-2026-10-05.md option C). Older rounds wrote a gauge's change as a bracket right
+ * after a verdict (`〖判定:…〗〖<gauge>回升至27〗`); the verdict went and the bracket stayed as a bare story line, which
+ * the model copied, and its copies came back in the next recap. Display and speech never pass these options.
+ */
+export interface ModelStoryOptions {
+  /** A `〖…〗` right after a left-out system line (only spaces between) is part of it and is left out too. */
+  dropBracketsAfterSystemLines?: boolean;
+  /**
+   * The save's plot gauge names: a short line of its own that starts with one and carries a digit is a gauge status
+   * line, not story. The names come from the save; nothing here names a game field.
+   */
+  gaugeNames?: ReadonlySet<string>;
+}
+
+/** The longest line read as a gauge status line; a longer one is story that happens to open with a gauge's name. */
+const MAX_STATUS_LINE_LENGTH = 40;
+
+function isGaugeStatusLine(line: string, gaugeNames: ReadonlySet<string>): boolean {
+  const t = line.trim().replace(/^[-*•]\s*/, '');
+  if (!t || t.length > MAX_STATUS_LINE_LENGTH || !/\d/.test(t)) return false;
+  for (const name of gaugeNames) if (name && t.startsWith(name)) return true;
+  return false;
+}
+
+function withoutGaugeStatusLines(text: string, gaugeNames: ReadonlySet<string> | undefined): string {
+  if (!gaugeNames || gaugeNames.size === 0) return text;
+  return text.split('\n').filter((line) => !isGaugeStatusLine(line, gaugeNames)).join('\n');
+}
+
 /** `withoutSystemLines` as recent story for the model: the blank lines a removed line leaves are closed up. */
-export function storyText(raw: string): string {
-  return withoutSystemLines(raw).replace(/\n{3,}/g, '\n\n').trim();
+export function storyText(raw: string, opts: ModelStoryOptions = {}): string {
+  return withoutGaugeStatusLines(withoutSystemLines(raw, opts), opts.gaugeNames).replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /**
  * `storyText` for a block of separate lines (a memory block's bullets and snippets): each line on its own, so a
  * snippet cut off inside a bracket can never pair with a later line's 〗 and take the lines between with it.
  */
-export function storyLines(raw: string): string {
-  return raw.split('\n').map(withoutSystemLines).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+export function storyLines(raw: string, opts: ModelStoryOptions = {}): string {
+  const lines = raw.split('\n').map((line) => withoutSystemLines(line, opts));
+  return withoutGaugeStatusLines(lines.join('\n'), opts.gaugeNames).replace(/\n{3,}/g, '\n\n').trim();
 }

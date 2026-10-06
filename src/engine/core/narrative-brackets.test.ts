@@ -39,3 +39,34 @@ describe('storyLines (a memory block)', () => {
     expect(storyText(block)).not.toContain('（第5轮）');
   });
 });
+
+// Option C (PO 2026-10-05; docs/research/numeric-status-lines-2026-10-05.md): the model's view of recent story in
+// plot momentum leaves out a gauge's status bracket written right after a verdict, and short gauge status lines.
+describe('ModelStoryOptions (the model’s recent story only)', () => {
+  const opts = { dropBracketsAfterSystemLines: true, gaugeNames: new Set(['人性锚点', '反差体质失控度', '外婆治疗费缺口']) };
+
+  it('display and speech are unchanged: without options a status bracket after a verdict keeps its text', () => {
+    expect(withoutSystemLines('她点头。〖判定:心性,结果:成功,判定值:57〗〖人性锚点回升至27〗')).toBe('她点头。人性锚点回升至27');
+  });
+
+  it('a bracket right after a verdict goes with it, a chain of them too, with spaces between but not a line break', () => {
+    expect(storyText('她点头。〖判定:心性,结果:成功〗〖人性锚点回升至27〗〖失控微涌后缓降至74〗', opts)).toBe('她点头。');
+    expect(storyText('她点头。〖判定:心性,结果:成功〗 〖人性锚点回升至27〗', { dropBracketsAfterSystemLines: true })).toBe('她点头。');
+    expect(storyText('〖判定:心性,结果:成功〗\n〖她心里一沉〗', { dropBracketsAfterSystemLines: true })).toBe('她心里一沉');
+    // A bracket of the story's own, not after a verdict, keeps its text.
+    expect(storyText('她说〖别回头〗然后走了。', opts)).toBe('她说别回头然后走了。');
+  });
+
+  it('a short line of its own that opens with a gauge name and carries a digit is left out; story lines stay', () => {
+    const raw = '她靠在你肩上睡着了。\n人性锚点回升至28\n反差体质失控度平稳维持72\n外婆治疗费缺口清零，后天三甲会诊有着落了。\n'
+      + '人性锚点这几个字在她心里转了很久很久，终于在第3次深夜里被她自己说出口，像一块石头落了地。';
+    expect(storyText(raw, opts)).toBe('她靠在你肩上睡着了。\n外婆治疗费缺口清零，后天三甲会诊有着落了。\n'
+      + '人性锚点这几个字在她心里转了很久很久，终于在第3次深夜里被她自己说出口，像一块石头落了地。');
+    // Without gauge names (no plot threads) nothing is read as a status line.
+    expect(storyText('人性锚点回升至28', { dropBracketsAfterSystemLines: true })).toBe('人性锚点回升至28');
+  });
+
+  it('memory blocks too, line by line, bullets included', () => {
+    expect(storyLines('### 最近\n- 人性锚点微降至25，档案热度升至315\n- 她笑了。', opts)).toBe('### 最近\n- 她笑了。');
+  });
+});

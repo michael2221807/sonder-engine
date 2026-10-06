@@ -27,6 +27,7 @@ import type { CommandExecutor } from '../../core/command-executor';
 import type { StateManager } from '../../core/state-manager';
 import { findIncompletePrivacy, readNsfwSettings } from '../../validators/privacy-profile-validator';
 import { eventBus } from '../../core/event-bus';
+import { plotGaugeNames, isGaugeShadowPath } from '../../plot/gauge-shadow';
 
 export class CommandExecutionStage implements PipelineStage {
   name = 'CommandExecution';
@@ -50,10 +51,14 @@ export class CommandExecutionStage implements PipelineStage {
     // 即使某条失败也会继续执行剩余指令（fail-soft 策略）。
     // 返回值包含每条指令的成功/失败状态和完整的变更日志。
     const refused: CommandResult[] = [];
+    const gaugeShadow = this.gaugeShadowCheck();
     const allowed = ctx.parsedResponse.commands.filter((command) => {
-      const hit = this.protectedPathOf(String(command.key ?? ''));
+      const key = String(command.key ?? '');
+      const hit = this.protectedPathOf(key);
+      const shadow = !hit && gaugeShadow(key);
       if (hit) refused.push({ success: false, command, error: `the engine keeps this path: ${hit}` });
-      return !hit;
+      else if (shadow) refused.push({ success: false, command, error: `a plot gauge changes only through gauge_updates: ${key}` });
+      return !hit && !shadow;
     });
     if (refused.length > 0) {
       console.warn('[CommandExecution] Refused commands on paths the engine keeps:', refused.map((r) => r.command.key));
@@ -95,6 +100,17 @@ export class CommandExecutionStage implements PipelineStage {
    * history, the pre-round snapshot, the reasoning ring, the bookmarks and the whole memory tree — and the roots
    * they live under, written whole. Returns the protected path a command key would write, or undefined.
    */
+  /**
+   * A gauge written outside the plot state (a shadow copy, gauge-shadow.ts): refused, the gauge changes only through
+   * the verdict's gauge_updates (PO 2026-10-05). Without the pack schema nothing is refused: a declared field that
+   * shares a gauge's name could not be told apart.
+   */
+  private gaugeShadowCheck(): (key: string) => boolean {
+    const names = plotGaugeNames(this.stateManager, this.paths.plotDirection);
+    if (names.size === 0 || !this.commandExecutor.knowsSchema) return () => false;
+    return (key) => isGaugeShadowPath(key, names, (path) => this.commandExecutor.declaresPath(path), this.paths.plotDirection);
+  }
+
   private protectedPathOf(key: string): string | undefined {
     const memoryRoot = this.paths.memoryMidTerm.slice(0, Math.max(0, this.paths.memoryMidTerm.lastIndexOf('.')));
     const kept = [this.paths.roundNumber, this.paths.narrativeHistory, this.paths.preRoundSnapshot,
