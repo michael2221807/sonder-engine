@@ -14,7 +14,7 @@
  */
 // App doc: docs/user-guide/pages/game-prompts.md §1.4（修改和开关在哪里生效）· game-save.md（游戏卡 · 内置提示词改动）
 import type { PromptRegistry } from './prompt-registry';
-import { ALWAYS_ON_PROMPT_IDS, BUILTIN_SLOTS } from './builtin-slots';
+import { BUILTIN_SLOTS, isPromptAlwaysOn } from './builtin-slots';
 
 /** One prompt's edit: the player's text and/or that the prompt is switched off. A prompt left alone has none. */
 export interface PromptEdit {
@@ -87,7 +87,7 @@ export function readPromptEdits(packId: string, ids?: Iterable<string>, storage?
   const out: PromptEdit[] = [];
   for (const id of ids ?? promptEditIds(packId, s)) {
     const content = s.getItem(promptContentKey(packId, id));
-    const off = s.getItem(promptEnabledKey(packId, id)) === 'false' && !ALWAYS_ON_PROMPT_IDS.has(id);
+    const off = s.getItem(promptEnabledKey(packId, id)) === 'false' && !isPromptAlwaysOn(id);
     if (content === null && !off) continue;
     out.push({ id, ...(content === null ? {} : { content }), ...(off ? { enabled: false as const } : {}) });
   }
@@ -115,7 +115,7 @@ export function sanitizePromptEdits(raw: unknown, knownIds?: ReadonlySet<string>
     if (typeof id !== 'string' || !id || (content !== undefined && typeof content !== 'string')) continue;
     // Only the pack's own prompts, within a size: a card must not fill the device's storage (code review L5).
     if ((knownIds && !knownIds.has(id)) || (typeof content === 'string' && content.length > MAX_IMPORTED_PROMPT_LENGTH)) continue;
-    const off = enabled === false && !ALWAYS_ON_PROMPT_IDS.has(id);
+    const off = enabled === false && !isPromptAlwaysOn(id);
     if (content === undefined && !off) continue;
     out.push({ id, ...(typeof content === 'string' ? { content } : {}), ...(off ? { enabled: false as const } : {}) });
   }

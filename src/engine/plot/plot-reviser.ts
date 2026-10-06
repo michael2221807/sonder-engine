@@ -135,7 +135,7 @@ export class PlotReviser {
    * is unusable.
    */
   async revise(arcId: string, request: string, opts: ReviseOptions = {}): Promise<ReviseResult | null> {
-    const promptContent = this.pack.prompts?.['plotRevise'] ?? '';
+    const promptContent = this.decomposer.promptText('plotRevise');
     if (!promptContent) {
       console.warn('[PlotReviser] plotRevise prompt not found in pack');
       return null;
@@ -196,7 +196,7 @@ export class PlotReviser {
     request: string,
     opts: DecomposeOptions = {},
   ): Promise<DecomposeResult['nodes'][number] | null> {
-    const promptContent = this.pack.prompts?.['plotReviseNode'] ?? '';
+    const promptContent = this.decomposer.promptText('plotReviseNode');
     if (!promptContent) {
       console.warn('[PlotReviser] plotReviseNode prompt not found in pack');
       return null;

@@ -27,6 +27,7 @@
 import type { AIService } from '../ai/ai-service';
 import type { AIMessage } from '../ai/types';
 import type { GamePack, CustomPresetSchema } from '../types';
+import type { PromptTextSource } from '../prompt/prompt-assembler';
 import { findBalancedJsonBlocks, stripMarkdownFences } from '../ai/json-extract';
 
 // ─── 参数 / 结果 ───
@@ -240,7 +241,17 @@ function pickSchemaFields(
 // ─── PresetAIGenerator ───
 
 export class PresetAIGenerator {
-  constructor(private aiService: AIService, private gamePack: GamePack | null) {}
+  constructor(
+    private aiService: AIService,
+    private gamePack: GamePack | null,
+    /** The prompts as the prompt page left them (item 2, PO 2026-10-05); without it, the pack's text. */
+    private prompts?: PromptTextSource,
+  ) {}
+
+  private promptText(promptId: string): string {
+    const packPrompts = this.gamePack?.prompts;
+    return (this.prompts ? this.prompts.effectiveText(promptId, packPrompts) : packPrompts?.[promptId] ?? '').trim();
+  }
 
   /**
    * 主入口 — 调 AI 生成一条预设条目
@@ -257,10 +268,7 @@ export class PresetAIGenerator {
     // 优先用专门为创角生成调优的 `creationGenJailbreak`（不含主回合 JSON 约束、
     // 专门为 NSFW/暗黑题材的拒绝问题写过措辞）；缺失时 fallback 到 narratorEnforcement
     // 以保持兼容（旧 pack 没有 creationGenJailbreak）。
-    const jailbreak = (
-      this.gamePack?.prompts['creationGenJailbreak']?.trim() ||
-      this.gamePack?.prompts['narratorEnforcement']?.trim()
-    );
+    const jailbreak = this.promptText('creationGenJailbreak') || this.promptText('narratorEnforcement');
     if (jailbreak) {
       messages.push({ role: 'system', content: jailbreak });
     }

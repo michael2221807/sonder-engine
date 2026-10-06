@@ -27,7 +27,7 @@ import { eventBus } from '@/engine/core/event-bus';
 import type { GamePack } from '@/engine/types/game-pack';
 import { useGameState } from '@/ui/composables/useGameState';
 import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio, actionOptionsOn, wordCountOf, type PromptSettings } from '@/engine/prompt/world-book';
-import { BUILTIN_SLOTS, ROUND_REQUIRED_PROMPT_IDS, RADIO_PROMPT_IDS } from '@/engine/prompt/builtin-slots';
+import { BUILTIN_SLOTS, ROUND_REQUIRED_PROMPT_IDS, RADIO_PROMPT_IDS, SETTING_PICKED_PROMPT_IDS, isPromptAlwaysOn } from '@/engine/prompt/builtin-slots';
 import { promptContentKey, promptEnabledKey, sameText } from '@/engine/prompt/prompt-edits';
 import { createEmptyHeroinePlan, type HeroinePlan, type HeroineEntry, type HeroineInteractionEvent } from '@/engine/story/heroine-plan';
 import type { PromptRegistry } from '@/engine/prompt/prompt-registry';
@@ -411,8 +411,10 @@ function isPromptActiveByRadio(id: string): boolean | null {
 
 /** What every round needs (its formats, its length rule): edited here, never switched off. */
 const REQUIRED_PROMPTS: ReadonlySet<string> = new Set(ROUND_REQUIRED_PROMPT_IDS);
-/** The prompts a setting chooses (the engine's list: the registry keeps them always on). */
+/** The prompts a setting chooses among (perspective, story style): the chosen one is in use, the others never. */
 const RADIO_PROMPTS: ReadonlySet<string> = new Set(RADIO_PROMPT_IDS);
+/** The prompts a setting switches on and off (CoT, action options, plot direction and so on). */
+const SETTING_PROMPTS: ReadonlySet<string> = new Set(SETTING_PICKED_PROMPT_IDS);
 
 // The list reads the page's edits from localStorage, which Vue does not track: every write here bumps this, and so
 // does coming back to the page (it is kept alive; a game card's import writes edits elsewhere). Before 2026-10-04 a
@@ -437,7 +439,7 @@ const promptEntries = computed<PromptEntry[]>(() => {
     const radioState = isPromptActiveByRadio(id);
     const enabled = radioState !== null
       ? radioState
-      : REQUIRED_PROMPTS.has(id) || (savedEnabled !== null ? savedEnabled === 'true' : true);
+      : switchLocked(id) || (savedEnabled !== null ? savedEnabled === 'true' : true);
 
     entries.push({
       id,
@@ -534,16 +536,20 @@ const filteredPrompts = computed<PromptEntry[]>(() => {
 // ─── Toggle enabled ───────────────────────────────────────────
 
 /**
- * A row whose switch decides nothing: a prompt every round needs, or one a setting chooses (perspective, story
- * style — the 「游戏设定」 tab picks it). The engine sends these as the registry's always-on modules (code review H2).
+ * A row without a switch: only a prompt a request works without can be switched off (PO 2026-10-05, item 1). The
+ * rest a request needs (a round's format, a task's prompt) or a setting decides; the engine sends them as the
+ * registry's always-on modules, so a switch here would decide nothing, or break the request it belongs to.
  */
 function switchLocked(id: string): boolean {
-  return REQUIRED_PROMPTS.has(id) || RADIO_PROMPTS.has(id);
+  return isPromptAlwaysOn(id);
 }
 
+/** Why a row has no switch, or what its switch does. */
 function switchTitle(entry: PromptEntry): string {
   if (REQUIRED_PROMPTS.has(entry.id)) return t('prompt.entry.requiredTitle');
   if (RADIO_PROMPTS.has(entry.id)) return t('prompt.entry.radioTitle');
+  if (SETTING_PROMPTS.has(entry.id)) return t('prompt.entry.settingTitle');
+  if (switchLocked(entry.id)) return t('prompt.entry.taskTitle');
   return entry.enabled ? t('prompt.entry.enableTitle') : t('prompt.entry.disableTitle');
 }
 
@@ -995,6 +1001,7 @@ function previewContent(content: string, maxLen = 100): string {
                       <span class="prompt-id">{{ getDisplayName(entry.id) }}</span>
                     </Tooltip>
                     <span v-if="entry.modified" class="modified-badge">{{ $t('prompt.entry.modifiedBadge') }}</span>
+                    <span v-if="RADIO_PROMPTS.has(entry.id) && entry.enabled" class="in-use-badge">{{ $t('prompt.entry.inUseBadge') }}</span>
                   </div>
                   <div class="prompt-controls">
                     <!-- Export single -->
@@ -1005,11 +1012,25 @@ function previewContent(content: string, maxLen = 100): string {
                         </svg>
                       </button>
                     </Tooltip>
+                    <!-- No switch where a request needs the prompt or a setting decides it: a lock that says why.
+                         A static icon (the tooltip's wrapper takes keyboard focus), fixed: the list scrolls and its
+                         right edge clips an in-flow bubble. -->
+                    <Tooltip v-if="switchLocked(entry.id)" :text="switchTitle(entry)" fixed>
+                      <span
+                        class="lock-mark"
+                        role="img"
+                        :aria-label="switchTitle(entry)"
+                        :data-testid="`prompt-lock-${entry.id}`"
+                      >
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12" aria-hidden="true">
+                          <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
+                        </svg>
+                      </span>
+                    </Tooltip>
                     <!-- Enable toggle -->
-                    <Tooltip :text="switchTitle(entry)" interactive>
+                    <Tooltip v-else :text="switchTitle(entry)" interactive>
                       <AgaToggle
                         :modelValue="entry.enabled"
-                        :disabled="switchLocked(entry.id)"
                         :data-testid="`prompt-toggle-${entry.id}`"
                         :label="switchTitle(entry)"
                         @update:modelValue="() => toggleEnabled(entry)"
@@ -1313,6 +1334,28 @@ function previewContent(content: string, maxLen = 100): string {
   border-radius: 8px;
   flex-shrink: 0;
   text-shadow: 0 0 4px color-mix(in oklch, var(--color-amber-400) 30%, transparent);
+}
+
+.in-use-badge {
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  color: var(--color-sage-300, #9fbf9f);
+  background: color-mix(in oklch, var(--color-sage-400, #8fae8f) 12%, transparent);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+/* A row without a switch: a quiet lock, the same footprint as the switch it replaces. */
+.lock-mark {
+  width: 32px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary, #8888a0);
+  opacity: 0.7;
+  border-radius: 9px;
 }
 
 /* ── Prompt controls ── */

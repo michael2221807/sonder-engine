@@ -24,6 +24,7 @@ const JAILBREAK_HEADING = '# 虚构创作环境声明';
 const CORE_HEADING = '# 核心规则 · GM 身份与输出格式';
 const WRITING_RULES_HEADING = '# 核心规则 · 写正文';
 const FORMAT_LINE = '按照上述规则的 JSON 格式输出本回合的叙事和状态变更。';
+const STEP1_FORMAT_HEADING = '# 分步生成 1/2：仅正文';
 
 // Two full rounds so round 2 has a divider with the bookmark star (the opening has none).
 const twoRoundTree = makeSeedTree({
@@ -102,10 +103,10 @@ for (const splitGen of [true, false]) {
       await goToGameTab(page, 'prompts');
       await page.getByRole('button', { name: '内置提示词', exact: true }).click();
       await page.getByRole('button', { name: '展开', exact: true }).click();
-      // The round's own format cannot be switched off: every round needs it to know what to write.
+      // The round's own format has no switch: every round needs it to know what to write.
       for (const id of ['mainRound', 'splitGenStep1']) {
-        await expect(page.getByTestId(`prompt-toggle-${id}`)).toBeDisabled();
-        await expect(page.getByTestId(`prompt-toggle-${id}`)).toHaveAttribute('aria-checked', 'true');
+        await expect(page.getByTestId(`prompt-lock-${id}`)).toBeVisible();
+        await expect(page.getByTestId(`prompt-toggle-${id}`)).toHaveCount(0);
       }
       // The page shows each click at once (it used to show nothing until a reload, so a second click switched the
       // prompt off again instead of back on).
@@ -151,7 +152,10 @@ for (const splitGen of [true, false]) {
       expect(story).toContain('玩家收藏的历史片段');
       expect(timesIn(story, BOOKMARK_LABEL)).toBe(1);
       // The format prompt no longer opens with a context section the story request cannot fill (it rendered empty).
-      expect(story).toContain(FORMAT_LINE);
+      // Split Step 1 writes the story only, with plot momentum on or off: the story-only format, not the single
+      // call's, which asks for commands, options and memory that Step 2 writes (item 3, PO 2026-10-05).
+      expect(story).toContain(splitGen ? STEP1_FORMAT_HEADING : FORMAT_LINE);
+      expect(story).not.toContain(splitGen ? FORMAT_LINE : STEP1_FORMAT_HEADING);
       expect(story).not.toContain('# 主回合上下文');
       // 2A + 3C (PO 2026-10-05): every request that writes the story opens with the jailbreak and carries core's
       // writing rules (coreNarrative).
@@ -182,7 +186,7 @@ for (const splitGen of [true, false]) {
 
 // Code review H2/M1/M2 (2026-10-04): a switch that decides nothing is not offered, and a save without a change is no
 // edit (kept, it would freeze the pack's text of today and travel in cards).
-test('the prompt page locks the switches that decide nothing, and a save without a change stores nothing',
+test('the prompt page has no switch where a request needs the prompt or a setting decides it; a save without a change stores nothing',
   { tag: ['@regression', '@prompts'] }, async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-1920', 'one viewport is enough for the prompt page');
     // About 20 s on a quiet machine, 30 s under load: many dialogs and checks.
@@ -192,19 +196,47 @@ test('the prompt page locks the switches that decide nothing, and a save without
     await goToGameTab(page, 'prompts');
     await page.getByRole('button', { name: '内置提示词', exact: true }).click();
     await page.getByRole('button', { name: '展开', exact: true }).click();
-    // Every round needs these: on, locked.
-    for (const id of ['mainRound', 'splitGenStep1', 'splitGenStep2', 'splitGenStep2Followup', 'wordCountReq']) {
-      await expect(page.getByTestId(`prompt-toggle-${id}`)).toBeDisabled();
-      await expect(page.getByTestId(`prompt-toggle-${id}`)).toHaveAttribute('aria-checked', 'true');
+    // A lock instead of a switch, saying why (item 1, PO 2026-10-05). Every round needs these:
+    const why = {
+      round: '每回合都要用它，不能关闭；内容可以改',
+      task: '这项功能的请求离不开它，不能关闭；内容可以改',
+      setting: '用不用由对应的设置决定，这里不能关；内容可以改',
+      radio: '开不开由「游戏设定」里的选择决定',
+    };
+    const locked: Array<[string, string]> = [
+      ...['mainRound', 'splitGenStep1', 'splitGenStep2', 'splitGenStep2Followup', 'wordCountReq'].map((id): [string, string] => [id, why.round]),
+      // another feature's request needs these (private chat, memory, heartbeat, the opening, images, plot):
+      ...['npcChat', 'memorySummary', 'worldHeartbeat', 'opening', 'imageSceneTokenizer', 'plotDecompose'].map((id): [string, string] => [id, why.task]),
+      // a setting switches these on and off (CoT, action options, no-control):
+      ...['cot-preamble', 'actionOptions', 'noControl'].map((id): [string, string] => [id, why.setting]),
+      // a setting chooses among these:
+      ...['perspectiveFirst', 'perspectiveSecond', 'storyStyleGeneral'].map((id): [string, string] => [id, why.radio]),
+    ];
+    for (const [id, text] of locked) {
+      await expect(page.getByTestId(`prompt-lock-${id}`)).toHaveAttribute('aria-label', text);
+      await expect(page.getByTestId(`prompt-toggle-${id}`)).toHaveCount(0);
     }
-    // A setting chooses these (second person by default): they show the choice, locked.
-    await expect(page.getByTestId('prompt-toggle-perspectiveSecond')).toHaveAttribute('aria-checked', 'true');
-    await expect(page.getByTestId('prompt-toggle-perspectiveFirst')).toHaveAttribute('aria-checked', 'false');
-    for (const id of ['perspectiveFirst', 'perspectiveSecond', 'storyStyleGeneral']) {
-      await expect(page.getByTestId(`prompt-toggle-${id}`)).toBeDisabled();
+    // The setting's choice (second person by default) shows as in use; the others are dimmed.
+    const cardOf = (id: string) => page.locator('.prompt-card').filter({ has: page.getByTestId(`prompt-lock-${id}`) });
+    await expect(cardOf('perspectiveSecond').locator('.in-use-badge')).toBeVisible();
+    await expect(cardOf('perspectiveFirst').locator('.in-use-badge')).toHaveCount(0);
+    await expect(cardOf('perspectiveFirst')).toHaveClass(/prompt-card--disabled/);
+    // The lock explains itself on hover, the whole sentence inside the window (the list's edge used to clip it).
+    const lock = page.getByTestId('prompt-lock-npcChat');
+    // Scrolled to first, as a player would: the tooltip closes when its list scrolls under it.
+    await lock.scrollIntoViewIfNeeded();
+    await lock.hover();
+    const tipId = await lock.locator('xpath=ancestor::*[contains(@class,"tt-wrap")][1]').getAttribute('aria-describedby');
+    const tip = page.locator(`[id="${tipId}"]`);
+    await expect(tip).toHaveText(why.task);
+    await expect.poll(() => tip.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      return getComputedStyle(el).opacity === '1' && r.left >= 0 && r.right <= window.innerWidth;
+    })).toBe(true);
+    // A prompt a request works without keeps its switch.
+    for (const id of ['jailbreak', 'writeStyle', 'core', 'coreNarrative']) {
+      await expect(page.getByTestId(`prompt-toggle-${id}`)).toBeEnabled();
     }
-    // An ordinary prompt keeps its switch.
-    await expect(page.getByTestId('prompt-toggle-jailbreak')).toBeEnabled();
     // Opened and saved without a change: no edit.
     const card = page.locator('.prompt-card').filter({ has: page.getByTestId('prompt-toggle-jailbreak') });
     await card.locator('.prompt-title-area').click();
@@ -214,7 +246,7 @@ test('the prompt page locks the switches that decide nothing, and a save without
     expect(await page.evaluate(() => localStorage.getItem('aga_prompt_tianming_jailbreak'))).toBeNull();
     // An always-on prompt emptied is still sent as the pack's text: saving it empty is a reset, not an edit.
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    const format = page.locator('.prompt-card').filter({ has: page.getByTestId('prompt-toggle-mainRound') });
+    const format = page.locator('.prompt-card').filter({ has: page.getByTestId('prompt-lock-mainRound') });
     await format.locator('.prompt-title-area').click();
     await page.locator('.prompt-editor').fill('');
     await page.getByRole('button', { name: '保存修改' }).click();

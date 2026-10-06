@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { ContextAssemblyStage } from './context-assembly';
 import { PromptAssembler } from '../../prompt/prompt-assembler';
 import { PromptRegistry } from '../../prompt/prompt-registry';
-import { ALWAYS_ON_PROMPT_IDS } from '../../prompt/builtin-slots';
+import { isPromptAlwaysOn } from '../../prompt/builtin-slots';
 import { TemplateEngine } from '../../prompt/template-engine';
 import { DEFAULT_ENGINE_PATHS } from '../types';
 import type { BookmarkedRound, PipelineContext, IMemoryRetriever, IBehaviorRunner } from '../types';
@@ -38,7 +38,7 @@ function makeStage(bookmarks: BookmarkedRound[]): ContextAssemblyStage {
     系统: { 设置: { prompt: { enableWorldBook: false } } },
   });
   const registry = new PromptRegistry();
-  registry.registerPack(PACK_PROMPTS, ALWAYS_ON_PROMPT_IDS);
+  registry.registerPack(PACK_PROMPTS, isPromptAlwaysOn);
   const pack = {
     id: 'test-pack',
     prompts: PACK_PROMPTS,

@@ -24,6 +24,7 @@ import type { EngramManager } from '@/engine/memory/engram/engram-manager';
 import type { AIService } from '@/engine/ai/ai-service';
 import type { StateManager } from '@/engine/core/state-manager';
 import type { GamePack } from '@/engine/types';
+import type { PromptAssembler } from '@/engine/prompt/prompt-assembler';
 
 const JAILBREAK_KEY = 'jailbreak';
 
@@ -33,6 +34,7 @@ export function useBatchSolidify() {
   const aiService = inject<AIService>('aiService');
   const stateManager = inject<StateManager>('stateManager');
   const gamePack = inject<GamePack | null>('gamePack', null);
+  const promptAssembler = inject<PromptAssembler | undefined>('promptAssembler', undefined);
   const memoryRetriever = inject<IMemoryRetriever | null>('memoryRetriever', null);
 
   const available = !!(engramEditor && engramManager && aiService && stateManager);
@@ -61,7 +63,11 @@ export function useBatchSolidify() {
   };
 
   function getJailbreakPrompt(): string | undefined {
-    return gamePack?.prompts?.[JAILBREAK_KEY]?.trim() || undefined;
+    // As the prompt page left it: edited, or none when switched off (item 2, PO 2026-10-05).
+    const text = promptAssembler
+      ? promptAssembler.effectiveText(JAILBREAK_KEY, gamePack?.prompts)
+      : gamePack?.prompts?.[JAILBREAK_KEY] ?? '';
+    return text.trim() || undefined;
   }
 
   async function run(): Promise<BatchSolidifyResult | null> {

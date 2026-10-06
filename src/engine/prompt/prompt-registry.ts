@@ -42,12 +42,13 @@ export class PromptRegistry {
   }
 
   /**
-   * Register a pack's prompts (its default texts), each on; the ids in `alwaysOn` can never be switched off. The one
-   * place a pack's prompts become modules, so the app and its tests build the same registry.
+   * Register a pack's prompts (its default texts), each on; the ids `alwaysOn` holds for can never be switched off
+   * (the app passes isPromptAlwaysOn). The one place a pack's prompts become modules, so the app and its tests build
+   * the same registry.
    */
-  registerPack(prompts: Readonly<Record<string, string>>, alwaysOn: ReadonlySet<string>): void {
+  registerPack(prompts: Readonly<Record<string, string>>, alwaysOn: (promptId: string) => boolean): void {
     for (const [id, content] of Object.entries(prompts)) {
-      this.register({ id, content, enabled: true, alwaysOn: alwaysOn.has(id) });
+      this.register({ id, content, enabled: true, alwaysOn: alwaysOn(id) });
     }
   }
 

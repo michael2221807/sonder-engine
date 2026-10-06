@@ -22,6 +22,7 @@ import Modal from '@/ui/components/common/Modal.vue';
 import type { CustomPresetSchema, GamePack } from '@/engine/types';
 import type { AIService } from '@/engine/ai/ai-service';
 import { PresetAIGenerator } from '@/engine/services/preset-ai-generator';
+import type { PromptAssembler } from '@/engine/prompt/prompt-assembler';
 import { eventBus } from '@/engine/core/event-bus';
 
 const props = withDefaults(defineProps<{
@@ -46,11 +47,13 @@ const { t } = useI18n();
 
 const aiService = inject<AIService>('aiService');
 const gamePack = inject<GamePack | null>('gamePack', null);
+// The prompt page's edits and switches reach the generator's jailbreak (item 2, PO 2026-10-05).
+const promptAssembler = inject<PromptAssembler | undefined>('promptAssembler', undefined);
 
 // CR-2026-04-14 P2-3：缓存 generator 实例（aiService/gamePack 在 inject 后稳定）
 // 实例本身轻量，但避免每次 click 都 new 一份是良好实践。
 const generator = computed(() =>
-  aiService ? new PresetAIGenerator(aiService, gamePack) : null,
+  aiService ? new PresetAIGenerator(aiService, gamePack, promptAssembler) : null,
 );
 
 // ─── State ────────────────────────────────────────────────

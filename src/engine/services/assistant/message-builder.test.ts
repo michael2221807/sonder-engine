@@ -14,6 +14,10 @@ import { MessageBuilder } from './message-builder';
 import type { AssistantMessage, AttachmentPayload } from './types';
 import { generateAssistantMessageId } from './types';
 import type { GamePack } from '../../types';
+import { PromptRegistry } from '../../prompt/prompt-registry';
+import { PromptAssembler } from '../../prompt/prompt-assembler';
+import { TemplateEngine } from '../../prompt/template-engine';
+import { isPromptAlwaysOn } from '../../prompt/builtin-slots';
 
 function makeMsg(role: AssistantMessage['role'], content: string, extra: Partial<AssistantMessage> = {}): AssistantMessage {
   return {
@@ -244,5 +248,27 @@ describe('MessageBuilder — 整体顺序', () => {
     expect(msgs[3].role).toBe('assistant');
     expect(msgs[4].role).toBe('user');
     expect(msgs[4].content).toContain('cur-q');
+  });
+});
+
+// Item 2 (PO 2026-10-05): the assistant reads its prompts as the prompt page left them, not the pack's text.
+describe('MessageBuilder — the prompt page reaches the assistant', () => {
+  function assemblerFor(prompts: Record<string, string>) {
+    const registry = new PromptRegistry();
+    registry.registerPack(prompts, isPromptAlwaysOn);
+    return { registry, assembler: new PromptAssembler(registry, new TemplateEngine()) };
+  }
+
+  it('sends the edited contract, keeps it on despite a stored off, leaves out a jailbreak switched off', () => {
+    const { registry, assembler } = assemblerFor(PACK.prompts);
+    registry.setUserContent('assistantInjectionContract', '【contract】EDITED');
+    registry.setEnabled('assistantInjectionContract', false);
+    registry.setEnabled('assistantJailbreak', false);
+    const msgs = new MessageBuilder().build({
+      history: [], userPrompt: '改一下', attachments: [makeAttachment('target', '社交关系', [{ 名称: 'A' }])],
+      gamePack: PACK, prompts: assembler,
+    });
+    const system = msgs.filter((m) => m.role === 'system').map((m) => String(m.content));
+    expect(system).toEqual(['【contract】EDITED']);
   });
 });

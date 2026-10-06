@@ -54,6 +54,9 @@ export interface AssembleResult {
   }>;
 }
 
+/** What a request that fills a prompt itself needs: the prompt as the prompt page left it. */
+export type PromptTextSource = Pick<PromptAssembler, 'effectiveText'>;
+
 export class PromptAssembler {
   constructor(
     private registry: PromptRegistry,
@@ -69,6 +72,16 @@ export class PromptAssembler {
   private content(promptId: string): string | null {
     const raw = this.registry.getEffectiveContent(promptId);
     return raw ? (this.transform?.(promptId, raw) ?? raw) : null;
+  }
+
+  /**
+   * One prompt as a request sends it, untransformed and unrendered: the player's edited text or the pack's, '' when
+   * switched off (an always-on prompt never is); one the registry does not know keeps the pack's text. For requests
+   * that fill a prompt themselves instead of through a flow (item 2, PO 2026-10-05: they read the pack's text, so the
+   * prompt page never reached them).
+   */
+  effectiveText(promptId: string, packPrompts?: Readonly<Record<string, string>>): string {
+    return this.registry.has(promptId) ? this.registry.getEffectiveContent(promptId) : (packPrompts?.[promptId] ?? '');
   }
 
   /**

@@ -23,6 +23,7 @@ import type { StateManager } from '../core/state-manager';
 import type { EnginePathConfig } from '../pipeline/types';
 import type { GamePack } from '../types';
 import type { WorldBook } from '../prompt/world-book';
+import type { PromptTextSource } from '../prompt/prompt-assembler';
 import type { PlotNode, PlotGauge, OpportunityTier, PlotArc, PlotDirectionState, ThreadActivation, ThreadTrigger } from './types';
 import { DEFAULT_GAUGE_MAX_DELTA, DEFAULT_MAX_ACTIVE_THREADS } from './types';
 import { buildEnvironmentBlock } from '../prompt/environment-block';
@@ -116,7 +117,13 @@ export class PlotDecomposer {
     private stateManager: StateManager,
     private pack: GamePack,
     private paths: EnginePathConfig,
+    private prompts?: PromptTextSource,
   ) {}
+
+  /** A prompt as the prompt page left it (the pack's text without a registry): item 2, PO 2026-10-05. */
+  promptText(promptId: string): string {
+    return this.prompts ? this.prompts.effectiveText(promptId, this.pack.prompts) : (this.pack.prompts?.[promptId] ?? '');
+  }
 
   private labels(): CtxLabels {
     const out: CtxLabels = { ...DEFAULT_CTX_LABELS };
@@ -135,7 +142,7 @@ export class PlotDecomposer {
 
   async decompose(outline: string, signalOrOpts?: AbortSignal | DecomposeOptions): Promise<DecomposeResult | null> {
     const opts = this.toOpts(signalOrOpts);
-    const promptContent = this.pack.prompts?.['plotDecompose'] ?? '';
+    const promptContent = this.promptText('plotDecompose');
     if (!promptContent) {
       console.warn('[PlotDecomposer] plotDecompose prompt not found in pack');
       return null;
@@ -157,7 +164,7 @@ export class PlotDecomposer {
   // ═══════════════════════════════════════════════════════════════
 
   async decomposeThreads(outline: string, opts: DecomposeOptions = {}): Promise<MultiDecomposeResult | null> {
-    const promptContent = this.pack.prompts?.['plotDecomposeThreads'] ?? '';
+    const promptContent = this.promptText('plotDecomposeThreads');
     if (!promptContent) {
       console.warn('[PlotDecomposer] plotDecomposeThreads prompt not found in pack');
       return null;
@@ -260,7 +267,7 @@ export class PlotDecomposer {
 
     const messages: { role: 'system' | 'user'; content: string }[] = [];
     // Jailbreak — always inject as first system message (same pattern as assistant-service)
-    const jailbreak = this.pack.prompts?.['assistantJailbreak']?.trim();
+    const jailbreak = this.promptText('assistantJailbreak').trim();
     if (jailbreak) messages.push({ role: 'system', content: jailbreak });
     messages.push({ role: 'system', content: rendered });
     messages.push({ role: 'user', content: userMessage });

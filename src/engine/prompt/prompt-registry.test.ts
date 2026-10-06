@@ -49,7 +49,7 @@ describe('PromptRegistry', () => {
   });
 
   it('registerPack registers every prompt on, the always-on ones marked', () => {
-    registry.registerPack({ a: 'A', b: 'B' }, new Set(['b']));
+    registry.registerPack({ a: 'A', b: 'B' }, (id) => id === 'b');
     expect(registry.get('a')).toMatchObject({ content: 'A', enabled: true, alwaysOn: false });
     expect(registry.get('b')).toMatchObject({ content: 'B', enabled: true, alwaysOn: true });
   });

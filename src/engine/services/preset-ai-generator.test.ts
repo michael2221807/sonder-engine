@@ -21,6 +21,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { PresetAIGenerator } from './preset-ai-generator';
 import type { AIService } from '../ai/ai-service';
 import type { GamePack, CustomPresetSchema } from '../types';
+import { PromptRegistry } from '../prompt/prompt-registry';
+import { PromptAssembler } from '../prompt/prompt-assembler';
+import { TemplateEngine } from '../prompt/template-engine';
+import { isPromptAlwaysOn } from '../prompt/builtin-slots';
 
 // ─── 测试辅助 ───────────────────────────────────────────────
 
@@ -492,5 +496,27 @@ describe('PresetAIGenerator 行为冒烟', () => {
   it('未使用的 vi mock placeholder（防止 lint 删 import）', () => {
     // vitest spy/mock 不在此文件用到 —— 但保留 import 让未来扩展更容易
     expect(typeof vi.fn).toBe('function');
+  });
+});
+
+// Item 2 (PO 2026-10-05): the generator's jailbreak is the prompt page's, not the pack's text.
+describe('PresetAIGenerator.generate — the prompt page reaches it', () => {
+  it('sends the edited jailbreak; switched off, falls back to narratorEnforcement as the page left it', async () => {
+    const prompts = { creationGenJailbreak: 'PACK CREATION JB', narratorEnforcement: 'PACK ENFORCEMENT' };
+    const registry = new PromptRegistry();
+    registry.registerPack(prompts, isPromptAlwaysOn);
+    const assembler = new PromptAssembler(registry, new TemplateEngine());
+    const { aiService, calls } = makeMockAIService('{"name":"X","description":"Y"}');
+    const gen = new PresetAIGenerator(aiService, { prompts } as unknown as GamePack, assembler);
+    const input = { presetType: 'worlds', stepLabel: '世界', schema: SCHEMA_BASIC, userSeed: '修真' } as const;
+
+    registry.setUserContent('creationGenJailbreak', 'EDITED CREATION JB');
+    await gen.generate(input);
+    expect((calls[0].messages as Array<{ content: string }>)[0].content).toBe('EDITED CREATION JB');
+
+    registry.setEnabled('creationGenJailbreak', false);
+    registry.setUserContent('narratorEnforcement', 'EDITED ENFORCEMENT');
+    await gen.generate(input);
+    expect((calls[1].messages as Array<{ content: string }>)[0].content).toBe('EDITED ENFORCEMENT');
   });
 });

@@ -378,7 +378,8 @@ async function executePhaseC(ctx: PhaseContext): Promise<string> {
   // otherwise leave it empty (and strip any 私密信息 below).
   let nsfwSection = '';
   if (ctx.options.nsfwMode) {
-    nsfwSection = ctx.gamePack.prompts['openingEnhancedCNsfw'] ?? '';
+    // As the prompt page left it (edited, or '' when switched off): item 2, PO 2026-10-05.
+    nsfwSection = ctx.promptAssembler.effectiveText('openingEnhancedCNsfw', ctx.gamePack.prompts);
     if (!nsfwSection) {
       // I-3: make the degradation observable — without the pack fragment the AI generates NPCs
       // with no 私密信息, forcing Phase G PrivacyProfileRepair to backfill every one of them.

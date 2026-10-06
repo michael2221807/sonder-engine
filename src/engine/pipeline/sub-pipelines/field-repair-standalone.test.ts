@@ -30,7 +30,8 @@ function run(task: ExtraRepairTask, pendingEntity: boolean) {
   if (pendingEntity) localStorage.setItem(ENGRAM_CONFIG_KEY, JSON.stringify({ knowledgeEdgeMode: 'active' }));
   const requests: GenerateOptions[] = [];
   const ai = { generate: async (o: GenerateOptions) => { requests.push(o); return JSON.stringify({ abilities: [{ id: 'x' }], entity_descriptions: [] }); } } as unknown as AIService;
-  const pipeline = new FieldRepairPipeline(state, new CommandExecutor(state), ai, new ResponseParser(), {} as PromptAssembler, null,
+  const pipeline = new FieldRepairPipeline(state, new CommandExecutor(state), ai, new ResponseParser(),
+    { effectiveText: (id: string, prompts?: Record<string, string>) => prompts?.[id] ?? '' } as unknown as PromptAssembler, null,
     { rules: {}, promptFlows: {}, prompts: {} } as unknown as GamePack, P, async () => task);
   return { requests, result: pipeline.execute() };
 }

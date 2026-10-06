@@ -397,7 +397,7 @@ export class FieldRepairPipeline {
     }
 
     if (enrichData) {
-      const enrichPrompt = this.gamePack.prompts['entityEnrich'];
+      const enrichPrompt = this.promptAssembler.effectiveText('entityEnrich', this.gamePack.prompts);
       let block = enrichPrompt
         ? enrichPrompt.replace('{{MISSING_ENTITIES}}', enrichData.nameList)
         : this.buildDefaultEntityEnrichPrompt(enrichData.nameList);
@@ -409,7 +409,7 @@ export class FieldRepairPipeline {
     }
 
     if (reviewData) {
-      const edgeReviewPrompt = this.gamePack.prompts['edgeReview'];
+      const edgeReviewPrompt = this.promptAssembler.effectiveText('edgeReview', this.gamePack.prompts);
       let block = edgeReviewPrompt
         ? edgeReviewPrompt
             .replace('{{REVIEW_EDGES_LIST}}', reviewData.reviewList)

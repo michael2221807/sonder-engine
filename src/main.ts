@@ -64,7 +64,7 @@ import { AIService, applyPersistedAISettings } from './engine/ai/ai-service';
 import { ResponseParser } from './engine/ai/response-parser';
 import { PromptRegistry } from './engine/prompt/prompt-registry';
 import { hydratePromptRegistry, migrateLegacyBuiltinOverrides, resplitPromptEdits } from './engine/prompt/prompt-edits';
-import { ALWAYS_ON_PROMPT_IDS } from './engine/prompt/builtin-slots';
+import { isPromptAlwaysOn } from './engine/prompt/builtin-slots';
 import { TemplateEngine } from './engine/prompt/template-engine';
 import { PromptAssembler } from './engine/prompt/prompt-assembler';
 import { CharacterInitPipeline } from './engine/pipeline/sub-pipelines/character-init';
@@ -291,7 +291,7 @@ async function bootstrap(): Promise<void> {
   }
 
   const promptRegistry = new PromptRegistry();
-  if (pack) promptRegistry.registerPack(pack.prompts, ALWAYS_ON_PROMPT_IDS);
+  if (pack) promptRegistry.registerPack(pack.prompts, isPromptAlwaysOn);
 
   // The prompt page's edits (prompt-edits.ts): loaded now, and again whenever something replaces them.
   if (pack) {
@@ -664,6 +664,7 @@ async function bootstrap(): Promise<void> {
       stateManager,
       pack,
       DEFAULT_ENGINE_PATHS,
+      promptAssembler,
     );
     // Plot Revise & Extend epic — AI revision of an existing thread's pending region
     plotReviser = new PlotReviser(
@@ -961,6 +962,7 @@ async function bootstrap(): Promise<void> {
     stateManager,
     commandExecutor,
     gamePack: pack,
+    prompts: promptAssembler,
     settings: assistantSettings,
     locale: i18n.global.locale.value,
     engramManager,
@@ -972,6 +974,7 @@ async function bootstrap(): Promise<void> {
     aiService,
     stateManager,
     gamePack: pack,
+    prompts: promptAssembler,
     payloadValidator,
     engramManager,
     conversationStore: assistantConversationStore,

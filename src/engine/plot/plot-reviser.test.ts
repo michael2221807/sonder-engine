@@ -11,6 +11,10 @@ import type { AIService } from '../ai/ai-service';
 import type { ResponseParser } from '../ai/response-parser';
 import type { GamePack } from '../types';
 import type { PlotNode } from './types';
+import { PromptRegistry } from '../prompt/prompt-registry';
+import { PromptAssembler } from '../prompt/prompt-assembler';
+import { TemplateEngine } from '../prompt/template-engine';
+import { isPromptAlwaysOn } from '../prompt/builtin-slots';
 
 function node(id: string, arcId: string, over: Partial<PlotNode> = {}): PlotNode {
   return {
@@ -202,5 +206,36 @@ describe('PlotReviser.revise', () => {
     const scaffolding = arcBlock
       .replace(/把后面改成她主动退赛|高考冲刺篇|一个月冲刺|发现秘密|模拟考异常|道德抉择|目睹服药|承接秘密|怀疑扩散|同学的怀疑|怀疑/g, '');
     expect(/[一-鿿]/.test(scaffolding)).toBe(false);
+  });
+});
+
+// Item 2 (PO 2026-10-05): the decomposer and the reviser read their prompts as the prompt page left them; they read
+// the pack's text before, so an edit or a switch there never reached them.
+describe('PlotDecomposer / PlotReviser · the prompt page reaches them', () => {
+  it('sends the edited task prompt, keeps a locked one on, leaves out a jailbreak switched off', async () => {
+    const sm = makeSm();
+    type GenReq = { messages: Array<{ role: string; content: string }> };
+    const generate = vi.fn<(req: GenReq) => Promise<string>>(async () => JSON.stringify(okReply));
+    const parser = { parse: (raw: string) => ({ text: raw, customFields: undefined }) } as unknown as ResponseParser;
+    const prompts = { plotRevise: 'PACK REVISE {{PLOT_REVISE_REQUEST}}', plotReviseNode: 'PACK NODE', assistantJailbreak: 'PACK JB' };
+    const pack = { prompts, engineFragments: {} } as unknown as GamePack;
+    const registry = new PromptRegistry();
+    registry.registerPack(prompts, isPromptAlwaysOn);
+    const assembler = new PromptAssembler(registry, new TemplateEngine());
+    const d = new PlotDecomposer({ generate } as unknown as AIService, parser, sm, pack, DEFAULT_ENGINE_PATHS, assembler);
+    const r = new PlotReviser(d, sm, pack, DEFAULT_ENGINE_PATHS);
+
+    registry.setUserContent('plotRevise', 'EDITED REVISE {{PLOT_REVISE_REQUEST}}');
+    await r.revise('a', '改结局');
+    const first = generate.mock.calls[0][0].messages.map((m) => m.content).join('\n');
+    expect(first).toContain('EDITED REVISE 改结局');
+    expect(first).toContain('PACK JB');
+
+    registry.setEnabled('assistantJailbreak', false);
+    registry.setEnabled('plotRevise', false); // a stored "off" of a task prompt never applies
+    await r.revise('a', '改结局');
+    const second = generate.mock.calls[1][0].messages.map((m) => m.content).join('\n');
+    expect(second).toContain('EDITED REVISE 改结局');
+    expect(second).not.toContain('PACK JB');
   });
 });

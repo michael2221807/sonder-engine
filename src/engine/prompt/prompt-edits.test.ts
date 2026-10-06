@@ -7,7 +7,7 @@ import {
 } from './prompt-edits';
 import { PromptRegistry } from './prompt-registry';
 import type { BuiltinPromptEntry } from './world-book';
-import { ALWAYS_ON_PROMPT_IDS } from './builtin-slots';
+import { isPromptAlwaysOn, SWITCHABLE_PROMPT_IDS, SETTING_PICKED_PROMPT_IDS, ROUND_REQUIRED_PROMPT_IDS } from './builtin-slots';
 
 /** A Storage stand-in over a map, in insertion order. */
 function memoryStorage(initial: Record<string, string> = {}): EditStorage & { dump(): Record<string, string> } {
@@ -46,25 +46,40 @@ describe('prompt edits (the prompt page)', () => {
       [promptContentKey('p', 'keep')]: 'kept',
     });
     // Code review M3: a card is data from elsewhere; nothing malformed is stored ("[object Object]", a number).
-    const incoming: unknown[] = [{ id: 'a' }, { id: 'b', content: 'new b', enabled: false }, { id: 5, content: 'x' },
+    const incoming: unknown[] = [{ id: 'a' }, { id: 'antiCliche', content: 'new b', enabled: false }, { id: 5, content: 'x' },
       { id: 'c', content: { not: 'text' } }, null, 'mainRound', { id: 'd', content: 'new d', enabled: 'false' }];
     expect(writePromptEdits('p', incoming, s)).toBe(2);
     expect(s.dump()).toEqual({
       [promptContentKey('p', 'a')]: 'old a',
       [promptEnabledKey('p', 'a')]: 'false',
       [promptContentKey('p', 'keep')]: 'kept',
-      [promptContentKey('p', 'b')]: 'new b',
-      [promptEnabledKey('p', 'b')]: 'false',
+      [promptContentKey('p', 'antiCliche')]: 'new b',
+      [promptEnabledKey('p', 'antiCliche')]: 'false',
       [promptContentKey('p', 'd')]: 'new d',
     });
   });
 
   it('an always-on prompt is never off: not read as an edit, not taken from a card', () => {
-    expect(ALWAYS_ON_PROMPT_IDS.has('mainRound') && ALWAYS_ON_PROMPT_IDS.has('perspectiveSecond')).toBe(true);
+    expect(isPromptAlwaysOn('mainRound') && isPromptAlwaysOn('perspectiveSecond')).toBe(true);
     const s = memoryStorage({ [promptEnabledKey('p', 'mainRound')]: 'false', [promptEnabledKey('p', 'jailbreak')]: 'false' });
     expect(readPromptEdits('p', undefined, s)).toEqual([{ id: 'jailbreak', enabled: false }]);
     expect(sanitizePromptEdits([{ id: 'perspectiveSecond', enabled: false }, { id: 'splitGenStep1', content: 'mine', enabled: false }]))
       .toEqual([{ id: 'splitGenStep1', content: 'mine' }]);
+  });
+
+  // Item 1 (PO 2026-10-05): only prompts a request works without keep a switch; a task's prompt, one a setting
+  // decides and one a pack adds later are always on, so a stored or imported "off" never reaches them.
+  it('only the switchable prompts can be off: task prompts, setting-picked ones and unknown ones never are', () => {
+    for (const id of ['memorySummary', 'npcChat', 'worldHeartbeatInput', 'imageSceneTokenizer', 'plotDecompose',
+      'assistantInjectionContract', 'cot-preamble', 'actionOptions', 'noControl', 'plotVectorMode', 'aNewTaskPrompt']) {
+      expect(isPromptAlwaysOn(id)).toBe(true);
+    }
+    for (const id of SETTING_PICKED_PROMPT_IDS) expect(isPromptAlwaysOn(id)).toBe(true);
+    for (const id of ROUND_REQUIRED_PROMPT_IDS) expect(isPromptAlwaysOn(id)).toBe(true);
+    for (const id of SWITCHABLE_PROMPT_IDS) expect(isPromptAlwaysOn(id)).toBe(false);
+    expect(SETTING_PICKED_PROMPT_IDS.some((id) => SWITCHABLE_PROMPT_IDS.has(id))).toBe(false);
+    expect(sanitizePromptEdits([{ id: 'memorySummary', enabled: false }, { id: 'writeStyle', enabled: false }]))
+      .toEqual([{ id: 'writeStyle', enabled: false }]);
   });
 
   it('restores a snapshot exactly: its prompts edited, every other edit of the pack cleared', () => {
@@ -88,7 +103,7 @@ describe('prompt edits (the prompt page)', () => {
   // Code review M1/M2: loading drops what is no edit, so the store only ever holds the player's real edits.
   it('drops a copy identical to the pack text and an always-on prompt\'s stored off while loading', () => {
     const registry = new PromptRegistry();
-    registry.registerPack({ mainRound: 'pack format', jailbreak: 'pack jb' }, new Set(['mainRound']));
+    registry.registerPack({ mainRound: 'pack format', jailbreak: 'pack jb' }, (id) => id === 'mainRound');
     const s = memoryStorage({
       [promptContentKey('p', 'jailbreak')]: 'pack jb',
       [promptEnabledKey('p', 'mainRound')]: 'false',
@@ -106,7 +121,7 @@ describe('prompt edits (the prompt page)', () => {
     expect(sameText('一\r\n二', '一\n二')).toBe(true);
     expect(sameText('一\n二', '一\n三')).toBe(false);
     const registry = new PromptRegistry();
-    registry.registerPack({ jailbreak: '第一行\r\n第二行' }, new Set());
+    registry.registerPack({ jailbreak: '第一行\r\n第二行' }, () => false);
     const s = memoryStorage({ [promptContentKey('p', 'jailbreak')]: '第一行\n第二行' });
     hydratePromptRegistry(registry, 'p', ['jailbreak'], s);
     expect(s.dump()).toEqual({});

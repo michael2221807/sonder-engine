@@ -111,8 +111,12 @@ function makeAiService(responses: string[]): {
   return svc;
 }
 
-function makePromptAssembler(): { assemble: ReturnType<typeof vi.fn> } {
-  return { assemble: vi.fn(() => ({ messages: [], messageSources: [] })) };
+function makePromptAssembler(): { assemble: ReturnType<typeof vi.fn>; effectiveText: ReturnType<typeof vi.fn> } {
+  return {
+    assemble: vi.fn(() => ({ messages: [], messageSources: [] })),
+    // No edits on the prompt page: the pack's text.
+    effectiveText: vi.fn((id: string, prompts?: Record<string, string>) => prompts?.[id] ?? ''),
+  };
 }
 
 const NSFW_SECTION_FIXTURE = '   - **私密信息**（NSFW 模式已开启，必填）— 嵌套对象，含身体部位/性取向/性渴望程度等字段。';

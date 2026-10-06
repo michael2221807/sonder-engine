@@ -18,6 +18,10 @@ import { PayloadValidator } from '../assistant/payload-validator';
 import type { StateManager } from '../../core/state-manager';
 import type { GamePack } from '../../types';
 import type { AIService } from '../../ai/ai-service';
+import { PromptRegistry } from '../../prompt/prompt-registry';
+import { PromptAssembler } from '../../prompt/prompt-assembler';
+import { TemplateEngine } from '../../prompt/template-engine';
+import { isPromptAlwaysOn } from '../../prompt/builtin-slots';
 
 class FakeStateManager {
   state: Record<string, unknown>;
@@ -589,5 +593,28 @@ describe('WorldBuilderService — region conditional prompts', () => {
     const prompt = (calls[0].messages as Array<{ role: string; content: string }>)[1].content;
     expect(prompt).not.toContain('常驻 NPC');
     expect(prompt).not.toContain('$.社交.关系');
+  });
+});
+
+// Item 2 (PO 2026-10-05): the world builder reads its prompts as the prompt page left them, not the pack's text.
+describe('WorldBuilderService — the prompt page reaches it', () => {
+  it('sends the edited task prompt despite a stored off, and leaves out a jailbreak switched off', async () => {
+    const registry = new PromptRegistry();
+    registry.registerPack(PACK.prompts, isPromptAlwaysOn);
+    registry.setUserContent('worldBuilderFromDescription', 'EDITED DESC {USER_INSTRUCTION}');
+    registry.setEnabled('worldBuilderFromDescription', false);
+    registry.setEnabled('assistantJailbreak', false);
+    const sm = new FakeStateManager(JSON.parse(JSON.stringify(INITIAL_STATE)));
+    const { aiService, calls } = makeAIService(VALID_AI_RESPONSE);
+    const svc = new WorldBuilderService({
+      aiService, stateManager: sm as unknown as StateManager, gamePack: PACK,
+      payloadValidator: new PayloadValidator({ stateManager: sm as unknown as StateManager, gamePack: PACK }),
+      conversationStore: new InMemoryConversationStore(),
+      prompts: new PromptAssembler(registry, new TemplateEngine()),
+    });
+    await svc.execute('default', { type: 'from-description', userInstruction: '雪山' }, TEST_PATHS);
+    const msgs = calls[0].messages as Array<{ role: string; content: string }>;
+    expect(msgs[0]).toEqual({ role: 'system', content: 'EDITED DESC 雪山' });
+    expect(msgs.some((m) => m.content.includes('JAILBREAK_PROMPT'))).toBe(false);
   });
 });

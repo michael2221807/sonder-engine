@@ -50,6 +50,9 @@
   "prompt.entry.disableTitle": "点击启用",
   "prompt.entry.requiredTitle": "每回合都要用它，不能关闭；内容可以改",
   "prompt.entry.radioTitle": "开不开由「游戏设定」里的选择决定",
+  "prompt.entry.settingTitle": "用不用由对应的设置决定，这里不能关；内容可以改",
+  "prompt.entry.taskTitle": "这项功能的请求离不开它，不能关闭；内容可以改",
+  "prompt.entry.inUseBadge": "在用",
 
   "prompt.toast.enabled": "{id} 已启用",
   "prompt.toast.disabled": "{id} 已禁用",

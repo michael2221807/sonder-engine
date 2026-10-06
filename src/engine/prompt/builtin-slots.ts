@@ -352,8 +352,42 @@ export const RADIO_PROMPT_IDS: readonly string[] = [
   ...Object.values(STORY_STYLE_PROMPT_IDS),
 ].filter(Boolean);
 
-/** Sent whenever a request uses them: the player's text applies, a stored "off" never does (PromptModule.alwaysOn). */
-export const ALWAYS_ON_PROMPT_IDS: ReadonlySet<string> = new Set([...ROUND_REQUIRED_PROMPT_IDS, ...RADIO_PROMPT_IDS]);
+/**
+ * Prompts a setting switches on and off: the CoT modules (CoT, judge CoT), the action-option modules, NPC presence,
+ * setting capture, plot direction, the narrative contract, character vectors, plot momentum and no-control. Plus the
+ * ones a setting chooses among (RADIO_PROMPT_IDS). The setting decides whether a request sends them; a switch on the
+ * prompt page would only fight it (PO 2026-10-05, item 1).
+ */
+export const SETTING_PICKED_PROMPT_IDS: readonly string[] = [
+  ...RADIO_PROMPT_IDS,
+  'cot-preamble', 'cot-masquerade', 'cot-judge', 'cot-opening', 'cot-no-thinking-guard',
+  'actionOptions', 'actionOptionsStory', 'actionOptionsOff',
+  'presencePartition', 'settingAuthority', 'settingCapture',
+  'plotDirective', 'plotEvaluationStep2', 'narrativeContract', 'characterVectors', 'plotVectorMode',
+  BUILTIN_SLOTS.write_no_control?.defaultPromptId ?? 'noControl',
+];
+
+/**
+ * The prompts a player may switch off on the prompt page: a request works without each (they frame, style or loosen
+ * the story). Every other prompt has no switch (PO 2026-10-05, item 1): a request needs it (its task, its format), or
+ * a setting decides whether it is sent. A prompt a pack adds later has no switch until it is listed here, so a new
+ * task can never be switched off by mistake.
+ */
+export const SWITCHABLE_PROMPT_IDS: ReadonlySet<string> = new Set([
+  'jailbreak', 'creationGenJailbreak', 'assistantJailbreak',
+  'narratorFrame', 'narratorEnforcement', 'historyFraming',
+  'core', 'coreNarrative',
+  'writeStyle', 'antiCliche', 'emotionGuard', 'narrativeConstraints',
+  'openingEnhancedCNsfw',
+]);
+
+/**
+ * Sent whenever a request uses it: the player's text applies, a stored "off" never does, and an emptied text falls
+ * back to the pack's (PromptModule.alwaysOn). True for every prompt the player may not switch off.
+ */
+export function isPromptAlwaysOn(promptId: string): boolean {
+  return !SWITCHABLE_PROMPT_IDS.has(promptId);
+}
 
 /**
  * Get the slot IDs for a given category.

@@ -14,6 +14,7 @@
  */
 import type { AIMessage } from '../../ai/types';
 import type { GamePack } from '../../types';
+import type { PromptTextSource } from '../../prompt/prompt-assembler';
 import type {
   AssistantMessage,
   AttachmentPayload,
@@ -27,21 +28,26 @@ export interface BuildMessagesInput {
   gamePack: GamePack | null;
   /** Story 3: when true, injects assistantWorldBuilder prompt module */
   worldBuilderMode?: boolean;
+  /** The prompts as the prompt page left them (item 2, PO 2026-10-05); without it, the pack's text. */
+  prompts?: PromptTextSource;
 }
 
 export class MessageBuilder {
   build(input: BuildMessagesInput): AIMessage[] {
     const messages: AIMessage[] = [];
+    const packPrompts = input.gamePack?.prompts;
+    const text = (id: string): string =>
+      (input.prompts ? input.prompts.effectiveText(id, packPrompts) : packPrompts?.[id] ?? '').trim();
 
     // 1. Jailbreak
-    const jailbreak = input.gamePack?.prompts?.['assistantJailbreak']?.trim();
+    const jailbreak = text('assistantJailbreak');
     if (jailbreak) {
       messages.push({ role: 'system', content: jailbreak });
     }
 
     // 1.5. World Builder mode prompt (Story 3 — between jailbreak and injection contract)
     if (input.worldBuilderMode) {
-      const worldBuilder = input.gamePack?.prompts?.['assistantWorldBuilder']?.trim();
+      const worldBuilder = text('assistantWorldBuilder');
       if (worldBuilder) {
         messages.push({ role: 'system', content: worldBuilder });
       }
@@ -50,7 +56,7 @@ export class MessageBuilder {
     // 2. Injection contract（仅 Mode B）
     const hasTarget = input.attachments.some((a) => a.scope === 'target');
     if (hasTarget) {
-      const contract = input.gamePack?.prompts?.['assistantInjectionContract']?.trim();
+      const contract = text('assistantInjectionContract');
       if (contract) {
         messages.push({ role: 'system', content: contract });
       }

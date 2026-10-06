@@ -16,6 +16,7 @@
  * 对应 docs/status/plan-assistant-utility-2026-04-14.md §4 + Phase 1。
  */
 import type { AIService } from '../../ai/ai-service';
+import type { PromptTextSource } from '../../prompt/prompt-assembler';
 import type { AIResponse } from '../../ai/types';
 import type { CommandExecutor } from '../../core/command-executor';
 import type { StateManager } from '../../core/state-manager';
@@ -65,6 +66,8 @@ export interface AssistantServiceDeps {
   payloadApplier?: PayloadApplier;
   /** Story 3: externally-constructed PayloadValidator for sharing with WorldBuilderService */
   payloadValidator?: PayloadValidator;
+  /** The prompts as the prompt page left them (item 2, PO 2026-10-05); without it, the pack's text. */
+  prompts?: PromptTextSource;
 }
 
 /**
@@ -92,6 +95,7 @@ export class AssistantService {
   // @ts-expect-error — 当前未直接使用，但保留 DI 入口
   private commandExecutor: CommandExecutor;
   private gamePack: GamePack | null;
+  private readonly prompts?: PromptTextSource;
   private locale: string | undefined;
   private conversationStore: ConversationStore;
   private settings: AssistantSettings;
@@ -132,6 +136,7 @@ export class AssistantService {
     this.stateManager = deps.stateManager;
     this.commandExecutor = deps.commandExecutor;
     this.gamePack = deps.gamePack;
+    this.prompts = deps.prompts;
     this.locale = deps.locale;
     this.conversationStore = deps.conversationStore ?? new InMemoryConversationStore();
     this.settings = deps.settings ?? { ...DEFAULT_ASSISTANT_SETTINGS };
@@ -273,6 +278,7 @@ export class AssistantService {
       attachments: attachmentPayloads,
       gamePack: this.gamePack,
       worldBuilderMode: this.settings.worldBuilderMode,
+      prompts: this.prompts,
     });
 
     // ── 4-5. AI 调用（流式） ──

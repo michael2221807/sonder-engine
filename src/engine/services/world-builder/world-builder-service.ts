@@ -11,6 +11,7 @@
  * Does not reuse PipelineRunner (only AICall subset needed, see plan §3.2.1).
  */
 import type { AIService } from '../../ai/ai-service';
+import type { PromptTextSource } from '../../prompt/prompt-assembler';
 import type { StateManager } from '../../core/state-manager';
 import type { EngramManager } from '../../memory/engram/engram-manager';
 import type { GamePack } from '../../types';
@@ -49,6 +50,8 @@ export interface WorldBuilderDeps {
   locale?: string;
   maxHistoryTurns?: number;
   labels?: WorldBuilderLabels;
+  /** The prompts as the prompt page left them (item 2, PO 2026-10-05); without it, the pack's text. */
+  prompts?: PromptTextSource;
 }
 
 export interface WorldBuilderPaths {
@@ -210,6 +213,12 @@ export class WorldBuilderService {
     this.labels = deps.labels ?? DEFAULT_LABELS;
   }
 
+  /** A prompt as the prompt page left it ('' when switched off); the pack's text without a registry. */
+  private promptText(promptId: string): string {
+    const packPrompts = this.deps.gamePack?.prompts;
+    return this.deps.prompts ? this.deps.prompts.effectiveText(promptId, packPrompts) : (packPrompts?.[promptId] ?? '');
+  }
+
   /**
    * Whether a task is currently executing.
    * Note: this is a snapshot — do not use as a concurrency gate.
@@ -259,7 +268,7 @@ export class WorldBuilderService {
     if (!promptKey) {
       return this.buildErrorResult(sessionId, task, `Unsupported task type: ${task.type}`);
     }
-    const promptTemplate = this.deps.gamePack?.prompts?.[promptKey];
+    const promptTemplate = this.promptText(promptKey);
     if (!promptTemplate) {
       return this.buildErrorResult(sessionId, task, `Prompt "${promptKey}" not found in game pack`);
     }
@@ -288,7 +297,7 @@ export class WorldBuilderService {
     let aiResponse: string;
     try {
       const messages: Array<{ role: 'system' | 'user'; content: string }> = [];
-      const jailbreak = this.deps.gamePack?.prompts?.['assistantJailbreak']?.trim();
+      const jailbreak = this.promptText('assistantJailbreak').trim();
       if (jailbreak) {
         messages.push({ role: 'system', content: jailbreak });
       }
