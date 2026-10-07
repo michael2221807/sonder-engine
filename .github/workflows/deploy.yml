@@ -56,10 +56,17 @@ jobs:
       - name: Run tests
         run: npx vitest run
 
-      # Type-check is informational until pre-existing errors are fixed.
-      # TODO: remove `|| true` once all TS errors are resolved.
-      - name: Type-check (non-blocking)
-        run: npx vue-tsc --noEmit || true
+      - name: Type-check
+        run: npx vue-tsc --noEmit
+
+      # Report-only code-health checks (2026-10 audit, roadmap W0): they never fail the build.
+      - name: Lint (report only)
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Unused code (report only)
+        run: npm run knip
+        continue-on-error: true
 
       - name: Build
         run: npx vite build

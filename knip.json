@@ -1,0 +1,4 @@
+{
+  "entry": ["e2e/**/*.spec.ts", "scripts/*.{js,mjs,cjs,ts}"],
+  "project": ["src/**/*.{ts,vue}", "e2e/**/*.ts", "scripts/**/*.{js,mjs,cjs,ts}"]
+}
