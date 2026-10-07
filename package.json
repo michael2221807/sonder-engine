@@ -26,13 +26,13 @@
     "@types/node": "^25.6.0",
     "@vitejs/plugin-vue": "^5.2.4",
     "@vitest/coverage-v8": "^4.1.4",
+    "fake-indexeddb": "^6.2.5",
     "typescript": "~5.8.3",
     "vite": "^6.4.2",
     "vitest": "^4.1.4",
     "vue-tsc": "^2.2.12"
   },
   "dependencies": {
-    "ajv": "^8.18.0",
     "cytoscape": "^3.33.2",
     "cytoscape-fcose": "^2.2.0",
     "fflate": "^0.8.2",

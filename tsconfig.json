@@ -19,6 +19,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
     "forceConsistentCasingInFileNames": true,
 
     /* 路径别名 — 与 vite.config.ts 的 alias 保持一致 */
