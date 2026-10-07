@@ -39,12 +39,15 @@ function readJson<T>(relativePath: string): T {
   return JSON.parse(readFileSync(join(packRoot, relativePath), 'utf8')) as T;
 }
 
-/** Flow ids production code reads through `promptFlows['x']` or `promptFlows.x`. */
+/**
+ * Flow ids production code reads through a literal `promptFlows['x']` or `promptFlows.x`.
+ * Dynamic lookups such as `promptFlows[flowId]` are not covered.
+ */
 function flowIdsUsedByCode(): Set<string> {
   const ids = new Set<string>();
   const pattern = /promptFlows(?:\.([A-Za-z]\w*)|\[\s*['"]([A-Za-z]\w*)['"]\s*\])/g;
   const files = readdirSync('src', { recursive: true, encoding: 'utf8' }).filter(
-    (f) => /\.(ts|vue)$/.test(f) && !/\.(test|spec)\.ts$/.test(f),
+    (f) => /\.(ts|vue)$/.test(f) && !/\.(test|spec)\.ts$/.test(f) && !/__test-utils__/.test(f),
   );
   for (const file of files) {
     const text = readFileSync(join('src', file), 'utf8');
