@@ -149,7 +149,7 @@ export interface TtsStateEvent {
 }
 
 /**
- * 'tts:cache' 事件负载 — 供 UI(配音快切 popover 下载按钮)反应式显隐。
+ * 'tts:cache' 事件负载 — 供 UI(主面板回合 meta 行的下载键)反应式显隐。
  * 仅假流式/整段模式会缓存字节;真流式不缓存 → available 恒 false。
  */
 export interface TtsCacheEvent {

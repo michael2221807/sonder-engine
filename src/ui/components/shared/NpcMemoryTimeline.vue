@@ -6,8 +6,8 @@
  * Handles both legacy `string` and new `{内容, 时间}` entry shapes via
  * `parseMemoryEntry` from the shared helper.
  *
- * Design: vertical timeline with connector line + dots (layout concept from
- * rendered in AGA tokens, no wuxia borders).
+ * Design: vertical timeline with connector line + dots, rendered in AGA tokens
+ * (no wuxia borders).
  */
 import { computed } from 'vue';
 import { parseMemoryEntry } from '@/engine/social/npc-memory-format';

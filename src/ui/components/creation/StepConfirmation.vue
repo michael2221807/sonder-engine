@@ -157,16 +157,6 @@ const inventoryRange = ref<[number, number]>([3, 8]);
 const relationDensity = ref<'sparse' | 'medium' | 'dense'>('medium');
 const bypassRateLimit = ref(false);
 
-/**
- * §4.1c: toggle 改变时立即 emit，让 CreationView 持续同步 generationMode
- *
- * 之前这个 toggle 只在用户点内部"开始游戏"按钮时才 emit，但用户也可能点
- * CreationView 底栏的"开始游戏"按钮（那个直接调 onFinalize），该路径不会
- * 触发任何 emit → toggle 状态从未同步 → 分步开局永远是 'single'。
- *
- * 解决方案：每次 toggle 变化都主动 emit，CreationView 的 onStepSelect
- * confirmation 分支会持续捕获最新值到 `splitGenOpening` ref。
- */
 function clampRange(range: [number, number], min: number, max: number): [number, number] {
   let [lo, hi] = range;
   lo = Math.max(min, Math.min(max, Math.round(lo) || min));
@@ -175,6 +165,12 @@ function clampRange(range: [number, number], min: number, max: number): [number,
   return [lo, hi];
 }
 
+/**
+ * §4.1c: toggle 改变时立即 emit，让 CreationView 持续同步 generationMode。
+ * 玩家也可能点 CreationView 底栏的"开始游戏"（直接调 onFinalize，不经过本组件的按钮），
+ * 不 emit 的话 toggle 状态从未同步，分步开局永远是 'single'。CreationView 的 onStepSelect
+ * confirmation 分支持续捕获最新值到 `splitGenOpening` ref。
+ */
 function emitCurrentOptions(): void {
   const clampedNpc = clampRange(npcRange.value, 3, 30);
   const clampedLoc = clampRange(locationRange.value, 5, 40);

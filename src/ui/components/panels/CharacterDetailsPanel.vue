@@ -8,7 +8,7 @@
  * - 社交.关系 ← 数组，每项含 名称/好感度/内心想法/在做事项 等字段
  * - 属性读取路径与现有代码一致，schema 驱动优先
  *
- * 2026-04-08 升级：英雄头像区、Tab 结构（基础/属性/关系/身体）
+ * 英雄头像区、Tab 结构（基础/属性/关系/身体/主角生图；身体仅 NSFW 开启时出现）
  */
 import { ref, reactive, computed, onUnmounted } from 'vue';
 import { SYSTEM_PATHS } from '@/engine/pipeline/system-paths';
@@ -137,9 +137,8 @@ const gender = useValue<string>(P.characterGender);
 const occupation = useValue<string>(P.characterOccupation);
 const description = useValue<string>(P.characterDescription);
 
-// 2026-04-11 fix：特质 schema 是 string（单个名称），不是 string[]。
-// 旧代码按 string[] 读取会在 string 类型值上走 `.slice` / `v-for` 迭代字符，
-// 导致显示异常。这里读为 unknown + 双形态 fallback（兼容旧存档）。
+// 特质现行 schema 是 {名称, 描述} 对象；旧存档里可能是 string 或 string[]。
+// 这里读为 unknown，三种形态都兼容。
 const traitsRaw = useValue<unknown>(P.characterTraits);
 const traitText = computed<string>(() => {
   const v = traitsRaw.value;

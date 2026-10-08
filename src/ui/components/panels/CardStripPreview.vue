@@ -4,8 +4,10 @@
  * CardStripPreview — Story 7 (P5): strip preview for card export, shared by the
  * Story 5 flow (active save) and the Story 7 save-to-card flow (U12).
  *
- * Three groups: kept / cleared / reset — driven by the same ExportFlags that
- * drive the actual strip, so the preview can never drift from the exporter.
+ * Three groups: kept / cleared / reset. Only two flags change what is shown
+ * (includedPlotDirection, containsNsfw); the cleared / reset lists are static i18n text
+ * (save.export.preview.stripItems / resetItems) with no code link to card-stripper's rules,
+ * so a new strip rule must be added to that text by hand.
  * Engram is carried separately in bundle.engram, so it is shown under "kept"
  * (never as "lost"). Includes the NSFW silent-drop hint (hardening F2) and the
  * missing-image warning (U16).

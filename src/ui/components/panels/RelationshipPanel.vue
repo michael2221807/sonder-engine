@@ -350,10 +350,8 @@ function saveNpc(): void {
 
 // §7.2: 打开 NPC 私聊 modal — 直接打开，不经过 edit modal
 //
-// CR-R26 修复（2026-04-11）：仅当 NPC.名称 非空时允许打开私聊。
-// 原因：NpcChatPipeline.chat 的唯一标识是 `名称`；空字符串会导致 find 匹配多个
-// "未命名" NPC 或全部失败，产生不可预测的越权写入风险。
-// UI 层拦在源头最便宜：点击按钮直接 toast 提示，不进入 pipeline。
+// 仅当 NPC.名称 非空时允许打开私聊：NpcChatPipeline.chat 以 `名称` 为唯一标识，空名会匹配多个
+// "未命名" NPC 或全部失败。UI 层在源头拦下并 toast，不进入 pipeline。Changelog: 2026-04-11 CR-R26。
 function openChat(npc: NpcRelation, event: Event): void {
   event.stopPropagation(); // 防止冒泡触发卡片的 openEdit
   const name = typeof npc.名称 === 'string' ? npc.名称.trim() : '';

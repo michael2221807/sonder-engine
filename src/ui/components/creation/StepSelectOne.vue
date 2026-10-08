@@ -101,9 +101,8 @@ function openAIGenModal(): void {
 
 /**
  * AI 推演成功 → 用结果预填 CustomPresetModal 让用户审阅/编辑后保存
- * 注意：这里只 emit `customSave`（同手填路径），但 generatedBy 标签由父组件
- * 决定 —— 实际由 useCreationFlow.addCustomPreset 处理时父组件根据 modal 来源
- * 标记。这里用一个简单的"AI 模式"状态告诉父组件这次是 AI 生成的。
+ * 注意：这里只 emit `customSave`（同手填路径）；generatedBy 标签在本组件的
+ * handleCustomSubmit 里按 aiSourceFlag 标成 'ai' / 'manual' 一起 emit 给父组件。
  */
 function handleAIGenerated(fields: Record<string, unknown>): void {
   // 把 AI 生成的字段塞进 CustomPresetModal 让用户审阅

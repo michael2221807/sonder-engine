@@ -1,10 +1,8 @@
 <script setup lang="ts">
 // App doc: docs/user-guide/pages/game-image.md
 /**
- * ImagePanel — image generation workspace.
- *
- * This is a simplified first-pass that provides actual usable controls.
- * Full ImageManagerModal (7-tab system) will be built on top of this foundation.
+ * ImagePanel — image generation workspace: eight tabs (manual / gallery / scene / queue /
+ * history / presets / rules / settings), see `tabs` below.
  */
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { SYSTEM_PATHS } from '@/engine/pipeline/system-paths';

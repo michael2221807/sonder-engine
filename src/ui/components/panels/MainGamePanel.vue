@@ -7,27 +7,21 @@
  * reads AI-generated narrative and interacts with the game world.
  *
  * Layout (top to bottom):
- * ┌──────────────────────────────────────────┐
- * │  Round counter + status bar              │
- * ├──────────────────────────────────────────┤
- * │                                          │
- * │  Scrollable message history              │
- * │   - User messages (right-aligned)        │
- * │   - Assistant messages (left-aligned)    │
- * │   - Streaming indicator (typing dots)    │
- * │                                          │
- * ├──────────────────────────────────────────┤
- * │  Action options (clickable buttons)      │
- * ├──────────────────────────────────────────┤
- * │  Input area: textarea + send button      │
- * └──────────────────────────────────────────┘
+ * - Round counter + status bar
+ * - Scrollable message history: one turn item per round (with a RoundDivider), plus a
+ *   "typing" bubble while a reply streams
+ * - GameComposer: action options, the input textarea, send / cancel / rollback. It is a
+ *   separate component; this panel hands it the options and the generating state and
+ *   receives its `send`.
  *
  * Data flow:
  * - Reads narrative history / round via `DEFAULT_ENGINE_PATHS`（`engine/pipeline/types.ts`）
- * - Sends user input by emitting 'pipeline:user-input' on the eventBus
+ * - Sends user input by emitting 'pipeline:user-input' on the eventBus, after the pre-round
+ *   save-health gate (useSaveHealthGate)
  * - Listens for 'ai:stream-chunk' events to display streaming text
  * - Listens for 'engine:round-complete' to update action options
  * - Streaming can be cancelled via 'pipeline:cancel' event
+ * - Per-round voice (ttsService) and bookmarks (main-game/bookmarks) hang off each round's meta row
  *
  * Key design decisions:
  * 1. Auto-scroll: The message area scrolls to bottom on new messages,
@@ -37,7 +31,6 @@
  * 3. Streaming: During AI generation, partial text is accumulated and displayed
  *    in a "typing" bubble. The streaming indicator (animated dots) gives
  *    visual feedback that the AI is working.
- * 4. The textarea auto-grows up to 4 lines, then scrolls internally.
  *
  * Dependencies:
  *   - useGameState()  → reads narrative history, round number

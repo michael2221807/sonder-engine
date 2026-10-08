@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * AgaProgressBar — bounded metric display (HP, stamina, affinity, etc.).
+ * AgaProgressBar — bounded metric display (currently the image-generation stats in ImagePanel).
  *
  * Shows a horizontal bar with optional label, value text, and color variant.
  */

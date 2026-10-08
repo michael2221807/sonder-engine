@@ -66,11 +66,6 @@ watch(
   { immediate: true },
 );
 
-/**
- * 初始化表单值
- * - 编辑模式：从 initialData 中按 schema 字段 key 取值
- * - 新增模式：每个字段填默认值（number = 0 或 default，其他 = ''）
- */
 // ─── Validation ────────────────────────────────────────────
 
 function validate(): boolean {

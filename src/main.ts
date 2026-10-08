@@ -11,17 +11,18 @@ if (typeof globalThis.structuredClone !== 'function') {
 /**
  * 应用入口 — 引擎初始化序列
  *
- * 启动流程（按依赖顺序）：
- * 1. Vue + Pinia + Router
- * 2. API 配置加载 → AIService
- * 3. 持久化层（ProfileManager → SaveManager）
- * 4. 配置系统（Registry + Store + Resolver）
- * 5. Game Pack 加载
- * 6. Prompt 引擎（PromptRegistry + TemplateEngine + PromptAssembler + ResponseParser）
- * 7. StateManager / CommandExecutor / BehaviorRunner / CharacterInitPipeline
- * 8. PromptStorage / VectorStore / BackupService（M5 备份与 Engram 持久化）
- * 9. Action Queue 恢复
- * 10. provide → 挂载
+ * 启动流程（按依赖顺序，每一步的细节在 src/bootstrap/ 对应文件里；boot-trace.test.ts 锁定了
+ * provide 键与顺序）：
+ * 1. Vue + Pinia + Router + i18n（预加载当前语言包）
+ * 2. AI 栈（createAiStack）
+ * 3. 持久化层（createPersistenceStack：档案/存档/配置/备份等）
+ * 4. Game Pack 加载 + 存档迁移注册（loadPackAndMigrations）
+ * 5. Prompt 栈（createPromptStack）
+ * 6. 状态内核（createStateKernel：StateManager / CommandExecutor / BehaviorRunner）
+ * 7. 记忆栈、pack 行为模块、Engram 栈
+ * 8. 子管线（createSubPipelines）、媒体服务（生图/配音/听写）
+ * 9. 游戏主循环（createGameLoop：编排器、创角管线、卡片服务）
+ * 10. provide → 挂载（provideServices、mountAndFollowUp）
  */
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';

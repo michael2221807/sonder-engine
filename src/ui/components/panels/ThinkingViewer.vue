@@ -7,8 +7,7 @@
  * Phase 3 (2026-04-19): opened from the 🌐 button on RoundDivider's left slot
  * and from the existing PromptAssembly panel's CoT reference button.
  *
- * Principle: the modal only *displays* — no editing. Edit flow belongs to
- * Phase 5's raw-response editor, which rewrites the full parser input.
+ * Principle: the modal only *displays* — no editing.
  */
 import { useI18n } from 'vue-i18n';
 import Modal from '@/ui/components/common/Modal.vue';

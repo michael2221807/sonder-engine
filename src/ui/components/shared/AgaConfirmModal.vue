@@ -2,7 +2,7 @@
 /**
  * AgaConfirmModal — replaces window.confirm with an AGA-styled dialog.
  *
- * Teleports to <body>; traps focus; Escape to cancel; guarded backdrop press
+ * Teleports to <body>; focuses the first button on open (no focus trap); Escape to cancel; guarded backdrop press
  * to cancel (pointerdown AND pointerup must both land on the backdrop — a drag
  * that starts inside the dialog can never dismiss it).
  */

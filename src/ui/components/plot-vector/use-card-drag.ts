@@ -6,8 +6,8 @@
  * Drop targets mark themselves with `data-drop-cell="01"` or `data-drop-hand`.
  *
  * On a touch screen the page must not scroll under a card being carried: a scroll takes the gesture and cancels the
- * drag, and the card jumps back. CSS `touch-action` says so, but iOS does not honour it inside a scrolling panel —
- * the table scrolls on a phone with the ring board, so there a drag snapped back at once (PO 2026-10-01). The host
+ * drag, and the card jumps back. CSS `touch-action` says so, but iOS does not honour it inside a scrolling panel
+ * (Changelog: 2026-10-01 a drag snapped back at once on a phone). The host
  * passes `touchMove` to a non-passive `touchmove` listener on the panel, which holds the page still while a card is
  * carried and for a card in a cell that can move; a card that cannot move never holds it. A finger on a card in the
  * hand chooses by its first few pixels: up or down picks the card up (and the page stays held to the end), sideways

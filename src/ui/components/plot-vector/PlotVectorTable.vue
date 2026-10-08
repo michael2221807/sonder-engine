@@ -311,7 +311,7 @@ function onFocusIn(event: FocusEvent): void {
 }
 let rowWatch: ResizeObserver | undefined;
 
-// ── Saving the arrangement holds the page for a moment on a large save: the badge says so first (PO 2026-09-30). ──
+// ── Saving the arrangement holds the page for a moment on a large save: the badge says so first. ──
 const saveNote = ref<'saving' | 'saved' | null>(null);
 let saveNoteTimer: ReturnType<typeof setTimeout> | undefined;
 const nextPaint = () => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
@@ -367,7 +367,7 @@ watch(() => props.generating, (now, before) => {
  * has, the board can be neither read nor kept. The table counts that time as part of the round: it stays locked,
  * then — once the engine is free — reads the board again, puts back a move that met the busy engine, or writes an
  * arrangement still waiting. Opening it meanwhile used to end in "the table cannot open" until it was closed and
- * opened again (PO 2026-10-02). The engine says when it is done; a short look-again covers any other busy spell.
+ * opened again. The engine says when it is done; a short look-again covers any other busy spell.
  */
 function whenEngineFree(): void {
   clearTimeout(settleTimer);
@@ -587,7 +587,7 @@ const drag = useCardDrag({
 });
 // A drag that begins (also after a long press lifted the card with its details) puts the details away.
 // A drag also replaces a card picked up by a tap: otherwise that card stays held after the drop, the cells keep
-// inviting it, and the next tap on any cell moves it (PO 2026-10-01).
+// inviting it, and the next tap on any cell moves it.
 watch(() => !!drag.drag.value, dragging => {
   if (!dragging) return;
   clearTimeout(hoverTimer);
@@ -1155,7 +1155,7 @@ const ghostStyle = computed(() => {
 .vtable__hand-wrap { display: grid; min-width: 0; }
 .vtable__hand-label { padding: 6px 2px; font-size: 11px; letter-spacing: 0.1em; color: var(--color-text-muted); }
 /* A strip that scrolls sideways clips up and down as well, which cut the glow of rare cards in the hand: the
-   strip keeps room for that glow inside itself and gives it back with negative margins (PO 2026-10-01). */
+   strip keeps room for that glow inside itself and gives it back with negative margins. */
 .vtable__hand {
   display: flex;
   gap: 12px;

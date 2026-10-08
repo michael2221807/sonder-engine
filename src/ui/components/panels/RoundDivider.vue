@@ -6,9 +6,8 @@
  * stream. Shows a horizontal rule with a centered "第 N 回合" badge, and an
  * optional token/duration stats pill below.
  *
- * Phase 2 (2026-04-19): basic badge + metrics pill.
- * Phase 3 will populate the `actions-left` / `actions-right` slots with
- * satellite buttons (thinking / commands / raw-view).
+ * Basic badge + metrics pill; the satellite buttons (thinking / commands / raw-view / bookmark)
+ * are rendered inline.
  *
  * Layout reference: TurnItem's outer wrapper pattern.
  * AGA uses its own design tokens — no Tailwind.

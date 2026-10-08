@@ -5,7 +5,7 @@
  * Story 1 of Game Card Epic (plan section 5.3).
  *
  * Layout:
- *   - (future) EngramGraphView placeholder (350px, read-only)
+ *   - EngramGraphView (350px, read-only)
  *   - Stats bar (entity/edge/core/pending counts)
  *   - Coverage bar (NPC coverage %, missing names)
  *   - Entity list with pagination, inline edit/delete

@@ -6,8 +6,7 @@
  *   - Step 2 (structured) from `_rawResponseStep2`
  * For single-call rounds, one tab labeled "原始响应".
  *
- * Phase 3 (2026-04-19): readonly. Phase 5 will add editable + re-parse
- * capability (gated to latest turn only).
+ * Read-only.
  *
  * Data source: narrativeHistory[i]._rawResponse + ._rawResponseStep2 (Phase 1).
  */

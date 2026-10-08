@@ -1,13 +1,13 @@
 <script setup lang="ts">
 /**
- * ImageDisplay — Sprint Image-4
+ * ImageDisplay
  *
  * Generic image display component with fallback to initial-letter avatar.
  * Resolves an asset ID from the image cache; shows fallback while loading
  * or when no asset exists.
  *
- * Used by: CharacterDetailsPanel (avatar), RelationshipPanel (NPC avatar),
- * future gallery/wallpaper components.
+ * Used by: CharacterDetailsPanel (avatar), RelationshipPanel (NPC avatar), ImagePanel,
+ * FormattedInline.
  */
 import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { ImageAssetCache } from '@/engine/image/asset-cache';
