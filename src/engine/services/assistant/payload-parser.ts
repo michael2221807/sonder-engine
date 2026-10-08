@@ -20,14 +20,8 @@
  *
  * 对应 docs/status/plan-assistant-utility-2026-04-14.md §5.2.2 + Phase 2。
  */
-import { stripMarkdownFences, findBalancedJsonBlocks } from '../../ai/json-extract';
-import { stripThinkOrThinkingBlocks } from '../../ai/thinking-tags';
+import { scanJsonObjectBlocks } from '../../ai/json-extract';
 import type { AssistantPayload, AssistantPatch, KnowledgeFact } from './types';
-
-/** 剥离 thinking 标签 —— 与 preset-ai-generator 同范式 */
-function stripThinkingTags(text: string): string {
-  return stripThinkOrThinkingBlocks(text);
-}
 
 /**
  * 解析 AI 响应 → AssistantPayload | null
@@ -38,25 +32,15 @@ function stripThinkingTags(text: string): string {
 export function parseAssistantPayload(raw: string): AssistantPayload | null {
   if (typeof raw !== 'string' || raw.trim().length === 0) return null;
 
-  const detagged = stripThinkingTags(raw);
-  const cleaned = stripMarkdownFences(detagged);
-  const blocks = findBalancedJsonBlocks(cleaned);
-
   type Candidate = { obj: AssistantPayload; score: number; index: number };
   const candidates: Candidate[] = [];
 
-  blocks.forEach((blk, idx) => {
-    try {
-      const obj = JSON.parse(blk) as Record<string, unknown>;
-      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
-      const score = scoreCandidate(obj);
-      if (score === 0) return;
-      const payload = sanitizePayload(obj);
-      if (!payload) return;
-      candidates.push({ obj: payload, score, index: idx });
-    } catch {
-      /* skip non-JSON blocks */
-    }
+  scanJsonObjectBlocks(raw, (obj, idx) => {
+    const score = scoreCandidate(obj);
+    if (score === 0) return;
+    const payload = sanitizePayload(obj);
+    if (!payload) return;
+    candidates.push({ obj: payload, score, index: idx });
   });
 
   if (candidates.length === 0) return null;

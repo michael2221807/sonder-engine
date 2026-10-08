@@ -28,8 +28,7 @@ import type { AIService } from '../ai/ai-service';
 import type { AIMessage } from '../ai/types';
 import type { GamePack, CustomPresetSchema } from '../types';
 import type { PromptTextSource } from '../prompt/prompt-assembler';
-import { findBalancedJsonBlocks, stripMarkdownFences } from '../ai/json-extract';
-import { stripThinkOrThinkingBlocks } from '../ai/thinking-tags';
+import { scanJsonObjectBlocks } from '../ai/json-extract';
 
 // ─── 参数 / 结果 ───
 
@@ -87,16 +86,6 @@ function describeSchema(schema: CustomPresetSchema): string {
 }
 
 /**
- * 剥离 `<thinking>...</thinking>` / `<think>...</think>` 块（CR-2026-04-14 P1-2）
- *
- * 部分模型即便被要求直接输出仍会先 dump 思维链。在 thinking 内常含半成品 JSON，
- * 旧实现会优先选中它。统一在解析前剥离，避免污染。
- */
-function stripThinkingTags(text: string): string {
-  return stripThinkOrThinkingBlocks(text);
-}
-
-/**
  * 解析 AI 响应 → 字段对象（CR-2026-04-14 P1-2 修复）
  *
  * 流程：
@@ -113,30 +102,21 @@ function parsePresetResponse(
   raw: string,
   schema: CustomPresetSchema,
 ): Record<string, unknown> {
-  const detagged = stripThinkingTags(raw);
-  const cleaned = stripMarkdownFences(detagged);
-  const blocks = findBalancedJsonBlocks(cleaned);
-
   const requiredKeys = new Set(schema.fields.filter((f) => f.required).map((f) => f.key));
   const schemaKeys = new Set(schema.fields.map((f) => f.key));
 
   type Candidate = { obj: Record<string, unknown>; score: number; index: number };
   const candidates: Candidate[] = [];
 
-  blocks.forEach((blk, idx) => {
-    try {
-      const obj = JSON.parse(blk) as Record<string, unknown>;
-      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
-      const keys = Object.keys(obj);
-      const requiredHits = keys.filter((k) => requiredKeys.has(k)).length;
-      const schemaHits = keys.filter((k) => schemaKeys.has(k)).length;
-      if (schemaHits === 0) return; // 至少含一个 schema key 才视为候选
-      // 必填命中权重远大于普通 schema 命中（10:1）—— 必填覆盖全的 block 总是优先
-      const score = requiredHits * 10 + schemaHits;
-      candidates.push({ obj, score, index: idx });
-    } catch {
-      /* 当前块非合法 JSON */
-    }
+  // Steps 1-3 (strip thinking, strip fences, balanced blocks) are scanJsonObjectBlocks.
+  const cleaned = scanJsonObjectBlocks(raw, (obj, idx) => {
+    const keys = Object.keys(obj);
+    const requiredHits = keys.filter((k) => requiredKeys.has(k)).length;
+    const schemaHits = keys.filter((k) => schemaKeys.has(k)).length;
+    if (schemaHits === 0) return; // 至少含一个 schema key 才视为候选
+    // 必填命中权重远大于普通 schema 命中（10:1）—— 必填覆盖全的 block 总是优先
+    const score = requiredHits * 10 + schemaHits;
+    candidates.push({ obj, score, index: idx });
   });
 
   if (candidates.length > 0) {

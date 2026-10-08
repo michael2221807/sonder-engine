@@ -180,3 +180,45 @@ export function sanitizeJsonEscapes(src: string): string {
 
   return out;
 }
+
+
+/**
+ * How far a call site repairs a JSON source before giving up. The depth differs per call site on
+ * purpose (each one's current behaviour); this table records it, it does not recommend one.
+ *
+ * | depth              | tries, in order                                   | call sites                                              |
+ * |--------------------|----------------------------------------------------|---------------------------------------------------------|
+ * | 'none'             | the source as is                                   | parseLooseJson (batch-solidify-pipeline), assistant payload blocks and preset blocks (scanJsonObjectBlocks) |
+ * | 'escapes'          | as is, then sanitizeJsonEscapes                    | extractJsonObjectByKey (json-extract)                  |
+ * | 'escapes+quotes'   | as is, then sanitizeJsonEscapes, then healUnescapedQuotes on the sanitized text | tryParseWithSanitizer (response-parser) |
+ *
+ * Not routed through here (small gain): the JSON parts of enhanced-opening `extractJSON` and field-repair
+ * `parseCombinedResponse`, which parse a first-to-last-brace slice with their own fallbacks.
+ */
+export type JsonRepairDepth = 'none' | 'escapes' | 'escapes+quotes';
+
+/**
+ * Parse `src` with the repairs `depth` allows, stopping at the first attempt that parses. A parsed
+ * `null`, `0`, `false` or `""` is a success and is returned as is; `undefined` means every allowed
+ * attempt failed (JSON.parse never returns undefined, so it cannot be mistaken for a parsed value).
+ */
+export function parseJsonWithRepairs(src: string, depth: JsonRepairDepth): unknown {
+  try {
+    return JSON.parse(src);
+  } catch {
+    // fall through to the repairs the depth allows
+  }
+  if (depth === 'none') return undefined;
+  const sanitized = sanitizeJsonEscapes(src);
+  try {
+    return JSON.parse(sanitized);
+  } catch {
+    // fall through to the quote healer if the depth allows
+  }
+  if (depth === 'escapes') return undefined;
+  try {
+    return JSON.parse(healUnescapedQuotes(sanitized));
+  } catch {
+    return undefined;
+  }
+}

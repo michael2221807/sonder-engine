@@ -17,7 +17,7 @@
 import type { AIResponse, RawSettingUpdate } from './types';
 import { MAX_RAW_SETTING_UPDATES } from './types';
 import type { Command } from '../types';
-import { sanitizeJsonEscapes, healUnescapedQuotes } from './json-escape-sanitize';
+import { parseJsonWithRepairs } from './json-escape-sanitize';
 import { THINKING_TAGS, extractThinkingBlocks, stripThinkingBlocks } from './thinking-tags';
 
 /**
@@ -27,22 +27,8 @@ import { THINKING_TAGS, extractThinkingBlocks, stripThinkingBlocks } from './thi
  * 返回解析出的对象或 null。
  */
 function tryParseWithSanitizer(src: string): Record<string, unknown> | null {
-  try {
-    return JSON.parse(src) as Record<string, unknown>;
-  } catch {
-    // 继续走 sanitizer
-  }
-  const sanitized = sanitizeJsonEscapes(src);
-  try {
-    return JSON.parse(sanitized) as Record<string, unknown>;
-  } catch {
-    // 继续走 quote healer
-  }
-  try {
-    return JSON.parse(healUnescapedQuotes(sanitized)) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
+  const parsed = parseJsonWithRepairs(src, 'escapes+quotes');
+  return parsed === undefined ? null : (parsed as Record<string, unknown>);
 }
 
 /**

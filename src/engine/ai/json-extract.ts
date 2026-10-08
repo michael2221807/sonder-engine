@@ -1,4 +1,5 @@
-import { sanitizeJsonEscapes } from './json-escape-sanitize';
+import { parseJsonWithRepairs } from './json-escape-sanitize';
+import { stripThinkOrThinkingBlocks } from './thinking-tags';
 
 /**
  * JSON 块提取工具 — 2026-04-11 CR M-08 修复
@@ -126,18 +127,10 @@ export function extractJsonObjectByKey(
   const blocks = findBalancedJsonBlocks(stripped);
 
   for (const block of blocks) {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(block);
-    } catch {
-      // 2026-04-19: 过一遍 escape sanitizer 再试一次
-      // 修复 LLM \X stutter bug（参见 json-escape-sanitize.ts 头注）
-      try {
-        parsed = JSON.parse(sanitizeJsonEscapes(block));
-      } catch {
-        continue;
-      }
-    }
+    // 2026-04-19: 原文失败后过一遍 escape sanitizer 再试一次
+    // 修复 LLM \X stutter bug（参见 json-escape-sanitize.ts 头注）
+    const parsed = parseJsonWithRepairs(block, 'escapes');
+    if (parsed === undefined) continue;
 
     // 递归查找 requiredKey —— 支持嵌套对象（例如 `{semantic_memory: {long_term_memories: [...]}}`）
     if (containsKey(parsed, requiredKey)) {
@@ -146,6 +139,31 @@ export function extractJsonObjectByKey(
   }
 
   return null;
+}
+
+/**
+ * Shared front half of the assistant and preset reply parsers: take the `<think>` / `<thinking>`
+ * blocks out, take the markdown fences off, find the balanced `{...}` blocks and parse each one as is
+ * (no repair). `visit` is called with each block that parses to a plain object (not an array, not
+ * null) and the block's index; anything it throws is swallowed, so a block it cannot use is skipped.
+ * Returns the cleaned text so a caller can still try it whole.
+ */
+export function scanJsonObjectBlocks(
+  raw: string,
+  visit: (obj: Record<string, unknown>, index: number) => void,
+): string {
+  const cleaned = stripMarkdownFences(stripThinkOrThinkingBlocks(raw));
+  const blocks = findBalancedJsonBlocks(cleaned);
+  blocks.forEach((blk, idx) => {
+    try {
+      const obj = JSON.parse(blk) as Record<string, unknown>;
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
+      visit(obj, idx);
+    } catch {
+      /* skip a block that is not JSON, or that visit cannot use */
+    }
+  });
+  return cleaned;
 }
 
 /** 递归查找对象树中是否存在某个 key */

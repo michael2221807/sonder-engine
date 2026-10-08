@@ -21,6 +21,7 @@ import type { EngramEditor, NewKnowledgeEdge } from './engram-editor';
 import type { EngramManager } from './engram-manager';
 import type { IMemoryRetriever } from '../../pipeline/types';
 import { loadEngramConfig } from './engram-config';
+import { parseJsonWithRepairs } from '../../ai/json-escape-sanitize';
 import { stringifySnapshotForPrompt } from '../../memory/snapshot-sanitizer';
 import { SUB_PIPELINE_HISTORY_PAIRS } from '../../prompt/context-compiler';
 
@@ -230,8 +231,9 @@ export function parseLooseJson<T>(raw: string, accept: (v: unknown) => v is T): 
     const closeIdx = candidate.lastIndexOf('}');
     if (closeIdx < 0) continue;
 
+    const parsed = parseJsonWithRepairs(candidate.slice(0, closeIdx + 1), 'none');
+    if (parsed === undefined) continue;
     try {
-      const parsed: unknown = JSON.parse(candidate.slice(0, closeIdx + 1));
       if (accept(parsed)) return parsed;
     } catch {
       continue;
