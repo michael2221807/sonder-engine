@@ -15,8 +15,8 @@
  * engine cannot be blamed for the outcome — those are recorded for the contradiction
  * baseline, not enforced as a pass/fail gate.
  */
-import type { RawSettingUpdate } from '../../../ai/types';
-import type { SettingRejectReason } from '../setting-capture';
+import type { RawSettingUpdate } from '../../ai/types';
+import type { SettingRejectReason } from '../../pipeline/stages/setting-capture';
 
 export interface CaptureFixture {
   id: string;

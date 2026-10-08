@@ -33,7 +33,7 @@ import {
   GATED_FIXTURES,
   PROBABILISTIC_FIXTURES,
   type CaptureFixture,
-} from './__fixtures__/setting-capture-fixtures';
+} from '../../__test-utils__/fixtures/setting-capture-fixtures';
 
 const paths = DEFAULT_ENGINE_PATHS;
 

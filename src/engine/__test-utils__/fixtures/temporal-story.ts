@@ -13,11 +13,11 @@
  *   R4: stub restored across round (Step 2.25)
  *   R5: Tier 2 enrichment fills description
  */
-import type { EngramEdge } from '../knowledge-edge';
-import { engramEdgeId } from '../knowledge-edge';
-import type { EngramEntity } from '../entity-builder';
-import type { EngramEventNode, EngramEventStructuredKV } from '../event-builder';
-import type { KnowledgeFact } from '../fact-builder';
+import type { EngramEdge } from '../../memory/engram/knowledge-edge';
+import { engramEdgeId } from '../../memory/engram/knowledge-edge';
+import type { EngramEntity } from '../../memory/engram/entity-builder';
+import type { EngramEventNode, EngramEventStructuredKV } from '../../memory/engram/event-builder';
+import type { KnowledgeFact } from '../../memory/engram/fact-builder';
 
 function makeKV(event: string, roles: string[] = []): EngramEventStructuredKV {
   return { event, role: roles, location: [], time_anchor: '', causality: '承接', logic: [] };

@@ -7,7 +7,7 @@ import { createMockStateManager } from '@/engine/__test-utils__/state-manager.mo
 import {
   ROUND_1, ROUND_2, ROUND_3, ROUND_4, ROUND_5,
   buildEdgesUpToRound4, buildAllEntities, STUB_ENTITY_NAME,
-} from '@/engine/memory/engram/__fixtures__/temporal-story';
+} from '@/engine/__test-utils__/fixtures/temporal-story';
 import type { EngramEdge } from '@/engine/memory/engram/knowledge-edge';
 import type { EngramEntity } from '@/engine/memory/engram/entity-builder';
 
