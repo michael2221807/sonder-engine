@@ -28,6 +28,12 @@ import { eventBus } from '@/engine/core/event-bus';
 import type { SaveSlotMeta } from '@/engine/types/persistence';
 import type { GameStateTree } from '@/engine/types';
 import { loadEngramConfig } from '@/engine/memory/engram/engram-config';
+import {
+  CUSTOM_PRESETS_SUPPORTED_VERSION, countCustomPresets, buildCustomPresetsExport, customPresetsFileName, isUnsupportedPresetsVersion,
+  cleanImportedPresets, type CustomPresetsExportFile,
+} from '@/ui/composables/save/custom-presets-io';
+import { isGhClassicVisible, isGhBusyStage, buildPreUploadSlotMeta, copyTextWithTextarea } from '@/ui/composables/save/github-classic';
+import { lanUploadSizeKb } from '@/ui/composables/save/lan-sync';
 
 const { t } = useI18n();
 const { formatDateTime } = useLocale();
@@ -442,19 +448,6 @@ async function exportFullBackup(): Promise<void> {
 const isExportingPresets = ref(false);
 const isImportingPresets = ref(false);
 
-interface CustomPresetsExportFile {
-  /** 固定为 1，未来字段变化时升版 */
-  version: number;
-  /** 区分文件类型与全量备份 */
-  type: 'custom_presets';
-  /** 与导出时的 packId 绑定，导入时校验 */
-  packId: string;
-  /** ISO 时间戳 */
-  exportedAt: string;
-  /** 各 preset 类型的用户条目数组（结构与 BackupBundle.customPresets[packId] 一致） */
-  presets: Record<string, unknown[]>;
-}
-
 async function exportCustomPresets(): Promise<void> {
   if (!customPresetStore || isExportingPresets.value) return;
   const pid = activePackId.value;
@@ -465,26 +458,17 @@ async function exportCustomPresets(): Promise<void> {
   isExportingPresets.value = true;
   try {
     const data = await customPresetStore.load(pid);
-    const totalCount = Object.values(data.presets ?? {}).reduce(
-      (sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0),
-      0,
-    );
+    const totalCount = countCustomPresets(data.presets);
     if (totalCount === 0) {
       eventBus.emit('ui:toast', { type: 'info', message: t('save.presets.exportEmpty'), duration: 2500 });
       return;
     }
-    const payload: CustomPresetsExportFile = {
-      version: 1,
-      type: 'custom_presets',
-      packId: pid,
-      exportedAt: new Date().toISOString(),
-      presets: data.presets ?? {},
-    };
+    const payload: CustomPresetsExportFile = buildCustomPresetsExport(pid, data.presets, new Date().toISOString());
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const today = new Date().toISOString().slice(0, 10);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `presets-${pid}-${today}.json`;
+    a.download = customPresetsFileName(pid, today);
     a.click();
     URL.revokeObjectURL(a.href);
     eventBus.emit('ui:toast', {
@@ -541,11 +525,10 @@ async function importCustomPresets(file: File): Promise<void> {
       return;
     }
     // CR-2026-04-14 P2-8：校验文件版本 —— 高于当前支持版本时拒绝
-    const SUPPORTED_VERSION = 1;
-    if (typeof payload.version !== 'number' || payload.version > SUPPORTED_VERSION) {
+    if (isUnsupportedPresetsVersion(payload.version)) {
       eventBus.emit('ui:toast', {
         type: 'error',
-        message: t('save.presets.importVersionError', { version: payload.version, supported: SUPPORTED_VERSION }),
+        message: t('save.presets.importVersionError', { version: payload.version, supported: CUSTOM_PRESETS_SUPPORTED_VERSION }),
         duration: 4000,
       });
       return;
@@ -563,16 +546,7 @@ async function importCustomPresets(file: File): Promise<void> {
     }
 
     // CR-2026-04-14 P2-1：用 bulkAppend 取代逐条 add，N 条 → 单次 IDB load+save
-    const presetsByType: Record<string, Record<string, unknown>[]> = {};
-    for (const [presetType, list] of Object.entries(payload.presets ?? {})) {
-      if (!Array.isArray(list)) continue;
-      const cleaned: Record<string, unknown>[] = [];
-      for (const raw of list) {
-        if (!raw || typeof raw !== 'object') continue;
-        cleaned.push(raw as Record<string, unknown>);
-      }
-      if (cleaned.length > 0) presetsByType[presetType] = cleaned;
-    }
+    const presetsByType = cleanImportedPresets(payload.presets);
     const added = await customPresetStore.bulkAppend(pid, presetsByType);
     const importedCount = added.length;
 
@@ -724,7 +698,7 @@ const githubSync = injectService('githubSync');
 // 云端格式（由 CloudSlotsSection 探测上报）：v3/empty → 插槽列表接管，
 // 经典整包上传/下载行隐藏；v2/unknown → 维持现状 UI（+ v2 时插槽区渲染迁移入口）
 const ghCloudFormat = ref<CloudFormat | 'unknown'>('unknown');
-const ghClassicVisible = computed(() => ghCloudFormat.value === 'v2' || ghCloudFormat.value === 'unknown');
+const ghClassicVisible = computed(() => isGhClassicVisible(ghCloudFormat.value));
 const ghToken = ref(githubSync?.getToken() ?? '');
 const ghOwner = ref(githubSync?.getOwner() ?? '');
 const ghRepoName = ref(githubSync?.getRepoName() ?? 'aga-cloud-save');
@@ -766,19 +740,12 @@ async function ghRefreshCloudInfo(): Promise<void> {
   }
 }
 
-const ghBusy = () => ['checking', 'uploading', 'downloading'].includes(ghStatus.value.stage);
+const ghBusy = () => isGhBusyStage(ghStatus.value.stage);
 
 function ghCopyToken(): void {
   const token = githubSync?.getToken() ?? ghToken.value;
   if (!token.trim()) return;
-  const ta = document.createElement('textarea');
-  ta.value = token;
-  ta.style.position = 'fixed';
-  ta.style.opacity = '0';
-  document.body.appendChild(ta);
-  ta.select();
-  document.execCommand('copy');
-  document.body.removeChild(ta);
+  copyTextWithTextarea(token);
   eventBus.emit('ui:toast', { type: 'success', message: t('save.github.tokenCopied'), duration: 1200 });
 }
 
@@ -794,16 +761,7 @@ async function ghUpload(force = false): Promise<void> {
     const sid = activeSlotId.value;
     if (saveManager && pid && sid && store) {
       const snapshot = store.toSnapshot() as GameStateTree;
-      await saveManager.saveGame(pid, sid, snapshot, {
-        slotId: sid,
-        slotName: sid,
-        lastSavedAt: new Date().toISOString(),
-        packId: activePackId.value ?? '',
-        characterName: store.characterName,
-        currentLocation: store.currentLocation,
-        gameTime: store.gameTime,
-        saveType: 'auto',
-      });
+      await saveManager.saveGame(pid, sid, snapshot, buildPreUploadSlotMeta(sid, activePackId.value ?? '', store));
     }
     await githubSync.upload((s) => { ghStatus.value = s; }, { force });
     void ghRefreshCloudInfo();
@@ -884,7 +842,7 @@ async function lanUpload(): Promise<void> {
   lanStatus.value = '';
   try {
     const result = await lanSync.upload();
-    const kb = Math.round(result.size / 1024);
+    const kb = lanUploadSizeKb(result.size);
     lanStatus.value = t('save.github.uploadUploaded', { size: kb });
     eventBus.emit('ui:toast', { type: 'success', message: t('save.lan.uploadToast', { size: kb }), duration: 2000 });
   } catch (err) {
