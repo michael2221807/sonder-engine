@@ -1,0 +1,73 @@
+{
+  "empty-shelf": {
+    "ok": {
+      "valid": true,
+      "errors": [],
+      "warnings": []
+    }
+  },
+  "single-with-triggers": {
+    "ok": {
+      "valid": true,
+      "errors": [],
+      "warnings": []
+    }
+  },
+  "disabled-and-wrong-scope": {
+    "ok": {
+      "valid": true,
+      "errors": [],
+      "warnings": []
+    }
+  },
+  "six-active-too-many": {
+    "ok": {
+      "valid": true,
+      "errors": [],
+      "warnings": [
+        "当前 flow 有 6 个 LoRA 生效，可能影响质量和消耗"
+      ]
+    }
+  },
+  "strong-and-mature": {
+    "ok": {
+      "valid": true,
+      "errors": [],
+      "warnings": [
+        "Strong: strength 2 效果可能过强",
+        "Negative: strength -1.6 效果可能过强",
+        "Mature 标记为 Mature，请确认 allowMatureContent 已开启"
+      ]
+    }
+  },
+  "lora-syntax-triggers": {
+    "ok": {
+      "valid": true,
+      "errors": [],
+      "warnings": []
+    }
+  },
+  "air-conflict-and-raw-json": {
+    "ok": {
+      "valid": true,
+      "errors": [],
+      "warnings": []
+    }
+  },
+  "invalid-air-zero-strength-bad-json": {
+    "ok": {
+      "valid": false,
+      "errors": [
+        "Bad AIR: AIR 必须以 urn:air: 开头",
+        "No civitai: AIR 必须包含 :civitai: 标识",
+        "Checkpoint: AIR 类型不是 LoRA — 请检查是否误用了 checkpoint AIR",
+        "No version: AIR 缺少 modelId@versionId（格式: civitai:数字@数字）",
+        "Zero: strength 不能为 0（使用 enabled=false 来关闭 LoRA）",
+        "Empty AIR: AIR 不能为空"
+      ],
+      "warnings": [
+        "当前 flow 有 6 个 LoRA 生效，可能影响质量和消耗"
+      ]
+    }
+  }
+}

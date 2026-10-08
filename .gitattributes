@@ -2,3 +2,4 @@
 # including Windows with core.autocrlf=true, or the matrix fails on a fresh checkout.
 src/engine/pipeline/stages/__snapshots__/request-matrix/*.json text eol=lf
 src/engine/ai/__snapshots__/reply-corpus/*.json text eol=lf
+src/engine/image/__snapshots__/**/*.json text eol=lf

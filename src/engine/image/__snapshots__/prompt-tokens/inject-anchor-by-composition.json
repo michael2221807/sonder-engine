@@ -1,0 +1,802 @@
+{
+  "plain-tags": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "1girl, long hair, red eyes",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "masterpiece, best quality, 1girl, long hair, red eyes",
+        "withFeatures": "masterpiece, best quality, 1girl, long hair, red eyes"
+      },
+      "full-length": {
+        "positiveOnly": "masterpiece, best quality, 1girl, long hair, red eyes",
+        "withFeatures": "masterpiece, best quality, 1girl, long hair, red eyes"
+      },
+      "scene": {
+        "positiveOnly": "masterpiece, best quality, 1girl, long hair, red eyes",
+        "withFeatures": "masterpiece, best quality, 1girl, long hair, red eyes"
+      },
+      "custom": {
+        "positiveOnly": "masterpiece, best quality, 1girl, long hair, red eyes",
+        "withFeatures": "masterpiece, best quality, 1girl, long hair, red eyes"
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "duplicates-bullets-case": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "1girl, Long Hair, red eyes",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush",
+        "withFeatures": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush"
+      },
+      "full-length": {
+        "positiveOnly": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush",
+        "withFeatures": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush"
+      },
+      "scene": {
+        "positiveOnly": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush",
+        "withFeatures": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush"
+      },
+      "custom": {
+        "positiveOnly": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush",
+        "withFeatures": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush"
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "sd-weights": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "(red eyes:1.1), (long hair:0.9)",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "(smile:1.3), (red eyes:1.1), (long hair:0.9)",
+        "withFeatures": "(smile:1.3), (red eyes:1.1), (long hair:0.9)"
+      },
+      "full-length": {
+        "positiveOnly": "(smile:1.3), (red eyes:1.1), (long hair:0.9)",
+        "withFeatures": "(smile:1.3), (red eyes:1.1), (long hair:0.9)"
+      },
+      "scene": {
+        "positiveOnly": "(smile:1.3), (red eyes:1.1), (long hair:0.9)",
+        "withFeatures": "(smile:1.3), (red eyes:1.1), (long hair:0.9)"
+      },
+      "custom": {
+        "positiveOnly": "(smile:1.3), (red eyes:1.1), (long hair:0.9)",
+        "withFeatures": "(smile:1.3), (red eyes:1.1), (long hair:0.9)"
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "sd-weights-nested": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "((masterpiece:1.2), best quality:1.1)",
+        "withFeatures": "((masterpiece:1.2), best quality:1.1)"
+      },
+      "full-length": {
+        "positiveOnly": "((masterpiece:1.2), best quality:1.1)",
+        "withFeatures": "((masterpiece:1.2), best quality:1.1)"
+      },
+      "scene": {
+        "positiveOnly": "((masterpiece:1.2), best quality:1.1)",
+        "withFeatures": "((masterpiece:1.2), best quality:1.1)"
+      },
+      "custom": {
+        "positiveOnly": "((masterpiece:1.2), best quality:1.1)",
+        "withFeatures": "((masterpiece:1.2), best quality:1.1)"
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "nai-weights-clean": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "1.2::anime background, scenic composition::, 1.1::misty courtyard::",
+        "withFeatures": "1.2::anime background, scenic composition::, 1.1::misty courtyard::"
+      },
+      "full-length": {
+        "positiveOnly": "1.2::anime background, scenic composition::, 1.1::misty courtyard::",
+        "withFeatures": "1.2::anime background, scenic composition::, 1.1::misty courtyard::"
+      },
+      "scene": {
+        "positiveOnly": "1.2::anime background, scenic composition::, 1.1::misty courtyard::",
+        "withFeatures": "1.2::anime background, scenic composition::, 1.1::misty courtyard::"
+      },
+      "custom": {
+        "positiveOnly": "1.2::anime background, scenic composition::, 1.1::misty courtyard::",
+        "withFeatures": "1.2::anime background, scenic composition::, 1.1::misty courtyard::"
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "nai-weights-dirty-left": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "1.3::1girl, smile, ::1.1::red eyes::",
+        "withFeatures": "1.3::1girl, smile, ::1.1::red eyes::"
+      },
+      "full-length": {
+        "positiveOnly": "1.3::1girl, smile, ::1.1::red eyes::",
+        "withFeatures": "1.3::1girl, smile, ::1.1::red eyes::"
+      },
+      "scene": {
+        "positiveOnly": "1.3::1girl, smile, ::1.1::red eyes::",
+        "withFeatures": "1.3::1girl, smile, ::1.1::red eyes::"
+      },
+      "custom": {
+        "positiveOnly": "1.3::1girl, smile, ::1.1::red eyes::",
+        "withFeatures": "1.3::1girl, smile, ::1.1::red eyes::"
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "nai-weights-dirty-comma": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing",
+        "withFeatures": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing"
+      },
+      "full-length": {
+        "positiveOnly": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing",
+        "withFeatures": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing"
+      },
+      "scene": {
+        "positiveOnly": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing",
+        "withFeatures": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing"
+      },
+      "custom": {
+        "positiveOnly": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing",
+        "withFeatures": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing"
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "paren-wrapped-nai": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "(1.2::warm light::), (0.8::soft shadow::)",
+        "withFeatures": "(1.2::warm light::), (0.8::soft shadow::)"
+      },
+      "full-length": {
+        "positiveOnly": "(1.2::warm light::), (0.8::soft shadow::)",
+        "withFeatures": "(1.2::warm light::), (0.8::soft shadow::)"
+      },
+      "scene": {
+        "positiveOnly": "(1.2::warm light::), (0.8::soft shadow::)",
+        "withFeatures": "(1.2::warm light::), (0.8::soft shadow::)"
+      },
+      "custom": {
+        "positiveOnly": "(1.2::warm light::), (0.8::soft shadow::)",
+        "withFeatures": "(1.2::warm light::), (0.8::soft shadow::)"
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "thinking-then-prompt": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "<thinking>plan the tags</thinking><提示词>1girl, long hair, red eyes</提示词>",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "<thinking>plan the tags</thinking><提示词>1girl, long hair, red eyes</提示词>",
+        "withFeatures": "<thinking>plan the tags</thinking><提示词>1girl, long hair, red eyes</提示词>"
+      },
+      "full-length": {
+        "positiveOnly": "<thinking>plan the tags</thinking><提示词>1girl, long hair, red eyes</提示词>",
+        "withFeatures": "<thinking>plan the tags</thinking><提示词>1girl, long hair, red eyes</提示词>"
+      },
+      "scene": {
+        "positiveOnly": "<thinking>plan the tags</thinking><提示词>1girl, long hair, red eyes</提示词>",
+        "withFeatures": "<thinking>plan the tags</thinking><提示词>1girl, long hair, red eyes</提示词>"
+      },
+      "custom": {
+        "positiveOnly": "<thinking>plan the tags</thinking><提示词>1girl, long hair, red eyes</提示词>",
+        "withFeatures": "<thinking>plan the tags</thinking><提示词>1girl, long hair, red eyes</提示词>"
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "thinking-unclosed": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "<提示词>1girl",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "<thinking>I will write <提示词>...</提示词> later\n<提示词>1girl, smile</提示词>",
+        "withFeatures": "<thinking>I will write <提示词>...</提示词> later\n<提示词>1girl, smile</提示词>"
+      },
+      "full-length": {
+        "positiveOnly": "<thinking>I will write <提示词>...</提示词> later\n<提示词>1girl, smile</提示词>",
+        "withFeatures": "<thinking>I will write <提示词>...</提示词> later\n<提示词>1girl, smile</提示词>"
+      },
+      "scene": {
+        "positiveOnly": "<thinking>I will write <提示词>...</提示词> later\n<提示词>1girl, smile</提示词>",
+        "withFeatures": "<thinking>I will write <提示词>...</提示词> later\n<提示词>1girl, smile</提示词>"
+      },
+      "custom": {
+        "positiveOnly": "<thinking>I will write <提示词>...</提示词> later\n<提示词>1girl, smile</提示词>",
+        "withFeatures": "<thinking>I will write <提示词>...</提示词> later\n<提示词>1girl, smile</提示词>"
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "think-and-fence": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "1girl",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "<think>x</think>\n```text\n1girl, solo\n```",
+        "withFeatures": "<think>x</think>\n```text\n1girl, solo\n```"
+      },
+      "full-length": {
+        "positiveOnly": "<think>x</think>\n```text\n1girl, solo\n```",
+        "withFeatures": "<think>x</think>\n```text\n1girl, solo\n```"
+      },
+      "scene": {
+        "positiveOnly": "<think>x</think>\n```text\n1girl, solo\n```",
+        "withFeatures": "<think>x</think>\n```text\n1girl, solo\n```"
+      },
+      "custom": {
+        "positiveOnly": "<think>x</think>\n```text\n1girl, solo\n```",
+        "withFeatures": "<think>x</think>\n```text\n1girl, solo\n```"
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "label-prefix": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "生图词组：1girl",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "生图词组：1girl, hanfu, lantern",
+        "withFeatures": "生图词组：1girl, hanfu, lantern"
+      },
+      "full-length": {
+        "positiveOnly": "生图词组：1girl, hanfu, lantern",
+        "withFeatures": "生图词组：1girl, hanfu, lantern"
+      },
+      "scene": {
+        "positiveOnly": "生图词组：1girl, hanfu, lantern",
+        "withFeatures": "生图词组：1girl, hanfu, lantern"
+      },
+      "custom": {
+        "positiveOnly": "生图词组：1girl, hanfu, lantern",
+        "withFeatures": "生图词组：1girl, hanfu, lantern"
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "structured-single-role": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "lanterns</基础><角色>[1]李明阳|handsome man",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "<提示词结构><基础>palace courtyard, night, lanterns</基础><角色>[1]李明阳|handsome man, black robe, sword in hand</角色></提示词结构>",
+        "withFeatures": "<提示词结构><基础>palace courtyard, night, lanterns</基础><角色>[1]李明阳|handsome man, black robe, sword in hand</角色></提示词结构>"
+      },
+      "full-length": {
+        "positiveOnly": "<提示词结构><基础>palace courtyard, night, lanterns</基础><角色>[1]李明阳|handsome man, black robe, sword in hand</角色></提示词结构>",
+        "withFeatures": "<提示词结构><基础>palace courtyard, night, lanterns</基础><角色>[1]李明阳|handsome man, black robe, sword in hand</角色></提示词结构>"
+      },
+      "scene": {
+        "positiveOnly": "<提示词结构><基础>palace courtyard, night, lanterns</基础><角色>[1]李明阳|handsome man, black robe, sword in hand</角色></提示词结构>",
+        "withFeatures": "<提示词结构><基础>palace courtyard, night, lanterns</基础><角色>[1]李明阳|handsome man, black robe, sword in hand</角色></提示词结构>"
+      },
+      "custom": {
+        "positiveOnly": "<提示词结构><基础>palace courtyard, night, lanterns</基础><角色>[1]李明阳|handsome man, black robe, sword in hand</角色></提示词结构>",
+        "withFeatures": "<提示词结构><基础>palace courtyard, night, lanterns</基础><角色>[1]李明阳|handsome man, black robe, sword in hand</角色></提示词结构>"
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "structured-two-roles": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "warm light</基础><角色>[1]林暖|1girl, [2]关宇|1boy",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "<提示词结构><基础>tavern interior, warm light</基础><角色>[1]林暖|1girl, apron\n[2]关宇|1boy, black clothes</角色></提示词结构>",
+        "withFeatures": "<提示词结构><基础>tavern interior, warm light</基础><角色>[1]林暖|1girl, apron\n[2]关宇|1boy, black clothes</角色></提示词结构>"
+      },
+      "full-length": {
+        "positiveOnly": "<提示词结构><基础>tavern interior, warm light</基础><角色>[1]林暖|1girl, apron\n[2]关宇|1boy, black clothes</角色></提示词结构>",
+        "withFeatures": "<提示词结构><基础>tavern interior, warm light</基础><角色>[1]林暖|1girl, apron\n[2]关宇|1boy, black clothes</角色></提示词结构>"
+      },
+      "scene": {
+        "positiveOnly": "<提示词结构><基础>tavern interior, warm light</基础><角色>[1]林暖|1girl, apron\n[2]关宇|1boy, black clothes</角色></提示词结构>",
+        "withFeatures": "<提示词结构><基础>tavern interior, warm light</基础><角色>[1]林暖|1girl, apron\n[2]关宇|1boy, black clothes</角色></提示词结构>"
+      },
+      "custom": {
+        "positiveOnly": "<提示词结构><基础>tavern interior, warm light</基础><角色>[1]林暖|1girl, apron\n[2]关宇|1boy, black clothes</角色></提示词结构>",
+        "withFeatures": "<提示词结构><基础>tavern interior, warm light</基础><角色>[1]林暖|1girl, apron\n[2]关宇|1boy, black clothes</角色></提示词结构>"
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "artist-case": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "1girl",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "Artist: someone, artist:other, 1girl",
+        "withFeatures": "Artist: someone, artist:other, 1girl"
+      },
+      "full-length": {
+        "positiveOnly": "Artist: someone, artist:other, 1girl",
+        "withFeatures": "Artist: someone, artist:other, 1girl"
+      },
+      "scene": {
+        "positiveOnly": "Artist: someone, artist:other, 1girl",
+        "withFeatures": "Artist: someone, artist:other, 1girl"
+      },
+      "custom": {
+        "positiveOnly": "Artist: someone, artist:other, 1girl",
+        "withFeatures": "Artist: someone, artist:other, 1girl"
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "composition-words": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "1girl, long hair, red eyes, pale skin",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up",
+        "withFeatures": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up"
+      },
+      "full-length": {
+        "positiveOnly": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up",
+        "withFeatures": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up"
+      },
+      "scene": {
+        "positiveOnly": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up",
+        "withFeatures": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up"
+      },
+      "custom": {
+        "positiveOnly": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up",
+        "withFeatures": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up"
+      },
+      "secret_part-none": {
+        "positiveOnly": "pale skin",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "breasts, pale skin",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "pale skin",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "pale skin",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "breast-weights": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin",
+        "withFeatures": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin"
+      },
+      "full-length": {
+        "positiveOnly": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin",
+        "withFeatures": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin"
+      },
+      "scene": {
+        "positiveOnly": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin",
+        "withFeatures": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin"
+      },
+      "custom": {
+        "positiveOnly": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin",
+        "withFeatures": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin"
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "empty": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "",
+        "withFeatures": ""
+      },
+      "full-length": {
+        "positiveOnly": "",
+        "withFeatures": ""
+      },
+      "scene": {
+        "positiveOnly": "",
+        "withFeatures": ""
+      },
+      "custom": {
+        "positiveOnly": "",
+        "withFeatures": ""
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "narrative-chinese": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。",
+        "withFeatures": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。"
+      },
+      "full-length": {
+        "positiveOnly": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。",
+        "withFeatures": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。"
+      },
+      "scene": {
+        "positiveOnly": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。",
+        "withFeatures": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。"
+      },
+      "custom": {
+        "positiveOnly": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。",
+        "withFeatures": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。"
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  },
+  "messy-lines": {
+    "ok": {
+      "portrait": {
+        "positiveOnly": "<提示词>角色1：1girl",
+        "withFeatures": "1girl, young adult, long hair, black hair, red eyes, pale skin, beauty mark, scar"
+      },
+      "half-body": {
+        "positiveOnly": "<提示词>角色1：1girl, smile</提示词>\n[1] 角色: tag1, tag2,\n- tag3\n\n\n* tag4",
+        "withFeatures": "<提示词>角色1：1girl, smile</提示词>\n[1] 角色: tag1, tag2,\n- tag3\n\n\n* tag4"
+      },
+      "full-length": {
+        "positiveOnly": "<提示词>角色1：1girl, smile</提示词>\n[1] 角色: tag1, tag2,\n- tag3\n\n\n* tag4",
+        "withFeatures": "<提示词>角色1：1girl, smile</提示词>\n[1] 角色: tag1, tag2,\n- tag3\n\n\n* tag4"
+      },
+      "scene": {
+        "positiveOnly": "<提示词>角色1：1girl, smile</提示词>\n[1] 角色: tag1, tag2,\n- tag3\n\n\n* tag4",
+        "withFeatures": "<提示词>角色1：1girl, smile</提示词>\n[1] 角色: tag1, tag2,\n- tag3\n\n\n* tag4"
+      },
+      "custom": {
+        "positiveOnly": "<提示词>角色1：1girl, smile</提示词>\n[1] 角色: tag1, tag2,\n- tag3\n\n\n* tag4",
+        "withFeatures": "<提示词>角色1：1girl, smile</提示词>\n[1] 角色: tag1, tag2,\n- tag3\n\n\n* tag4"
+      },
+      "secret_part-none": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-breast": {
+        "positiveOnly": "",
+        "withFeatures": "large breasts, pale skin, young adult"
+      },
+      "secret_part-vagina": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      },
+      "secret_part-anus": {
+        "positiveOnly": "",
+        "withFeatures": "pale skin, young adult"
+      }
+    }
+  }
+}

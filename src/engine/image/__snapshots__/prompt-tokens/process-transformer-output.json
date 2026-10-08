@@ -1,0 +1,562 @@
+{
+  "plain-tags": {
+    "ok": {
+      "flat": {
+        "novelai": "masterpiece, best quality, 1girl, long hair, red eyes",
+        "other": "masterpiece, best quality, 1girl, long hair, red eyes"
+      },
+      "nai_character_segments": {
+        "novelai": "masterpiece, best quality, 1girl, long hair, red eyes",
+        "other": "masterpiece, best quality, 1girl, long hair, red eyes"
+      },
+      "gemini_structured": {
+        "novelai": "masterpiece, best quality, 1girl, long hair, red eyes",
+        "other": "masterpiece, best quality, 1girl, long hair, red eyes"
+      },
+      "grok_structured": {
+        "novelai": "masterpiece, best quality, 1girl, long hair, red eyes",
+        "other": "masterpiece, best quality, 1girl, long hair, red eyes"
+      },
+      "sd_danbooru": {
+        "novelai": "masterpiece, best quality, 1girl, long hair, red eyes",
+        "other": "masterpiece, best quality, 1girl, long hair, red eyes"
+      },
+      "seedream_narrative": {
+        "novelai": "masterpiece, best quality, 1girl, long hair, red eyes",
+        "other": "masterpiece, best quality, 1girl, long hair, red eyes"
+      }
+    }
+  },
+  "duplicates-bullets-case": {
+    "ok": {
+      "flat": {
+        "novelai": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush",
+        "other": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush"
+      },
+      "nai_character_segments": {
+        "novelai": "1girl, 1GIRL, Long Hair, long hair, - red eyes, * smile, • blush",
+        "other": "1girl, 1GIRL, Long Hair, long hair, - red eyes, * smile, • blush"
+      },
+      "gemini_structured": {
+        "novelai": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush",
+        "other": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush"
+      },
+      "grok_structured": {
+        "novelai": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush",
+        "other": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush"
+      },
+      "sd_danbooru": {
+        "novelai": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush",
+        "other": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush"
+      },
+      "seedream_narrative": {
+        "novelai": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush",
+        "other": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush"
+      }
+    }
+  },
+  "sd-weights": {
+    "ok": {
+      "flat": {
+        "novelai": "(smile:1.3), (red eyes:1.1), (long hair:0.9)",
+        "other": "(smile:1.3), (red eyes:1.1), (long hair:0.9)"
+      },
+      "nai_character_segments": {
+        "novelai": "1.3::smile::, 1.1::red eyes::, 0.9::long hair::",
+        "other": "1.3::smile::, 1.1::red eyes::, 0.9::long hair::"
+      },
+      "gemini_structured": {
+        "novelai": "(smile:1.3), (red eyes:1.1), (long hair:0.9)",
+        "other": "(smile:1.3), (red eyes:1.1), (long hair:0.9)"
+      },
+      "grok_structured": {
+        "novelai": "(smile:1.3), (red eyes:1.1), (long hair:0.9)",
+        "other": "(smile:1.3), (red eyes:1.1), (long hair:0.9)"
+      },
+      "sd_danbooru": {
+        "novelai": "(smile:1.3), (red eyes:1.1), (long hair:0.9)",
+        "other": "(smile:1.3), (red eyes:1.1), (long hair:0.9)"
+      },
+      "seedream_narrative": {
+        "novelai": "(smile:1.3), (red eyes:1.1), (long hair:0.9)",
+        "other": "(smile:1.3), (red eyes:1.1), (long hair:0.9)"
+      }
+    }
+  },
+  "sd-weights-nested": {
+    "ok": {
+      "flat": {
+        "novelai": "((masterpiece:1.2), best quality:1.1)",
+        "other": "((masterpiece:1.2), best quality:1.1)"
+      },
+      "nai_character_segments": {
+        "novelai": "1.1::1.2::masterpiece::, best quality::",
+        "other": "1.1::1.2::masterpiece::, best quality::"
+      },
+      "gemini_structured": {
+        "novelai": "((masterpiece:1.2), best quality:1.1)",
+        "other": "((masterpiece:1.2), best quality:1.1)"
+      },
+      "grok_structured": {
+        "novelai": "((masterpiece:1.2), best quality:1.1)",
+        "other": "((masterpiece:1.2), best quality:1.1)"
+      },
+      "sd_danbooru": {
+        "novelai": "((masterpiece:1.2), best quality:1.1)",
+        "other": "((masterpiece:1.2), best quality:1.1)"
+      },
+      "seedream_narrative": {
+        "novelai": "((masterpiece:1.2), best quality:1.1)",
+        "other": "((masterpiece:1.2), best quality:1.1)"
+      }
+    }
+  },
+  "nai-weights-clean": {
+    "ok": {
+      "flat": {
+        "novelai": "1.2::anime background, scenic composition::, 1.1::misty courtyard::",
+        "other": "1.2::anime background, scenic composition::, 1.1::misty courtyard::"
+      },
+      "nai_character_segments": {
+        "novelai": "1.2::anime background, scenic composition::, 1.1::misty courtyard::",
+        "other": "1.2::anime background, scenic composition::, 1.1::misty courtyard::"
+      },
+      "gemini_structured": {
+        "novelai": "1.2::anime background, scenic composition::, 1.1::misty courtyard::",
+        "other": "1.2::anime background, scenic composition::, 1.1::misty courtyard::"
+      },
+      "grok_structured": {
+        "novelai": "1.2::anime background, scenic composition::, 1.1::misty courtyard::",
+        "other": "1.2::anime background, scenic composition::, 1.1::misty courtyard::"
+      },
+      "sd_danbooru": {
+        "novelai": "1.2::anime background, scenic composition::, 1.1::misty courtyard::",
+        "other": "1.2::anime background, scenic composition::, 1.1::misty courtyard::"
+      },
+      "seedream_narrative": {
+        "novelai": "1.2::anime background, scenic composition::, 1.1::misty courtyard::",
+        "other": "1.2::anime background, scenic composition::, 1.1::misty courtyard::"
+      }
+    }
+  },
+  "nai-weights-dirty-left": {
+    "ok": {
+      "flat": {
+        "novelai": "1.3::1girl, smile, ::1.1::red eyes::",
+        "other": "1.3::1girl, smile, ::1.1::red eyes::"
+      },
+      "nai_character_segments": {
+        "novelai": "1.3::1girl, smile::, 1.1::red eyes::",
+        "other": "1.3::1girl, smile::, 1.1::red eyes::"
+      },
+      "gemini_structured": {
+        "novelai": "1.3::1girl, smile, ::1.1::red eyes::",
+        "other": "1.3::1girl, smile, ::1.1::red eyes::"
+      },
+      "grok_structured": {
+        "novelai": "1.3::1girl, smile, ::1.1::red eyes::",
+        "other": "1.3::1girl, smile, ::1.1::red eyes::"
+      },
+      "sd_danbooru": {
+        "novelai": "1.3::1girl, smile, ::1.1::red eyes::",
+        "other": "1.3::1girl, smile, ::1.1::red eyes::"
+      },
+      "seedream_narrative": {
+        "novelai": "1.3::1girl, smile, ::1.1::red eyes::",
+        "other": "1.3::1girl, smile, ::1.1::red eyes::"
+      }
+    }
+  },
+  "nai-weights-dirty-comma": {
+    "ok": {
+      "flat": {
+        "novelai": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing",
+        "other": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing"
+      },
+      "nai_character_segments": {
+        "novelai": "1.2::1girl, black hair::, 1.1::blue eyes::, standing",
+        "other": "1.2::1girl, black hair::, 1.1::blue eyes::, standing"
+      },
+      "gemini_structured": {
+        "novelai": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing",
+        "other": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing"
+      },
+      "grok_structured": {
+        "novelai": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing",
+        "other": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing"
+      },
+      "sd_danbooru": {
+        "novelai": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing",
+        "other": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing"
+      },
+      "seedream_narrative": {
+        "novelai": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing",
+        "other": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing"
+      }
+    }
+  },
+  "paren-wrapped-nai": {
+    "ok": {
+      "flat": {
+        "novelai": "(1.2::warm light::), (0.8::soft shadow::)",
+        "other": "(1.2::warm light::), (0.8::soft shadow::)"
+      },
+      "nai_character_segments": {
+        "novelai": "1.2::warm light::, 0.8::soft shadow::",
+        "other": "1.2::warm light::, 0.8::soft shadow::"
+      },
+      "gemini_structured": {
+        "novelai": "(1.2::warm light::), (0.8::soft shadow::)",
+        "other": "(1.2::warm light::), (0.8::soft shadow::)"
+      },
+      "grok_structured": {
+        "novelai": "(1.2::warm light::), (0.8::soft shadow::)",
+        "other": "(1.2::warm light::), (0.8::soft shadow::)"
+      },
+      "sd_danbooru": {
+        "novelai": "(1.2::warm light::), (0.8::soft shadow::)",
+        "other": "(1.2::warm light::), (0.8::soft shadow::)"
+      },
+      "seedream_narrative": {
+        "novelai": "(1.2::warm light::), (0.8::soft shadow::)",
+        "other": "(1.2::warm light::), (0.8::soft shadow::)"
+      }
+    }
+  },
+  "thinking-then-prompt": {
+    "ok": {
+      "flat": {
+        "novelai": "1girl, long hair, red eyes",
+        "other": "1girl, long hair, red eyes"
+      },
+      "nai_character_segments": {
+        "novelai": "1girl, long hair, red eyes",
+        "other": "1girl, long hair, red eyes"
+      },
+      "gemini_structured": {
+        "novelai": "1girl, long hair, red eyes",
+        "other": "1girl, long hair, red eyes"
+      },
+      "grok_structured": {
+        "novelai": "1girl, long hair, red eyes",
+        "other": "1girl, long hair, red eyes"
+      },
+      "sd_danbooru": {
+        "novelai": "1girl, long hair, red eyes",
+        "other": "1girl, long hair, red eyes"
+      },
+      "seedream_narrative": {
+        "novelai": "1girl, long hair, red eyes",
+        "other": "1girl, long hair, red eyes"
+      }
+    }
+  },
+  "thinking-unclosed": {
+    "ok": {
+      "flat": {
+        "novelai": "1girl, smile",
+        "other": "1girl, smile"
+      },
+      "nai_character_segments": {
+        "novelai": "1girl, smile",
+        "other": "1girl, smile"
+      },
+      "gemini_structured": {
+        "novelai": "1girl, smile",
+        "other": "1girl, smile"
+      },
+      "grok_structured": {
+        "novelai": "1girl, smile",
+        "other": "1girl, smile"
+      },
+      "sd_danbooru": {
+        "novelai": "1girl, smile",
+        "other": "1girl, smile"
+      },
+      "seedream_narrative": {
+        "novelai": "1girl, smile",
+        "other": "1girl, smile"
+      }
+    }
+  },
+  "think-and-fence": {
+    "ok": {
+      "flat": {
+        "novelai": "1girl, solo",
+        "other": "1girl, solo"
+      },
+      "nai_character_segments": {
+        "novelai": "1girl, solo",
+        "other": "1girl, solo"
+      },
+      "gemini_structured": {
+        "novelai": "1girl, solo",
+        "other": "1girl, solo"
+      },
+      "grok_structured": {
+        "novelai": "1girl, solo",
+        "other": "1girl, solo"
+      },
+      "sd_danbooru": {
+        "novelai": "1girl, solo",
+        "other": "1girl, solo"
+      },
+      "seedream_narrative": {
+        "novelai": "1girl, solo",
+        "other": "1girl, solo"
+      }
+    }
+  },
+  "label-prefix": {
+    "ok": {
+      "flat": {
+        "novelai": "1girl, hanfu, lantern",
+        "other": "1girl, hanfu, lantern"
+      },
+      "nai_character_segments": {
+        "novelai": "1girl, hanfu, lantern",
+        "other": "1girl, hanfu, lantern"
+      },
+      "gemini_structured": {
+        "novelai": "1girl, hanfu, lantern",
+        "other": "1girl, hanfu, lantern"
+      },
+      "grok_structured": {
+        "novelai": "1girl, hanfu, lantern",
+        "other": "1girl, hanfu, lantern"
+      },
+      "sd_danbooru": {
+        "novelai": "1girl, hanfu, lantern",
+        "other": "1girl, hanfu, lantern"
+      },
+      "seedream_narrative": {
+        "novelai": "1girl, hanfu, lantern",
+        "other": "1girl, hanfu, lantern"
+      }
+    }
+  },
+  "structured-single-role": {
+    "ok": {
+      "flat": {
+        "novelai": "palace courtyard, night, lanterns, handsome man, black robe, sword in hand",
+        "other": "palace courtyard, night, lanterns, handsome man, black robe, sword in hand"
+      },
+      "nai_character_segments": {
+        "novelai": "palace courtyard, night, lanterns | handsome man, black robe, sword in hand",
+        "other": "palace courtyard, night, lanterns | handsome man, black robe, sword in hand"
+      },
+      "gemini_structured": {
+        "novelai": "Base scene: palace courtyard, night, lanterns; Character 1: handsome man, black robe, sword in hand",
+        "other": "Base scene: palace courtyard, night, lanterns; Character 1: handsome man, black robe, sword in hand"
+      },
+      "grok_structured": {
+        "novelai": "Scene staging: palace courtyard, night, lanterns; Character 1: handsome man, black robe, sword in hand",
+        "other": "Scene staging: palace courtyard, night, lanterns; Character 1: handsome man, black robe, sword in hand"
+      },
+      "sd_danbooru": {
+        "novelai": "palace courtyard, night, lanterns, handsome man, black robe, sword in hand",
+        "other": "palace courtyard, night, lanterns, handsome man, black robe, sword in hand"
+      },
+      "seedream_narrative": {
+        "novelai": "palace courtyard, night, lanterns\n画面中的角色：handsome man, black robe, sword in hand",
+        "other": "palace courtyard, night, lanterns\n画面中的角色：handsome man, black robe, sword in hand"
+      }
+    }
+  },
+  "structured-two-roles": {
+    "ok": {
+      "flat": {
+        "novelai": "tavern interior, warm light, 1girl, apron, 1boy, black clothes",
+        "other": "tavern interior, warm light, 1girl, apron, 1boy, black clothes"
+      },
+      "nai_character_segments": {
+        "novelai": "tavern interior, warm light | 1girl, apron | 1boy, black clothes",
+        "other": "tavern interior, warm light | 1girl, apron | 1boy, black clothes"
+      },
+      "gemini_structured": {
+        "novelai": "Base scene: tavern interior, warm light; Character 1: 1girl, apron; Character 2: 1boy, black clothes",
+        "other": "Base scene: tavern interior, warm light; Character 1: 1girl, apron; Character 2: 1boy, black clothes"
+      },
+      "grok_structured": {
+        "novelai": "Scene staging: tavern interior, warm light; Character 1: 1girl, apron; Character 2: 1boy, black clothes",
+        "other": "Scene staging: tavern interior, warm light; Character 1: 1girl, apron; Character 2: 1boy, black clothes"
+      },
+      "sd_danbooru": {
+        "novelai": "tavern interior, warm light, 1girl, apron, 1boy, black clothes",
+        "other": "tavern interior, warm light, 1girl, apron, 1boy, black clothes"
+      },
+      "seedream_narrative": {
+        "novelai": "tavern interior, warm light\n画面中的角色1：1girl, apron\n画面中的角色2：1boy, black clothes",
+        "other": "tavern interior, warm light\n画面中的角色1：1girl, apron\n画面中的角色2：1boy, black clothes"
+      }
+    }
+  },
+  "artist-case": {
+    "ok": {
+      "flat": {
+        "novelai": "artist: someone, artist:other, 1girl",
+        "other": "artist: someone, artist:other, 1girl"
+      },
+      "nai_character_segments": {
+        "novelai": "artist: someone, artist:other, 1girl",
+        "other": "artist: someone, artist:other, 1girl"
+      },
+      "gemini_structured": {
+        "novelai": "artist: someone, artist:other, 1girl",
+        "other": "artist: someone, artist:other, 1girl"
+      },
+      "grok_structured": {
+        "novelai": "artist: someone, artist:other, 1girl",
+        "other": "artist: someone, artist:other, 1girl"
+      },
+      "sd_danbooru": {
+        "novelai": "artist: someone, artist:other, 1girl",
+        "other": "artist: someone, artist:other, 1girl"
+      },
+      "seedream_narrative": {
+        "novelai": "artist: someone, artist:other, 1girl",
+        "other": "artist: someone, artist:other, 1girl"
+      }
+    }
+  },
+  "composition-words": {
+    "ok": {
+      "flat": {
+        "novelai": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up",
+        "other": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up"
+      },
+      "nai_character_segments": {
+        "novelai": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up",
+        "other": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up"
+      },
+      "gemini_structured": {
+        "novelai": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up",
+        "other": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up"
+      },
+      "grok_structured": {
+        "novelai": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up",
+        "other": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up"
+      },
+      "sd_danbooru": {
+        "novelai": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up",
+        "other": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up"
+      },
+      "seedream_narrative": {
+        "novelai": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up",
+        "other": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up"
+      }
+    }
+  },
+  "breast-weights": {
+    "ok": {
+      "flat": {
+        "novelai": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin",
+        "other": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin"
+      },
+      "nai_character_segments": {
+        "novelai": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin",
+        "other": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin"
+      },
+      "gemini_structured": {
+        "novelai": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin",
+        "other": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin"
+      },
+      "grok_structured": {
+        "novelai": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin",
+        "other": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin"
+      },
+      "sd_danbooru": {
+        "novelai": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin",
+        "other": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin"
+      },
+      "seedream_narrative": {
+        "novelai": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin",
+        "other": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin"
+      }
+    }
+  },
+  "empty": {
+    "ok": {
+      "flat": {
+        "novelai": "",
+        "other": ""
+      },
+      "nai_character_segments": {
+        "novelai": "",
+        "other": ""
+      },
+      "gemini_structured": {
+        "novelai": "",
+        "other": ""
+      },
+      "grok_structured": {
+        "novelai": "",
+        "other": ""
+      },
+      "sd_danbooru": {
+        "novelai": "",
+        "other": ""
+      },
+      "seedream_narrative": {
+        "novelai": "",
+        "other": ""
+      }
+    }
+  },
+  "narrative-chinese": {
+    "ok": {
+      "flat": {
+        "novelai": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。",
+        "other": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。"
+      },
+      "nai_character_segments": {
+        "novelai": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。",
+        "other": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。"
+      },
+      "gemini_structured": {
+        "novelai": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。",
+        "other": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。"
+      },
+      "grok_structured": {
+        "novelai": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。",
+        "other": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。"
+      },
+      "sd_danbooru": {
+        "novelai": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。",
+        "other": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。"
+      },
+      "seedream_narrative": {
+        "novelai": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。",
+        "other": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。"
+      }
+    }
+  },
+  "messy-lines": {
+    "ok": {
+      "flat": {
+        "novelai": "角色: tag1, tag2,\n- tag3\n\n\n* tag4",
+        "other": "角色: tag1, tag2,\n- tag3\n\n\n* tag4"
+      },
+      "nai_character_segments": {
+        "novelai": "角色: tag1, tag2,\n- tag3 * tag4",
+        "other": "角色: tag1, tag2,\n- tag3 * tag4"
+      },
+      "gemini_structured": {
+        "novelai": "角色: tag1, tag2,\n- tag3\n\n\n* tag4",
+        "other": "角色: tag1, tag2,\n- tag3\n\n\n* tag4"
+      },
+      "grok_structured": {
+        "novelai": "角色: tag1, tag2,\n- tag3\n\n\n* tag4",
+        "other": "角色: tag1, tag2,\n- tag3\n\n\n* tag4"
+      },
+      "sd_danbooru": {
+        "novelai": "角色: tag1, tag2,\n- tag3\n\n\n* tag4",
+        "other": "角色: tag1, tag2,\n- tag3\n\n\n* tag4"
+      },
+      "seedream_narrative": {
+        "novelai": "角色: tag1, tag2,\n- tag3\n\n\n* tag4",
+        "other": "角色: tag1, tag2,\n- tag3\n\n\n* tag4"
+      }
+    }
+  }
+}

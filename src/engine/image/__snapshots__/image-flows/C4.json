@@ -1,0 +1,397 @@
+{
+  "outcome": {
+    "ok": {
+      "id": "<task#1>",
+      "status": "complete",
+      "createdAt": 1791417600000,
+      "updatedAt": 1791417600000,
+      "subjectType": "character",
+      "targetCharacter": "__player__",
+      "anchorId": "__undefined__",
+      "width": 832,
+      "height": 1216,
+      "backend": "volcengine",
+      "presetId": "__undefined__",
+      "positivePrompt": "1girl, long hair, red eyes, school uniform, smile",
+      "negativePrompt": "text, watermark, signature, username, logo, artist name, web address, url, copyright, subtitle",
+      "providerMeta": {},
+      "resultAssetId": "asset_<task#1>_1791417600000"
+    }
+  },
+  "events": [
+    [
+      "engine:state-changed",
+      {
+        "path": "系统.扩展.image.tasks",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "engine:request-save",
+      "__undefined__"
+    ],
+    [
+      "image:task-update",
+      {}
+    ],
+    [
+      "engine:state-changed",
+      {
+        "path": "系统.扩展.image.tasks",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "engine:request-save",
+      "__undefined__"
+    ],
+    [
+      "image:task-update",
+      {}
+    ],
+    [
+      "image:task-update",
+      {
+        "taskId": "<task#1>",
+        "status": "tokenizing"
+      }
+    ],
+    [
+      "ui:debug-prompt",
+      {
+        "flow": "image:imageCharacterTokenizer",
+        "variables": {
+          "CHARACTER_NAME": "__player__",
+          "NPC_DATA_JSON": "{\n  \"姓名\": \"__player__\",\n  \"描述\": \"主角\",\n  \"外貌描述\": \"清瘦少年\",\n  \"外貌\": \"清瘦少年\"\n}",
+          "ART_STYLE": "国风",
+          "COMPOSITION": "场景",
+          "COMPOSITION_DESCRIPTION": "场景图，人物嵌入环境画面，环境和构图权重更高，保留人物核心辨识度。",
+          "COMPOSITION_FOCUS": "构图重点：环境氛围、景深层次、人物与场景的位置关系和光影融合。",
+          "ANCHOR_INSTRUCTION": "请先完成稳定身份辨识、外观、身材和常驻衣着，再补动作、镜头、光影和环境。\n若原始资料较少，可以根据身份、境界、年龄、性别做低冲突保守补全，优先补出年龄感、脸部气质、体态、常驻衣着材质、身份道具和气场表现。",
+          "ANCHOR_DATA": "",
+          "ANCHOR_MODE_INSTRUCTION": "",
+          "EXTRA_REQUIREMENTS": "附加要求：无"
+        },
+        "messages": "<same as aiCalls[0].messages>",
+        "messageSources": [
+          "module:imageCharacterTokenizer",
+          "tokenizer:preset",
+          "tokenizer:preset",
+          "tokenizer:task_context",
+          "tokenizer:task_data",
+          "tokenizer:start_task",
+          "module:imageCharacterCot"
+        ],
+        "generationId": "img_imageCharacterTokenizer_1791417600000_4fzy"
+      }
+    ],
+    [
+      "ui:debug-prompt-response",
+      {
+        "flow": "image:imageCharacterTokenizer",
+        "generationId": "img_imageCharacterTokenizer_1791417600000_4fzy",
+        "thinking": "character reasoning",
+        "rawResponse": "<thinking>character reasoning</thinking>\n<提示词>1girl, long hair, red eyes, school uniform, smile</提示词>"
+      }
+    ],
+    [
+      "engine:state-changed",
+      {
+        "path": "系统.扩展.image.tasks",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "engine:request-save",
+      "__undefined__"
+    ],
+    [
+      "image:task-update",
+      {}
+    ],
+    [
+      "image:task-update",
+      {
+        "taskId": "<task#1>",
+        "status": "generating"
+      }
+    ],
+    [
+      "engine:state-changed",
+      {
+        "path": "系统.扩展.image.tasks",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "engine:request-save",
+      "__undefined__"
+    ],
+    [
+      "image:task-update",
+      {}
+    ],
+    [
+      "image:task-update",
+      {
+        "taskId": "<task#1>",
+        "status": "complete",
+        "assetId": "asset_<task#1>_1791417600000"
+      }
+    ],
+    [
+      "ui:toast",
+      {
+        "type": "success",
+        "i18nKey": "engine.toast.imageGenComplete",
+        "message": "图像生成完成",
+        "duration": 2000
+      }
+    ],
+    [
+      "engine:state-changed",
+      {
+        "path": "角色.图片档案",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "engine:request-save",
+      "__undefined__"
+    ]
+  ],
+  "aiCalls": [
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "你是分词器大师。\n你的职责是把输入资料整理成稳定、可执行、可直接投喂图像模型的高质量提示词。\n请严格遵循系统层给定的角色、规则、任务和输出约束，围绕任务目标组织结果。\n目标模型、提示词语言与内容格式以系统层给定的模型规则为准，不要自行假设。"
+        },
+        {
+          "role": "system",
+          "content": "目标模型为 NovelAI V4/V4.5。\n输出采用 NovelAI 常用的英文 tags 习惯。\n若任务要求单角色图，则直接输出单个角色最终 tags；若任务要求场景图，则按基础段 + [序号]角色段组织。\n质量串、画风串、主体身份可以使用权重分组；动作、镜头、环境和临时状态保持自然标签表达，让画面更稳。\n若输入没有明确要求，不要擅自锁定二次元、写实、国风或摄影风格；只整理并强化已有风格线索。\n标签顺序保持稳定，信息容量均衡，避免同义重复，以及把多个镜头语法堆到一起。\n必须严格跟随任务要求给出的输出标签结构，不要自行改成带属性的 XML 角色标签。\n若 NPC 资料较少，可以根据身份、等级、年龄、性别做保守补全，但补全内容必须长期稳定、低冲突、易复用。"
+        },
+        {
+          "role": "system",
+          "content": "你是 NovelAI V4/V4.5 角色提示词整理器。\n你的任务是把 NPC 资料整理成可直接用于角色生图的英文 tags，并保持稳定、统一、可复用。\n请按 NovelAI 更易执行的单角色提示词思路组织内容：在同一条 tags 里先放稳定身份、外观、服饰，再补镜头、光影与动作。\n若输入没有明确指定画风介质，不要擅自锁定二次元、写实、国风或摄影风格；只整理并强化输入中已经存在的风格信息。\n建议信息顺序：主体身份与年龄感 > 外貌与面部辨识 > 身材体态 > 常驻服饰 > 手持物或身份道具 > 姿态表情 > 镜头构图 > 光影环境。\n质量串、画风串、主体身份可以使用权重分组；动作、景别、环境关系和临时状态更适合自然 tags。\n请把身份、等级、性格转换成 gaze, posture, silhouette, expression, lighting, fabric detail 这类可见结果。\n单次输出只服务一个清晰镜头、一个主姿态、一个主光源，避免互相冲突的多视角、多动作、多光线。\n用词少而准，避免同义重复、避免堆砌空泛质量词、避免把同一外观信息在多个分组里反复重写。\n资料缺口只做低冲突、可长期复用的保守补全。\n当资料有限时，可根据身份、等级、年龄、性别补全年龄感、脸部气质、体态、常驻衣着材质、配饰、身份道具与可见气场。\n\n请根据输入的角色设定完成完整角色生成，不能只输出镜头、姿态、光影或空泛气质词。\n请优先完整提炼年龄感、身份、等级、外貌、身材、常驻衣着和其他稳定辨识特征。\n请先完成稳定外观和身份辨识，再补动作、姿态、镜头、光影和环境。\n请在补全时选择稳妥、低冲突、容易长期保持一致的视觉表达，但对输入中已经明确给出的设定不得省略。\n当资料只给出身份、等级、年龄、性别等少量字段时，也要据此补全最稳妥的外观、体态、衣着层次、配饰、武器或身份道具。\n\n请使用以下结构输出：\n<提示词>...</提示词>\n只输出当前单个角色最终用于生图的 tags。\nNovelAI 最终会直接使用这一条单角色 tags；如需要人数标签或权重分组，可直接写在同一个 <提示词> 中。\n输出内容只保留这个结构本身。\n单角色图直接输出 <提示词>，不要再拆 <基础>/<角色>。\n请先写稳定主体，再补镜头、动作、光影和少量环境。\n有锚点时，只补动态动作、姿态、表情、临时服装变化和道具。"
+        },
+        {
+          "role": "system",
+          "content": "当前任务目标画风：国风。除非输入资料或附加要求明确指定，否则不要擅自锁定具体风格标签。\n请把身份、境界、性格、外貌、身材和衣着转换成可见的角色信息，不要写成空泛气质词。\n请先完成稳定身份辨识、外观、身材和常驻衣着，再补动作、镜头、光影和环境。\n若原始资料较少，可以根据身份、境界、年龄、性别做低冲突保守补全，优先补出年龄感、脸部气质、体态、常驻衣着材质、身份道具和气场表现。\n当前构图要求：场景图，人物嵌入环境画面，环境和构图权重更高，保留人物核心辨识度。\n请保持单一镜头距离、单一主姿态、单一主光源，不要混入相互冲突的多镜头、多动作或多光效。"
+        },
+        {
+          "role": "assistant",
+          "content": "【本次任务】\n【NPC基础资料】\n{\n  \"姓名\": \"__player__\",\n  \"描述\": \"主角\",\n  \"外貌描述\": \"清瘦少年\",\n  \"外貌\": \"清瘦少年\"\n}\n【输出要求】\n输出风格：国风。不要补充用户未要求的固定风格底座。\n输出语言：英文 tags，使用英文逗号分隔。\n构图模式：场景\n输出结构：请将所有 tags 放入 <提示词> 和 </提示词> 之间。不要输出除 tags 外的任何字符，不要输出英文省略号或任何占位符号。示例：<提示词>1girl, long hair, red eyes, school uniform, smile, masterpiece</提示词>\n标签组织：优先整理成 4 到 6 个加权分组，再补少量自然标签。\n请使用源数据里已有的稳定设定字段，尤其是身份、境界、外貌、身材、衣着和性格。\n不要只返回姿态、镜头、光影或抽象气质词；<提示词> 内必须具备能长期复用的身份辨识、外观与服饰信息。\n若资料字段不足，请根据身份、境界、年龄、性别自行补全最稳妥的可见设定，例如年龄感、脸型气质、体态、常驻服装层次、材质、配饰与身份道具。\n构图重点：环境氛围、景深层次、人物与场景的位置关系和光影融合。\n镜头约束：单一镜头距离、单一主姿态、单一主光源。\n色彩要求：从角色身份、衣着、环境和情绪线索中自然提炼，不要额外强塞固定配色模板。\n附加要求：无"
+        },
+        {
+          "role": "user",
+          "content": "开始任务"
+        },
+        {
+          "role": "assistant",
+          "content": "<think>好的思考结束</think>\n好的，将先输出<thinking></thinking>，再输出<提示词></提示词>；<提示词>内只保留当前单个角色最终用于生图的提示词内容，语言与格式遵循系统层模型规则："
+        }
+      ],
+      "stream": false,
+      "usageType": "imageCharacterTokenizer"
+    }
+  ],
+  "providerCalls": [
+    {
+      "op": "resolve",
+      "backend": "volcengine",
+      "config": {
+        "endpoint": "https://img.test/volcengine",
+        "apiKey": "key-volcengine",
+        "model": "model-volcengine"
+      }
+    },
+    {
+      "op": "generate",
+      "backend": "volcengine",
+      "prompt": "1girl, long hair, red eyes, school uniform, smile",
+      "negative": "text, watermark, signature, username, logo, artist name, web address, url, copyright, subtitle",
+      "width": 1024,
+      "height": 576,
+      "options": "__undefined__"
+    }
+  ],
+  "cacheOps": [
+    [
+      "store",
+      "asset_<task#1>_1791417600000",
+      {
+        "metadata": {
+          "id": "asset_<task#1>_1791417600000",
+          "taskId": "<task#1>",
+          "storageKey": "asset_<task#1>_1791417600000",
+          "mimeType": "image/png",
+          "width": 832,
+          "height": 1216,
+          "sizeBytes": 18,
+          "backend": "volcengine",
+          "createdAt": 1791417600000,
+          "origin": "generated"
+        },
+        "blobSize": 18,
+        "blobType": "image/png"
+      }
+    ]
+  ],
+  "cacheIds": [
+    "asset_<task#1>_1791417600000"
+  ],
+  "state": {
+    "image": {
+      "enabled": true,
+      "tasks": [
+        {
+          "id": "<task#1>",
+          "status": "complete",
+          "createdAt": 1791417600000,
+          "updatedAt": 1791417600000,
+          "subjectType": "character",
+          "targetCharacter": "__player__",
+          "anchorId": "__undefined__",
+          "width": 832,
+          "height": 1216,
+          "backend": "volcengine",
+          "presetId": "__undefined__",
+          "positivePrompt": "1girl, long hair, red eyes, school uniform, smile",
+          "negativePrompt": "text, watermark, signature, username, logo, artist name, web address, url, copyright, subtitle",
+          "providerMeta": {},
+          "resultAssetId": "asset_<task#1>_1791417600000"
+        }
+      ],
+      "characterAnchors": [
+        {
+          "id": "anc1",
+          "npcName": "林暖",
+          "enabled": true,
+          "sceneLink": true,
+          "positive": "1girl, long black hair, red eyes, white dress",
+          "negative": "bad hands"
+        },
+        {
+          "id": "anc2",
+          "npcName": "关宇",
+          "enabled": false,
+          "sceneLink": true,
+          "positive": "1boy, short hair, sword"
+        }
+      ],
+      "sceneArchive": {
+        "生图历史": [],
+        "当前壁纸图片ID": ""
+      },
+      "referenceLibrary": [],
+      "config": {
+        "sceneHistoryLimit": 10,
+        "auto": {
+          "historyLimit": 100
+        },
+        "civitai": {
+          "allowMatureContent": true,
+          "scheduler": "DPM++ 2M",
+          "steps": 25,
+          "cfgScale": 6,
+          "additionalNetworksJson": "{\"urn:air:sdxl:lora:civitai:999@1\":{\"strength\":0.5}}",
+          "loras": []
+        },
+        "novelai": {
+          "sampler": "k_euler",
+          "noiseSchedule": "karras",
+          "steps": 28,
+          "cfgScale": 5,
+          "smea": true
+        },
+        "comfyui": {
+          "workflowJson": ""
+        },
+        "reference": {}
+      }
+    },
+    "relationships": [
+      {
+        "名称": "林暖",
+        "类型": "重要",
+        "性别": "女",
+        "年龄": 18,
+        "描述": "酒肆老板娘",
+        "外貌描述": "眉目清亮，黑发及腰",
+        "身材描写": "纤细修长",
+        "衣着风格": "素色长裙",
+        "是否在场": true,
+        "好感度": 50,
+        "私密信息": {
+          "身体部位": [
+            {
+              "部位名称": "胸部",
+              "特征描述": "小巧挺翘，肤色白皙",
+              "特殊印记": "锁骨下一颗小痣",
+              "敏感度": 60,
+              "开发度": 10
+            },
+            {
+              "部位名称": "屁穴",
+              "特征描述": "紧致"
+            }
+          ]
+        }
+      },
+      {
+        "名称": "关宇",
+        "类型": "普通",
+        "性别": "男",
+        "年龄": 25,
+        "描述": "游侠",
+        "外貌描述": "剑眉星目",
+        "身材描写": "高大结实",
+        "衣着风格": "黑色劲装",
+        "是否在场": true,
+        "好感度": 20
+      }
+    ],
+    "playerArchive": {
+      "生图历史": [
+        {
+          "id": "asset_<task#1>_1791417600000",
+          "taskId": "<task#1>",
+          "composition": "scene",
+          "status": "complete",
+          "positivePrompt": "1girl, long hair, red eyes, school uniform, smile",
+          "negativePrompt": "text, watermark, signature, username, logo, artist name, web address, url, copyright, subtitle",
+          "width": 1024,
+          "height": 576,
+          "backend": "volcengine",
+          "model": "model-volcengine",
+          "apiConfigName": "cfg-volcengine",
+          "artStyle": "国风",
+          "createdAt": 1791417600000,
+          "providerMeta": {}
+        }
+      ],
+      "已选头像图片ID": "asset_<task#1>_1791417600000",
+      "已选立绘图片ID": "",
+      "已选背景图片ID": "",
+      "最近生图结果": "asset_<task#1>_1791417600000"
+    }
+  },
+  "locks": {
+    "林暖": false,
+    "关宇": false,
+    "__player__": false,
+    "林暖::breast": false,
+    "林暖::vagina": false,
+    "林暖::anus": false,
+    "关宇::breast": false,
+    "__player__::breast": false,
+    "__player__::vagina": false
+  },
+  "logs": []
+}

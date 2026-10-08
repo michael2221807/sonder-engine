@@ -1,0 +1,142 @@
+{
+  "plain-tags": {
+    "ok": {
+      "novelai": "masterpiece, best quality, 1girl, long hair, red eyes",
+      "other": "masterpiece, best quality, 1girl, long hair, red eyes",
+      "noOptions": "masterpiece, best quality, 1girl, long hair, red eyes"
+    }
+  },
+  "duplicates-bullets-case": {
+    "ok": {
+      "novelai": "1girl, 1GIRL, Long Hair, long hair, - red eyes, * smile, • blush",
+      "other": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush",
+      "noOptions": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush"
+    }
+  },
+  "sd-weights": {
+    "ok": {
+      "novelai": "1.3::smile::, 1.1::red eyes::, 0.9::long hair::",
+      "other": "(smile:1.3), (red eyes:1.1), (long hair:0.9)",
+      "noOptions": "(smile:1.3), (red eyes:1.1), (long hair:0.9)"
+    }
+  },
+  "sd-weights-nested": {
+    "ok": {
+      "novelai": "1.1::1.2::masterpiece::, best quality::",
+      "other": "((masterpiece:1.2), best quality:1.1)",
+      "noOptions": "((masterpiece:1.2), best quality:1.1)"
+    }
+  },
+  "nai-weights-clean": {
+    "ok": {
+      "novelai": "1.2::anime background, scenic composition::, 1.1::misty courtyard::",
+      "other": "1.2::anime background, scenic composition::, 1.1::misty courtyard::",
+      "noOptions": "1.2::anime background, scenic composition::, 1.1::misty courtyard::"
+    }
+  },
+  "nai-weights-dirty-left": {
+    "ok": {
+      "novelai": "1.3::1girl, smile::, 1.1::red eyes::",
+      "other": "1.3::1girl, smile, ::1.1::red eyes::",
+      "noOptions": "1.3::1girl, smile, ::1.1::red eyes::"
+    }
+  },
+  "nai-weights-dirty-comma": {
+    "ok": {
+      "novelai": "1.2::1girl, black hair::, 1.1::blue eyes::, standing",
+      "other": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing",
+      "noOptions": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing"
+    }
+  },
+  "paren-wrapped-nai": {
+    "ok": {
+      "novelai": "1.2::warm light::, 0.8::soft shadow::",
+      "other": "(1.2::warm light::), (0.8::soft shadow::)",
+      "noOptions": "(1.2::warm light::), (0.8::soft shadow::)"
+    }
+  },
+  "thinking-then-prompt": {
+    "ok": {
+      "novelai": "1girl, long hair, red eyes",
+      "other": "1girl, long hair, red eyes",
+      "noOptions": "1girl, long hair, red eyes"
+    }
+  },
+  "thinking-unclosed": {
+    "ok": {
+      "novelai": "1girl, smile",
+      "other": "1girl, smile",
+      "noOptions": "1girl, smile"
+    }
+  },
+  "think-and-fence": {
+    "ok": {
+      "novelai": "1girl, solo",
+      "other": "1girl, solo",
+      "noOptions": "1girl, solo"
+    }
+  },
+  "label-prefix": {
+    "ok": {
+      "novelai": "1girl, hanfu, lantern",
+      "other": "1girl, hanfu, lantern",
+      "noOptions": "1girl, hanfu, lantern"
+    }
+  },
+  "structured-single-role": {
+    "ok": {
+      "novelai": "palace courtyard, night, lanterns, handsome man, black robe, sword in hand",
+      "other": "palace courtyard, night, lanterns, handsome man, black robe, sword in hand",
+      "noOptions": "palace courtyard, night, lanterns, handsome man, black robe, sword in hand"
+    }
+  },
+  "structured-two-roles": {
+    "ok": {
+      "novelai": "tavern interior, warm light, 1girl, apron, 1boy, black clothes",
+      "other": "tavern interior, warm light, 1girl, apron, 1boy, black clothes",
+      "noOptions": "tavern interior, warm light, 1girl, apron, 1boy, black clothes"
+    }
+  },
+  "artist-case": {
+    "ok": {
+      "novelai": "artist: someone, artist:other, 1girl",
+      "other": "artist: someone, artist:other, 1girl",
+      "noOptions": "artist: someone, artist:other, 1girl"
+    }
+  },
+  "composition-words": {
+    "ok": {
+      "novelai": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up",
+      "other": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up",
+      "noOptions": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up"
+    }
+  },
+  "breast-weights": {
+    "ok": {
+      "novelai": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin",
+      "other": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin",
+      "noOptions": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin"
+    }
+  },
+  "empty": {
+    "ok": {
+      "novelai": "",
+      "other": "",
+      "noOptions": ""
+    }
+  },
+  "narrative-chinese": {
+    "ok": {
+      "novelai": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。",
+      "other": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。",
+      "noOptions": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。"
+    }
+  },
+  "messy-lines": {
+    "ok": {
+      "novelai": "角色: tag1, tag2,\n- tag3 * tag4",
+      "other": "角色: tag1, tag2,\n- tag3\n\n\n* tag4",
+      "noOptions": "角色: tag1, tag2,\n- tag3\n\n\n* tag4"
+    }
+  }
+}

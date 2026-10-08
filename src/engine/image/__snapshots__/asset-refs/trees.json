@@ -1,0 +1,140 @@
+{
+  "full": {
+    "withoutReferenceLibrary": [
+      "p_avatar",
+      "p_portrait",
+      "p_bg",
+      "p_last",
+      "p_h1",
+      "p_h2",
+      "p_sec_breast",
+      "p_sec_vagina",
+      "a_avatar",
+      "a_portrait",
+      "a_h1",
+      "a_h2",
+      "a_sec_anus",
+      "b_avatar",
+      "b_h1",
+      "s_wall",
+      "s_last",
+      "s_h1",
+      "t_ref1",
+      "t_ref2",
+      "t_ref_legacy"
+    ],
+    "withReferenceLibrary": [
+      "p_avatar",
+      "p_portrait",
+      "p_bg",
+      "p_last",
+      "p_h1",
+      "p_h2",
+      "p_sec_breast",
+      "p_sec_vagina",
+      "a_avatar",
+      "a_portrait",
+      "a_h1",
+      "a_h2",
+      "a_sec_anus",
+      "b_avatar",
+      "b_h1",
+      "s_wall",
+      "s_last",
+      "s_h1",
+      "t_ref1",
+      "t_ref2",
+      "t_ref_legacy",
+      "lib_1",
+      "lib_2"
+    ],
+    "seeded": [
+      "seed_1",
+      "p_h2",
+      "p_avatar",
+      "p_portrait",
+      "p_bg",
+      "p_last",
+      "p_h1",
+      "p_sec_breast",
+      "p_sec_vagina",
+      "a_avatar",
+      "a_portrait",
+      "a_h1",
+      "a_h2",
+      "a_sec_anus",
+      "b_avatar",
+      "b_h1",
+      "s_wall",
+      "s_last",
+      "s_h1",
+      "t_ref1",
+      "t_ref2",
+      "t_ref_legacy",
+      "lib_1",
+      "lib_2"
+    ]
+  },
+  "odd": {
+    "withoutReferenceLibrary": [
+      "padded",
+      "dup",
+      "d_avatar",
+      "s_odd",
+      "legacy_only"
+    ],
+    "withReferenceLibrary": [
+      "padded",
+      "dup",
+      "d_avatar",
+      "s_odd",
+      "legacy_only",
+      "lib_odd"
+    ],
+    "seeded": [
+      "seed_1",
+      "p_h2",
+      "padded",
+      "dup",
+      "d_avatar",
+      "s_odd",
+      "legacy_only",
+      "lib_odd"
+    ]
+  },
+  "legacy": {
+    "withoutReferenceLibrary": [
+      "f_last",
+      "legacy_wall",
+      "legacy_1",
+      "new_1",
+      "new_2"
+    ],
+    "withReferenceLibrary": [
+      "f_last",
+      "legacy_wall",
+      "legacy_1",
+      "new_1",
+      "new_2",
+      "lib_legacy"
+    ],
+    "seeded": [
+      "seed_1",
+      "p_h2",
+      "f_last",
+      "legacy_wall",
+      "legacy_1",
+      "new_1",
+      "new_2",
+      "lib_legacy"
+    ]
+  },
+  "empty": {
+    "withoutReferenceLibrary": [],
+    "withReferenceLibrary": [],
+    "seeded": [
+      "seed_1",
+      "p_h2"
+    ]
+  }
+}

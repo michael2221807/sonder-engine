@@ -1,0 +1,50 @@
+{
+  "requests": [
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "<<imageCharacterTokenizer>>"
+        },
+        {
+          "role": "system",
+          "content": "ROLE nai"
+        },
+        {
+          "role": "system",
+          "content": "TASK nai"
+        },
+        {
+          "role": "system",
+          "content": "你是场景提示词转换器。\n任务：把当前场景整理成可直接生图的高质量英文 tags。\n目标画风：跟随正文、场景资料和附加要求决定。除非正文、附加要求或风格提示词明确指定，否则不要擅自锁定二次元、写实、国风等具体风格标签。\n推荐结构：质量底座 -> 场景介质 -> 地点/时间天气 -> 空间层级与材质 -> 镜头与光影。\n质量、画风和整体环境基调适合权重分组；空间层级、材质细节、天气和光影适合自然标签表达。\n【空间构图逻辑 (Spatial Logic)】：请按以下结构描述画面：\n1) 背景 (Background)：天色、星辰、远山、建筑远影。\n2) 中景 (Midground)：地点主体、主要植被、地貌细节。\n3) 前景 (Foreground)：点景器物、近端花草、地面纹理。\n4) 视觉重心 (Placement)：明确核心景物或主景位于左(Left)、中(Center)或右(Right)。\n【光影效果】：描述光线方向（Side lighting, Rim lighting）与氛围（God rays, Atmospheric haze）。\n纯场景时，让地点、季节、天气、材质、景深和主光源先成立。\n输出的场景保持单一可执行镜头，让时间、天气和视角自然统一。\n构图要求：纯场景，完整展开环境空间、材质、天气和光影。\n纯场景硬约束：最终只输出场景/风景/建筑/天气/材质/光影相关 tags，禁止输出任何角色、人物、性别、动作、表情、服饰、互动或站位 tags。\n词组使用短语串，按逗号分隔。\n若目标后端是 NovelAI，优先使用带权重的标签分组，例如 1.22::anime background, scenic composition::, 1.1::misty courtyard, wet stone path::。\n输出格式：将所有场景 tags 放入 <提示词结构><基础> 和 </基础></提示词结构> 之间，不要输出任何占位符号。示例：<提示词结构><基础>ancient temple, misty mountain, sunrise, cinematic lighting</基础></提示词结构>"
+        },
+        {
+          "role": "assistant",
+          "content": "【本次任务】\n【环境层级与具体坐标】\n大地点（远景）：长安\n中地点（中景）：朱雀大街\n具体地点（近景/舞台）：酒肆\n【当前上下文详情】\n当前时间：夜晚，秋季\n当前天气：小雨（作为 atmosphere / lighting / precipitation token）\n当前节日：中秋节（作为 decoration / lantern / festive crowd token，不喧宾夺主）\n环境标签：雾气、潮湿（作为 mood / ground / air / visibility token；权重不超过全 prompt 的 20%）\n在场角色：林暖\n【最新正文】\n夜色里，林暖在庭院中点起灯笼。\n【生图核心约束】\n风格：跟随正文和场景资料。不要默认补充固定二次元质量串。\n位阶构图：利用 [大地点] 渲染宏大的视觉远景/地标，利用 [具体地点] 渲染细腻的活动区/前景。\n空间要求：Background (Far) -> Midground (Main) -> Foreground (Close) 逻辑层次。\n方位要求：必须明确主景或核心视觉重心位于画面 左(Left)、中(Center) 或 右(Right)。\n结构化输出：只写 <基础>，内容只包含环境、建筑、地形、天气、材质、镜头、布局、光影与景深；不要输出 <角色>。\n构图要求：纯风景，默认宽景，完整展开环境层级。最终只允许输出场景/风景 tags，禁止输出人物相关 tags。\n输出顺序：质量与介质 -> 地点与天气 -> 空间层级与材质 -> 镜头与光影。\n额外要求：突出灯笼光影\n要求：词组应以英文 tags 为主，包含具体的光影描述（如 God rays, Twilight glow）和材质细节（如 Weathered moss, Reflected water）。"
+        },
+        {
+          "role": "user",
+          "content": "开始任务"
+        },
+        {
+          "role": "assistant",
+          "content": "<<imageSceneCot>>"
+        }
+      ],
+      "stream": false,
+      "usageType": "imageSceneTokenizer"
+    }
+  ],
+  "result": {
+    "tokens": [
+      "适合场景快照有清晰互动场景快照",
+      "ancient courtyard",
+      "night[1]林暖|1girl",
+      "smile"
+    ],
+    "negative": "__undefined__",
+    "rawResponse": "<thinking>judge</thinking>\n<场景判定>适合场景快照</场景判定><判定说明>有清晰互动</判定说明><场景类型>场景快照</场景类型>\n<提示词结构><基础>ancient courtyard, night</基础><角色>[1]林暖|1girl, smile</角色></提示词结构>",
+    "sceneType": "landscape",
+    "judgmentExplanation": "已按手动要求生成纯场景。"
+  }
+}

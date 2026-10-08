@@ -1,0 +1,11 @@
+{
+  "scene/undefined": "scene",
+  "scene/林暖": "scene",
+  "scene/__player__": "scene",
+  "character/undefined": "character",
+  "character/林暖": "character",
+  "character/__player__": "player",
+  "secret_part/undefined": "secret_part",
+  "secret_part/林暖": "secret_part",
+  "secret_part/__player__": "secret_part"
+}

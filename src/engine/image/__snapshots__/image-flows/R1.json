@@ -1,0 +1,337 @@
+{
+  "outcome": {
+    "ok": {
+      "id": "<task#1>",
+      "status": "complete",
+      "createdAt": 1791417600000,
+      "updatedAt": 1791417600000,
+      "subjectType": "scene",
+      "targetCharacter": "__undefined__",
+      "part": "__undefined__",
+      "width": 896,
+      "height": 1152,
+      "backend": "novelai",
+      "positivePrompt": "masterpiece, 1girl, lantern",
+      "negativePrompt": "lowres",
+      "providerMeta": {
+        "reference": {
+          "mode": "image_to_image",
+          "sourceAssetIds": [
+            "asset_r1"
+          ],
+          "denoiseStrength": 0.6,
+          "provider": "novelai"
+        }
+      },
+      "resultAssetId": "asset_<task#1>_1791417600000"
+    }
+  },
+  "events": [
+    [
+      "engine:state-changed",
+      {
+        "path": "系统.扩展.image.tasks",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "engine:request-save",
+      "__undefined__"
+    ],
+    [
+      "image:task-update",
+      {}
+    ],
+    [
+      "engine:state-changed",
+      {
+        "path": "系统.扩展.image.tasks",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "engine:request-save",
+      "__undefined__"
+    ],
+    [
+      "image:task-update",
+      {}
+    ],
+    [
+      "image:task-update",
+      {
+        "taskId": "<task#1>",
+        "status": "generating"
+      }
+    ],
+    [
+      "engine:state-changed",
+      {
+        "path": "系统.扩展.image.tasks",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "engine:request-save",
+      "__undefined__"
+    ],
+    [
+      "image:task-update",
+      {}
+    ],
+    [
+      "image:task-update",
+      {
+        "taskId": "<task#1>",
+        "status": "complete",
+        "assetId": "asset_<task#1>_1791417600000"
+      }
+    ],
+    [
+      "ui:toast",
+      {
+        "type": "success",
+        "i18nKey": "engine.toast.imageGenComplete",
+        "message": "图像生成完成",
+        "duration": 2000
+      }
+    ],
+    [
+      "engine:state-changed",
+      {
+        "path": "系统.扩展.image.sceneArchive",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "engine:request-save",
+      "__undefined__"
+    ]
+  ],
+  "aiCalls": [],
+  "providerCalls": [
+    {
+      "op": "resolve",
+      "backend": "novelai",
+      "config": {
+        "endpoint": "https://img.test/novelai",
+        "apiKey": "key-novelai",
+        "model": "model-novelai"
+      }
+    },
+    {
+      "op": "imageToImage",
+      "backend": "novelai",
+      "prompt": "masterpiece, 1girl, lantern",
+      "negative": "lowres",
+      "width": 896,
+      "height": 1152,
+      "references": [
+        {
+          "id": "ref_data",
+          "role": "source",
+          "source": "data_url",
+          "dataUrl": "data:image/png;base64,AAAA",
+          "mimeType": "image/png",
+          "denoiseStrength": 0.6,
+          "assetId": "asset_r1"
+        }
+      ],
+      "options": {
+        "sampler": "k_euler",
+        "noiseSchedule": "karras",
+        "steps": 28,
+        "cfgScale": 5,
+        "smea": true,
+        "seed": "__undefined__"
+      }
+    }
+  ],
+  "cacheOps": [
+    [
+      "store",
+      "asset_<task#1>_1791417600000",
+      {
+        "metadata": {
+          "id": "asset_<task#1>_1791417600000",
+          "taskId": "<task#1>",
+          "storageKey": "asset_<task#1>_1791417600000",
+          "mimeType": "image/png",
+          "width": 896,
+          "height": 1152,
+          "sizeBytes": 15,
+          "backend": "novelai",
+          "createdAt": 1791417600000,
+          "origin": "generated"
+        },
+        "blobSize": 15,
+        "blobType": "image/png"
+      }
+    ]
+  ],
+  "cacheIds": [
+    "asset_<task#1>_1791417600000"
+  ],
+  "state": {
+    "image": {
+      "enabled": true,
+      "tasks": [
+        {
+          "id": "<task#1>",
+          "status": "complete",
+          "createdAt": 1791417600000,
+          "updatedAt": 1791417600000,
+          "subjectType": "scene",
+          "targetCharacter": "__undefined__",
+          "part": "__undefined__",
+          "width": 896,
+          "height": 1152,
+          "backend": "novelai",
+          "positivePrompt": "masterpiece, 1girl, lantern",
+          "negativePrompt": "lowres",
+          "providerMeta": {
+            "reference": {
+              "mode": "image_to_image",
+              "sourceAssetIds": [
+                "asset_r1"
+              ],
+              "denoiseStrength": 0.6,
+              "provider": "novelai"
+            }
+          },
+          "resultAssetId": "asset_<task#1>_1791417600000"
+        }
+      ],
+      "characterAnchors": [
+        {
+          "id": "anc1",
+          "npcName": "林暖",
+          "enabled": true,
+          "sceneLink": true,
+          "positive": "1girl, long black hair, red eyes, white dress",
+          "negative": "bad hands"
+        },
+        {
+          "id": "anc2",
+          "npcName": "关宇",
+          "enabled": false,
+          "sceneLink": true,
+          "positive": "1boy, short hair, sword"
+        }
+      ],
+      "sceneArchive": {
+        "生图历史": [
+          {
+            "id": "asset_<task#1>_1791417600000",
+            "taskId": "<task#1>",
+            "status": "complete",
+            "positivePrompt": "masterpiece, 1girl, lantern",
+            "negativePrompt": "lowres",
+            "width": 896,
+            "height": 1152,
+            "backend": "novelai",
+            "model": "model-novelai",
+            "apiConfigName": "cfg-novelai",
+            "createdAt": 1791417600000,
+            "providerMeta": {
+              "reference": {
+                "mode": "image_to_image",
+                "sourceAssetIds": [
+                  "asset_r1"
+                ],
+                "denoiseStrength": 0.6,
+                "provider": "novelai"
+              }
+            }
+          }
+        ],
+        "当前壁纸图片ID": "",
+        "最近生图结果": "asset_<task#1>_1791417600000"
+      },
+      "referenceLibrary": [],
+      "config": {
+        "sceneHistoryLimit": 10,
+        "auto": {
+          "historyLimit": 100
+        },
+        "civitai": {
+          "allowMatureContent": true,
+          "scheduler": "DPM++ 2M",
+          "steps": 25,
+          "cfgScale": 6,
+          "additionalNetworksJson": "{\"urn:air:sdxl:lora:civitai:999@1\":{\"strength\":0.5}}",
+          "loras": []
+        },
+        "novelai": {
+          "sampler": "k_euler",
+          "noiseSchedule": "karras",
+          "steps": 28,
+          "cfgScale": 5,
+          "smea": true
+        },
+        "comfyui": {
+          "workflowJson": ""
+        },
+        "reference": {}
+      }
+    },
+    "relationships": [
+      {
+        "名称": "林暖",
+        "类型": "重要",
+        "性别": "女",
+        "年龄": 18,
+        "描述": "酒肆老板娘",
+        "外貌描述": "眉目清亮，黑发及腰",
+        "身材描写": "纤细修长",
+        "衣着风格": "素色长裙",
+        "是否在场": true,
+        "好感度": 50,
+        "私密信息": {
+          "身体部位": [
+            {
+              "部位名称": "胸部",
+              "特征描述": "小巧挺翘，肤色白皙",
+              "特殊印记": "锁骨下一颗小痣",
+              "敏感度": 60,
+              "开发度": 10
+            },
+            {
+              "部位名称": "屁穴",
+              "特征描述": "紧致"
+            }
+          ]
+        }
+      },
+      {
+        "名称": "关宇",
+        "类型": "普通",
+        "性别": "男",
+        "年龄": 25,
+        "描述": "游侠",
+        "外貌描述": "剑眉星目",
+        "身材描写": "高大结实",
+        "衣着风格": "黑色劲装",
+        "是否在场": true,
+        "好感度": 20
+      }
+    ],
+    "playerArchive": "__undefined__"
+  },
+  "locks": {
+    "林暖": false,
+    "关宇": false,
+    "__player__": false,
+    "林暖::breast": false,
+    "林暖::vagina": false,
+    "林暖::anus": false,
+    "关宇::breast": false,
+    "__player__::breast": false,
+    "__player__::vagina": false
+  },
+  "logs": []
+}

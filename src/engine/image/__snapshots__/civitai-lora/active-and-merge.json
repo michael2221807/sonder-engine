@@ -1,0 +1,182 @@
+{
+  "empty-shelf": {
+    "ok": {
+      "activeIds": [],
+      "merge": {
+        "ok": {
+          "merged": {},
+          "mergedJson": "",
+          "conflicts": []
+        }
+      }
+    }
+  },
+  "single-with-triggers": {
+    "ok": {
+      "activeIds": [
+        "lora_1"
+      ],
+      "merge": {
+        "ok": {
+          "merged": {
+            "urn:air:sdxl:lora:civitai:101@201": {
+              "strength": 0.8
+            }
+          },
+          "mergedJson": "{\"urn:air:sdxl:lora:civitai:101@201\":{\"strength\":0.8}}",
+          "conflicts": []
+        }
+      }
+    }
+  },
+  "disabled-and-wrong-scope": {
+    "ok": {
+      "activeIds": [
+        "lora_4"
+      ],
+      "merge": {
+        "ok": {
+          "merged": {
+            "urn:air:sdxl:lora:civitai:104@204": {
+              "strength": 0.8
+            }
+          },
+          "mergedJson": "{\"urn:air:sdxl:lora:civitai:104@204\":{\"strength\":0.8}}",
+          "conflicts": []
+        }
+      }
+    }
+  },
+  "six-active-too-many": {
+    "ok": {
+      "activeIds": [
+        "lora_5",
+        "lora_6",
+        "lora_7",
+        "lora_8",
+        "lora_9",
+        "lora_10"
+      ],
+      "merge": {
+        "ok": {
+          "merged": {
+            "urn:air:sdxl:lora:civitai:105@205": {
+              "strength": 0.8
+            },
+            "urn:air:sdxl:lora:civitai:106@206": {
+              "strength": 0.8
+            },
+            "urn:air:sdxl:lora:civitai:107@207": {
+              "strength": 0.8
+            },
+            "urn:air:sdxl:lora:civitai:108@208": {
+              "strength": 0.8
+            },
+            "urn:air:sdxl:lora:civitai:109@209": {
+              "strength": 0.8
+            },
+            "urn:air:sdxl:lora:civitai:110@210": {
+              "strength": 0.8
+            }
+          },
+          "mergedJson": "{\"urn:air:sdxl:lora:civitai:105@205\":{\"strength\":0.8},\"urn:air:sdxl:lora:civitai:106@206\":{\"strength\":0.8},\"urn:air:sdxl:lora:civitai:107@207\":{\"strength\":0.8},\"urn:air:sdxl:lora:civitai:108@208\":{\"strength\":0.8},\"urn:air:sdxl:lora:civitai:109@209\":{\"strength\":0.8},\"urn:air:sdxl:lora:civitai:110@210\":{\"strength\":0.8}}",
+          "conflicts": []
+        }
+      }
+    }
+  },
+  "strong-and-mature": {
+    "ok": {
+      "activeIds": [
+        "lora_11",
+        "lora_12",
+        "lora_13"
+      ],
+      "merge": {
+        "ok": {
+          "merged": {
+            "urn:air:sdxl:lora:civitai:111@211": {
+              "strength": 2
+            },
+            "urn:air:sdxl:lora:civitai:112@212": {
+              "strength": -1.6
+            },
+            "urn:air:sdxl:lora:civitai:113@213": {
+              "strength": 1.5
+            }
+          },
+          "mergedJson": "{\"urn:air:sdxl:lora:civitai:111@211\":{\"strength\":2},\"urn:air:sdxl:lora:civitai:112@212\":{\"strength\":-1.6},\"urn:air:sdxl:lora:civitai:113@213\":{\"strength\":1.5}}",
+          "conflicts": []
+        }
+      }
+    }
+  },
+  "lora-syntax-triggers": {
+    "ok": {
+      "activeIds": [
+        "lora_14",
+        "lora_15",
+        "lora_16"
+      ],
+      "merge": {
+        "ok": {
+          "merged": {
+            "urn:air:sdxl:lora:civitai:114@214": {
+              "strength": 0.8
+            },
+            "urn:air:sdxl:lora:civitai:115@215": {
+              "strength": 0.8
+            },
+            "urn:air:sdxl:lora:civitai:116@216": {
+              "strength": 0.8
+            }
+          },
+          "mergedJson": "{\"urn:air:sdxl:lora:civitai:114@214\":{\"strength\":0.8},\"urn:air:sdxl:lora:civitai:115@215\":{\"strength\":0.8},\"urn:air:sdxl:lora:civitai:116@216\":{\"strength\":0.8}}",
+          "conflicts": []
+        }
+      }
+    }
+  },
+  "air-conflict-and-raw-json": {
+    "ok": {
+      "activeIds": [
+        "lora_17",
+        "lora_18"
+      ],
+      "merge": {
+        "ok": {
+          "merged": {
+            "urn:air:sdxl:lora:civitai:999@1": {
+              "strength": 0.7
+            },
+            "urn:air:sdxl:other:civitai:1@1": {
+              "strength": 1
+            },
+            "urn:air:sdxl:lora:civitai:555@6": {
+              "strength": 0.4
+            }
+          },
+          "mergedJson": "{\"urn:air:sdxl:lora:civitai:999@1\":{\"strength\":0.7},\"urn:air:sdxl:other:civitai:1@1\":{\"strength\":1},\"urn:air:sdxl:lora:civitai:555@6\":{\"strength\":0.4}}",
+          "conflicts": [
+            "urn:air:sdxl:lora:civitai:999@1"
+          ]
+        }
+      }
+    }
+  },
+  "invalid-air-zero-strength-bad-json": {
+    "ok": {
+      "activeIds": [
+        "lora_19",
+        "lora_20",
+        "lora_21",
+        "lora_22",
+        "lora_23",
+        "lora_24"
+      ],
+      "merge": {
+        "threw": "Error: 附加网络 JSON 格式错误: Expected property name or '}' in JSON at position 1 (line 1 column 2)"
+      }
+    }
+  }
+}

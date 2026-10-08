@@ -1,0 +1,285 @@
+{
+  "outcome": {
+    "ok": [
+      {
+        "id": "<task#1>",
+        "status": "complete",
+        "subjectType": "scene",
+        "width": 1024,
+        "height": 576,
+        "backend": "novelai",
+        "resultAssetId": "asset_done",
+        "createdAt": 400,
+        "updatedAt": 400
+      },
+      {
+        "id": "<task#2>",
+        "status": "failed",
+        "subjectType": "scene",
+        "width": 1024,
+        "height": 576,
+        "backend": "civitai",
+        "createdAt": 300,
+        "updatedAt": 1791417600000,
+        "error": "任务因页面刷新中断，请重试"
+      },
+      {
+        "id": "<task#3>",
+        "status": "failed",
+        "subjectType": "character",
+        "targetCharacter": "林暖",
+        "width": 832,
+        "height": 1216,
+        "backend": "novelai",
+        "createdAt": 200,
+        "updatedAt": 1791417600000,
+        "error": "任务因页面刷新中断，请重试"
+      },
+      {
+        "id": "<task#4>",
+        "status": "failed",
+        "subjectType": "scene",
+        "width": 1024,
+        "height": 576,
+        "backend": "novelai",
+        "createdAt": 100,
+        "updatedAt": 1791417600000,
+        "error": "任务因页面刷新中断，请重试"
+      }
+    ]
+  },
+  "events": [
+    [
+      "engine:state-changed",
+      {
+        "type": "load"
+      }
+    ],
+    [
+      "engine:state-changed",
+      {
+        "path": "系统.扩展.image.tasks",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "engine:request-save",
+      "__undefined__"
+    ],
+    [
+      "image:task-update",
+      {}
+    ],
+    [
+      "engine:state-changed",
+      {
+        "path": "系统.扩展.image.tasks",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "engine:request-save",
+      "__undefined__"
+    ],
+    [
+      "image:task-update",
+      {}
+    ],
+    [
+      "engine:state-changed",
+      {
+        "path": "系统.扩展.image.tasks",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "engine:request-save",
+      "__undefined__"
+    ],
+    [
+      "image:task-update",
+      {}
+    ],
+    [
+      "ui:toast",
+      {
+        "type": "warning",
+        "i18nKey": "engine.toast.imageTasksRecovered",
+        "i18nParams": {
+          "count": 3
+        },
+        "message": "3 个图像生成任务因页面刷新中断",
+        "duration": 4000
+      }
+    ],
+    [
+      "image:task-update",
+      {}
+    ]
+  ],
+  "aiCalls": [],
+  "providerCalls": [],
+  "cacheOps": [],
+  "cacheIds": [],
+  "state": {
+    "image": {
+      "enabled": true,
+      "tasks": [
+        {
+          "id": "<task#1>",
+          "status": "complete",
+          "subjectType": "scene",
+          "width": 1024,
+          "height": 576,
+          "backend": "novelai",
+          "resultAssetId": "asset_done",
+          "createdAt": 400,
+          "updatedAt": 400
+        },
+        {
+          "id": "<task#2>",
+          "status": "failed",
+          "subjectType": "scene",
+          "width": 1024,
+          "height": 576,
+          "backend": "civitai",
+          "createdAt": 300,
+          "updatedAt": 1791417600000,
+          "error": "任务因页面刷新中断，请重试"
+        },
+        {
+          "id": "<task#3>",
+          "status": "failed",
+          "subjectType": "character",
+          "targetCharacter": "林暖",
+          "width": 832,
+          "height": 1216,
+          "backend": "novelai",
+          "createdAt": 200,
+          "updatedAt": 1791417600000,
+          "error": "任务因页面刷新中断，请重试"
+        },
+        {
+          "id": "<task#4>",
+          "status": "failed",
+          "subjectType": "scene",
+          "width": 1024,
+          "height": 576,
+          "backend": "novelai",
+          "createdAt": 100,
+          "updatedAt": 1791417600000,
+          "error": "任务因页面刷新中断，请重试"
+        }
+      ],
+      "characterAnchors": [
+        {
+          "id": "anc1",
+          "npcName": "林暖",
+          "enabled": true,
+          "sceneLink": true,
+          "positive": "1girl, long black hair, red eyes, white dress",
+          "negative": "bad hands"
+        },
+        {
+          "id": "anc2",
+          "npcName": "关宇",
+          "enabled": false,
+          "sceneLink": true,
+          "positive": "1boy, short hair, sword"
+        }
+      ],
+      "sceneArchive": {
+        "生图历史": [],
+        "当前壁纸图片ID": ""
+      },
+      "referenceLibrary": [],
+      "config": {
+        "sceneHistoryLimit": 10,
+        "auto": {
+          "historyLimit": 100
+        },
+        "civitai": {
+          "allowMatureContent": true,
+          "scheduler": "DPM++ 2M",
+          "steps": 25,
+          "cfgScale": 6,
+          "additionalNetworksJson": "{\"urn:air:sdxl:lora:civitai:999@1\":{\"strength\":0.5}}",
+          "loras": []
+        },
+        "novelai": {
+          "sampler": "k_euler",
+          "noiseSchedule": "karras",
+          "steps": 28,
+          "cfgScale": 5,
+          "smea": true
+        },
+        "comfyui": {
+          "workflowJson": ""
+        },
+        "reference": {}
+      }
+    },
+    "relationships": [
+      {
+        "名称": "林暖",
+        "类型": "重要",
+        "性别": "女",
+        "年龄": 18,
+        "描述": "酒肆老板娘",
+        "外貌描述": "眉目清亮，黑发及腰",
+        "身材描写": "纤细修长",
+        "衣着风格": "素色长裙",
+        "是否在场": true,
+        "好感度": 50,
+        "私密信息": {
+          "身体部位": [
+            {
+              "部位名称": "胸部",
+              "特征描述": "小巧挺翘，肤色白皙",
+              "特殊印记": "锁骨下一颗小痣",
+              "敏感度": 60,
+              "开发度": 10
+            },
+            {
+              "部位名称": "屁穴",
+              "特征描述": "紧致"
+            }
+          ]
+        }
+      },
+      {
+        "名称": "关宇",
+        "类型": "普通",
+        "性别": "男",
+        "年龄": 25,
+        "描述": "游侠",
+        "外貌描述": "剑眉星目",
+        "身材描写": "高大结实",
+        "衣着风格": "黑色劲装",
+        "是否在场": true,
+        "好感度": 20
+      }
+    ],
+    "playerArchive": "__undefined__"
+  },
+  "locks": {
+    "林暖": false,
+    "关宇": false,
+    "__player__": false,
+    "林暖::breast": false,
+    "林暖::vagina": false,
+    "林暖::anus": false,
+    "关宇::breast": false,
+    "__player__::breast": false,
+    "__player__::vagina": false
+  },
+  "logs": [
+    [
+      "warn",
+      "[ImageService] Recovered 3 stuck task(s) after reload"
+    ]
+  ]
+}

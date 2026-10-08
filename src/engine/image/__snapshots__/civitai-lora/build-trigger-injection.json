@@ -1,0 +1,83 @@
+{
+  "empty-shelf": {
+    "ok": {
+      "(empty base)": [],
+      "1girl, ink wash, Soft Edges": []
+    }
+  },
+  "single-with-triggers": {
+    "ok": {
+      "(empty base)": [
+        "ink wash",
+        "soft edges, 1girl"
+      ],
+      "1girl, ink wash, Soft Edges": []
+    }
+  },
+  "disabled-and-wrong-scope": {
+    "ok": {
+      "(empty base)": [
+        "both trigger"
+      ],
+      "1girl, ink wash, Soft Edges": [
+        "both trigger"
+      ]
+    }
+  },
+  "six-active-too-many": {
+    "ok": {
+      "(empty base)": [
+        "trigger 1",
+        "shared, trigger",
+        "trigger 2",
+        "trigger 3",
+        "trigger 4",
+        "trigger 5",
+        "trigger 6"
+      ],
+      "1girl, ink wash, Soft Edges": [
+        "trigger 1",
+        "shared, trigger",
+        "trigger 2",
+        "trigger 3",
+        "trigger 4",
+        "trigger 5",
+        "trigger 6"
+      ]
+    }
+  },
+  "strong-and-mature": {
+    "ok": {
+      "(empty base)": [
+        "strong trigger",
+        "mature trigger"
+      ],
+      "1girl, ink wash, Soft Edges": [
+        "strong trigger",
+        "mature trigger"
+      ]
+    }
+  },
+  "lora-syntax-triggers": {
+    "ok": {
+      "(empty base)": [
+        "plain"
+      ],
+      "1girl, ink wash, Soft Edges": [
+        "plain"
+      ]
+    }
+  },
+  "air-conflict-and-raw-json": {
+    "ok": {
+      "(empty base)": [],
+      "1girl, ink wash, Soft Edges": []
+    }
+  },
+  "invalid-air-zero-strength-bad-json": {
+    "ok": {
+      "(empty base)": [],
+      "1girl, ink wash, Soft Edges": []
+    }
+  }
+}

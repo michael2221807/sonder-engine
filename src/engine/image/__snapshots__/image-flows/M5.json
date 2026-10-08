@@ -1,0 +1,136 @@
+{
+  "outcome": {
+    "ok": {
+      "withAnchors": {
+        "presentNpcs": [
+          "林暖",
+          "关宇"
+        ],
+        "roleAnchors": [
+          {
+            "name": "林暖",
+            "positive": "1girl, long black hair, red eyes, white dress"
+          }
+        ]
+      },
+      "noAnchors": {
+        "presentNpcs": [
+          "林暖",
+          "关宇"
+        ],
+        "roleAnchors": []
+      },
+      "blankAnchor": {
+        "presentNpcs": [
+          "林暖",
+          "关宇"
+        ],
+        "roleAnchors": []
+      },
+      "nobodyPresent": {
+        "presentNpcs": [],
+        "roleAnchors": []
+      },
+      "noList": {
+        "presentNpcs": [],
+        "roleAnchors": []
+      }
+    }
+  },
+  "events": [
+    [
+      "engine:state-changed",
+      {
+        "path": "系统.扩展.image.characterAnchors",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "engine:state-changed",
+      {
+        "path": "系统.扩展.image.characterAnchors",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "engine:state-changed",
+      {
+        "path": "社交.关系",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "engine:state-changed",
+      {
+        "path": "社交.关系",
+        "action": "delete",
+        "source": "system"
+      }
+    ]
+  ],
+  "aiCalls": [],
+  "providerCalls": [],
+  "cacheOps": [],
+  "cacheIds": [],
+  "state": {
+    "image": {
+      "enabled": true,
+      "tasks": [],
+      "characterAnchors": [
+        {
+          "npcName": "林暖",
+          "enabled": true,
+          "sceneLink": true,
+          "positive": "   "
+        }
+      ],
+      "sceneArchive": {
+        "生图历史": [],
+        "当前壁纸图片ID": ""
+      },
+      "referenceLibrary": [],
+      "config": {
+        "sceneHistoryLimit": 10,
+        "auto": {
+          "historyLimit": 100
+        },
+        "civitai": {
+          "allowMatureContent": true,
+          "scheduler": "DPM++ 2M",
+          "steps": 25,
+          "cfgScale": 6,
+          "additionalNetworksJson": "{\"urn:air:sdxl:lora:civitai:999@1\":{\"strength\":0.5}}",
+          "loras": []
+        },
+        "novelai": {
+          "sampler": "k_euler",
+          "noiseSchedule": "karras",
+          "steps": 28,
+          "cfgScale": 5,
+          "smea": true
+        },
+        "comfyui": {
+          "workflowJson": ""
+        },
+        "reference": {}
+      }
+    },
+    "relationships": "__undefined__",
+    "playerArchive": "__undefined__"
+  },
+  "locks": {
+    "林暖": false,
+    "关宇": false,
+    "__player__": false,
+    "林暖::breast": false,
+    "林暖::vagina": false,
+    "林暖::anus": false,
+    "关宇::breast": false,
+    "__player__::breast": false,
+    "__player__::vagina": false
+  },
+  "logs": []
+}

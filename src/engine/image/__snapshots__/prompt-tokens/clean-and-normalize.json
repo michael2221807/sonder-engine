@@ -1,0 +1,142 @@
+{
+  "plain-tags": {
+    "ok": {
+      "cleanSubjectNovelAI": "masterpiece, best quality, 1girl, long hair, red eyes",
+      "cleanSubjectOther": "masterpiece, best quality, 1girl, long hair, red eyes",
+      "normalizeNaiWeightSyntax": "masterpiece, best quality, 1girl, long hair, red eyes"
+    }
+  },
+  "duplicates-bullets-case": {
+    "ok": {
+      "cleanSubjectNovelAI": "1girl, 1GIRL, Long Hair, long hair, - red eyes, * smile, • blush",
+      "cleanSubjectOther": "1girl,  1GIRL, Long Hair, long hair, - red eyes, * smile, • blush",
+      "normalizeNaiWeightSyntax": "1girl, 1GIRL, Long Hair, long hair, - red eyes, * smile, • blush"
+    }
+  },
+  "sd-weights": {
+    "ok": {
+      "cleanSubjectNovelAI": "1.3::smile::, 1.1::red eyes::, 0.9::long hair::",
+      "cleanSubjectOther": "(smile:1.3), (red eyes:1.1), (long hair:0.9)",
+      "normalizeNaiWeightSyntax": "1.3::smile::, 1.1::red eyes::, 0.9::long hair::"
+    }
+  },
+  "sd-weights-nested": {
+    "ok": {
+      "cleanSubjectNovelAI": "1.1::1.2::masterpiece::, best quality::",
+      "cleanSubjectOther": "((masterpiece:1.2), best quality:1.1)",
+      "normalizeNaiWeightSyntax": "1.1::1.2::masterpiece::, best quality::"
+    }
+  },
+  "nai-weights-clean": {
+    "ok": {
+      "cleanSubjectNovelAI": "1.2::anime background, scenic composition::, 1.1::misty courtyard::",
+      "cleanSubjectOther": "1.2::anime background, scenic composition::, 1.1::misty courtyard::",
+      "normalizeNaiWeightSyntax": "1.2::anime background, scenic composition::, 1.1::misty courtyard::"
+    }
+  },
+  "nai-weights-dirty-left": {
+    "ok": {
+      "cleanSubjectNovelAI": "1.3::1girl, smile::, 1.1::red eyes::",
+      "cleanSubjectOther": "1.3::1girl, smile, ::1.1::red eyes::",
+      "normalizeNaiWeightSyntax": "1.3::1girl, smile::, 1.1::red eyes::"
+    }
+  },
+  "nai-weights-dirty-comma": {
+    "ok": {
+      "cleanSubjectNovelAI": "1.2::1girl, black hair::, 1.1::blue eyes::, standing",
+      "cleanSubjectOther": "1.2::1girl, black hair, ::, 1.1::blue eyes::, standing",
+      "normalizeNaiWeightSyntax": "1.2::1girl, black hair::, 1.1::blue eyes::, standing"
+    }
+  },
+  "paren-wrapped-nai": {
+    "ok": {
+      "cleanSubjectNovelAI": "1.2::warm light::, 0.8::soft shadow::",
+      "cleanSubjectOther": "(1.2::warm light::), (0.8::soft shadow::)",
+      "normalizeNaiWeightSyntax": "1.2::warm light::, 0.8::soft shadow::"
+    }
+  },
+  "thinking-then-prompt": {
+    "ok": {
+      "cleanSubjectNovelAI": "1girl, long hair, red eyes",
+      "cleanSubjectOther": "1girl, long hair, red eyes",
+      "normalizeNaiWeightSyntax": "<提示词>1girl, long hair, red eyes</提示词>"
+    }
+  },
+  "thinking-unclosed": {
+    "ok": {
+      "cleanSubjectNovelAI": "1girl, smile",
+      "cleanSubjectOther": "1girl, smile",
+      "normalizeNaiWeightSyntax": "<提示词>1girl, smile</提示词>"
+    }
+  },
+  "think-and-fence": {
+    "ok": {
+      "cleanSubjectNovelAI": "1girl, solo",
+      "cleanSubjectOther": "1girl, solo",
+      "normalizeNaiWeightSyntax": "1girl, solo"
+    }
+  },
+  "label-prefix": {
+    "ok": {
+      "cleanSubjectNovelAI": "1girl, hanfu, lantern",
+      "cleanSubjectOther": "1girl, hanfu, lantern",
+      "normalizeNaiWeightSyntax": "1girl, hanfu, lantern"
+    }
+  },
+  "structured-single-role": {
+    "ok": {
+      "cleanSubjectNovelAI": "palace courtyard, night, lanterns | handsome man, black robe, sword in hand",
+      "cleanSubjectOther": "palace courtyard, night, lanterns; handsome man, black robe, sword in hand",
+      "normalizeNaiWeightSyntax": "<提示词结构><基础>palace courtyard, night, lanterns</基础><角色>[1]李明阳|handsome man, black robe, sword in hand</角色></提示词结构>"
+    }
+  },
+  "structured-two-roles": {
+    "ok": {
+      "cleanSubjectNovelAI": "tavern interior, warm light | 1girl, apron | 1boy, black clothes",
+      "cleanSubjectOther": "tavern interior, warm light; 1girl, apron; 1boy, black clothes",
+      "normalizeNaiWeightSyntax": "<提示词结构><基础>tavern interior, warm light</基础><角色>[1]林暖|1girl, apron\n[2]关宇|1boy, black clothes</角色></提示词结构>"
+    }
+  },
+  "artist-case": {
+    "ok": {
+      "cleanSubjectNovelAI": "artist: someone, artist:other, 1girl",
+      "cleanSubjectOther": "artist: someone, artist:other, 1girl",
+      "normalizeNaiWeightSyntax": "artist: someone, artist:other, 1girl"
+    }
+  },
+  "composition-words": {
+    "ok": {
+      "cleanSubjectNovelAI": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up",
+      "cleanSubjectOther": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up",
+      "normalizeNaiWeightSyntax": "1girl, breasts, long hair, standing, full body, portrait, white dress, red eyes, pale skin, close-up"
+    }
+  },
+  "breast-weights": {
+    "ok": {
+      "cleanSubjectNovelAI": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin",
+      "cleanSubjectOther": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin",
+      "normalizeNaiWeightSyntax": "1girl, 1.22::big breasts, cleavage::, cowboy shot, young adult, tan skin"
+    }
+  },
+  "empty": {
+    "ok": {
+      "cleanSubjectNovelAI": "",
+      "cleanSubjectOther": "",
+      "normalizeNaiWeightSyntax": ""
+    }
+  },
+  "narrative-chinese": {
+    "ok": {
+      "cleanSubjectNovelAI": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。",
+      "cleanSubjectOther": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。",
+      "normalizeNaiWeightSyntax": "一位十八岁的少女立于庭前，眉目清亮，身着淡青色长衫。"
+    }
+  },
+  "messy-lines": {
+    "ok": {
+      "cleanSubjectNovelAI": "角色: tag1, tag2,\n- tag3 * tag4",
+      "cleanSubjectOther": "角色: tag1, tag2,\n- tag3\n\n\n* tag4",
+      "normalizeNaiWeightSyntax": "<提示词>角色1：1girl, smile</提示词>\n[1] 角色: tag1, tag2,\n- tag3 * tag4"
+    }
+  }
+}

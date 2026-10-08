@@ -1,0 +1,371 @@
+{
+  "empty-shelf": {
+    "ok": {
+      "modifiedPositive": "1girl, smile",
+      "mergedAdditionalNetworksJson": "",
+      "snapshot": {
+        "loras": [],
+        "additionalNetworks": {}
+      },
+      "warnings": []
+    }
+  },
+  "single-with-triggers": {
+    "ok": {
+      "modifiedPositive": "1girl, Smile, ink wash, soft edges, 1girl",
+      "mergedAdditionalNetworksJson": "{\"urn:air:sdxl:lora:civitai:101@201\":{\"strength\":0.8}}",
+      "snapshot": {
+        "loras": [
+          {
+            "id": "lora_1",
+            "name": "Ink",
+            "air": "urn:air:sdxl:lora:civitai:101@201",
+            "strength": 0.8,
+            "scopes": [
+              "character"
+            ],
+            "injectedTriggers": [
+              "soft edges, 1girl"
+            ]
+          }
+        ],
+        "additionalNetworks": {
+          "urn:air:sdxl:lora:civitai:101@201": {
+            "strength": 0.8
+          }
+        }
+      },
+      "warnings": []
+    }
+  },
+  "disabled-and-wrong-scope": {
+    "ok": {
+      "modifiedPositive": "both trigger",
+      "mergedAdditionalNetworksJson": "{\"urn:air:sdxl:lora:civitai:104@204\":{\"strength\":0.8}}",
+      "snapshot": {
+        "loras": [
+          {
+            "id": "lora_4",
+            "name": "Both",
+            "air": "urn:air:sdxl:lora:civitai:104@204",
+            "strength": 0.8,
+            "scopes": [
+              "scene",
+              "character"
+            ],
+            "injectedTriggers": [
+              "both trigger"
+            ]
+          }
+        ],
+        "additionalNetworks": {
+          "urn:air:sdxl:lora:civitai:104@204": {
+            "strength": 0.8
+          }
+        }
+      },
+      "warnings": []
+    }
+  },
+  "six-active-too-many": {
+    "ok": {
+      "modifiedPositive": "scenery, trigger 1, shared, trigger, trigger 2, trigger 3, trigger 4, trigger 5, trigger 6",
+      "mergedAdditionalNetworksJson": "{\"urn:air:sdxl:lora:civitai:105@205\":{\"strength\":0.8},\"urn:air:sdxl:lora:civitai:106@206\":{\"strength\":0.8},\"urn:air:sdxl:lora:civitai:107@207\":{\"strength\":0.8},\"urn:air:sdxl:lora:civitai:108@208\":{\"strength\":0.8},\"urn:air:sdxl:lora:civitai:109@209\":{\"strength\":0.8},\"urn:air:sdxl:lora:civitai:110@210\":{\"strength\":0.8}}",
+      "snapshot": {
+        "loras": [
+          {
+            "id": "lora_5",
+            "name": "L1",
+            "air": "urn:air:sdxl:lora:civitai:105@205",
+            "strength": 0.8,
+            "scopes": [
+              "scene"
+            ],
+            "injectedTriggers": [
+              "trigger 1",
+              "shared, trigger"
+            ]
+          },
+          {
+            "id": "lora_6",
+            "name": "L2",
+            "air": "urn:air:sdxl:lora:civitai:106@206",
+            "strength": 0.8,
+            "scopes": [
+              "scene"
+            ],
+            "injectedTriggers": [
+              "trigger 2"
+            ]
+          },
+          {
+            "id": "lora_7",
+            "name": "L3",
+            "air": "urn:air:sdxl:lora:civitai:107@207",
+            "strength": 0.8,
+            "scopes": [
+              "scene"
+            ],
+            "injectedTriggers": [
+              "trigger 3"
+            ]
+          },
+          {
+            "id": "lora_8",
+            "name": "L4",
+            "air": "urn:air:sdxl:lora:civitai:108@208",
+            "strength": 0.8,
+            "scopes": [
+              "scene"
+            ],
+            "injectedTriggers": [
+              "trigger 4"
+            ]
+          },
+          {
+            "id": "lora_9",
+            "name": "L5",
+            "air": "urn:air:sdxl:lora:civitai:109@209",
+            "strength": 0.8,
+            "scopes": [
+              "scene"
+            ],
+            "injectedTriggers": [
+              "trigger 5"
+            ]
+          },
+          {
+            "id": "lora_10",
+            "name": "L6",
+            "air": "urn:air:sdxl:lora:civitai:110@210",
+            "strength": 0.8,
+            "scopes": [
+              "scene"
+            ],
+            "injectedTriggers": [
+              "trigger 6"
+            ]
+          }
+        ],
+        "additionalNetworks": {
+          "urn:air:sdxl:lora:civitai:105@205": {
+            "strength": 0.8
+          },
+          "urn:air:sdxl:lora:civitai:106@206": {
+            "strength": 0.8
+          },
+          "urn:air:sdxl:lora:civitai:107@207": {
+            "strength": 0.8
+          },
+          "urn:air:sdxl:lora:civitai:108@208": {
+            "strength": 0.8
+          },
+          "urn:air:sdxl:lora:civitai:109@209": {
+            "strength": 0.8
+          },
+          "urn:air:sdxl:lora:civitai:110@210": {
+            "strength": 0.8
+          }
+        }
+      },
+      "warnings": [
+        {
+          "type": "too_many_active",
+          "message": "当前 flow 有 6 个 LoRA 生效，可能影响质量和消耗"
+        }
+      ]
+    }
+  },
+  "strong-and-mature": {
+    "ok": {
+      "modifiedPositive": "portrait, strong trigger, mature trigger",
+      "mergedAdditionalNetworksJson": "{\"urn:air:sdxl:lora:civitai:111@211\":{\"strength\":2},\"urn:air:sdxl:lora:civitai:112@212\":{\"strength\":-1.6},\"urn:air:sdxl:lora:civitai:113@213\":{\"strength\":1.5}}",
+      "snapshot": {
+        "loras": [
+          {
+            "id": "lora_11",
+            "name": "Strong",
+            "air": "urn:air:sdxl:lora:civitai:111@211",
+            "strength": 2,
+            "scopes": [
+              "player"
+            ],
+            "injectedTriggers": [
+              "strong trigger"
+            ]
+          },
+          {
+            "id": "lora_12",
+            "name": "Negative",
+            "air": "urn:air:sdxl:lora:civitai:112@212",
+            "strength": -1.6,
+            "scopes": [
+              "player"
+            ],
+            "injectedTriggers": []
+          },
+          {
+            "id": "lora_13",
+            "name": "Mature",
+            "air": "urn:air:sdxl:lora:civitai:113@213",
+            "strength": 1.5,
+            "scopes": [
+              "player"
+            ],
+            "injectedTriggers": [
+              "mature trigger"
+            ]
+          }
+        ],
+        "additionalNetworks": {
+          "urn:air:sdxl:lora:civitai:111@211": {
+            "strength": 2
+          },
+          "urn:air:sdxl:lora:civitai:112@212": {
+            "strength": -1.6
+          },
+          "urn:air:sdxl:lora:civitai:113@213": {
+            "strength": 1.5
+          }
+        }
+      },
+      "warnings": [
+        {
+          "type": "strong_effect",
+          "message": "Strong: strength 2 可能产生过强效果",
+          "loraId": "lora_11"
+        },
+        {
+          "type": "strong_effect",
+          "message": "Negative: strength -1.6 可能产生过强效果",
+          "loraId": "lora_12"
+        },
+        {
+          "type": "mature_mismatch",
+          "message": "Mature 标记为 Mature，请确认 allowMatureContent 已开启",
+          "loraId": "lora_13"
+        }
+      ]
+    }
+  },
+  "lora-syntax-triggers": {
+    "ok": {
+      "modifiedPositive": "close-up, plain",
+      "mergedAdditionalNetworksJson": "{\"urn:air:sdxl:lora:civitai:114@214\":{\"strength\":0.8},\"urn:air:sdxl:lora:civitai:115@215\":{\"strength\":0.8},\"urn:air:sdxl:lora:civitai:116@216\":{\"strength\":0.8}}",
+      "snapshot": {
+        "loras": [
+          {
+            "id": "lora_14",
+            "name": "Syntax",
+            "air": "urn:air:sdxl:lora:civitai:114@214",
+            "strength": 0.8,
+            "scopes": [
+              "secret_part"
+            ],
+            "injectedTriggers": [
+              "plain"
+            ]
+          },
+          {
+            "id": "lora_15",
+            "name": "No inject",
+            "air": "urn:air:sdxl:lora:civitai:115@215",
+            "strength": 0.8,
+            "scopes": [
+              "secret_part"
+            ],
+            "injectedTriggers": []
+          },
+          {
+            "id": "lora_16",
+            "name": "Syntax again",
+            "air": "urn:air:sdxl:lora:civitai:116@216",
+            "strength": 0.8,
+            "scopes": [
+              "secret_part"
+            ],
+            "injectedTriggers": []
+          }
+        ],
+        "additionalNetworks": {
+          "urn:air:sdxl:lora:civitai:114@214": {
+            "strength": 0.8
+          },
+          "urn:air:sdxl:lora:civitai:115@215": {
+            "strength": 0.8
+          },
+          "urn:air:sdxl:lora:civitai:116@216": {
+            "strength": 0.8
+          }
+        }
+      },
+      "warnings": [
+        {
+          "type": "lora_trigger_syntax",
+          "message": "Syntax: 触发词 \"<lora:ink:0.8>\" 包含 <lora:> 语法 — Civitai 使用 strength 滑块，触发词应为普通 prompt 关键词",
+          "loraId": "lora_14"
+        },
+        {
+          "type": "lora_trigger_syntax",
+          "message": "Syntax: 触发词 \"x <LoRA:y:1> z\" 包含 <lora:> 语法 — Civitai 使用 strength 滑块，触发词应为普通 prompt 关键词",
+          "loraId": "lora_14"
+        },
+        {
+          "type": "lora_trigger_syntax",
+          "message": "Syntax again: 触发词 \"<lora:more:1>\" 包含 <lora:> 语法 — Civitai 使用 strength 滑块，触发词应为普通 prompt 关键词",
+          "loraId": "lora_16"
+        }
+      ]
+    }
+  },
+  "air-conflict-and-raw-json": {
+    "ok": {
+      "modifiedPositive": "x",
+      "mergedAdditionalNetworksJson": "{\"urn:air:sdxl:lora:civitai:999@1\":{\"strength\":0.7},\"urn:air:sdxl:other:civitai:1@1\":{\"strength\":1},\"urn:air:sdxl:lora:civitai:555@6\":{\"strength\":0.4}}",
+      "snapshot": {
+        "loras": [
+          {
+            "id": "lora_17",
+            "name": "Conflict",
+            "air": "urn:air:sdxl:lora:civitai:999@1",
+            "strength": 0.7,
+            "scopes": [
+              "character"
+            ],
+            "injectedTriggers": []
+          },
+          {
+            "id": "lora_18",
+            "name": "Padded",
+            "air": "urn:air:sdxl:lora:civitai:555@6",
+            "strength": 0.4,
+            "scopes": [
+              "character"
+            ],
+            "injectedTriggers": []
+          }
+        ],
+        "additionalNetworks": {
+          "urn:air:sdxl:lora:civitai:999@1": {
+            "strength": 0.7
+          },
+          "urn:air:sdxl:other:civitai:1@1": {
+            "strength": 1
+          },
+          "urn:air:sdxl:lora:civitai:555@6": {
+            "strength": 0.4
+          }
+        }
+      },
+      "warnings": [
+        {
+          "type": "air_conflict",
+          "message": "urn:air:sdxl:lora:civitai:999@1 同时存在于书架和高级 JSON，生成时以书架强度为准"
+        }
+      ]
+    }
+  },
+  "invalid-air-zero-strength-bad-json": {
+    "threw": "Error: 附加网络 JSON 格式错误: Expected property name or '}' in JSON at position 1 (line 1 column 2)"
+  }
+}
