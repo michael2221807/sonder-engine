@@ -1,0 +1,254 @@
+{
+  "SYSTEM_PATHS": {
+    "settings": "系统.设置",
+    "promptSettings": "系统.设置.prompt",
+    "bodyPolish": "系统.设置.bodyPolish",
+    "presenceEnabled": "系统.设置.social.presenceEnabled",
+    "cotEnabled": "系统.设置.cot.enabled",
+    "cotJudgeEnabled": "系统.设置.cot.judgeEnabled",
+    "cotInjectStep2": "系统.设置.cot.injectStep2",
+    "cotReasoningRingSize": "系统.设置.cot.reasoningRingSize",
+    "plotSettings": "系统.设置.plot",
+    "plotEnabled": "系统.设置.plot.enabled",
+    "plotMaxActiveThreads": "系统.设置.plot.maxActiveThreads",
+    "nsfwMode": "系统.nsfwMode",
+    "nsfwGenderFilter": "系统.nsfwGenderFilter",
+    "actionOptions": "系统.actionOptions",
+    "actionOptionsMode": "系统.actionOptions.mode",
+    "actionOptionsPace": "系统.actionOptions.pace",
+    "actionOptionsCustomPrompt": "系统.actionOptions.customPrompt",
+    "generatedNpcLocations": "系统.已生成NPC地点",
+    "image": {
+      "root": "系统.扩展.image",
+      "enabled": "系统.扩展.image.enabled",
+      "config": "系统.扩展.image.config",
+      "tasks": "系统.扩展.image.tasks",
+      "sceneArchive": "系统.扩展.image.sceneArchive",
+      "referenceLibrary": "系统.扩展.image.referenceLibrary"
+    }
+  },
+  "TIANMING": {
+    "TIANMING_PRIVACY_REQUIRED_FIELDS": [
+      "是否为处女/处男",
+      "身体部位",
+      "性格倾向",
+      "性取向",
+      "性癖好",
+      "性渴望程度",
+      "性交总次数",
+      "性伴侣名单"
+    ],
+    "TIANMING_PRIVACY_PARTNER_LIST_FIELD": "性伴侣名单",
+    "TIANMING_PRIVACY_BODY_PARTS": {
+      "field": "身体部位",
+      "nameKey": "部位名称",
+      "descriptionKey": "特征描述"
+    },
+    "TIANMING_PRIVACY_REQUIRED_PART_NAMES": [
+      "嘴",
+      "胸部",
+      "小穴",
+      "屁穴"
+    ],
+    "TIANMING_PRIVACY_VIRGIN_FIELD": "是否为处女/处男",
+    "TIANMING_PRIVACY_NON_VIRGIN_FIELDS": [
+      "初夜夺取者",
+      "初夜时间",
+      "初夜描述"
+    ],
+    "TIANMING_PLAYER_BODY_REQUIRED_FIELDS": [
+      "身高",
+      "体重",
+      "三围",
+      "敏感点",
+      "开发度"
+    ],
+    "TIANMING_PLAYER_BODY_SHAPE": {
+      "sizes": "三围",
+      "sizeKeys": [
+        "胸围",
+        "腰围",
+        "臀围"
+      ],
+      "sensitivePoints": "敏感点",
+      "development": "开发度"
+    },
+    "TIANMING_PRIVACY_PLACEHOLDERS": [
+      "待生成",
+      "待ai生成",
+      "暂无",
+      "无",
+      "未知",
+      "未定义",
+      "tbd",
+      "todo",
+      "placeholder"
+    ],
+    "TIANMING_GENDER_VALUES": {
+      "female": "女",
+      "male": "男"
+    },
+    "TIANMING_IMAGE_ARCHIVE_KEYS": {
+      "secretChamber": "香闺秘档",
+      "generationHistory": "生图历史",
+      "selectedAvatarId": "已选头像图片ID"
+    },
+    "TIANMING_VITAL_FIELDS": {
+      "current": "当前",
+      "cap": "上限"
+    },
+    "TIANMING_PROTAGONIST_EDITABLE": {
+      "whitelist": [
+        "基础信息.姓名",
+        "基础信息.年龄",
+        "基础信息.性别",
+        "基础信息.特质",
+        "基础信息.外貌",
+        "背包"
+      ],
+      "blacklist": [
+        "属性",
+        "可变属性",
+        "效果",
+        "图片档案",
+        "身体"
+      ],
+      "gray": [
+        "身份.先天六维",
+        "身份.出身",
+        "身份.天赋"
+      ]
+    },
+    "TIANMING_MEMORY_ENTRY_CONTENT_KEY": "内容",
+    "TIANMING_LEGACY_NPC_KEYS": {
+      "relationToPlayer": "与玩家关系",
+      "appearanceAlias": "外貌描写",
+      "locationAlias": "当前位置"
+    },
+    "TIANMING_LOCATION_NPC_KEY": "NPC"
+  },
+  "DEFAULT_ENGINE_PATHS": {
+    "roundNumber": "元数据.回合序号",
+    "narrativeHistory": "元数据.叙事历史",
+    "gameTime": "世界.时间",
+    "playerName": "角色.基础信息.姓名",
+    "playerLocation": "角色.基础信息.当前位置",
+    "characterBaseInfo": "角色.基础信息",
+    "characterAttributes": "角色.属性",
+    "characterAge": "角色.基础信息.年龄",
+    "characterGender": "角色.基础信息.性别",
+    "characterOccupation": "角色.可变属性.地位.名称",
+    "characterDescription": "角色.可变属性.地位.描述",
+    "characterTraits": "角色.基础信息.特质",
+    "characterOrigin": "角色.身份.出身",
+    "characterTalentTier": "角色.身份.天赋档次",
+    "characterInnateStats": "角色.身份.先天六维",
+    "inventoryItems": "角色.背包.物品",
+    "inventoryCurrency": "角色.背包.金钱",
+    "heartbeatConfig": "世界.状态.心跳.配置",
+    "heartbeatEnabled": "世界.状态.心跳.配置.enabled",
+    "heartbeatPeriod": "世界.状态.心跳.配置.period",
+    "lastHeartbeatRound": "世界.状态.心跳.上次心跳回合序号",
+    "heartbeatHistory": "世界.状态.心跳.历史",
+    "heartbeatLastRun": "世界.状态.心跳.上次执行时间",
+    "heartbeatHistoryLimit": "世界.状态.心跳.历史条数",
+    "heartbeatForgetRounds": "世界.状态.心跳.遗忘回合数",
+    "npcDemotionThreshold": "系统.npcDemotionThreshold",
+    "worldEvents": "社交.事件.事件记录",
+    "relationships": "社交.关系",
+    "worldDescription": "世界.描述",
+    "weather": "世界.天气",
+    "festival": "世界.节日",
+    "environmentTags": "世界.环境",
+    "engramMemory": "系统.扩展.engramMemory",
+    "npcList": "社交.关系",
+    "locations": "世界.地点信息",
+    "vitalHealth": "角色.可变属性.体力",
+    "vitalEnergy": "角色.可变属性.精力",
+    "statusEffects": "角色.效果",
+    "reputation": "角色.可变属性.声望",
+    "talents": "角色.身份.天赋",
+    "gameTimeHour": "世界.时间.小时",
+    "gameTimeMinute": "世界.时间.分钟",
+    "gameTimeFieldNames": {
+      "year": "年",
+      "month": "月",
+      "day": "日",
+      "hour": "小时",
+      "minute": "分钟"
+    },
+    "preRoundSnapshot": "元数据.上次对话前快照",
+    "slotWorldBooks": "系统.扩展.slotWorldBooks",
+    "settingCaptureLast": "系统.扩展.settingCaptureLast",
+    "storageHealth": "系统.扩展.storageHealth",
+    "narrativeContract": "系统.扩展.narrativeContract",
+    "characterVectors": "系统.扩展.characterVectors",
+    "plotVector": "系统.扩展.plotVector",
+    "explorationRecord": "系统.探索记录",
+    "reasoningHistory": "元数据.推理历史",
+    "storyPlan": "元数据.剧情规划",
+    "plotDirection": "元数据.剧情导向",
+    "memoryMidTerm": "记忆.中期",
+    "memoryLongTerm": "记忆.长期",
+    "shortTermMemory": "记忆.短期",
+    "implicitMidTermMemory": "记忆.隐式中期",
+    "currentActionOptions": "元数据.当前行动选项",
+    "heroinePlan": "元数据.女主规划",
+    "playerBody": "角色.身体",
+    "playerImageArchive": "角色.图片档案",
+    "heartbeatRoot": "世界.状态.心跳",
+    "bookmarkedRounds": "元数据.收藏楼层",
+    "locationFieldNames": {
+      "name": "名称",
+      "description": "描述",
+      "connections": "连接",
+      "npcList": [
+        "NPC",
+        "常驻NPC"
+      ],
+      "parent": "上级"
+    },
+    "locationPathSeparator": "·",
+    "worldEventFieldNames": {
+      "participants": "相关人物",
+      "scope": "影响范围",
+      "description": "事件描述"
+    },
+    "worldSelection": "world",
+    "npcTypeExclude": "普通",
+    "npcTypeKey": "重点",
+    "npcFieldNames": {
+      "name": "名称",
+      "type": "类型",
+      "gender": "性别",
+      "age": "年龄",
+      "location": "位置",
+      "affinity": "好感度",
+      "description": "描述",
+      "appearance": "外貌描述",
+      "bodyDescription": "身材描写",
+      "outfitStyle": "衣着风格",
+      "background": "背景",
+      "innerThought": "内心想法",
+      "currentActivity": "在做事项",
+      "personalityTraits": "性格特征",
+      "memory": "记忆",
+      "privateChatHistory": "私聊历史",
+      "privacyProfile": "私密信息",
+      "memorySummaries": "总结记忆",
+      "isPresent": "是否在场",
+      "isMajorRole": "是否主要角色",
+      "attention": "关注",
+      "relationshipStatus": "关系状态",
+      "corePersonality": "核心性格特征",
+      "affinityBreakthrough": "好感度突破条件",
+      "relationshipBreakthrough": "关系突破条件",
+      "relationshipNetwork": "关系网变量",
+      "lastInteractionTime": "最后互动时间",
+      "lastMainRoundUpdate": "上次主回合更新回合",
+      "deceased": "已死亡",
+      "heartbeatLock": "心跳锁定",
+      "imageArchive": "图片档案"
+    }
+  }
+}

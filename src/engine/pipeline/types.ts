@@ -25,6 +25,7 @@ import type {
   LongTermEntry,
   MidTermEntry,
 } from '../memory/memory-manager';
+import { SYSTEM_PATHS } from './system-paths';
 
 // ═══════════════════════════════════════════════════════════════
 //  管线核心类型
@@ -757,6 +758,20 @@ export interface EnginePathConfig {
   memoryMidTerm: string;
   /** 长期记忆数组路径（如 "记忆.长期"）— 同上。 */
   memoryLongTerm: string;
+  /** 短期记忆数组路径（如 "记忆.短期"）— 条目形状见 memory-manager 的 ShortTermEntry。 */
+  shortTermMemory: string;
+  /** 隐式中期记忆数组路径（如 "记忆.隐式中期"）— 与短期 1:1 配对。 */
+  implicitMidTermMemory: string;
+  /** 当前行动选项数组路径（如 "元数据.当前行动选项"）— 只用于刷新后恢复 UI，不进 prompt。 */
+  currentActionOptions: string;
+  /** 女主规划对象路径（如 "元数据.女主规划"）。 */
+  heroinePlan: string;
+  /** 玩家身体对象路径（如 "角色.身体"）— NSFW 子树，nsfwMode 关闭时从 prompt 剥离。 */
+  playerBody: string;
+  /** 玩家图片档案对象路径（如 "角色.图片档案"）。 */
+  playerImageArchive: string;
+  /** 世界心跳子树根路径（如 "世界.状态.心跳"）— 配置与执行日志，不进 prompt。 */
+  heartbeatRoot: string;
 
   /**
    * 收藏楼层路径（如 "元数据.收藏楼层"）— 玩家手动收藏的重要回合书签数组。
@@ -1021,6 +1036,8 @@ export interface EngineNpcFieldNames {
   deceased: string;
   /** 心跳锁定标记 key（默认 '心跳锁定'，关系面板的锁图标写它）：为 true 的 NPC 不进世界心跳 */
   heartbeatLock: string;
+  /** 图片档案对象 key（默认 '图片档案'） */
+  imageArchive: string;
 }
 
 /** 心跳历史保留条数的缺省值（设置页「历史保留条数」显示的就是它；存档里没有这个设置时用它） */
@@ -1105,6 +1122,13 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
   plotDirection: '元数据.剧情导向',
   memoryMidTerm: '记忆.中期',
   memoryLongTerm: '记忆.长期',
+  shortTermMemory: '记忆.短期',
+  implicitMidTermMemory: '记忆.隐式中期',
+  currentActionOptions: '元数据.当前行动选项',
+  heroinePlan: '元数据.女主规划',
+  playerBody: '角色.身体',
+  playerImageArchive: '角色.图片档案',
+  heartbeatRoot: '世界.状态.心跳',
   bookmarkedRounds: '元数据.收藏楼层',
   locationFieldNames: {
     name: '名称',
@@ -1155,6 +1179,7 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
     lastMainRoundUpdate: '上次主回合更新回合',
     deceased: '已死亡',
     heartbeatLock: '心跳锁定',
+    imageArchive: '图片档案',
   },
 };
 
@@ -1168,15 +1193,15 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
  * word (PO 2026-10-03).
  */
 export const PREFERENCE_PATHS: readonly string[] = [
-  '系统.设置',
-  '系统.actionOptions',
-  '系统.nsfwMode',
-  '系统.nsfwGenderFilter',
+  SYSTEM_PATHS.settings,
+  SYSTEM_PATHS.actionOptions,
+  SYSTEM_PATHS.nsfwMode,
+  SYSTEM_PATHS.nsfwGenderFilter,
   DEFAULT_ENGINE_PATHS.heartbeatConfig,
   DEFAULT_ENGINE_PATHS.heartbeatHistoryLimit,
   DEFAULT_ENGINE_PATHS.heartbeatForgetRounds,
-  '系统.扩展.image.enabled',
-  '系统.扩展.image.config',
+  SYSTEM_PATHS.image.enabled,
+  SYSTEM_PATHS.image.config,
   DEFAULT_ENGINE_PATHS.npcDemotionThreshold,
 ];
 
