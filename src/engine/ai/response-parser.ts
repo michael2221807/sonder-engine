@@ -278,6 +278,19 @@ export function rereadStoredNarrative(stored: string, rawResponse: unknown): str
   return fresh && fresh !== current && decodeResidualEscapes(current).trim() === fresh ? fresh : null;
 }
 
+/** Where `parse` found the story and what it left to read as JSON (see `locateNarrative`). */
+interface LocatedNarrative {
+  tag: { content: string; start: number; end: number } | null;
+  tagJson: Record<string, unknown> | null;
+  replyInTag: boolean;
+  narrativeFromTag: string | null;
+  outsideTag: string;
+  textForJson: string;
+}
+
+/** The lifted sidecar blocks as `parse` spreads them into its result (nothing when none was lifted). */
+type ReplySidecars = { sidecars?: Record<string, string> };
+
 export class ResponseParser {
   /**
    * 清理 AI 原始输出 — 销毁式 strip（pre-migration 行为）
@@ -332,6 +345,14 @@ export class ResponseParser {
     if (lifted) sanitized = lifted.text;
     const sidecars = lifted && Object.keys(lifted.sidecars).length ? { sidecars: lifted.sidecars } : {};
 
+    const located = this.locateNarrative(sanitized);
+    const json = this.parseReplyJson(located);
+    if (json) return this.toAIResponse(json, located.narrativeFromTag, thinking, sanitized, sidecars);
+    return this.toFailedResponse(located, thinking, sanitized, sidecars);
+  }
+
+  /** Where the story stands in a sanitized reply: the `<正文>` tag outside the JSON (if any) and what is left to parse as JSON. */
+  private locateNarrative(sanitized: string): LocatedNarrative {
     // Extract <正文> block before JSON parsing — some models put narrative
     // outside the JSON in CoT-style tags instead of inside json.text.
     // The tag is judged by where it stands (2026-10-03, the `{"text":"` leak's root): the CoT protocol asks for the
@@ -348,6 +369,12 @@ export class ResponseParser {
     const outsideTag = tag ? (sanitized.slice(0, tag.start) + sanitized.slice(tag.end)).trim() : '';
     const textForJson = !tag ? sanitized : replyInTag ? tag.content : outsideTag;
 
+    return { tag, tagJson, replyInTag, narrativeFromTag, outsideTag, textForJson };
+  }
+
+  /** The reply's JSON object, read from the tag, from the text outside it, or from a loose reply around a tag; null if none parses. */
+  private parseReplyJson(located: LocatedNarrative): Record<string, unknown> | null {
+    const { tag, tagJson, replyInTag, outsideTag, textForJson } = located;
     let json = replyInTag ? tagJson : this.tryParseJson(textForJson);
     if (replyInTag && tag && outsideTag) {
       // Fields the model wrote after the tag, in a JSON block of their own, still count; the tag's own win.
@@ -366,37 +393,54 @@ export class ResponseParser {
         json = { ...rest, text: story.length >= other.length ? story : other };
       }
     }
+    return json;
+  }
 
-    if (json) {
-      const rawText = String(json.text ?? json['叙事文本'] ?? '');
-      // When both <正文> tag and json.text exist, pick the longer one.
-      // Models with CoT prompts often put real narrative in the tag and a
-      // short placeholder like "(见上方正文)" in json.text.
-      const resolvedText = narrativeFromTag && narrativeFromTag.length >= rawText.length
-        ? narrativeFromTag
-        : (rawText || narrativeFromTag || '');
-      return {
-        text: this.stripNarrativeWrapperTags(decodeResidualEscapes(resolvedText)),
-        commands: this.normalizeCommands(
-          json.commands ?? json.tavern_commands ?? json['指令'] ?? [],
-        ),
-        midTermMemory: (json.mid_term_memory ?? json['中期记忆']) as AIResponse['midTermMemory'],
-        actionOptions: this.normalizeActionOptions(
-          json.action_options ?? json['行动选项'] ?? [],
-        ),
-        judgement: json.judgement as AIResponse['judgement'],
-        semanticMemory: json.semantic_memory as Record<string, unknown> | undefined,
-        knowledgeFacts: this.normalizeKnowledgeFacts(json.knowledge_facts),
-        settingUpdates: this.normalizeSettingUpdates(json.setting_updates),
-        memoryEntry: this.normalizeMemoryEntry(json.memoryEntry ?? json.memory_entry ?? json['记忆条目']),
-        customFields: this.collectCustomFields(json),
-        thinking,
-        raw: sanitized,
-        parseOk: true,
-        ...sidecars,
-      };
-    }
+  /** The parsed reply as an AIResponse. */
+  private toAIResponse(
+    json: Record<string, unknown>,
+    narrativeFromTag: string | null,
+    thinking: string | undefined,
+    sanitized: string,
+    sidecars: ReplySidecars,
+  ): AIResponse {
+    const rawText = String(json.text ?? json['叙事文本'] ?? '');
+    // When both <正文> tag and json.text exist, pick the longer one.
+    // Models with CoT prompts often put real narrative in the tag and a
+    // short placeholder like "(见上方正文)" in json.text.
+    const resolvedText = narrativeFromTag && narrativeFromTag.length >= rawText.length
+      ? narrativeFromTag
+      : (rawText || narrativeFromTag || '');
+    return {
+      text: this.stripNarrativeWrapperTags(decodeResidualEscapes(resolvedText)),
+      commands: this.normalizeCommands(
+        json.commands ?? json.tavern_commands ?? json['指令'] ?? [],
+      ),
+      midTermMemory: (json.mid_term_memory ?? json['中期记忆']) as AIResponse['midTermMemory'],
+      actionOptions: this.normalizeActionOptions(
+        json.action_options ?? json['行动选项'] ?? [],
+      ),
+      judgement: json.judgement as AIResponse['judgement'],
+      semanticMemory: json.semantic_memory as Record<string, unknown> | undefined,
+      knowledgeFacts: this.normalizeKnowledgeFacts(json.knowledge_facts),
+      settingUpdates: this.normalizeSettingUpdates(json.setting_updates),
+      memoryEntry: this.normalizeMemoryEntry(json.memoryEntry ?? json.memory_entry ?? json['记忆条目']),
+      customFields: this.collectCustomFields(json),
+      thinking,
+      raw: sanitized,
+      parseOk: true,
+      ...sidecars,
+    };
+  }
 
+  /** The reply when no JSON could be read: the story from the tag or the envelope, else the whole sanitized text; `parseOk: false`. */
+  private toFailedResponse(
+    located: LocatedNarrative,
+    thinking: string | undefined,
+    sanitized: string,
+    sidecars: ReplySidecars,
+  ): AIResponse {
+    const { narrativeFromTag, textForJson } = located;
     // JSON parse 全部策略失败 —— 退化到整段文本当作 narrative。
     // A <正文> tag wins; otherwise the narrative is read out of a `{"text":"…` envelope (split-gen step1 has no
     // repair stage behind it, so this is the only thing between the player and the JSON source); otherwise the
