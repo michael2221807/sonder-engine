@@ -14,6 +14,7 @@
  *   对齐 demo design note §70 "人物关系中的所有页面都在每项数据上增加一编辑按键"
  */
 import { ref, computed, onActivated, watch } from 'vue';
+import { SYSTEM_PATHS } from '@/engine/pipeline/system-paths';
 import { useI18n } from 'vue-i18n';
 import { useGameState } from '@/ui/composables/useGameState';
 import { useMobile } from '@/ui/composables/useMobile';
@@ -42,7 +43,7 @@ const { isLoaded, useValue, get } = useGameState();
 const npcEditor = useNpcEditor();
 
 /** NSFW 是否开启（读状态树） */
-const nsfwEnabled = computed(() => get<boolean>('系统.nsfwMode') === true);
+const nsfwEnabled = computed(() => get<boolean>(SYSTEM_PATHS.nsfwMode) === true);
 
 const relationships = useValue<NpcRelation[]>(DEFAULT_ENGINE_PATHS.relationships);
 

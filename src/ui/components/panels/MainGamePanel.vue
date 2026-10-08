@@ -227,7 +227,7 @@ const festival = useValue<unknown>(DEFAULT_ENGINE_PATHS.festival);
 const environmentTags = useValue<unknown>(DEFAULT_ENGINE_PATHS.environmentTags);
 
 /** Persisted action options from state tree — survives page refresh */
-const persistedActionOptions = useValue<string[]>('元数据.当前行动选项');
+const persistedActionOptions = useValue<string[]>(DEFAULT_ENGINE_PATHS.currentActionOptions);
 /** The player's action-options switch: off, the last round's options leave the screen at once (PO 2026-10-03). */
 const promptSettings = useValue<Partial<PromptSettings>>('系统.设置.prompt');
 const NO_OPTIONS: string[] = [];

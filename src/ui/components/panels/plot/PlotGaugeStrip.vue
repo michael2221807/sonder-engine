@@ -3,6 +3,7 @@
 // `showGaugesInMainPanel` / `gauge.showInMainPanel` dead controls found 2026-08-22)
 // App doc: docs/user-guide/pages/game-main.md §剧情度量条
 import { computed } from 'vue';
+import { SYSTEM_PATHS } from '@/engine/pipeline/system-paths';
 import { useGameState } from '@/ui/composables/useGameState';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import { resolveFocusArc } from '@/engine/plot/types';
@@ -12,7 +13,7 @@ import Tooltip from '@/ui/components/shared/Tooltip.vue';
 const { useValue } = useGameState();
 const plotState = useValue<PlotDirectionState | undefined>(DEFAULT_ENGINE_PATHS.plotDirection);
 const enabledSetting = useValue<boolean | undefined>('系统.设置.plot.showGaugesInMainPanel');
-const plotEnabled = useValue<boolean | undefined>('系统.设置.plot.enabled');
+const plotEnabled = useValue<boolean | undefined>(SYSTEM_PATHS.plotEnabled);
 
 /** Focus thread's gauges flagged for the main panel; empty when the setting is off. */
 const gauges = computed<Array<{ gauge: PlotGauge; pct: number; text: string; thread: string }>>(() => {

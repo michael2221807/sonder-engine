@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // App doc: docs/user-guide/pages/game-plot.md
 import { ref, computed, watch } from 'vue';
+import { SYSTEM_PATHS } from '@/engine/pipeline/system-paths';
 import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useGameState } from '@/ui/composables/useGameState';
@@ -274,7 +275,7 @@ function selectArc(arcId: string): void {
 }
 
 // Plot Threads: concurrency cap + game-time stamp for the scheduler's date axis.
-const maxActiveThreadsSetting = useValue<number | undefined>('系统.设置.plot.maxActiveThreads');
+const maxActiveThreadsSetting = useValue<number | undefined>(SYSTEM_PATHS.plotMaxActiveThreads);
 const maxActiveThreads = computed(() => maxActiveThreadsSetting.value ?? DEFAULT_MAX_ACTIVE_THREADS);
 const gameTimeRaw = useValue<unknown>(DEFAULT_ENGINE_PATHS.gameTime);
 
@@ -766,7 +767,7 @@ function cancelDetailAi(): void {
   detailAiBusy.value = false;
 }
 
-const plotSettingsFromState = useValue<{ showEvalLog?: boolean } | undefined>('系统.设置.plot');
+const plotSettingsFromState = useValue<{ showEvalLog?: boolean } | undefined>(SYSTEM_PATHS.plotSettings);
 const showEvalLog = ref(false);
 // Sync from settings panel
 watch(plotSettingsFromState, (s) => {

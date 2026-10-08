@@ -18,6 +18,7 @@
  * that would never be recorded.
  */
 import { computed, nextTick } from 'vue';
+import { SYSTEM_PATHS } from '@/engine/pipeline/system-paths';
 import { useI18n } from 'vue-i18n';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import { useEngineStateStore } from '@/engine/stores/engine-state';
@@ -42,7 +43,7 @@ const CLOSE = `</${TAG}>`;
 /** Prompt settings live in the state tree; read them live so a toggle takes effect at once. */
 const settings = computed<PromptSettings>(() => ({
   ...DEFAULT_PROMPT_SETTINGS,
-  ...((engineState.get('系统.设置.prompt') as Partial<PromptSettings> | undefined) ?? {}),
+  ...((engineState.get(SYSTEM_PATHS.promptSettings) as Partial<PromptSettings> | undefined) ?? {}),
 }));
 
 const captureEnabled = computed(() =>

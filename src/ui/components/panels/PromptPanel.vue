@@ -14,6 +14,8 @@
  * 引擎从没读过。内置提示词只剩内容、开关、恢复默认。
  */
 import { ref, computed, watch, onActivated } from 'vue';
+import { SYSTEM_PATHS } from '@/engine/pipeline/system-paths';
+import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import { injectService } from '@/ui/injection-keys';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -85,7 +87,7 @@ const promptSettings = computed<PromptSettings>(() => {
 
 function updatePromptSetting<K extends keyof PromptSettings>(key: K, value: PromptSettings[K]) {
   const current = promptSettings.value;
-  setValue('系统.设置.prompt', { ...current, [key]: value });
+  setValue(SYSTEM_PATHS.promptSettings, { ...current, [key]: value });
 }
 
 /** A cleared or unusable entry keeps the length the rounds use, and the box shows it again. */
@@ -114,7 +116,7 @@ const actionPaceOptions = computed(() => [
 
 // ─── Heroine Plan state ─────────────────────────────────────
 const heroinePlan = computed<HeroinePlan>(() => {
-  const raw = get<HeroinePlan>('元数据.女主规划');
+  const raw = get<HeroinePlan>(DEFAULT_ENGINE_PATHS.heroinePlan);
   return raw ?? createEmptyHeroinePlan();
 });
 
@@ -153,7 +155,7 @@ function addHeroineEntry() {
   };
   const plan = { ...heroinePlan.value };
   plan.heroineEntries = [...plan.heroineEntries, entry];
-  setValue('元数据.女主规划', plan);
+  setValue(DEFAULT_ENGINE_PATHS.heroinePlan, plan);
   heroineEditName.value = '';
   heroineEditRelation.value = '';
   heroineEditStage.value = '';
@@ -164,7 +166,7 @@ function removeHeroineEntry(name: string) {
   plan.heroineEntries = plan.heroineEntries.filter((e) => e.name !== name);
   plan.interactionEvents = plan.interactionEvents.filter((e) => e.heroineName !== name);
   plan.scenePlans = plan.scenePlans.filter((e) => e.heroineName !== name);
-  setValue('元数据.女主规划', plan);
+  setValue(DEFAULT_ENGINE_PATHS.heroinePlan, plan);
 }
 
 const heroineEventName = ref('');
@@ -190,7 +192,7 @@ function addHeroineEvent() {
   };
   const plan = { ...heroinePlan.value };
   plan.interactionEvents = [...plan.interactionEvents, event];
-  setValue('元数据.女主规划', plan);
+  setValue(DEFAULT_ENGINE_PATHS.heroinePlan, plan);
   heroineEventName.value = '';
   heroineEventDesc.value = '';
 }
@@ -198,7 +200,7 @@ function addHeroineEvent() {
 function removeHeroineEvent(idx: number) {
   const plan = { ...heroinePlan.value };
   plan.interactionEvents = plan.interactionEvents.filter((_, i) => i !== idx);
-  setValue('元数据.女主规划', plan);
+  setValue(DEFAULT_ENGINE_PATHS.heroinePlan, plan);
 }
 
 // ─── Prompt entry & persistence ──────────────────────────────

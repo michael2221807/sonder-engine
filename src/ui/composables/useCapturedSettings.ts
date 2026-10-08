@@ -178,7 +178,7 @@ export function useCapturedSettings() {
     const cfg = engramManager.getConfig();
     if (!engramManager.isEnabled() || cfg.knowledgeEdgeMode !== 'active') return 'off';
 
-    const edges = engineState.get<{ v2Edges?: EngramEdge[] }>('系统.扩展.engramMemory')?.v2Edges ?? [];
+    const edges = engineState.get<{ v2Edges?: EngramEdge[] }>(DEFAULT_ENGINE_PATHS.engramMemory)?.v2Edges ?? [];
     return findCanonEdges(edges, entry.id).length > 0 ? 'linked' : 'pending';
   }
 

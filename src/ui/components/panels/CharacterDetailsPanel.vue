@@ -11,6 +11,7 @@
  * 2026-04-08 升级：英雄头像区、Tab 结构（基础/属性/关系/身体）
  */
 import { ref, reactive, computed, onUnmounted } from 'vue';
+import { SYSTEM_PATHS } from '@/engine/pipeline/system-paths';
 import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useGameState } from '@/ui/composables/useGameState';
@@ -505,7 +506,7 @@ function affinityPct(val: number | undefined): number {
 
 // ─── NSFW body data ───
 
-const nsfwEnabled = computed(() => get<boolean>('系统.nsfwMode') === true);
+const nsfwEnabled = computed(() => get<boolean>(SYSTEM_PATHS.nsfwMode) === true);
 
 interface BodyPart {
   部位名称: string;
@@ -535,7 +536,7 @@ interface PlayerBody {
   纹身与印记?: string[];
 }
 
-const playerBody = useValue<PlayerBody>('角色.身体');
+const playerBody = useValue<PlayerBody>(DEFAULT_ENGINE_PATHS.playerBody);
 
 const hasBodyData = computed(() => {
   const b = playerBody.value;

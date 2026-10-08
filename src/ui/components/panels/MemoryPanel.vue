@@ -86,7 +86,7 @@ function normalizeMemoryEntries(raw: unknown): MemoryEntry[] {
 // ─── Reactive memory lists ───
 
 const shortTermRaw = useValue<unknown>(memoryConfig.value.shortTerm);
-const implicitMidTermRaw = useValue<unknown>('记忆.隐式中期');
+const implicitMidTermRaw = useValue<unknown>(DEFAULT_ENGINE_PATHS.implicitMidTermMemory);
 const midTermRaw = useValue<unknown>(memoryConfig.value.midTerm);
 const longTermRaw = useValue<unknown>(memoryConfig.value.longTerm);
 
@@ -98,7 +98,7 @@ const longTermEntries = computed(() => normalizeMemoryEntries(longTermRaw.value)
 // ─── Narrative history ───
 
 interface NarrativeMsg { role: string; content: string; _delta?: unknown }
-const narrativeHistoryRaw = useValue<unknown>('元数据.叙事历史');
+const narrativeHistoryRaw = useValue<unknown>(DEFAULT_ENGINE_PATHS.narrativeHistory);
 const narrativeEntries = computed<NarrativeMsg[]>(() => {
   const raw = narrativeHistoryRaw.value;
   if (!Array.isArray(raw)) return [];

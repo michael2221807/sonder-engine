@@ -7,6 +7,7 @@
  * Persists to localStorage / game state tree.
  */
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { SYSTEM_PATHS } from '@/engine/pipeline/system-paths';
 import { injectService } from '@/ui/injection-keys';
 import { useRouter, useRoute } from 'vue-router';
 import { eventBus } from '@/engine/core/event-bus';
@@ -231,9 +232,9 @@ function setActionOptionsSwitch(on: boolean): void {
 // actionOptions 的 mode/pace/customPrompt 同步写到状态树 `系统.actionOptions.*`，
 // context-assembly 从状态树读取后注入条件变量让 prompt flow 按 mode 分支。
 function syncActionOptionsToStateTree(): void {
-  setValue('系统.actionOptions.mode', actionOptions.value.mode);
-  setValue('系统.actionOptions.pace', actionOptions.value.pace);
-  setValue('系统.actionOptions.customPrompt', actionOptions.value.customPrompt);
+  setValue(SYSTEM_PATHS.actionOptionsMode, actionOptions.value.mode);
+  setValue(SYSTEM_PATHS.actionOptionsPace, actionOptions.value.pace);
+  setValue(SYSTEM_PATHS.actionOptionsCustomPrompt, actionOptions.value.customPrompt);
 }
 
 // 载入时和任何字段变化时都同步（仅在游戏页：首页写的是刚离开的那棵树，见 inGame）
@@ -303,8 +304,8 @@ function saveNsfwSettings(): void {
 }
 
 function syncNsfwToStateTree(): void {
-  setValue('系统.nsfwMode', nsfwSettings.value.nsfwMode);
-  setValue('系统.nsfwGenderFilter', nsfwSettings.value.nsfwGenderFilter);
+  setValue(SYSTEM_PATHS.nsfwMode, nsfwSettings.value.nsfwMode);
+  setValue(SYSTEM_PATHS.nsfwGenderFilter, nsfwSettings.value.nsfwGenderFilter);
   eventBus.emit('engine:request-save');
 }
 
@@ -416,14 +417,14 @@ function loadPlotSettings(): void {
 }
 
 function syncPlotSettingsToStateTree(): void {
-  setValue('系统.设置.plot.enabled', plotSettings.value.enabled);
+  setValue(SYSTEM_PATHS.plotEnabled, plotSettings.value.enabled);
   setValue('系统.设置.plot.criticalConfirmGate', plotSettings.value.criticalConfirmGate);
   setValue('系统.设置.plot.confidenceThreshold', plotSettings.value.confidenceThreshold);
   setValue('系统.设置.plot.showGaugesInMainPanel', plotSettings.value.showGaugesInMainPanel);
   setValue('系统.设置.plot.opportunityMaxTier', plotSettings.value.opportunityMaxTier);
   setValue('系统.设置.plot.autoAdvanceSkippable', plotSettings.value.autoAdvanceSkippable);
   setValue('系统.设置.plot.showEvalLog', plotSettings.value.showEvalLog);
-  setValue('系统.设置.plot.maxActiveThreads', plotSettings.value.maxActiveThreads);
+  setValue(SYSTEM_PATHS.plotMaxActiveThreads, plotSettings.value.maxActiveThreads);
   setValue('系统.设置.plot.timelineAxis', plotSettings.value.timelineAxis);
 }
 
@@ -765,14 +766,14 @@ function toggleCotSetting(key: 'enabled' | 'judgeEnabled' | 'injectStep2'): void
 function updateCotRingSize(val: string): void {
   const n = clampCotRingSize(val);
   cotSettings.value.ringSize = n;
-  setValue('系统.设置.cot.reasoningRingSize', n);
+  setValue(SYSTEM_PATHS.cotReasoningRingSize, n);
   saveCotToLocalStorage();
   eventBus.emit('engine:request-save');
 }
 
 const presenceEnabled = ref(false);
 function loadPresenceEnabled(): void {
-  presenceEnabled.value = get('系统.设置.social.presenceEnabled') === true;
+  presenceEnabled.value = get(SYSTEM_PATHS.presenceEnabled) === true;
 }
 function savePresenceToLocalStorage(): void {
   try {
@@ -781,14 +782,14 @@ function savePresenceToLocalStorage(): void {
 }
 function togglePresenceEnabled(): void {
   presenceEnabled.value = !presenceEnabled.value;
-  setValue('系统.设置.social.presenceEnabled', presenceEnabled.value);
+  setValue(SYSTEM_PATHS.presenceEnabled, presenceEnabled.value);
   savePresenceToLocalStorage();
   eventBus.emit('engine:request-save');
 }
 
 const bodyPolishEnabled = ref(false);
 function loadBodyPolish(): void {
-  bodyPolishEnabled.value = get('系统.设置.bodyPolish') === true;
+  bodyPolishEnabled.value = get(SYSTEM_PATHS.bodyPolish) === true;
 }
 function saveBodyPolishToLocalStorage(): void {
   try {
@@ -797,7 +798,7 @@ function saveBodyPolishToLocalStorage(): void {
 }
 function toggleBodyPolish(): void {
   bodyPolishEnabled.value = !bodyPolishEnabled.value;
-  setValue('系统.设置.bodyPolish', bodyPolishEnabled.value);
+  setValue(SYSTEM_PATHS.bodyPolish, bodyPolishEnabled.value);
   featureToggles.value.bodyPolish = bodyPolishEnabled.value;
   saveFeatureToggles();
   saveBodyPolishToLocalStorage();
@@ -850,7 +851,7 @@ function updateLowLoadMaxRequests(val: string): void {
 
 const imageGenEnabled = ref(false);
 function loadImageGen(): void {
-  imageGenEnabled.value = get('系统.扩展.image.enabled') === true;
+  imageGenEnabled.value = get(SYSTEM_PATHS.image.enabled) === true;
 }
 function saveImageGenToLocalStorage(): void {
   try {
@@ -859,7 +860,7 @@ function saveImageGenToLocalStorage(): void {
 }
 function toggleImageGen(): void {
   imageGenEnabled.value = !imageGenEnabled.value;
-  setValue('系统.扩展.image.enabled', imageGenEnabled.value);
+  setValue(SYSTEM_PATHS.image.enabled, imageGenEnabled.value);
   featureToggles.value.imageGeneration = imageGenEnabled.value;
   saveFeatureToggles();
   saveImageGenToLocalStorage();

@@ -185,6 +185,7 @@
 <script setup lang="ts">
 // App doc: docs/user-guide/pages/game-overview.md §4.0.1
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import { injectService } from '@/ui/injection-keys';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -233,8 +234,8 @@ const localizedGameTime = computed(() => {
   const month = engineState.get<number>('世界.时间.月') ?? 0;
   const day = engineState.get<number>('世界.时间.日') ?? 0;
   if (!year && !month && !day) return '';
-  const hour = engineState.get<number>('世界.时间.小时') ?? null;
-  const minute = engineState.get<number>('世界.时间.分钟') ?? null;
+  const hour = engineState.get<number>(DEFAULT_ENGINE_PATHS.gameTimeHour) ?? null;
+  const minute = engineState.get<number>(DEFAULT_ENGINE_PATHS.gameTimeMinute) ?? null;
   const timePart = (hour !== null && minute !== null)
     ? ` ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
     : '';

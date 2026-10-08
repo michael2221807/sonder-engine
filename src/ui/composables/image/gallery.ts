@@ -2,6 +2,7 @@
  * Gallery tab: per-NPC image archive, avatar / portrait / background / secret-part selection and deletion (R7 step 2).
  */
 import { type Ref, ref, computed } from 'vue';
+import { SYSTEM_PATHS } from '@/engine/pipeline/system-paths';
 import type { ImageBackendType, SecretPartType } from '@/engine/image/types';
 import type { CivitaiLoraSnapshot } from '@/engine/image/types';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
@@ -200,7 +201,7 @@ export function useGallery(deps: UseGalleryDeps) {
 
   function canSelectSecretPart(img: GalleryImage): boolean {
     if (img.status !== 'complete') return false;
-    if (get('系统.nsfwMode') !== true) return false;
+    if (get(SYSTEM_PATHS.nsfwMode) !== true) return false;
     const npcData = galleryNpcData.value;
     if (!npcData) return false;
     const gender = String(npcData['性别'] ?? '');

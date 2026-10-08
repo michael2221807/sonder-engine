@@ -3,6 +3,7 @@
  * definitions and the pure read/merge helpers, moved out of SettingsPanel.vue (refactor R7 step 9).
  * The panel keeps the refs, the watchers, the state-tree writes and the lifecycle calls.
  */
+import { SYSTEM_PATHS } from '@/engine/pipeline/system-paths';
 
 export const FEATURE_TOGGLES_KEY = 'aga_feature_toggles';
 
@@ -69,11 +70,11 @@ export interface CotSettings {
 /** The chain-of-thought settings as the game state tree holds them. */
 export function readCotSettings(get: (path: string) => unknown): CotSettings {
   return {
-    enabled: get('系统.设置.cot.enabled') === true,
-    judgeEnabled: get('系统.设置.cot.judgeEnabled') === true,
-    injectStep2: get('系统.设置.cot.injectStep2') !== false,
-    ringSize: typeof get('系统.设置.cot.reasoningRingSize') === 'number'
-      ? (get('系统.设置.cot.reasoningRingSize') as number)
+    enabled: get(SYSTEM_PATHS.cotEnabled) === true,
+    judgeEnabled: get(SYSTEM_PATHS.cotJudgeEnabled) === true,
+    injectStep2: get(SYSTEM_PATHS.cotInjectStep2) !== false,
+    ringSize: typeof get(SYSTEM_PATHS.cotReasoningRingSize) === 'number'
+      ? (get(SYSTEM_PATHS.cotReasoningRingSize) as number)
       : 3,
   };
 }

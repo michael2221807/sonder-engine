@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue';
+import { SYSTEM_PATHS } from '@/engine/pipeline/system-paths';
 import { useGameState } from './useGameState';
 
 /**
@@ -58,9 +59,9 @@ export function useActionOptionsStyle(): UseActionOptionsStyle {
     style.value = normalizeActionOptionsStyle({ ...readActionOptionsStyle(), ...patch });
     try { localStorage.setItem(ACTION_OPTIONS_STYLE_KEY, JSON.stringify(style.value)); } catch { /* storage unavailable */ }
     if (!isLoaded.value) return;
-    setValue('系统.actionOptions.mode', style.value.mode);
-    setValue('系统.actionOptions.pace', style.value.pace);
-    setValue('系统.actionOptions.customPrompt', style.value.customPrompt);
+    setValue(SYSTEM_PATHS.actionOptionsMode, style.value.mode);
+    setValue(SYSTEM_PATHS.actionOptionsPace, style.value.pace);
+    setValue(SYSTEM_PATHS.actionOptionsCustomPrompt, style.value.customPrompt);
   }
   refresh();
   return { style, save, refresh };

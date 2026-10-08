@@ -228,6 +228,7 @@
 <script setup lang="ts">
 // App doc: docs/user-guide/pages/game-overview.md §4.0.3
 import { ref, computed, watch, onUnmounted } from 'vue';
+import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useEngineStateStore } from '@/engine/stores/engine-state';
@@ -261,7 +262,7 @@ const locationDisplay = computed(() => {
 
 // ── Occupation ───────────────────────────────────────────────────
 const occupation = computed(() =>
-  engineState.get<string>('角色.可变属性.地位.名称') ?? '',
+  engineState.get<string>(DEFAULT_ENGINE_PATHS.characterOccupation) ?? '',
 );
 
 // ── Vitals ───────────────────────────────────────────────────────

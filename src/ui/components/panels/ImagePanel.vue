@@ -7,6 +7,7 @@
  * Full ImageManagerModal (7-tab system) will be built on top of this foundation.
  */
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { SYSTEM_PATHS } from '@/engine/pipeline/system-paths';
 import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
@@ -72,7 +73,7 @@ const imageUpdateTick = ref(0);
 const unsubImageUpdate = eventBus.on('image:task-update', () => { imageUpdateTick.value++; });
 onUnmounted(() => { unsubImageUpdate(); });
 
-const enabled = computed(() => get('系统.扩展.image.enabled') === true);
+const enabled = computed(() => get(SYSTEM_PATHS.image.enabled) === true);
 
 // ── Persistence: debounced auto-save for all image config changes ──
 // ImagePanel writes to 40+ state paths under 系统.扩展.image.*.
@@ -1270,7 +1271,7 @@ function clearSceneHistory() {
   }
   // Also clear scene archive history
   if (imageService) {
-    setValue('系统.扩展.image.sceneArchive', { '生图历史': [], '当前壁纸图片ID': '' });
+    setValue(SYSTEM_PATHS.image.sceneArchive, { '生图历史': [], '当前壁纸图片ID': '' });
   }
   eventBus.emit('ui:toast', { type: 'info', message: t('image.toast.clearedSceneHistory'), duration: 1500 });
 }
@@ -1300,7 +1301,7 @@ function deleteSceneImage(imageId: string) {
     ? (archive['生图历史'] as Array<Record<string, unknown>>).filter((r) => r.id !== imageId)
     : [];
   const cleared = String(archive['当前壁纸图片ID'] ?? '') === imageId ? '' : archive['当前壁纸图片ID'];
-  setValue('系统.扩展.image.sceneArchive', { ...archive, '生图历史': history, '当前壁纸图片ID': cleared });
+  setValue(SYSTEM_PATHS.image.sceneArchive, { ...archive, '生图历史': history, '当前壁纸图片ID': cleared });
   eventBus.emit('ui:toast', { type: 'info', message: t('image.toast.deletedSceneImage'), duration: 1500 });
 }
 
@@ -1372,7 +1373,7 @@ async function generateScene() {
 
     const task = await imageService.generateSceneImage({
       sceneDescription: selectedNarrative || sceneExtraPrompt.value || '当前场景',
-      location: get('角色.基础信息.当前位置') as string ?? '',
+      location: get(DEFAULT_ENGINE_PATHS.playerLocation) as string ?? '',
       gameTime,
       weather: get(DEFAULT_ENGINE_PATHS.weather) as string | undefined,
       festival: get(DEFAULT_ENGINE_PATHS.festival),
@@ -1973,7 +1974,7 @@ const {
 
             <!-- Secret part generation (NSFW gated, non-male NPC) -->
             <div
-              v-if="selectedNpcData && !(selectedNpcData['性别'] && String(selectedNpcData['性别']).includes('男')) && get('系统.nsfwMode') === true"
+              v-if="selectedNpcData && !(selectedNpcData['性别'] && String(selectedNpcData['性别']).includes('男')) && get(SYSTEM_PATHS.nsfwMode) === true"
               class="secret-section"
             >
               <CivitaiLoraShelf
@@ -3713,7 +3714,7 @@ const {
             <div><span class="form-label">{{ $t('image.settings.masterSwitch') }}</span></div>
             <AgaToggle
               :model-value="enabled"
-              @update:model-value="setValue('系统.扩展.image.enabled', $event)"
+              @update:model-value="setValue(SYSTEM_PATHS.image.enabled, $event)"
             />
           </div>
           <div class="settings-row">

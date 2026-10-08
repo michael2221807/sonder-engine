@@ -192,7 +192,7 @@ export function usePlayerImage(deps: PlayerImageDeps) {
 
   /** 快捷来源：恢复切到多图后端后丢失的「用头像 / 用立绘」（review Minor 修复）。 */
   const playerQuickSources = computed(() => {
-    const archive = get('角色.图片档案') as Record<string, unknown> | undefined;
+    const archive = get(DEFAULT_ENGINE_PATHS.playerImageArchive) as Record<string, unknown> | undefined;
     const out: Array<{ key: string; label: string }> = [];
     if (String(archive?.['已选头像图片ID'] ?? '')) out.push({ key: 'avatar', label: t('character.image.reference.sourceAvatar') });
     if (String(archive?.['已选立绘图片ID'] ?? '')) out.push({ key: 'portrait', label: t('character.image.reference.sourcePortrait') });
@@ -200,7 +200,7 @@ export function usePlayerImage(deps: PlayerImageDeps) {
   });
 
   async function onPlayerQuickSource(key: string): Promise<void> {
-    const archive = get('角色.图片档案') as Record<string, unknown> | undefined;
+    const archive = get(DEFAULT_ENGINE_PATHS.playerImageArchive) as Record<string, unknown> | undefined;
     const assetId = String((key === 'avatar' ? archive?.['已选头像图片ID'] : archive?.['已选立绘图片ID']) ?? '');
     if (!assetId || !imageService) return;
     if (playerMultiRefItems.value.length >= SEEDREAM_MAX_REFERENCE_IMAGES) return;
@@ -481,7 +481,7 @@ export function usePlayerImage(deps: PlayerImageDeps) {
             ? { id: refId, role: 'source', source: 'asset', assetId: playerRefAssetId.value, denoiseStrength: playerRefDenoise.value }
             : { id: refId, role: 'source', source: 'data_url', dataUrl: playerRefDataUrl.value!, denoiseStrength: playerRefDenoise.value };
         } else if (playerRefSource.value === 'avatar' || playerRefSource.value === 'portrait') {
-          const archive = get('角色.图片档案') as Record<string, unknown> | undefined;
+          const archive = get(DEFAULT_ENGINE_PATHS.playerImageArchive) as Record<string, unknown> | undefined;
           const assetId = playerRefSource.value === 'avatar'
             ? String(archive?.['已选头像图片ID'] ?? '')
             : String(archive?.['已选立绘图片ID'] ?? '');
@@ -520,16 +520,16 @@ export function usePlayerImage(deps: PlayerImageDeps) {
   }
 
   function setPlayerAvatar(assetId: string) {
-    const archive = { ...(get('角色.图片档案') ?? {}) } as Record<string, unknown>;
+    const archive = { ...(get(DEFAULT_ENGINE_PATHS.playerImageArchive) ?? {}) } as Record<string, unknown>;
     archive['已选头像图片ID'] = playerAvatarId.value === assetId ? '' : assetId;
-    setValue('角色.图片档案', archive);
+    setValue(DEFAULT_ENGINE_PATHS.playerImageArchive, archive);
     eventBus.emit('engine:request-save');
   }
 
   function setPlayerPortrait(assetId: string) {
-    const archive = { ...(get('角色.图片档案') ?? {}) } as Record<string, unknown>;
+    const archive = { ...(get(DEFAULT_ENGINE_PATHS.playerImageArchive) ?? {}) } as Record<string, unknown>;
     archive['已选立绘图片ID'] = playerPortraitId.value === assetId ? '' : assetId;
-    setValue('角色.图片档案', archive);
+    setValue(DEFAULT_ENGINE_PATHS.playerImageArchive, archive);
     eventBus.emit('engine:request-save');
   }
 
@@ -784,7 +784,7 @@ export function usePlayerSecretParts(deps: PlayerSecretPartsDeps) {
   }
 
   function getPlayerSecretPartAssetId(partKey: 'breast' | 'vagina' | 'anus'): string | null {
-    const archive = get('角色.图片档案') as Record<string, unknown> | undefined;
+    const archive = get(DEFAULT_ENGINE_PATHS.playerImageArchive) as Record<string, unknown> | undefined;
     const secretArchive = archive?.['香闺秘档'] as Record<string, unknown> | undefined;
     if (!secretArchive) return null;
     const cnKey = partKey === 'breast' ? '胸部' : partKey === 'vagina' ? '小穴' : '屁穴';
