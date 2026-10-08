@@ -121,7 +121,10 @@ export const TIANMING_LEGACY_NPC_KEYS = {
   locationAlias: '当前位置',
 } as const;
 
-/** Location key location-dedup reads for the NPC list; `locationFieldNames.npcList` is an array, this is not. */
+/**
+ * Location key location-dedup reads for the NPC list; `locationFieldNames.npcList` is an array, this is not.
+ * Registry entry only: location-dedup reads it as the typed property `loc.NPC`, so no code imports this yet.
+ */
 export const TIANMING_LOCATION_NPC_KEY = 'NPC';
 
 // ─── Secret-part names (image subsystem, audit E07a-010 / E07b-011) ───
