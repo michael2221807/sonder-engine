@@ -44,7 +44,32 @@ type Doc = Record<string, unknown>;
 type Outcome = { ok: unknown } | { threw: { name: string; message: string; status?: number } };
 
 async function snapDoc(id: string, doc: unknown): Promise<void> {
-  await expect(serialize(doc)).toMatchFileSnapshot(`${SNAPSHOT_DIR}/${id}.json`);
+  await expect(serialize(maskGzipFields(doc))).toMatchFileSnapshot(`${SNAPSHOT_DIR}/${id}.json`);
+}
+
+/**
+ * Masks every manifest chunk's gzip-dependent fields wherever a manifest appears in a
+ * document (request bodies are masked in describeBody; returned manifests reach here).
+ * Compressed bytes differ between zlib builds, so CI on Linux and Windows disagree on them.
+ */
+function maskGzipFields(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(maskGzipFields);
+  if (!value || typeof value !== 'object') return value;
+  const proto = Object.getPrototypeOf(value);
+  if (proto !== Object.prototype && proto !== null) return value;
+  const out: Doc = {};
+  for (const [k, v] of Object.entries(value as Doc)) {
+    if (k === 'chunks' && Array.isArray(v)) {
+      out[k] = v.map((c) =>
+        c && typeof c === 'object' && 'compressedSize' in (c as Doc)
+          ? { ...(maskGzipFields(c) as Doc), checksum: '<gz>', compressedSize: '<gz>' }
+          : maskGzipFields(c),
+      );
+    } else {
+      out[k] = maskGzipFields(v);
+    }
+  }
+  return out;
 }
 
 // ─── the fake GitHub ───
