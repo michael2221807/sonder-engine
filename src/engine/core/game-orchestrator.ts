@@ -18,13 +18,7 @@
 import { PipelineRunner } from '../pipeline/pipeline-runner';
 import { RoundOwnership, type RoundSlot } from './round-ownership';
 import { runPostRound } from './post-round';
-import { SettingCaptureStage } from '../pipeline/stages/setting-capture';
-import { parseSettingTagNames } from '../prompt/setting-tag-scanner';
-import { parseAnchorStopwords } from '../prompt/captured-entry-mutations';
-import { DEFAULT_PROMPT_SETTINGS } from '../prompt/world-book';
-import { FALLBACK_CAPTURED_LABELS } from '../prompt/captured-entry-mutations';
-import type { PromptSettings } from '../prompt/world-book';
-import type { CapturedSettingLabels } from '../prompt/captured-entry-mutations';
+import { addRoundStages, buildOpeningStages } from './stage-assembly';
 
 /** 从 localStorage 读取 AI 生成设置（每回合调用，确保设置变更立即生效） */
 function readAISettings(): { streaming: boolean; splitGen: boolean; contextCompiler: boolean } {
@@ -56,15 +50,6 @@ function generateId(): string {
     return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
   });
 }
-import { PreProcessStage } from '../pipeline/stages/pre-process';
-import { ContextAssemblyStage } from '../pipeline/stages/context-assembly';
-import { AICallStage } from '../pipeline/stages/ai-call';
-import { ResponseRepairStage } from '../pipeline/stages/response-repair';
-import { BodyPolishStage } from '../pipeline/stages/body-polish-stage';
-import { ReasoningIngestStage } from '../pipeline/stages/reasoning-ingest';
-import { CommandExecutionStage } from '../pipeline/stages/command-execution';
-import { PostProcessStage } from '../pipeline/stages/post-process';
-import { RenderStage } from '../pipeline/stages/render';
 import { eventBus } from './event-bus';
 import { useEngineStateStore } from '../stores/engine-state';
 import { useActionQueueStore } from '../stores/engine-action-queue';
@@ -103,7 +88,6 @@ import type { NpcMemorySummarizer } from '../social/npc-memory-summarizer';
 import type { ImageService } from '../image/image-service';
 import type { TtsService } from '../tts/tts-service';
 import type { OpeningStages } from '../pipeline/sub-pipelines/enhanced-opening';
-import { SYSTEM_PATHS } from '../pipeline/system-paths';
 
 /**
  * 子管线包 — 由 main.ts 在 bootstrap 期间构造并注入 GameOrchestrator。
@@ -292,80 +276,24 @@ export class GameOrchestrator {
     };
 
     this.runner = new PipelineRunner();
-    this.runner.addStage(new PreProcessStage(stateManager, actionQueue, paths));
-    this.runner.addStage(
-      new ContextAssemblyStage(
-        stateManager,
-        promptAssembler,
-        memoryRetriever,
-        behaviorRunner,
-        pack,
-        paths,
-        engramManager,    // E.2: 用于读取 retrievalMode
-        unifiedRetriever, // E.2: hybrid 路径使用
-        () => subPipelines.worldBooks ?? [],    // World book getter (supports live updates)
-        true, // useNewBuilder — enable context-piece prompt assembly
-        // gproxy cache flag — read live from the resolved main LLM config each round
-        () => aiService.getConfigForUsage('main')?.gproxyPromptCache === true,
-        ctx => subPipelines.plotVector?.promptTransform?.(ctx),
-      ),
-    );
-    if (subPipelines.plotVector) {
-      const port = subPipelines.plotVector;
-      this.runner.addStage({ name: 'PlotVector', execute: ctx => port.prepare(ctx) });
-    }
-    this.runner.addStage(new AICallStage(aiService, responseParser));
-    // 2026-04-19 修复 \你 stutter：当 ResponseParser 三个 tryParseJson 策略 +
-    // escape sanitizer 都救不回来时（JSON 被截断 / 缺闭合括号 等严重畸形），
-    // 这里发一次修复调用把 commands / memory / options 抢回来，避免本回合
-    // 状态变更全部丢失。no-op 当 parseOk=true。
-    this.runner.addStage(new ResponseRepairStage(aiService, responseParser));
-    // Phase 4 (2026-04-19): polish between AICall and ReasoningIngest so
-    // `parsedResponse.text` is polished before PostProcess persists the
-    // narrative entry. Previous sub-pipeline implementation ran AFTER the
-    // pipeline — too late, the original text was already stored.
-    this.runner.addStage(new BodyPolishStage(aiService, stateManager, promptAssembler));
-    this.runner.addStage(new ReasoningIngestStage(stateManager, paths));
-    this.runner.addStage(new CommandExecutionStage(commandExecutor, behaviorRunner, stateManager, paths));
-    // Canon Capture — after commands are applied, before PostProcess persists history
-    // and triggers the auto-save, so the captured settings are part of the SAME round
-    // (and therefore the same rollback unit) as the narrative that introduced them.
-    this.runner.addStage(
-      new SettingCaptureStage(stateManager, paths, {
-        isEnabled: () => {
-          const settings: PromptSettings = {
-            ...DEFAULT_PROMPT_SETTINGS,
-            ...(stateManager.get<Partial<PromptSettings>>(SYSTEM_PATHS.promptSettings) ?? {}),
-          };
-          // The world-book master switch gates BOTH extraction and injection; the
-          // feature switch gates extraction only (existing entries keep working).
-          return settings.enableWorldBook !== false && settings.enableSettingCapture !== false;
-        },
-        getTagNames: () => parseSettingTagNames(pack.engineFragments?.settingTagNames),
-        getAnchorStopwords: () => parseAnchorStopwords(pack.engineFragments?.settingAnchorStopwords),
-        getLabels: (): CapturedSettingLabels => ({
-          bookTitle: pack.engineFragments?.settingBookTitle ?? FALLBACK_CAPTURED_LABELS.bookTitle,
-          kind: {
-            character: pack.engineFragments?.settingKindCharacter ?? FALLBACK_CAPTURED_LABELS.kind.character,
-            relationship: pack.engineFragments?.settingKindRelationship ?? FALLBACK_CAPTURED_LABELS.kind.relationship,
-            world_fact: pack.engineFragments?.settingKindWorldFact ?? FALLBACK_CAPTURED_LABELS.kind.world_fact,
-          },
-        }),
-      }),
-    );
-    this.runner.addStage(
-      new PostProcessStage(
-        stateManager,
-        memoryManager,
-        engramManager,
-        behaviorRunner,
-        saveManager,
-        paths,
-        getActiveSlot,
-        subPipelines.plotVector,
-      ),
-    );
-    this.runner.addStage(new RenderStage());
+    addRoundStages(this.runner, {
+      stateManager,
+      commandExecutor,
+      behaviorRunner,
+      aiService,
+      responseParser,
+      promptAssembler,
+      memoryManager,
+      memoryRetriever,
+      engramManager,
+      saveManager,
+      pack,
+      paths,
+      unifiedRetriever,
+      subPipelines,
+      getActiveSlot,
+      actionQueue,
+    });
 
     this.subscribeToEvents(stateManager);
   }
@@ -707,38 +635,23 @@ export class GameOrchestrator {
    * The opening pipeline calls stage.execute() manually instead of going through PipelineRunner.
    */
   public createStagesForOpening(): OpeningStages {
-    return {
-      contextAssembly: new ContextAssemblyStage(
-        this._stateManager,
-        this._promptAssembler,
-        this._memoryRetriever,
-        this._behaviorRunner,
-        this._pack,
-        this._paths,
-        this.engramManager,
-        this._unifiedRetriever,
-        () => this.subPipelines.worldBooks ?? [],
-        // Use legacy flow-based path so step1/step2FlowOverride works
-        false,
-      ),
-      aiCall: new AICallStage(this._aiService, this._responseParser),
-      bodyPolish: new BodyPolishStage(this._aiService, this._stateManager, this._promptAssembler),
-      commandExecution: new CommandExecutionStage(
-        this._commandExecutor,
-        this._behaviorRunner,
-        this._stateManager,
-        this._paths,
-      ),
-      postProcess: new PostProcessStage(
-        this._stateManager,
-        this.memoryManager,
-        this.engramManager,
-        this._behaviorRunner,
-        this._saveManager,
-        this._paths,
-        this._getActiveSlot,
-      ),
-    };
+    return buildOpeningStages({
+      stateManager: this._stateManager,
+      commandExecutor: this._commandExecutor,
+      behaviorRunner: this._behaviorRunner,
+      aiService: this._aiService,
+      responseParser: this._responseParser,
+      promptAssembler: this._promptAssembler,
+      memoryManager: this.memoryManager,
+      memoryRetriever: this._memoryRetriever,
+      engramManager: this.engramManager,
+      saveManager: this._saveManager,
+      pack: this._pack,
+      paths: this._paths,
+      unifiedRetriever: this._unifiedRetriever,
+      subPipelines: this.subPipelines,
+      getActiveSlot: this._getActiveSlot,
+    });
   }
 
   /** 销毁 Orchestrator — 应在 app 卸载时调用（防止内存泄漏） */
