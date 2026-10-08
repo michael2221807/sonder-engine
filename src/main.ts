@@ -53,20 +53,11 @@ import './ui/styles/mobile.css';
 })();
 
 import { eventBus } from './engine/core/event-bus';
-import { GamePackLoader } from './engine/core/pack-loader';
-import { ConfigRegistry, ConfigStore, ConfigResolver } from './engine/core/config-system';
 import { StateManager } from './engine/core/state-manager';
 import { CommandExecutor, composePushGuards, schemaNumberBounds, schemaDeclaresArray, schemaDeclaresPath } from './engine/core/command-executor';
 import { buildMemoryPushDedupGuard } from './engine/social/memory-dedup';
 import { buildRelationshipMergeGuard } from './engine/social/relationship-merge-guard';
 import { BehaviorRunner } from './engine/behaviors/behavior-runner';
-import { AIService, applyPersistedAISettings } from './engine/ai/ai-service';
-import { ResponseParser } from './engine/ai/response-parser';
-import { PromptRegistry } from './engine/prompt/prompt-registry';
-import { hydratePromptRegistry, migrateLegacyBuiltinOverrides, resplitPromptEdits } from './engine/prompt/prompt-edits';
-import { isPromptAlwaysOn } from './engine/prompt/builtin-slots';
-import { TemplateEngine } from './engine/prompt/template-engine';
-import { PromptAssembler } from './engine/prompt/prompt-assembler';
 import { CharacterInitPipeline } from './engine/pipeline/sub-pipelines/character-init';
 import { MemorySummaryPipeline } from './engine/pipeline/sub-pipelines/memory-summary';
 import { MidTermRefinePipeline } from './engine/pipeline/sub-pipelines/mid-term-refine';
@@ -100,7 +91,6 @@ import { providerCatalog, measureConnectionTest } from './engine/providers';
 import { migrateImageState } from './engine/image/save-migration';
 import { NpcChatPipeline } from './engine/pipeline/sub-pipelines/npc-chat';
 import { DEFAULT_ENGINE_PATHS } from './engine/pipeline/types';
-import { setBootstrapGamePack } from './engine/bootstrap-pack';
 import { TimeService, gameCalendar } from './engine/behaviors/time-service';
 import { NpcDedupModule } from './engine/behaviors/npc-dedup';
 import { NpcMainRoundUpdateModule } from './engine/behaviors/npc-main-round-update';
@@ -127,20 +117,10 @@ import { parseSupplyRules, warmSupplyRatings } from './features/plot-vector/supp
 import { parseVectorPromptPolicy } from './features/plot-vector/prompt-policy';
 import type { ComputedFieldConfig, ThresholdTriggerConfig, IntegrityRule, EffectLifecycleConfig, NpcBehaviorConfig, ContentFilterConfig } from './engine/types';
 
-import { ProfileManager } from './engine/persistence/profile-manager';
-import { SaveManager } from './engine/persistence/save-manager';
-import { migrationRegistry } from './engine/persistence/migration-registry';
 import { requestPersistentStorage } from './engine/persistence/idb-adapter';
-import { BackupService } from './engine/persistence/backup-service';
-import { GameCardExportService } from './engine/export/game-card-export-service';
 import { GameCardImportService } from './engine/export/game-card-import-service';
-import { ImageAssetCache } from './engine/image/asset-cache';
 import { GitHubSyncService } from './engine/sync/github-sync';
 import { LanSyncService } from './engine/sync/lan-sync';
-import { PromptStorage } from './engine/prompt/prompt-storage';
-import { VectorStore } from './engine/memory/engram/vector-store';
-import { CustomPresetStore } from './engine/persistence/custom-preset-store';
-import { WorldBookStorage } from './engine/prompt/world-book-storage';
 import { AssistantService } from './engine/services/assistant/assistant-service';
 import { PayloadApplier } from './engine/services/assistant/payload-applier';
 import { PayloadValidator } from './engine/services/assistant/payload-validator';
@@ -153,7 +133,10 @@ import { useEngramDebugStore } from './engine/stores/engram-debug';
 
 import { useActionQueueStore } from './engine/stores/engine-action-queue';
 import { usePromptDebugStore } from './engine/stores/engine-prompt';
-import { useAPIManagementStore } from './engine/stores/engine-api';
+import { createAiStack } from './bootstrap/ai-stack';
+import { createPersistenceStack } from './bootstrap/persistence-stack';
+import { loadPackAndMigrations } from './bootstrap/pack-and-migrations';
+import { createPromptStack } from './bootstrap/prompt-stack';
 
 async function bootstrap(): Promise<void> {
   const app = createApp(App);
@@ -170,152 +153,13 @@ async function bootstrap(): Promise<void> {
     i18n.global.locale.value = 'zh-CN';
   }
 
-  const apiStore = useAPIManagementStore();
-  apiStore.loadFromStorage();
+  const { aiService } = createAiStack();
 
-  const aiService = new AIService();
-  aiService.setConfigs([...apiStore.apiConfigs]);
-  aiService.setAssignments([...apiStore.apiAssignments]);
+  const { profileManager, saveManager, configRegistry, configStore, configResolver, promptStorage, vectorStore, customPresetStore, imageAssetCacheForBackup, worldBookStorage, backupService, gameCardExportService } = await createPersistenceStack();
 
-  // ── CR-7 fix: 从 localStorage 恢复 AI 生成设置到 aiService ──
-  // APIPanel 在 B.1.4 中将 maxRetries 持久化到 'aga_ai_settings'，
-  // 但仅在用户主动保存时同步到 aiService。此处在启动时补做一次同步。
-  // 共享 helper —— 与 ManagementView 全量导入后的恢复逻辑共用，避免分叉。
-  applyPersistedAISettings(aiService);
+  const pack = await loadPackAndMigrations({ saveManager, customPresetStore });
 
-  // ── Low-load mode: SettingsPanel emits event → sync to aiService ──
-  eventBus.on<{ enabled: boolean; maxRequests: number }>('ai:rate-limiter-config', (payload) => {
-    if (!payload) return;
-    aiService.configureRateLimiter({
-      enabled: payload.enabled,
-      maxRequests: payload.maxRequests,
-      windowMs: 60_000,
-    });
-  });
-
-  // ── #9: 响应式同步 API 配置变更到 AIService ──
-  // 用户在 APIPanel 修改配置后，store 更新，watch 立即同步到 AIService 实例，
-  // 无需刷新页面。必须在 pinia 激活后 (app.use(pinia) 之后) 调用 watch。
-  watch(() => apiStore.apiConfigs, (configs) => {
-    aiService.setConfigs([...configs]);
-  }, { deep: true });
-  watch(() => apiStore.apiAssignments, (assignments) => {
-    aiService.setAssignments([...assignments]);
-  }, { deep: true });
-
-  const profileManager = new ProfileManager();
-  await profileManager.initialize();
-  const saveManager = new SaveManager(profileManager);
-
-  const configRegistry = new ConfigRegistry();
-  const configStore = new ConfigStore();
-  const configResolver = new ConfigResolver(configRegistry, configStore);
-
-  configRegistry.register({
-    id: 'enhancedOpening',
-    name: 'Enhanced Opening Settings',
-    description: 'Story 0 enhanced opening pipeline user preferences',
-    schema: {},
-    version: 1,
-    defaultSource: 'ui/creation',
-  });
-
-  const promptStorage = new PromptStorage();
-  const vectorStore = new VectorStore();
-  // 2026-04-14：用户自定义创角预设仓库（按 packId 隔离）
-  const customPresetStore = new CustomPresetStore();
-  const imageAssetCacheForBackup = new ImageAssetCache();
-  const worldBookStorage = new WorldBookStorage();
-  const backupService = new BackupService(
-    profileManager,
-    saveManager,
-    configStore,
-    promptStorage,
-    vectorStore,
-    customPresetStore,
-    imageAssetCacheForBackup,
-    worldBookStorage,
-  );
-
-  // Story 5: game-card export service (shares backup's stores; default strip paths from DEFAULT_ENGINE_PATHS).
-  const gameCardExportService = new GameCardExportService(
-    saveManager,
-    configStore,
-    promptStorage,
-    worldBookStorage,
-    customPresetStore,
-    imageAssetCacheForBackup,
-  );
-
-
-  const packLoader = new GamePackLoader();
-  let pack = null;
-  try {
-    pack = await packLoader.load('tianming', i18n.global.locale.value);
-    setBootstrapGamePack(pack);
-  } catch (err) {
-    console.warn('[Bootstrap] Game Pack load failed:', err);
-    setBootstrapGamePack(null);
-  }
-
-  // §5.2 GAP fix：把当前 pack 版本传给 SaveManager，启用 schema 迁移链
-  if (pack?.manifest.version) {
-    saveManager.setCurrentPackVersion(pack.manifest.version);
-  }
-
-  // Register save migrations (built-in + custom presets merged for name→description lookup)
-  if (pack) {
-    type P = { name: string; description?: string };
-    const toP = (entries: Record<string, unknown>[]): P[] =>
-      entries
-        .filter((e) => typeof e['name'] === 'string')
-        .map((e) => ({ name: e['name'] as string, description: typeof e['description'] === 'string' ? e['description'] : undefined }));
-    const merge = (builtIn: unknown[], custom: Record<string, unknown>[]): P[] => [
-      ...toP(builtIn as Record<string, unknown>[]),
-      ...toP(custom),
-    ];
-    const [customOrigins, customTraits, customTalents] = await Promise.all([
-      customPresetStore.get(pack.manifest.id, 'origins'),
-      customPresetStore.get(pack.manifest.id, 'traits'),
-      customPresetStore.get(pack.manifest.id, 'talents'),
-    ]);
-    const { createBackfillIdentityDescriptionsMigration } = await import(
-      '@/engine/persistence/migrations/backfill-identity-descriptions'
-    );
-    migrationRegistry.register(
-      createBackfillIdentityDescriptionsMigration(
-        merge(pack.presets['origins'] ?? [], customOrigins),
-        merge(pack.presets['traits'] ?? [], customTraits),
-        merge(pack.presets['talents'] ?? [], customTalents),
-      ),
-    );
-  }
-
-  const promptRegistry = new PromptRegistry();
-  if (pack) promptRegistry.registerPack(pack.prompts, isPromptAlwaysOn);
-
-  // The prompt page's edits (prompt-edits.ts): loaded now, and again whenever something replaces them.
-  if (pack) {
-    const packId = pack.manifest.id, promptIds = Object.keys(pack.prompts);
-    // An edit made before the pack split a prompt in two is re-split first (code review M1, 2026-10-05).
-    const loadEdits = (): void => {
-      resplitPromptEdits(packId, pack.manifest.promptSplits ?? [], pack.prompts);
-      hydratePromptRegistry(promptRegistry, packId, promptIds);
-    };
-    loadEdits();
-    eventBus.on<{ packId?: string }>('prompt:edits-replaced', (payload) => {
-      if (!payload?.packId || payload.packId === packId) loadEdits();
-    });
-    // The retired world-book slot-override store: what a restored backup or an old card import left there joins the
-    // page's edits once (P7 A). Async; the registry reloads when anything moved.
-    void migrateLegacyBuiltinOverrides(worldBookStorage, packId)
-      .then((moved) => { if (moved > 0) eventBus.emit('prompt:edits-replaced', { packId }); })
-      .catch((err: unknown) => console.warn('[PromptEdits] Moving old built-in prompt overrides failed:', err));
-  }
-
-  const templateEngine = new TemplateEngine();
-  const responseParser = new ResponseParser();
-  const promptAssembler = new PromptAssembler(promptRegistry, templateEngine);
+  const { promptRegistry, responseParser, promptAssembler } = createPromptStack({ pack, worldBookStorage });
 
   const stateManager = new StateManager();
 
