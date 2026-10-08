@@ -8,3 +8,5 @@ src/engine/pipeline/__snapshots__/path-contract/*.json text eol=lf
 src/engine/persistence/__snapshots__/**/*.json text eol=lf
 src/engine/sync/__snapshots__/**/*.json text eol=lf
 src/engine/memory/__snapshots__/**/*.json text eol=lf
+src/engine/core/__snapshots__/**/*.json text eol=lf
+src/bootstrap/__snapshots__/**/*.json text eol=lf

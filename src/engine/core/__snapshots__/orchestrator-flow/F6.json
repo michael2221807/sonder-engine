@@ -1,0 +1,36 @@
+{
+  "outcomes": [
+    {
+      "resolved": true
+    }
+  ],
+  "log": [
+    [
+      "event",
+      "pipeline:input-rejected",
+      {
+        "text": "编辑中"
+      }
+    ],
+    [
+      "event",
+      "ui:toast",
+      {
+        "type": "info",
+        "i18nKey": "mainGame.toast.roundBusy",
+        "message": "上一项操作仍在收尾，输入已保留，请稍后发送。",
+        "duration": 3000
+      }
+    ]
+  ],
+  "after": {
+    "isBusy": false,
+    "pendingSave": null,
+    "stateRevision": 0,
+    "roundNumber": 5,
+    "activeSlot": {
+      "profileId": "p1",
+      "slotId": "s1"
+    }
+  }
+}

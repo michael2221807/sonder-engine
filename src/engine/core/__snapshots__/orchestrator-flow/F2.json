@@ -1,0 +1,234 @@
+{
+  "outcomes": [
+    {
+      "resolved": true
+    },
+    {
+      "resolved": true
+    }
+  ],
+  "log": [
+    [
+      "run",
+      "start",
+      {
+        "userInput": "会失败",
+        "originalUserInput": "会失败",
+        "actionQueuePrompt": "",
+        "stateSnapshot": {},
+        "chatHistory": [],
+        "messages": [],
+        "roundNumber": 0,
+        "generationId": "<gen#1>",
+        "meta": {
+          "splitGen": false,
+          "contextCompiler": true,
+          "roundOwnership": "<RoundOwnership>"
+        },
+        "abortSignal": "<AbortSignal aborted=false>",
+        "onStreamChunk": "<fn>"
+      }
+    ],
+    [
+      "event",
+      "engine:round-start",
+      {
+        "roundNumber": 0
+      }
+    ],
+    [
+      "state",
+      "set",
+      "元数据.上次对话前快照",
+      {
+        "keys": [
+          "元数据",
+          "角色",
+          "世界",
+          "社交",
+          "系统",
+          "记忆"
+        ],
+        "round": 5,
+        "location": "长安"
+      },
+      "system"
+    ],
+    [
+      "event",
+      "engine:state-changed",
+      {
+        "path": "元数据.上次对话前快照",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "state",
+      "set",
+      "元数据.回合序号",
+      6,
+      "system"
+    ],
+    [
+      "event",
+      "engine:state-changed",
+      {
+        "path": "元数据.回合序号",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "state",
+      "set",
+      "角色.基础信息.当前位置",
+      "洛阳",
+      "system"
+    ],
+    [
+      "event",
+      "engine:state-changed",
+      {
+        "path": "角色.基础信息.当前位置",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "event",
+      "engine:round-error",
+      {
+        "stage": "AICall",
+        "error": "<Error: model down>"
+      }
+    ],
+    [
+      "console",
+      "error",
+      "[Orchestrator] Pipeline error:",
+      "<Error: model down>"
+    ],
+    [
+      "state",
+      "rollbackTo",
+      {
+        "keys": [
+          "元数据",
+          "角色",
+          "世界",
+          "社交",
+          "系统",
+          "记忆"
+        ],
+        "round": 5,
+        "location": "长安"
+      },
+      [
+        "系统.设置",
+        "系统.actionOptions",
+        "系统.nsfwMode",
+        "系统.nsfwGenderFilter",
+        "世界.状态.心跳.配置",
+        "世界.状态.心跳.历史条数",
+        "世界.状态.心跳.遗忘回合数",
+        "系统.扩展.image.enabled",
+        "系统.扩展.image.config",
+        "系统.npcDemotionThreshold"
+      ]
+    ],
+    [
+      "event",
+      "engine:state-changed",
+      {
+        "type": "rollback"
+      }
+    ],
+    [
+      "call",
+      "memoryManager.clearConfigCache",
+      [],
+      {
+        "busy": true
+      }
+    ],
+    [
+      "call",
+      "engram.syncVectorsToState",
+      {
+        "isStateManager": true
+      }
+    ],
+    [
+      "console",
+      "log",
+      "[Orchestrator] Auto-rolled back to pre-round snapshot after pipeline error"
+    ],
+    [
+      "event",
+      "ai:error",
+      {
+        "error": "<Error: model down>"
+      }
+    ],
+    [
+      "run",
+      "start",
+      {
+        "userInput": "更早失败",
+        "originalUserInput": "更早失败",
+        "actionQueuePrompt": "",
+        "stateSnapshot": {},
+        "chatHistory": [],
+        "messages": [],
+        "roundNumber": 0,
+        "generationId": "<gen#2>",
+        "meta": {
+          "splitGen": false,
+          "contextCompiler": true,
+          "roundOwnership": "<RoundOwnership>"
+        },
+        "abortSignal": "<AbortSignal aborted=false>",
+        "onStreamChunk": "<fn>"
+      }
+    ],
+    [
+      "event",
+      "engine:round-start",
+      {
+        "roundNumber": 0
+      }
+    ],
+    [
+      "event",
+      "engine:round-error",
+      {
+        "stage": "AICall",
+        "error": "<Error: model down>"
+      }
+    ],
+    [
+      "console",
+      "error",
+      "[Orchestrator] Pipeline error:",
+      "<Error: model down>"
+    ],
+    [
+      "event",
+      "ai:error",
+      {
+        "error": "<Error: model down>"
+      }
+    ]
+  ],
+  "after": {
+    "isBusy": false,
+    "pendingSave": null,
+    "stateRevision": 1,
+    "roundNumber": 5,
+    "activeSlot": {
+      "profileId": "p1",
+      "slotId": "s1"
+    }
+  }
+}

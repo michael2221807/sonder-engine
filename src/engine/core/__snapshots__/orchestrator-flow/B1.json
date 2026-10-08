@@ -1,0 +1,207 @@
+{
+  "outcomes": [],
+  "log": [
+    [
+      "probe",
+      "before",
+      [
+        {
+          "id": "wb0",
+          "name": "初始世界书"
+        }
+      ]
+    ],
+    [
+      "event",
+      "worldbook:updated",
+      [
+        {
+          "id": "wb1",
+          "name": "新世界书"
+        }
+      ]
+    ],
+    [
+      "probe",
+      "after update, same array",
+      true,
+      true
+    ],
+    [
+      "event",
+      "worldbook:updated",
+      "__undefined__"
+    ],
+    [
+      "probe",
+      "after undefined",
+      []
+    ],
+    [
+      "event",
+      "ui:debug-prompt",
+      {
+        "flow": "mainRound",
+        "variables": {
+          "A": "1"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        "messageSources": [
+          "s1"
+        ],
+        "generationId": "g1",
+        "roundNumber": 6,
+        "compileTrace": {
+          "pieces": []
+        }
+      }
+    ],
+    [
+      "store",
+      "promptDebug.recordAssembly",
+      [
+        "mainRound",
+        [
+          {
+            "role": "user",
+            "content": "hi"
+          }
+        ],
+        {
+          "A": "1"
+        },
+        6,
+        [
+          "s1"
+        ],
+        "g1",
+        {
+          "pieces": []
+        }
+      ]
+    ],
+    [
+      "event",
+      "ui:debug-prompt",
+      {
+        "flow": "sparse"
+      }
+    ],
+    [
+      "store",
+      "promptDebug.recordAssembly",
+      [
+        "sparse",
+        [],
+        {},
+        "__undefined__",
+        "__undefined__",
+        "__undefined__",
+        "__undefined__"
+      ]
+    ],
+    [
+      "event",
+      "ui:debug-prompt",
+      "__undefined__"
+    ],
+    [
+      "event",
+      "ui:debug-prompt-response",
+      {
+        "flow": "mainRound",
+        "generationId": "g1",
+        "thinking": "think",
+        "rawResponse": "raw"
+      }
+    ],
+    [
+      "store",
+      "promptDebug.attachResponse",
+      [
+        {
+          "generationId": "g1",
+          "flowId": "mainRound"
+        },
+        {
+          "thinking": "think",
+          "rawResponse": "raw"
+        }
+      ]
+    ],
+    [
+      "event",
+      "ui:debug-prompt-response",
+      "__undefined__"
+    ],
+    [
+      "event",
+      "ui:debug-prompt",
+      {
+        "flow": "mainRound",
+        "messages": []
+      }
+    ],
+    [
+      "store",
+      "promptDebug.recordAssembly",
+      [
+        "mainRound",
+        [],
+        {},
+        "__undefined__",
+        "__undefined__",
+        "__undefined__",
+        "__undefined__"
+      ]
+    ],
+    [
+      "console",
+      "warn",
+      "[Orchestrator] promptDebug.recordAssembly skipped:",
+      "<Error: pinia not ready>"
+    ],
+    [
+      "event",
+      "ui:debug-prompt-response",
+      {
+        "flow": "mainRound"
+      }
+    ],
+    [
+      "store",
+      "promptDebug.attachResponse",
+      [
+        {
+          "generationId": "__undefined__",
+          "flowId": "mainRound"
+        },
+        {
+          "thinking": "__undefined__",
+          "rawResponse": "__undefined__"
+        }
+      ]
+    ],
+    [
+      "console",
+      "warn",
+      "[Orchestrator] promptDebug.attachResponse skipped:",
+      "<Error: pinia not ready>"
+    ]
+  ],
+  "after": {
+    "isBusy": false,
+    "pendingSave": null,
+    "stateRevision": 0,
+    "roundNumber": 5,
+    "activeSlot": {
+      "profileId": "p1",
+      "slotId": "s1"
+    }
+  }
+}

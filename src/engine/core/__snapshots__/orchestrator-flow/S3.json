@@ -1,0 +1,68 @@
+{
+  "outcomes": [],
+  "log": [
+    [
+      "event",
+      "engine:request-save",
+      "__undefined__"
+    ],
+    [
+      "save",
+      "start",
+      {
+        "profileId": "p1",
+        "slotId": "s1",
+        "round": 5,
+        "treeIsLive": true,
+        "meta": "__undefined__"
+      }
+    ],
+    [
+      "state",
+      "loadTree",
+      [
+        "元数据",
+        "角色",
+        "世界",
+        "社交",
+        "系统",
+        "记忆"
+      ]
+    ],
+    [
+      "event",
+      "engine:state-changed",
+      {
+        "type": "load"
+      }
+    ],
+    [
+      "save",
+      "guard-threw",
+      "存档已切换，取消旧保存请求"
+    ],
+    [
+      "console",
+      "error",
+      "[Orchestrator] engine:request-save failed:",
+      "<Error: 存档已切换，取消旧保存请求>"
+    ],
+    [
+      "event",
+      "engine:save-error",
+      {
+        "error": "存档已切换，取消旧保存请求"
+      }
+    ]
+  ],
+  "after": {
+    "isBusy": false,
+    "pendingSave": null,
+    "stateRevision": 1,
+    "roundNumber": 5,
+    "activeSlot": {
+      "profileId": "p1",
+      "slotId": "s1"
+    }
+  }
+}

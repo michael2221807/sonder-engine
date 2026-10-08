@@ -1,0 +1,211 @@
+{
+  "outcomes": [],
+  "log": [
+    [
+      "call",
+      "memoryManager.shouldSummarizeLongTerm",
+      [],
+      {
+        "busy": true
+      }
+    ],
+    [
+      "call",
+      "memoryManager.shouldRefineMidTerm",
+      [],
+      {
+        "busy": true
+      }
+    ],
+    [
+      "call",
+      "characterVectorPropose.execute",
+      [],
+      {
+        "busy": true
+      }
+    ],
+    [
+      "call",
+      "memoryManager.shouldCompactLongTerm",
+      [],
+      {
+        "busy": true
+      }
+    ],
+    [
+      "call",
+      "worldHeartbeat.execute",
+      [],
+      {
+        "busy": true
+      }
+    ],
+    [
+      "state",
+      "set",
+      "世界.状态.心跳.上次心跳回合序号",
+      6,
+      "system"
+    ],
+    [
+      "event",
+      "engine:state-changed",
+      {
+        "path": "世界.状态.心跳.上次心跳回合序号",
+        "action": "set",
+        "source": "system"
+      }
+    ],
+    [
+      "call",
+      "fieldRepair.execute",
+      [],
+      {
+        "busy": true
+      }
+    ],
+    [
+      "event",
+      "ui:toast",
+      {
+        "type": "info",
+        "i18nKey": "engine.toast.autoSceneGenStart",
+        "message": "正在自动生成场景图…",
+        "duration": 2000
+      }
+    ],
+    [
+      "call",
+      "imageService.collectSceneRoleAnchors",
+      [],
+      {
+        "busy": true
+      }
+    ],
+    [
+      "call",
+      "imageService.generateSceneImage",
+      [
+        {
+          "sceneDescription": "开局正文",
+          "location": "长安",
+          "gameTime": {
+            "年": 1,
+            "月": 10,
+            "日": 3,
+            "小时": 21,
+            "分钟": 30
+          },
+          "weather": "小雨",
+          "festival": {
+            "名称": "中秋节"
+          },
+          "environment": [
+            {
+              "名称": "雾气"
+            }
+          ],
+          "backend": "novelai",
+          "compositionMode": "story_snapshot",
+          "preset": {
+            "id": "auto_scene",
+            "name": "auto scene",
+            "positivePrefix": "",
+            "positiveSuffix": "",
+            "negative": "",
+            "source": "auto",
+            "width": 832,
+            "height": 1216
+          },
+          "presentNpcs": [
+            "林暖"
+          ],
+          "roleAnchors": [
+            {
+              "npcName": "林暖",
+              "positive": "1girl"
+            }
+          ]
+        }
+      ],
+      {
+        "busy": true
+      }
+    ],
+    [
+      "call",
+      "ttsService.clearRoundAudio",
+      [],
+      {
+        "busy": true
+      }
+    ],
+    [
+      "call",
+      "ttsService.getSettings",
+      [],
+      {
+        "busy": true
+      }
+    ],
+    [
+      "call",
+      "npcMemorySummarizer.findCandidates",
+      [],
+      {
+        "busy": true
+      }
+    ],
+    [
+      "event",
+      "engine:request-save",
+      "__undefined__"
+    ],
+    [
+      "event",
+      "ui:toast",
+      {
+        "type": "success",
+        "i18nKey": "engine.toast.autoSceneGenComplete",
+        "message": "场景图已生成",
+        "duration": 2000
+      }
+    ],
+    [
+      "save",
+      "start",
+      {
+        "profileId": "p1",
+        "slotId": "s1",
+        "round": 5,
+        "treeIsLive": true,
+        "meta": "__undefined__"
+      }
+    ],
+    [
+      "save",
+      "committed"
+    ],
+    [
+      "event",
+      "engine:sub-pipelines-done",
+      "__undefined__"
+    ],
+    [
+      "probe",
+      "isBusy after",
+      false
+    ]
+  ],
+  "after": {
+    "isBusy": false,
+    "pendingSave": null,
+    "stateRevision": 0,
+    "roundNumber": 5,
+    "activeSlot": {
+      "profileId": "p1",
+      "slotId": "s1"
+    }
+  }
+}
