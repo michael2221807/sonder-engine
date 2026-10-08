@@ -263,7 +263,7 @@ export interface CivitaiLoraSnapshot {
 
 // ── Artist Preset types (promoted from ImagePanel.vue) ──
 
-export interface PngMeta {
+interface PngMeta {
   source?: string;
   originalPrompt?: string;
   rawText?: string;
@@ -285,27 +285,11 @@ export interface ArtistPreset {
 // ── Re-exports from reference-types and provider-capabilities ──
 
 export type {
-  ImageReferenceRole,
-  ImageReferenceSource,
   ImageReferenceInput,
-  ImageGenerationMode,
-  ImageGenerationReferenceParams,
   ImageUnderstandingEngine,
-  ImageUnderstandingTask,
   ImageUnderstandingRequest,
-  ImageUnderstandingTag,
   ImageUnderstandingResult,
   ReferenceLibraryEntry,
 } from './reference-types';
 
-export type {
-  ImageToImageProvider,
-  ImageUnderstandingProvider,
-  ImageProviderCapabilities,
-} from './provider-capabilities';
 
-export {
-  supportsImageToImage,
-  supportsImageUnderstanding,
-  PROVIDER_CAPABILITIES,
-} from './provider-capabilities';

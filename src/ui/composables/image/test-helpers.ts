@@ -7,7 +7,7 @@ import { reactive } from 'vue';
 import { vi } from 'vitest';
 import type { PanelTranslate } from './panel-deps';
 
-export type StateWrites = Array<[string, unknown]>;
+type StateWrites = Array<[string, unknown]>;
 
 export function makeStateAccess(initial: Record<string, unknown> = {}) {
   const tree = reactive<Record<string, unknown>>({ ...initial });

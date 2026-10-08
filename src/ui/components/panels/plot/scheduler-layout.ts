@@ -131,7 +131,7 @@ function finishLayout(ordered: PlotArc[], laid: Map<string, LayoutLane>, current
 
 export type AxisMode = 'round' | 'date';
 
-export interface AxisTick {
+interface AxisTick {
   /** Pixel x. */
   x: number;
   /** Primary label: `R12` on the round axis, date on the date axis. */

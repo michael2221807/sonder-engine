@@ -12,7 +12,6 @@
 import { openDB, type IDBPDatabase } from 'idb';
 import type {
   WorldBook,
-  WorldBookEntry,
   BuiltinPromptEntry,
   WorldBookPresetGroup,
   WorldBookExportData,
@@ -77,48 +76,11 @@ export class WorldBookStorage {
     await db.delete('worldbooks', `${profileId}:${bookId}`);
   }
 
-  // ─── World Book Entries (convenience) ─────────────────────
-
-  async addEntry(profileId: string, bookId: string, entry: WorldBookEntry): Promise<void> {
-    const books = await this.loadWorldBooks(profileId);
-    const book = books.find((b) => b.id === bookId);
-    if (!book) return;
-    book.entries.push(entry);
-    book.updatedAt = Date.now();
-    await this.saveWorldBook(profileId, book);
-  }
-
-  async updateEntry(profileId: string, bookId: string, entry: WorldBookEntry): Promise<void> {
-    const books = await this.loadWorldBooks(profileId);
-    const book = books.find((b) => b.id === bookId);
-    if (!book) return;
-    const idx = book.entries.findIndex((e) => e.id === entry.id);
-    if (idx >= 0) {
-      book.entries[idx] = { ...entry, updatedAt: Date.now() };
-      book.updatedAt = Date.now();
-      await this.saveWorldBook(profileId, book);
-    }
-  }
-
-  async deleteEntry(profileId: string, bookId: string, entryId: string): Promise<void> {
-    const books = await this.loadWorldBooks(profileId);
-    const book = books.find((b) => b.id === bookId);
-    if (!book) return;
-    book.entries = book.entries.filter((e) => e.id !== entryId);
-    book.updatedAt = Date.now();
-    await this.saveWorldBook(profileId, book);
-  }
-
   // ─── Built-in Prompt Overrides ────────────────────────────
 
   async saveBuiltinOverride(packId: string, entry: BuiltinPromptEntry): Promise<void> {
     const db = await this.getDB();
     await db.put('builtin-prompts', entry, `${packId}:${entry.slotId}`);
-  }
-
-  async loadBuiltinOverride(packId: string, slotId: string): Promise<BuiltinPromptEntry | undefined> {
-    const db = await this.getDB();
-    return db.get('builtin-prompts', `${packId}:${slotId}`) as Promise<BuiltinPromptEntry | undefined>;
   }
 
   async loadAllBuiltinOverrides(packId: string): Promise<BuiltinPromptEntry[]> {
@@ -133,11 +95,6 @@ export class WorldBookStorage {
       }
     }
     return entries;
-  }
-
-  async resetBuiltinOverride(packId: string, slotId: string): Promise<void> {
-    const db = await this.getDB();
-    await db.delete('builtin-prompts', `${packId}:${slotId}`);
   }
 
   // ─── Preset Groups ────────────────────────────────────────

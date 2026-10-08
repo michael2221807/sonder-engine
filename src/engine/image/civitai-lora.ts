@@ -8,7 +8,7 @@ import type {
 
 // ── Warning types ──
 
-export type CivitaiLoraWarningType =
+type CivitaiLoraWarningType =
   | 'too_many_active'
   | 'strong_effect'
   | 'mature_mismatch'

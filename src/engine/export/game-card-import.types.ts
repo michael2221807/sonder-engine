@@ -68,7 +68,7 @@ export type GlobalOptInFlag =
  * `editableFields` whitelist are honored — blacklisted/unknown paths are ignored at
  * apply time. `fixed` mode ignores this entirely (CONTRACT-OD4).
  */
-export type ProtagonistEdits = Record<string, unknown>;
+type ProtagonistEdits = Record<string, unknown>;
 
 // ─── Import options (caller → service) ───────────────────────────
 
@@ -106,7 +106,7 @@ export interface PackVersionDrift {
 
 // ─── Import result (service → caller) ────────────────────────────
 
-export interface ImportSuccess {
+interface ImportSuccess {
   ok: true;
   /** New profile id — the slot the UI navigates into at ⑧ (`router.push`). */
   profileId: string;
@@ -136,7 +136,7 @@ export interface ImportSuccess {
   globalChangesApplied: boolean;
 }
 
-export interface ImportFailure {
+interface ImportFailure {
   ok: false;
   code: ImportErrorCode;
   /**

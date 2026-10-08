@@ -45,7 +45,7 @@ function isPlainObject(value: unknown): value is JsonObject {
  * Deep-merges plain objects; arrays and primitives are REPLACED wholesale.
  * (Overriding 叙事历史 / 关系 / edges means "use mine", not "concat".)
  */
-export function deepMerge<T extends JsonObject>(base: T, override?: JsonObject): T {
+function deepMerge<T extends JsonObject>(base: T, override?: JsonObject): T {
   if (!override) return base;
   const out: JsonObject = { ...base };
   for (const [key, value] of Object.entries(override)) {

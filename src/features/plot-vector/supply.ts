@@ -13,7 +13,7 @@ import type { CardSpec } from './contract/types';
 import { CARD_TIERS, rateCard, type CardRating, type CardTier, type EffectProfile } from './rating';
 
 /** When a supply card regains a use: every `every` accepted rounds, or every `every` passes it acted on. */
-export interface RechargeSpec { on: 'round' | 'trigger'; every: number }
+interface RechargeSpec { on: 'round' | 'trigger'; every: number }
 export interface SupplyCard { id: string; name: LocalizedLabel; summary: LocalizedLabel; spec: CardSpec; recharge?: RechargeSpec }
 export interface SupplyRules {
   /** Most supply cards the hand holds. */
@@ -27,7 +27,7 @@ export interface SupplyRules {
   cards: SupplyCard[];
 }
 /** One card in the hand. `id` is the instance (the starter keeps the card id; a drawn card is `cardId#n`). */
-export interface SupplyHandCard { id: string; cardId: string; recharge?: number }
+interface SupplyHandCard { id: string; cardId: string; recharge?: number }
 export interface SupplyState {
   hand: SupplyHandCard[];
   /** Cards drawn so far; numbers the next instance. */

@@ -14,7 +14,7 @@
  * `scheduled` = waiting for its `activation.triggers` to be satisfied
  * (Plot Threads epic, docs/design/plot-parallel-threads-scheduler.md D3).
  */
-export type PlotArcStatus = 'draft' | 'scheduled' | 'active' | 'completed' | 'abandoned';
+type PlotArcStatus = 'draft' | 'scheduled' | 'active' | 'completed' | 'abandoned';
 
 /**
  * A thread (arc) may be activated automatically when ALL of its triggers hold.
@@ -98,7 +98,7 @@ export const DEFAULT_MAX_ACTIVE_THREADS = 3;
 //  PlotNode — single story waypoint
 // ═══════════════════════════════════════════════════════════════
 
-export type PlotNodeStatus = 'pending' | 'active' | 'completed' | 'skipped';
+type PlotNodeStatus = 'pending' | 'active' | 'completed' | 'skipped';
 
 export type CompletionMode = 'hint_only' | 'hint_and_gauges' | 'gauges_only';
 
@@ -196,7 +196,7 @@ export interface PlotEvaluation {
   }[];
 }
 
-export type PlotEvalAction =
+type PlotEvalAction =
   | 'none' | 'count_increment' | 'count_reset' | 'advance' | 'skip' | 'timeout'
   | 'thread_activated' | 'thread_completed' | 'thread_blocked';
 

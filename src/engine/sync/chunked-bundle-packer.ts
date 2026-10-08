@@ -25,7 +25,7 @@ export interface ChunkManifest {
   uploadedBy?: import('./device-identity').UploadDeviceStamp;
 }
 
-export interface ChunkEntry {
+interface ChunkEntry {
   name: string;
   path: string;
   compressedSize: number;

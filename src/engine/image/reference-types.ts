@@ -1,11 +1,11 @@
-export type ImageReferenceRole =
+type ImageReferenceRole =
   | 'source'
   | 'style'
   | 'composition'
   | 'mask'
   | 'control';
 
-export type ImageReferenceSource =
+type ImageReferenceSource =
   | 'upload'
   | 'asset'
   | 'url'
@@ -23,22 +23,6 @@ export interface ImageReferenceInput {
   height?: number;
   denoiseStrength?: number;
   providerMeta?: Record<string, unknown>;
-}
-
-/**
- * Generation mode.
- * MVP uses 'text_to_image' and 'image_to_image' only.
- * @reserved 'inpaint' and 'reference' — not implemented in MVP
- */
-export type ImageGenerationMode =
-  | 'text_to_image'
-  | 'image_to_image'
-  | 'inpaint'
-  | 'reference';
-
-export interface ImageGenerationReferenceParams {
-  mode: ImageGenerationMode;
-  references?: ImageReferenceInput[];
 }
 
 /**

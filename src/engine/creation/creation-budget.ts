@@ -27,13 +27,13 @@ export interface FinalCreationValidationResult {
   budgets: BudgetSummary[];
 }
 
-export function getEntryCost(entry: unknown, costField?: string): number {
+function getEntryCost(entry: unknown, costField?: string): number {
   if (!costField || entry === null || typeof entry !== 'object' || Array.isArray(entry)) return 0;
   const value = (entry as Record<string, unknown>)[costField];
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
-export function getSelectionCost(selection: unknown, costField?: string): number {
+function getSelectionCost(selection: unknown, costField?: string): number {
   const entries = Array.isArray(selection) ? selection : selection == null ? [] : [selection];
   return entries.reduce((sum, entry) => sum + getEntryCost(entry, costField), 0);
 }

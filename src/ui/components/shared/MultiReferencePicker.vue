@@ -34,7 +34,7 @@ export interface MultiReferenceItem {
 }
 
 /** 快捷来源：已有的头像 / 立绘 / 壁纸等，一键加入而不用重新上传。 */
-export interface QuickSource {
+interface QuickSource {
   /** 回传给父组件的标识 */
   key: string;
   label: string;

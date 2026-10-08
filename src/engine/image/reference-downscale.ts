@@ -30,7 +30,7 @@
 export const REFERENCE_MAX_EDGE = 1536;
 
 /** 重编码质量。0.88 在插画/照片上视觉无损，体积却只有 PNG 的十几分之一。 */
-export const REFERENCE_JPEG_QUALITY = 0.88;
+const REFERENCE_JPEG_QUALITY = 0.88;
 
 /**
  * 需要压缩的判定：像素超限，或体积超过该阈值（后者兜住"尺寸不大但存了

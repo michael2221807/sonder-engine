@@ -319,7 +319,7 @@ export const NSFW_STRIP_TAG = '私密';
  *   保留 `i` 是历史遗留。显式按字面匹配避免误伤大小写敏感场景）
  * - 剥离后清理连续空行（>=3 换行压缩为 2）
  */
-export function stripTagFromText(text: string, tag: string): string {
+function stripTagFromText(text: string, tag: string): string {
   if (!text) return text;
   const escaped = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const pattern = new RegExp(`\\[${escaped}\\][\\s\\S]*?\\[\\/${escaped}\\]`, 'g');

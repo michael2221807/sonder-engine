@@ -3,7 +3,7 @@ import type { GenesisEntryKind } from './genesis/post-save';
 import type { VectorState, VectorTaskRow } from './runtime';
 
 /** `failed`: an attempt did not give a usable ability. `waiting`: not tried yet (e.g. there before the feature was on). */
-export type BacklogState = 'failed' | 'waiting';
+type BacklogState = 'failed' | 'waiting';
 export interface BacklogEntry {
   id: string;
   kind: GenesisEntryKind;

@@ -13,9 +13,6 @@
 /** Always appended to final negative — ported */
 const DEFAULT_NEGATIVE_WATERMARK = 'text, watermark, signature, username, logo, artist name, web address, url, copyright, subtitle';
 
-/** Secret part close-up exclusion — ported */
-export const DEFAULT_SECRET_PART_NEGATIVE = 'face, eyes, portrait, headshot, upper body, half body, full body, torso, abdomen, legs, arm, feet, hands, multiple people, extra legs, extra arms, extra breasts, extra nipples, extra fingers, three legs, three breasts, merged body parts, room focus, scenery focus, environment focus, background focus, wide shot, mid shot, text, watermark, speech bubble, dialogue box, blurry, low quality, bad anatomy';
-
 /** Composition-specific negative — ported */
 const COMPOSITION_NEGATIVE: Partial<Record<string, string>> = {
   secret_part: 'multiple views, split screen, panel layout, comic panel, comic page, collage, contact sheet, reference sheet, character sheet, turnaround, comparison sheet, montage, triptych, diptych, quadriptych, grid layout, tiled composition',

@@ -76,7 +76,7 @@ function readMaxRetries(): number {
   }
 }
 
-export interface EdgeReviewDetail {
+interface EdgeReviewDetail {
   edgeId: string;
   fact: string;
   reason: string;

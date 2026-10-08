@@ -57,17 +57,6 @@ export interface TtsProvider {
   testConnection(opts?: { speaker?: string; signal?: AbortSignal }): Promise<{ ok: boolean; error?: string }>;
 }
 
-/** Provider 工厂签名 — 由 registry 注册 */
-export type TtsProviderFactory = (config: {
-  endpoint: string;
-  apiKey: string;
-  model?: string;
-  /** 自定义查询路径(默认 '/') */
-  routingPath?: string;
-  /** 多凭证 backend 的附加凭证(豆包: appId/accessToken/resourceId, epic P2) */
-  credentials?: Record<string, string>;
-}) => TtsProvider;
-
 // ─── 全局配音设置(持久化到 aga_tts_settings) ───
 
 /** 常用音色收藏项 */

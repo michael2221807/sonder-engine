@@ -36,7 +36,7 @@ import {
 } from '../../providers/doubao-ws-protocol';
 
 export const DOUBAO_STT_DEFAULT_PATH = '/api/v3/plan/sauc/bigmodel_nostream';
-export const DOUBAO_STT_DEFAULT_RESOURCE_ID = 'volc.seedasr.sauc.duration';
+const DOUBAO_STT_DEFAULT_RESOURCE_ID = 'volc.seedasr.sauc.duration';
 
 /** Upload chunk size (bytes) — ~200ms of 16k s16le audio per frame. */
 const AUDIO_CHUNK_BYTES = 6400;

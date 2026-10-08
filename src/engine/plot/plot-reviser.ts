@@ -19,7 +19,7 @@ import type { PlotArc, PlotNode, PlotDirectionState } from './types';
 import type { PlotDecomposer, DecomposeResult, DecomposeOptions } from './plot-decomposer';
 
 /** The six text fields the AI may update on the in-progress node (D1: content yes, progress no). */
-export const ACTIVE_NODE_UPDATE_FIELDS = [
+const ACTIVE_NODE_UPDATE_FIELDS = [
   'directive', 'narrativeGoal', 'completionHint', 'premise', 'stakes', 'emotionalTone',
 ] as const;
 export type ActiveNodeUpdate = Partial<Pick<PlotNode, (typeof ACTIVE_NODE_UPDATE_FIELDS)[number]>>;

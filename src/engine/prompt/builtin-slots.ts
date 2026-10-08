@@ -391,17 +391,3 @@ export const SWITCHABLE_PROMPT_IDS: ReadonlySet<string> = new Set([
 export function isPromptAlwaysOn(promptId: string): boolean {
   return !SWITCHABLE_PROMPT_IDS.has(promptId);
 }
-
-/**
- * Get the slot IDs for a given category.
- */
-export function getSlotsByCategory(category: string): BuiltinSlotDefinition[] {
-  return Object.values(BUILTIN_SLOTS).filter((s) => s.category === category);
-}
-
-/**
- * Get all unique categories.
- */
-export function getSlotCategories(): string[] {
-  return [...new Set(Object.values(BUILTIN_SLOTS).map((s) => s.category))];
-}

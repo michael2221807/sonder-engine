@@ -10,7 +10,7 @@ import type { MemorySummary } from '@/ui/components/shared/NpcMemoryTimeline.vue
 export type NpcFieldNames = EnginePathConfig['npcFieldNames'];
 
 /** 身体部位条目 */
-export interface BodyPartEntry {
+interface BodyPartEntry {
   部位名称?: string;
   敏感度?: number;
   开发度?: number;
@@ -43,7 +43,7 @@ export interface PrivacyProfile {
 }
 
 /** 私聊历史条目（与 NpcChatMessage 对齐） */
-export interface ChatHistoryEntry {
+interface ChatHistoryEntry {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
@@ -75,13 +75,13 @@ export interface NpcRelation {
   [key: string]: unknown;
 }
 
-export interface RelationNetworkEntry {
+interface RelationNetworkEntry {
   对象: string;
   关系: string;
   备注: string;
 }
 
-export interface MemorySummaryEntry {
+interface MemorySummaryEntry {
   摘要: string;
   涵盖范围: string;
   生成时间: string;

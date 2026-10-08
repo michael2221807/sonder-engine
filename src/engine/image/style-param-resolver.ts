@@ -3,7 +3,7 @@ import type { ArtistPreset, ImageBackendType } from './types';
 import { clamp } from './utils';
 import { seedreamSupportsSeed } from './providers/volcengine';
 
-export interface ResolvedStyleParams {
+interface ResolvedStyleParams {
   steps?: number;
   cfgScale?: number;
   seed?: number;
@@ -18,7 +18,7 @@ export interface ResolvedStyleParams {
   [key: string]: unknown;
 }
 
-export interface StyleParamNotApplicable {
+interface StyleParamNotApplicable {
   key: string;
   value: unknown;
   reason: string;

@@ -1,7 +1,7 @@
 // App doc: docs/user-guide/pages/creation.md §2.7
 import type { CustomPresetSchema } from '@/engine/types/game-pack';
 
-export type CustomPresetFormIssueType = 'required' | 'number' | 'min' | 'max' | 'option';
+type CustomPresetFormIssueType = 'required' | 'number' | 'min' | 'max' | 'option';
 
 export interface CustomPresetFormIssue {
   type: CustomPresetFormIssueType;

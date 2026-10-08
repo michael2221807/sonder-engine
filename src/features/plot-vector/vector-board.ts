@@ -8,7 +8,7 @@ import type { BoardDef, RunOptions } from '../../engine/plot-vector/core/types';
 export type BoardShape = SixCellTopology;
 export const BOARD_SHAPES: readonly BoardShape[] = ['line', 'ring'];
 /** New games and saves from before the switch existed play on the line. */
-export const DEFAULT_BOARD_SHAPE: BoardShape = 'line';
+const DEFAULT_BOARD_SHAPE: BoardShape = 'line';
 export function readBoardShape(value: unknown): BoardShape {
   return BOARD_SHAPES.includes(value as BoardShape) ? value as BoardShape : DEFAULT_BOARD_SHAPE;
 }

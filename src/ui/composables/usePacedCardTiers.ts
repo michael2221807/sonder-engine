@@ -4,7 +4,7 @@ import { entryCardTiers, type EntryTiers } from '@/features/plot-vector/entry-ti
 import type { CardTier } from '@/features/plot-vector/rating';
 
 /** Cards worked out per pass (about 40 ms each) and the pause between passes — the pace the table rates at. */
-export const CARD_TIER_RATE_PER_PASS = 1;
+const CARD_TIER_RATE_PER_PASS = 1;
 export const CARD_TIER_PAUSE_MS = 60;
 
 export interface CardTierInput {

@@ -52,7 +52,7 @@ export function utf8ToBase64(str: string): string {
   return bytesToBase64(new TextEncoder().encode(str));
 }
 
-export function bytesToBase64(bytes: Uint8Array): string {
+function bytesToBase64(bytes: Uint8Array): string {
   const CHUNK = 8192;
   let bin = '';
   for (let i = 0; i < bytes.length; i += CHUNK) {

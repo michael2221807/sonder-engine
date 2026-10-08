@@ -25,9 +25,9 @@ import { inflateSync } from 'fflate';
 // §1 — Types
 // ═══════════════════════════════════════════════════════════
 
-export type PngMetadataSource = 'novelai' | 'sd_webui' | 'unknown';
+type PngMetadataSource = 'novelai' | 'sd_webui' | 'unknown';
 
-export interface PngParsedParams {
+interface PngParsedParams {
   sampler?: string;
   noiseSchedule?: string;
   steps?: number;
@@ -238,7 +238,7 @@ function extractExifMetadata(pngBytes: Uint8Array): Record<string, string> {
 const STEALTH_MAGIC = 'stealth_pngcomp';
 const STEALTH_MAX_PIXELS = 4096 * 4096;
 
-export async function extractNovelAIStealthText(blob: Blob): Promise<string> {
+async function extractNovelAIStealthText(blob: Blob): Promise<string> {
   if (typeof document === 'undefined' || typeof URL === 'undefined') return '';
   let objectUrl = '';
   try {
@@ -445,7 +445,7 @@ function readMetadataField(map: Record<string, string>, keys: string[]): string 
  * Extract metadata from raw PNG bytes.
  * Extract metadata from raw PNG bytes — ported
  */
-export function extractPngBytesMetadata(pngBytes: Uint8Array, extraNovelAIText = ''): PngMetadataResult {
+function extractPngBytesMetadata(pngBytes: Uint8Array, extraNovelAIText = ''): PngMetadataResult {
   const tags = { ...extractExifMetadata(pngBytes), ...extractTextMetadata(pngBytes) };
   const parametersText = readMetadataField(tags, ['parameters', 'Parameters']);
   const commentText = readMetadataField(tags, ['comment', 'Comment', 'UserComment', 'XPComment']);

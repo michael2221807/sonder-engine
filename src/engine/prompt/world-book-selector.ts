@@ -20,7 +20,7 @@ import type { EngineGameTimeFieldNames } from '../pipeline/types';
 
 // ─── Corpus Building ─────────────────────────────────────────
 
-export interface NpcFieldKeys {
+interface NpcFieldKeys {
   name?: string;
   identity?: string;
   relation?: string;
@@ -45,7 +45,7 @@ export interface CorpusSources {
  * turns an auto-captured character setting into a permanent resident that silently
  * eats budget every round. `focused` is only this round's signal.
  */
-export interface WorldBookCorpora {
+interface WorldBookCorpora {
   /** Location, ALL social NPCs, last 12 narrative entries, world events, current input. */
   broad: string;
   /** Current input, current location, PRESENT NPCs only, the focus plot node. */
@@ -312,7 +312,7 @@ export interface WorldBookSelectionParams {
 }
 
 /** Why an entry that passed the filters did not make it into the prompt. */
-export type WorldBookSkipReason =
+type WorldBookSkipReason =
   | 'book_disabled'
   | 'entry_disabled'
   | 'empty_content'
@@ -322,7 +322,7 @@ export type WorldBookSkipReason =
   | 'budget'
   | 'captured_quota';
 
-export interface WorldBookSkippedEntry {
+interface WorldBookSkippedEntry {
   entryId: string;
   bookId: string;
   title: string;
@@ -332,7 +332,7 @@ export interface WorldBookSkippedEntry {
 }
 
 /** One injected entry together with the book it came from. */
-export interface SelectedEntryInfo {
+interface SelectedEntryInfo {
   entry: WorldBookEntry;
   bookId: string;
   origin: WorldBookOrigin;

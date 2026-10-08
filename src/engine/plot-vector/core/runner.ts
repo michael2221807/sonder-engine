@@ -49,7 +49,7 @@ export function accountDefsOf(board: CompiledBoard): AccountDef[] {
  * one, then clamped into [0, nMax]. `nMax` limits the initial input only; the safety ceiling
  * (`budget.maxVisits`) is separate and cannot be lifted by anything in the run.
  */
-export function resolveVisitBudget(board: CompiledBoard, settlement: Settlement): number {
+function resolveVisitBudget(board: CompiledBoard, settlement: Settlement): number {
   const raw = settlement.visitBudget ?? board.traversal.nDefault;
   return Math.min(board.traversal.nMax, Math.max(0, Math.floor(raw)));
 }

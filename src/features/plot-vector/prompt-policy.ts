@@ -11,7 +11,7 @@ export interface VectorPromptPolicy {
  * The round's abilities (rebuild plan §6.1, I21/I22): the request that writes the round's entries may append
  * one tagged block of cards after its JSON. Pack-owned tag and wording; the card domain is shared.
  */
-export interface AbilityBlockPolicy {
+interface AbilityBlockPolicy {
   /** Tag of the block (lifted out of the reply before its JSON is parsed). */
   tag: string;
   /** The pack instruction alone. */
@@ -23,7 +23,7 @@ export interface AbilityBlockPolicy {
  * Step3 abilities for the backlog (pack-owned task text). They come back in their own top-level reply field,
  * never as commands on the saved entries.
  */
-export interface AbilityRepairPolicy {
+interface AbilityRepairPolicy {
   /** Top-level reply field that carries `[{ id, card }]`. */
   field: string;
   /** Task template with `{{ITEMS}}`. */

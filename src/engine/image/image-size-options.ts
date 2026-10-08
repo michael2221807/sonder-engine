@@ -9,7 +9,7 @@
  * - Per-composition defaults used by prompt-composer
  */
 
-export type SizeOrientation = 'square' | 'portrait' | 'landscape';
+type SizeOrientation = 'square' | 'portrait' | 'landscape';
 
 export interface ImageSizeOption {
   value: string;

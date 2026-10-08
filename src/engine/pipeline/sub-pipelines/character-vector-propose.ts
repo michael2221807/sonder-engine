@@ -51,7 +51,7 @@ const MAX_MID_TERM_ENTRIES = 25;
 interface HistoryEntry { role?: unknown; content?: unknown }
 
 /** Why a proposal run ended the way it did — surfaced to the player by the manual trigger. */
-export type CharacterVectorProposeStatus =
+type CharacterVectorProposeStatus =
   | 'written'        // ≥1 proposal merged into the state tree
   | 'disabled'       // master switch off
   | 'noFlow'         // pack has no characterVectorExtract flow

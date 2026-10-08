@@ -4,7 +4,7 @@ import type { EngineEventName, EventHandler } from '../types';
  * Central event bus for engine ↔ UI communication.
  * All modules emit/subscribe through this singleton to avoid tight coupling.
  */
-export class EventBus {
+class EventBus {
   private handlers = new Map<string, Set<EventHandler>>();
 
   /** Subscribe to an event. Returns an unsubscribe function. */

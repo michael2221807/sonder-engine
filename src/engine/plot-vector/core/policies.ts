@@ -1,7 +1,7 @@
 import type { BoardDef, ChannelMeta, CompiledBoard } from './types';
 
 /** Bipolar dimensions own a positive and a negative channel; unipolar ones a single channel. */
-export function channelsOf(board: Pick<BoardDef, 'dimensions'>): ChannelMeta[] {
+function channelsOf(board: Pick<BoardDef, 'dimensions'>): ChannelMeta[] {
   const out: ChannelMeta[] = [];
   for (const d of board.dimensions) {
     if (d.polarity === 'bipolar') {

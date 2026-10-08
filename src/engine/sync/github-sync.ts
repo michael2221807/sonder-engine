@@ -29,7 +29,6 @@ import { getDeviceStamp } from './device-identity';
 import { LS_SYNC_BASELINE, LS_SYNC_PENDING, LS_SYNC_BASELINES, LS_SYNC_PENDING_MAP } from './sync-storage-keys';
 
 // Public names kept: moved to ./github-api and ./global-fingerprint (R6 step 5).
-export { ApiError } from './github-api';
 export { computeGlobalContentChecksum } from './global-fingerprint';
 
 // ─── 常量 ───

@@ -44,7 +44,7 @@ import { SYSTEM_PATHS } from './system-paths';
  * 提供类型，让常用键无需 `as` 断言即可获得类型安全（L-1：原为裸 `Record<string,unknown>`）。
  * 新增跨阶段字段时，优先在此登记类型而非依赖断言。
  */
-export interface PipelineMeta {
+interface PipelineMeta {
   [key: string]: unknown;
   /** Host round identity and durable commit boundary; never persisted. */
   roundOwnership?: import('../core/round-ownership').RoundOwnership;
@@ -371,7 +371,7 @@ export interface IBehaviorRunner {
  * 这些字段都是 `MemoryPathConfig` 默认值和 `localStorage.aga_memory_settings`
  * 用户覆盖合并 clamp 后的结果，表示**此刻**的记忆系统工作参数。
  */
-export interface EffectiveMemoryConfig {
+interface EffectiveMemoryConfig {
   shortTermCapacity: number;
   midTermRefineThreshold: number;
   longTermSummaryThreshold: number;
@@ -390,7 +390,7 @@ export interface EffectiveMemoryConfig {
  *
  * 不接受 `undefined`/`null`：调用者必须自己判空（post-process.ts 已按此约定调用）。
  */
-export type ImplicitMidTermInput =
+type ImplicitMidTermInput =
   | ImplicitMidTermEntry
   | string
   | Record<string, unknown>;
@@ -814,7 +814,7 @@ export interface EnginePathConfig {
 }
 
 /** Location object field name mappings — same pattern as EngineNpcFieldNames */
-export interface EngineLocationFieldNames {
+interface EngineLocationFieldNames {
   name: string;
   description: string;
   connections: string;
@@ -824,7 +824,7 @@ export interface EngineLocationFieldNames {
 }
 
 /** World-event record field name mappings (`社交.事件.事件记录[i]`). */
-export interface EngineWorldEventFieldNames {
+interface EngineWorldEventFieldNames {
   /** Array of NPC names involved in the event. */
   participants: string;
   /** Free-text scope of impact. */

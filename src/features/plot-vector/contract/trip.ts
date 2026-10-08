@@ -11,7 +11,7 @@ import { grow, initialGrowth } from './growth';
 import { CHANNEL_NAMES, LIMITS, MULTIPLIER_OF, RELEASE_BONUS, type CardReturn, type CardSpec, type ChannelName, type GrowthState, type PassValues, type RelayReturn } from './types';
 
 /** Domain names to the board's channels (推力 S+, 阻力 S−, 人际 Y, 机会 J). */
-export const CHANNEL_ID: Readonly<Record<ChannelName, ChannelId>> = { push: 'S+', drag: 'S-', social: 'Y', chance: 'J' };
+const CHANNEL_ID: Readonly<Record<ChannelName, ChannelId>> = { push: 'S+', drag: 'S-', social: 'Y', chance: 'J' };
 
 /** A card's own store: carried across rounds, at most LIMITS.stored in total, never expiring. */
 export function storeAccountId(cardId: string): string {
@@ -22,7 +22,7 @@ export function storeAccount(cardId: string): AccountDef {
 }
 
 /** Operations for one bounded return, in the fixed order the domain describes. */
-export function operationsOf(owner: string, ret: CardReturn): { operations: OperationDef[]; summary: string[] } {
+function operationsOf(owner: string, ret: CardReturn): { operations: OperationDef[]; summary: string[] } {
   const operations: OperationDef[] = [], summary: string[] = [];
   for (const name of CHANNEL_NAMES) {
     const amount = ret[name];

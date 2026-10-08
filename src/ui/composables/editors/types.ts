@@ -13,7 +13,7 @@ export interface EditorResult<T = void> {
   error?: EditorError;
 }
 
-export interface EditorError {
+interface EditorError {
   code: EditorErrorCode;
   /** i18n key for the error message — Toast.vue resolves via $t() */
   i18nKey: string;
@@ -25,7 +25,7 @@ export interface EditorError {
 
 // ─── Error codes ──────────────────────────────────────────────
 
-export type EditorErrorCode =
+type EditorErrorCode =
   // Generic
   | 'FIELD_REQUIRED'
   | 'FIELD_INVALID'
@@ -108,14 +108,6 @@ export interface DeleteImpact {
 }
 
 export type NpcFlag = '关注' | '心跳锁定' | '是否在场' | '是否主要角色';
-
-export interface BodyPartEntry {
-  部位名称: string;
-  敏感度: number;
-  开发度: number;
-  特征描述?: string;
-  特殊印记?: string;
-}
 
 // ─── Toast helper ─────────────────────────────────────────────
 

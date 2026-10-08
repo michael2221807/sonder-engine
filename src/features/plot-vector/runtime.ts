@@ -86,8 +86,7 @@ export function readVectorState(raw: unknown): VectorState {
 }
 
 /** The narrative strength every AGA vector round uses (the board and run options live in vector-board.ts). */
-export { VECTOR_RUN_OPTIONS, vectorBaseBoard };
-export const VECTOR_NARRATIVE_STRENGTH = 0.25;
+const VECTOR_NARRATIVE_STRENGTH = 0.25;
 /** Pure: the narrative prompt a prepared round injects, derived only from its inputs and packet. */
 export function narrativePromptFor(starting: NativeInput, layout: Layout, packet: VectorPacket, departed = false): string {
   const hasInput = Object.values(starting.payload).some(n => n > 0) || Object.values(layout.placements).some(Boolean) || departed;

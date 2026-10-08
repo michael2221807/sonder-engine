@@ -22,7 +22,7 @@ export const CARD_FORMAT_VERSION = 1;
 
 // ─── Card metadata ───────────────────────────────────────────────
 
-export interface CardMeta {
+interface CardMeta {
   /** Card schema version (independent of bundle.version). */
   formatVersion: number;
   /** Stable UUID; reused across re-exports of the same source save within a session. */
@@ -49,7 +49,7 @@ export interface CardMeta {
 
 export type ProtagonistMode = 'fixed' | 'template' | 'blank';
 
-export interface ProtagonistTemplate {
+interface ProtagonistTemplate {
   mode: ProtagonistMode;
   /**
    * Trimmed copy of the 角色 subtree.
@@ -84,7 +84,7 @@ export interface AssignmentPresetExport {
   featureToggles: Record<string, boolean>;
 }
 
-export interface ApiTemplateExport {
+interface ApiTemplateExport {
   /** Non-secret API config templates (apiKey/url/customRoutingPath stripped). Player fills the key on import. */
   configs: ApiConfigTemplate[];
   /** Optional function-allocation presets ("main uses X, utility uses Y"). */

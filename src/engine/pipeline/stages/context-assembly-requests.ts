@@ -265,7 +265,7 @@ function compileStep2Projection(
  * variables with the compiler off) and ends the base with the round's player input as a `user` turn.
  * Returns nothing when the pack has no Step 2 flow.
  */
-export function assembleStep2Request(
+function assembleStep2Request(
   deps: RequestDeps,
   ctx: PipelineContext,
   inputs: RoundPromptInputs,

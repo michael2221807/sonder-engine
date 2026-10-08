@@ -50,5 +50,3 @@ export const PIECE_ID = {
   WRITE_NO_CONTROL: 'write_no_control',
   WRITE_STYLE: 'write_style',
 } as const;
-
-export type PieceId = (typeof PIECE_ID)[keyof typeof PIECE_ID];

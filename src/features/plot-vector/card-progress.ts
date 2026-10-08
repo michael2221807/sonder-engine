@@ -7,7 +7,7 @@ import { storeAccountId } from './contract/trip';
 import { LIMITS, type GrowthState } from './contract/types';
 
 /** One progress row. `key` names what it is; the UI supplies the words. */
-export interface CardProgressRow { key: 'level' | 'stored' | 'uses'; value: number; max?: number; delta?: number }
+interface CardProgressRow { key: 'level' | 'stored' | 'uses'; value: number; max?: number; delta?: number }
 export interface CardProgress { cardId: string; name: string; rows: CardProgressRow[] }
 
 /** What a round keeps for each card: its growth and its store. */

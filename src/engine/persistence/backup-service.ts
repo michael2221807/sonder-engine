@@ -63,7 +63,6 @@ import {
 
 // Public names kept: the bundle format moved to ./bundle-format (R6 step 4).
 export type { BackupBundle, ExportImageIntegrity, ProfileDisplayMeta } from './bundle-format';
-export { collectBundleReferencedIds, bundleImagesLookDropped } from './bundle-format';
 
 // Public name kept: the walker moved to image/asset-refs (R3 step 3) so image code can use it without importing the backup service.
 export { collectAssetIdsFromTree };

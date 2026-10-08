@@ -26,7 +26,7 @@ export const EDGE_CAPACITY_DEFAULT = 800;
 export const MIN_FACT_LENGTH = 10;
 
 /** Engram 检索模式 */
-export type EngramRetrievalMode = 'legacy' | 'hybrid';
+type EngramRetrievalMode = 'legacy' | 'hybrid';
 
 /** Engram 向量检索配置 */
 export interface EngramEmbeddingConfig {
@@ -202,7 +202,7 @@ export interface EngramRelation {
 }
 
 /** @deprecated V2 不再构建关系边 — 保留仅为 EngramWriteSnapshot 结构兼容 */
-export interface EngramWriteRelationDelta {
+interface EngramWriteRelationDelta {
   from: string;
   to: string;
   type: string;
@@ -211,7 +211,7 @@ export interface EngramWriteRelationDelta {
 }
 
 /** 写入路径——事实边变化记录（V2 Graphiti） */
-export interface EngramWriteEdgeDelta {
+interface EngramWriteEdgeDelta {
   sourceEntity: string;
   targetEntity: string;
   fact: string;

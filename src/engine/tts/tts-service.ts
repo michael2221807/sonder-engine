@@ -26,7 +26,6 @@ import { eventBus } from '../core/event-bus';
 import type { AIService } from '../ai/ai-service';
 import type { TtsProviderRegistry } from './provider-registry';
 import type { TtsProvider, TtsSettings, TtsStatus, TtsStateEvent, TtsCacheEvent, TtsBackendType, TtsSpeaker } from './types';
-import { DEFAULT_TTS_SETTINGS } from './types';
 import { loadTtsSettings } from './tts-settings';
 import { stripMarkersForSpeech, splitSentences, groupSentencesBySize } from './sentence-splitter';
 import { HtmlAudioPlayer, type TtsAudioPlayer } from './audio-player';
@@ -481,4 +480,3 @@ function isAbort(err: unknown): boolean {
     : false;
 }
 
-export { DEFAULT_TTS_SETTINGS };

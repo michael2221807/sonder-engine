@@ -15,7 +15,7 @@ import { i18n } from '@/ui/i18n';
 
 // ─── 类型 ───────────────────────────────────────────────
 
-export interface TreeNode {
+interface TreeNode {
   /** 当前层级的 key（如 "基础信息"） */
   key: string;
   /** 完整 dot-path（如 "角色.基础信息"） */
@@ -30,7 +30,7 @@ export interface TreeNode {
   preview: string;
 }
 
-export interface FieldEntry {
+interface FieldEntry {
   key: string;
   path: string;
   value: unknown;
@@ -75,7 +75,7 @@ export interface StateTreeNavigation {
   translateSegment: (segment: string) => string;
 }
 
-export interface SearchResult {
+interface SearchResult {
   path: string;
   value: unknown;
   type: string;

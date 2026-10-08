@@ -61,7 +61,7 @@ export function saveEngramConfig(config: EngramConfig): void {
  * 不使用 `any`：通过局部类型断言 (`as unknown as Record<string, unknown>`)
  * 安全提取嵌套字段。
  */
-export function normalizeEngramConfig(raw: unknown): EngramConfig {
+function normalizeEngramConfig(raw: unknown): EngramConfig {
   const d = DEFAULT_ENGRAM_CONFIG;
   if (!raw || typeof raw !== 'object') return { ...d };
 

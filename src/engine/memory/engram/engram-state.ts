@@ -12,7 +12,7 @@ import { ENGRAM_SCHEMA_VERSION, normalizeEngramBlock } from './engram-types';
 import type { EngramStateData } from './engram-types';
 
 /** Empty block. NOTE: no `v2PendingReview` key (the editor's empty block has one; do not share). */
-export function createEmptyEngram(): EngramStateData {
+function createEmptyEngram(): EngramStateData {
   return {
     events: [],
     entities: [],

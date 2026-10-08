@@ -87,16 +87,3 @@ export interface StorageRoot {
   /** 所有角色档案（key = profileId） */
   profiles: Record<string, ProfileMeta>;
 }
-
-/**
- * 版本迁移定义
- * 用于存档格式升级（如 Game Pack 版本更新后的数据迁移）
- */
-export interface Migration {
-  /** 源版本号 */
-  fromVersion: number;
-  /** 目标版本号 */
-  toVersion: number;
-  /** 迁移函数 — 接收旧数据返回新数据 */
-  migrate: (data: unknown) => unknown;
-}

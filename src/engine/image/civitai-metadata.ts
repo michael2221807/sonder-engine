@@ -1,7 +1,7 @@
 // Design: docs/design/civitai-lora-shelf-design.md
 import type { CivitaiLoraTrigger } from './types';
 
-export interface CivitaiModelVersionResponse {
+interface CivitaiModelVersionResponse {
   id: number;
   name?: string;
   trainedWords?: string[];

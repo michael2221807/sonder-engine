@@ -35,7 +35,7 @@ import { SYSTEM_PATHS } from '../system-paths';
 import { DEFAULT_ENGINE_PATHS } from '../types';
 
 /** 状态树中叙事历史条目的结构 — 从 "元数据.叙事历史" 读取 */
-export interface NarrativeEntry {
+interface NarrativeEntry {
   role: string;
   content: string;
 }

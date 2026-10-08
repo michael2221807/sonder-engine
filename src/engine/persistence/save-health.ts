@@ -28,7 +28,7 @@ import type { EnginePathConfig } from '../pipeline/types';
 import { collectAssetIdsFromTree } from '../image/asset-refs';
 import { readWorldBookBaseline } from './save-health-baseline';
 
-export type SaveHealthIssue =
+type SaveHealthIssue =
   | 'images_missing'
   | 'world_books_unreadable'
   | 'world_books_lost'

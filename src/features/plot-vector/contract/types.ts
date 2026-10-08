@@ -15,8 +15,6 @@ export type ChannelName = typeof CHANNEL_NAMES[number];
 
 /** The multiplier return for each quantity. */
 export const MULTIPLIER_OF = { push: 'xPush', drag: 'xDrag', social: 'xSocial', chance: 'xChance' } as const;
-export type MultiplierName = typeof MULTIPLIER_OF[ChannelName];
-
 /** What `onPass` may return, after the engine has read and bounded it (§2.4). Absent = not used. */
 export interface CardReturn {
   push?: number;

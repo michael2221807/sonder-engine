@@ -36,7 +36,7 @@ import { COMPILE_REASON } from './context-compiler';
 
 // ─── State shape (stored at `paths.characterVectors`) ───
 
-export type CharacterVectorSource = 'player' | 'proposed' | 'accepted';
+type CharacterVectorSource = 'player' | 'proposed' | 'accepted';
 
 export interface CharacterVectorEntry {
   id: string;
@@ -218,7 +218,7 @@ export interface CharacterVectorFragments {
   unconfirmedSeparator: string;
 }
 
-export const CHARACTER_VECTOR_FRAGMENT_KEYS = {
+const CHARACTER_VECTOR_FRAGMENT_KEYS = {
   header: 'characterVectorHeader',
   headingLabel: 'characterVectorHeadingLabel',
   tensionLabel: 'characterVectorTensionLabel',

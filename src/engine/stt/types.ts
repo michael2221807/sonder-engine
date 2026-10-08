@@ -56,17 +56,6 @@ export interface SttProvider {
   testConnection(opts?: { signal?: AbortSignal }): Promise<{ ok: boolean; error?: string }>;
 }
 
-/** Provider 工厂签名 — 由 registry 注册 */
-export type SttProviderFactory = (config: {
-  endpoint: string;
-  apiKey: string;
-  model?: string;
-  /** 自定义转写路径(默认 '/v1/audio/transcriptions') */
-  routingPath?: string;
-  /** 多凭证 backend 的附加凭证(豆包: appId/accessToken/resourceId, epic P3) */
-  credentials?: Record<string, string>;
-}) => SttProvider;
-
 /** CosyVoice STT 默认转写路径(OpenAI Whisper 兼容) */
 export const DEFAULT_STT_ROUTING_PATH = '/v1/audio/transcriptions';
 

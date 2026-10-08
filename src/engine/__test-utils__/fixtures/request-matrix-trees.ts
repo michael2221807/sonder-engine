@@ -19,11 +19,11 @@ import { CAPTURED_SETTINGS_BOOK_ID } from '../../prompt/world-book';
 
 type JsonObject = Record<string, unknown>;
 
-export const MATRIX_PROTAGONIST = '叶尘';
-export const MATRIX_LOCATION = '青云城·茶馆';
-export const MATRIX_NPC_PRESENT = '林婉儿';
-export const MATRIX_NPC_AWAY = '苏小棠';
-export const MATRIX_NPC_NEARBY = '陆沉';
+const MATRIX_PROTAGONIST = '叶尘';
+const MATRIX_LOCATION = '青云城·茶馆';
+const MATRIX_NPC_PRESENT = '林婉儿';
+const MATRIX_NPC_AWAY = '苏小棠';
+const MATRIX_NPC_NEARBY = '陆沉';
 
 /** Plot thread with one active node, one completed node and a gauge named like the stray copy in `系统`. */
 function plotDirection(): JsonObject {

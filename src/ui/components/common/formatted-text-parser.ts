@@ -49,7 +49,7 @@ export interface JudgementData {
 }
 
 /** 行内叶子片段种类 */
-export type InlineKind =
+type InlineKind =
   | 'normal'
   | 'environment'
   | 'psychology'
@@ -69,7 +69,7 @@ export interface InlinePart {
 }
 
 /** 列表项：本项行内内容 + 可选的嵌套原始子文本（递归渲染） */
-export interface ListItem {
+interface ListItem {
   parts: InlinePart[];
   /** 缩进的嵌套内容（子列表 / 续行），交由上层递归渲染；无则 undefined */
   childText?: string;
@@ -100,7 +100,7 @@ const OUTCOME_WORD = /成功|失败|完美/;
  * Parse 〖类型:结果,判定值:X,难度:Y,基础:B,幸运:L,环境:E,状态:S〗。
  * 纯解析——缺省类型返回空串，展示层自行兜底文案（避免 i18n 依赖）。
  */
-export function parseJudgement(raw: string): JudgementData {
+function parseJudgement(raw: string): JudgementData {
   const normalized = raw.replace(/：/g, ':').replace(/，/g, ',');
   const parts = normalized.split(',').map((p) => p.trim());
   const [typeStr, resultStr] = (parts[0] ?? '').split(':').map((s) => s.trim());

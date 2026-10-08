@@ -33,7 +33,7 @@ const MAX_EVIDENCE_CHARS = 80;
 //  Labels (pack-overridable)
 // ═══════════════════════════════════════════════════════════════
 
-export const DEFAULT_PLOT_LABELS = {
+const DEFAULT_PLOT_LABELS = {
   plotArcLabel: '弧线：{title}',
   plotSynopsisLabel: '概要：{text}',
   plotCompletedLabel: '已完成：{list}',
@@ -73,10 +73,10 @@ export const DEFAULT_PLOT_LABELS = {
   plotHintJoinSep: ' / ',
 } satisfies Record<string, string>;
 
-export type PlotPromptLabels = { [K in keyof typeof DEFAULT_PLOT_LABELS]: string };
+type PlotPromptLabels = { [K in keyof typeof DEFAULT_PLOT_LABELS]: string };
 
 /** Fragment-backed labels; any key absent from the pack falls back to the zh default. */
-export function resolvePlotLabels(fragments?: Record<string, unknown>): PlotPromptLabels {
+function resolvePlotLabels(fragments?: Record<string, unknown>): PlotPromptLabels {
   const out: PlotPromptLabels = { ...DEFAULT_PLOT_LABELS };
   if (!fragments) return out;
   for (const key of Object.keys(DEFAULT_PLOT_LABELS) as Array<keyof PlotPromptLabels>) {

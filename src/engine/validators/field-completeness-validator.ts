@@ -35,7 +35,7 @@ export interface RequiredFieldsConfig {
 }
 
 /** Single entity's missing-field result */
-export interface EntityFieldReport {
+interface EntityFieldReport {
   /** 'npc' for relationship entries, 'player' for 角色.* top-level paths */
   entityType: 'npc' | 'player';
   /** Unique display name (NPC 名称 for npcs, '玩家' for player) */

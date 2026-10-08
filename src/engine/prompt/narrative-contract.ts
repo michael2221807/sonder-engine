@@ -29,7 +29,7 @@ import { COMPILE_REASON } from './context-compiler';
 
 // ─── State shape (stored at `paths.narrativeContract`) ───
 
-export type NarrativeContractSource = 'player' | 'proposed' | 'accepted';
+type NarrativeContractSource = 'player' | 'proposed' | 'accepted';
 
 export interface NarrativeContractClause {
   id: string;
@@ -150,7 +150,7 @@ export interface NarrativeContractFragments {
   castSeparator: string;
 }
 
-export const NARRATIVE_CONTRACT_FRAGMENT_KEYS = {
+const NARRATIVE_CONTRACT_FRAGMENT_KEYS = {
   title: 'narrativeContractTitle',
   authority: 'narrativeContractAuthority',
   castLabel: 'narrativeContractCastLabel',

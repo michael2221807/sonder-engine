@@ -25,7 +25,7 @@ export type WorldBookInjectionMode = 'always' | 'match_any';
 
 export type WorldBookEntryShape = 'normal' | 'timeline_outline' | 'time_injection';
 
-export type BuiltinPromptCategory =
+type BuiltinPromptCategory =
   | '常驻'
   | '开局'
   | '主剧情'
@@ -47,7 +47,7 @@ export type BuiltinPromptCategory =
  *
  * Absent on legacy data → treat as `profile`.
  */
-export type WorldBookOwnership = 'profile' | 'slot';
+type WorldBookOwnership = 'profile' | 'slot';
 
 /**
  * WHO wrote a world book.
@@ -240,23 +240,7 @@ export interface BuiltinPromptExportData {
   packId?: string;
 }
 
-export interface PresetGroupExportData {
-  version: number;
-  exportedAt: string;
-  groups: WorldBookPresetGroup[];
-}
-
 // ─── Context Piece (output of SystemPromptBuilder) ──────────
-
-export interface ContextPiece {
-  id: string;
-  title: string;
-  category: string;
-  content: string;
-  role: 'system' | 'user' | 'assistant';
-  /** Estimated token count (rough: chars / 3 for Chinese, chars / 4 for English) */
-  tokenEstimate?: number;
-}
 
 export interface MessageEntry {
   id: string;
@@ -371,8 +355,8 @@ export interface PromptSettings {
 }
 
 /** Bounds for {@link PromptSettings.capturedEntryBudgetRatio}. */
-export const CAPTURED_BUDGET_RATIO_MIN = 0.2;
-export const CAPTURED_BUDGET_RATIO_MAX = 0.8;
+const CAPTURED_BUDGET_RATIO_MIN = 0.2;
+const CAPTURED_BUDGET_RATIO_MAX = 0.8;
 export const CAPTURED_BUDGET_RATIO_DEFAULT = 0.6;
 
 /** Clamp an arbitrary stored value into the supported ratio range. */

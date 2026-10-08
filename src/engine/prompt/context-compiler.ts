@@ -87,11 +87,11 @@ export function formatShortTermFallback(shortTerm: unknown, contentKey: string):
 /** World-event log projection: always keep the newest N entries… */
 export const WORLD_EVENT_RECENT_COUNT = 5;
 /** …plus at most M older entries relevant to the present NPCs / current location. */
-export const WORLD_EVENT_RELEVANT_COUNT = 5;
+const WORLD_EVENT_RELEVANT_COUNT = 5;
 
 /** step1 builder piece ids whose content step2 would otherwise duplicate. */
-export const STEP1_PIECE_WORLD_PROMPT = PIECE_ID.WORLD_PROMPT;
-export const STEP1_PIECE_ENGRAM = PIECE_ID.MEMORY_ENGRAM;
+const STEP1_PIECE_WORLD_PROMPT = PIECE_ID.WORLD_PROMPT;
+const STEP1_PIECE_ENGRAM = PIECE_ID.MEMORY_ENGRAM;
 
 /** Trace reason keys (translated by the UI; see i18n `compiler.reason.*`). */
 export const COMPILE_REASON = {
@@ -110,7 +110,7 @@ export const COMPILE_REASON = {
  * reference save has no connection data and the PO defined adjacency as same layer +
  * direct parent/child. Flip here (or make it a path-config option) when a pack uses links.
  */
-export const LOCATION_ADJACENCY_INCLUDE_CONNECTIONS = false;
+const LOCATION_ADJACENCY_INCLUDE_CONNECTIONS = false;
 
 // ─── Sent registry ───
 

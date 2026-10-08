@@ -12,7 +12,7 @@
 
 // ─── Stage Progression ──────────────────────────────────────
 
-export interface HeroineStageProgression {
+interface HeroineStageProgression {
   /** Stage name (e.g., "初识期", "暧昧期", "确认关系") */
   stageName: string;
   /** Goals for this stage */
@@ -89,7 +89,7 @@ export interface HeroineInteractionEvent {
 
 // ─── Scene/Camera Planning ──────────────────────────────────
 
-export interface HeroineScenePlan {
+interface HeroineScenePlan {
   /** Related heroine */
   heroineName: string;
   /** Scene title */

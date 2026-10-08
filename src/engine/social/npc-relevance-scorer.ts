@@ -39,7 +39,7 @@ export interface NpcRelevanceResult {
   npcSignalCounts: Map<string, number>;
 }
 
-export interface NpcTierEntry { name: string; signals?: string[] }
+interface NpcTierEntry { name: string; signals?: string[] }
 
 export interface NpcRelevanceMeta {
   tier1Count: number;

@@ -78,16 +78,16 @@ const FREE_CALLS = new Set(['isFinite', 'isNaN']);
  * Plus signs a body may use (each runs at most once, and only `+` can grow a text). The cards written so far use
  * at most 3 (97 cards, P5); 16 keeps arithmetic room and caps a text at its longest piece × 2^16.
  */
-export const MAX_PLUS = 16;
+const MAX_PLUS = 16;
 /** The only texts a body may write: the channel names (in convert and store). */
 const TEXTS = new Set(CHANNEL_NAMES.flatMap(name => [`'${name}'`, `"${name}"`]));
 /** How much of a failing body's report is kept (it travels with the trip into the save). */
-export const MAX_ERROR_CHARS = 300;
+const MAX_ERROR_CHARS = 300;
 /**
  * A pass longer than this switches its card off for the session (a pass normally takes microseconds; this is far
  * above that even on a slow phone).
  */
-export const SLOW_PASS_MS = 250;
+const SLOW_PASS_MS = 250;
 /** Words after which `(` may follow without being a call (an `if` head, a grouped expression after a keyword). */
 const CALL_FREE_KEYWORDS = new Set(['if', 'return', 'typeof', 'void', 'delete', 'in', 'instanceof', 'throw', 'else']);
 
@@ -201,7 +201,7 @@ const SCOPE: object = new Proxy(Object.freeze(Object.create(null) as object), {
 });
 
 /** What a card body sees as `ctx`. */
-export interface PassContext extends Readonly<PassValues> {
+interface PassContext extends Readonly<PassValues> {
   rng(): number;
 }
 export type CompiledPass = (ctx: PassContext) => unknown;
@@ -224,7 +224,7 @@ export function compilePass(source: string): CompiledPass {
 }
 
 /** Content hash of a body (FNV-1a in both directions); only a cache key, not a security boundary. */
-export function sourceHash(source: string): string {
+function sourceHash(source: string): string {
   let a = 0x811c9dc5;
   for (let i = 0; i < source.length; i++) { a ^= source.charCodeAt(i); a = Math.imul(a, 0x01000193) >>> 0; }
   let b = 0x811c9dc5 ^ source.length;

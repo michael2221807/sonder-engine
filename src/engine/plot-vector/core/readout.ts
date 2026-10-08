@@ -1,9 +1,9 @@
 import type { BipolarReadout, ChannelId, ChannelMeta, DimensionDef, DimensionId, LocalizedLabel, NetVector, ReadoutOptions, TraceEvent, VectorPacket } from './types';
 
-export const DIMENSION_SCHEMA_VERSION = 'lab-fixture-1';
-export const REPRESENTATION_VERSION = 'bipolar-dual-channel-1';
+const DIMENSION_SCHEMA_VERSION = 'lab-fixture-1';
+const REPRESENTATION_VERSION = 'bipolar-dual-channel-1';
 
-export function channelsForDimension(channels: ChannelMeta[], dim: DimensionId): { plus?: ChannelId; minus?: ChannelId; mono?: ChannelId } {
+function channelsForDimension(channels: ChannelMeta[], dim: DimensionId): { plus?: ChannelId; minus?: ChannelId; mono?: ChannelId } {
   const own = channels.filter((c) => c.dimension === dim);
   if (own.length === 2) {
     return { plus: own.find((c) => c.pole === 'positive')?.id, minus: own.find((c) => c.pole === 'negative')?.id };
@@ -22,7 +22,7 @@ export function netVector(payload: Record<ChannelId, number>, dims: DimensionDef
   return out;
 }
 
-export function bipolarReadout(payload: Record<ChannelId, number>, plus: ChannelId, minus: ChannelId, kappa: number): BipolarReadout {
+function bipolarReadout(payload: Record<ChannelId, number>, plus: ChannelId, minus: ChannelId, kappa: number): BipolarReadout {
   const p = payload[plus] ?? 0;
   const n = payload[minus] ?? 0;
   const den = p + n + kappa;
@@ -34,7 +34,7 @@ export function bipolarReadout(payload: Record<ChannelId, number>, plus: Channel
 }
 
 /** N1 readout: each dimension is tanh(net / κ) of the final payload. */
-export function readoutDimensions(payload: Record<ChannelId, number>, dims: DimensionDef[], channels: ChannelMeta[], options: ReadoutOptions): Record<DimensionId, number> {
+function readoutDimensions(payload: Record<ChannelId, number>, dims: DimensionDef[], channels: ChannelMeta[], options: ReadoutOptions): Record<DimensionId, number> {
   const net = netVector(payload, dims, channels);
   const dimensions: Record<DimensionId, number> = {};
   for (const d of dims) dimensions[d.id] = Math.tanh((net[d.id] ?? 0) / options.kappa);

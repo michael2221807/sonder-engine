@@ -3,7 +3,7 @@ import { DEFAULT_ENGINE_PATHS as P } from '@/engine/pipeline/types';
 import { capabilityKey, type SavedElement, type BoundCard } from './genesis/post-save';
 
 /** The branches the projections read: items, talents, statuses, environment and attributes. */
-export const SAVED_SOURCE_PATHS: readonly string[] = [P.inventoryItems, P.talents, P.statusEffects, P.environmentTags, P.characterAttributes];
+const SAVED_SOURCE_PATHS: readonly string[] = [P.inventoryItems, P.talents, P.statusEffects, P.environmentTags, P.characterAttributes];
 /**
  * A copy of only those branches, shaped like the tree, for `projectSavedElements` / `projectNativeInput`.
  * Small next to a full snapshot, which copies the whole tree (many megabytes on a long save).

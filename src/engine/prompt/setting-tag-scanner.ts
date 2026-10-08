@@ -71,7 +71,7 @@ export const MAX_SETTING_SEGMENTS = 5;
  * auto-rejected as `no_evidence`, punishing the player for writing a long passage.
  * 4000 covers any realistic marked passage while still stopping a paste-bomb.
  */
-export const MAX_SETTING_TOTAL_CHARS = 4000;
+const MAX_SETTING_TOTAL_CHARS = 4000;
 
 /**
  * Soft advisory line, NOT a gate. Past this combined tag length the model's

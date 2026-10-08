@@ -84,8 +84,6 @@ export interface GamePack {
 // ─── 创角流程相关类型 ───
 
 export type CreationGenre = 'modern' | 'wuxia' | 'fantasy' | 'dystopia';
-export type CreationContentRating = 'general' | 'nsfw';
-export type CreationGenreScope = CreationGenre | 'all';
 
 /** Shared runtime shape for pack and user-authored preset entries. */
 export interface PresetEntry {
@@ -95,24 +93,6 @@ export interface PresetEntry {
   description?: string;
   source?: 'pack' | 'user';
   [key: string]: unknown;
-}
-
-export interface WorldPresetEntry extends PresetEntry {
-  id: string;
-  name: string;
-  description: string;
-  genre: CreationGenre;
-  contentRating: CreationContentRating;
-}
-
-export interface CreationChoicePresetEntry extends PresetEntry {
-  id: string;
-  name: string;
-  description: string;
-  genres: CreationGenreScope[];
-  adultOnly: boolean;
-  talent_cost: number;
-  attribute_modifiers?: Record<string, number>;
 }
 
 /** 创角流程配置 — 定义创角的所有步骤 */
@@ -240,7 +220,7 @@ export interface CustomPresetSchema {
   fields: CustomPresetField[];
 }
 
-export interface CustomPresetField {
+interface CustomPresetField {
   /** 字段在 entry 对象中的 key（如 "name", "description", "talent_cost"） */
   key: string;
   /** UI 显示标签 */
@@ -300,7 +280,7 @@ export interface PromptFlowConfig {
  * Prompt Flow 中的单个模块引用
  * 指定 prompt 内容、角色、顺序和注入深度
  */
-export interface PromptFlowModule {
+interface PromptFlowModule {
   /** 引用的 prompt ID（对应 prompts/{id}.md） */
   promptId: string;
   /** 消息角色 */

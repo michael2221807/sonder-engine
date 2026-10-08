@@ -23,7 +23,7 @@ import type { VectorStore } from './vector-store';
  * `defaultCore` / `defaultSource` options cannot express that difference, so anything
  * with its own provenance carries it here and wins over the defaults.
  */
-export interface FactProvenance {
+interface FactProvenance {
   source: EngramEdge['source'];
   core?: boolean;
   canonEntryId?: string;

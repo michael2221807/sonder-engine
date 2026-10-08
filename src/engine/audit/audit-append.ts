@@ -34,7 +34,7 @@ export type AuditSource =
   | 'bodyPolish';
 
 /** A change record as stored on the narrative entry's _delta, with source tag. */
-export type TaggedChange = StateChange & { source?: AuditSource };
+type TaggedChange = StateChange & { source?: AuditSource };
 
 /**
  * Append a batch of changes to the last assistant narrative entry's `_delta`.

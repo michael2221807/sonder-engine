@@ -5,9 +5,7 @@ import type {
   AccountSnapshot,
   AccountState,
   Cap,
-  ChannelId,
 } from './types';
-import { SCALAR_KEY } from './types';
 
 /** Upper bound of any account total, far above every meaningful amount; keeps all sums finite. */
 export const ACCOUNT_CEILING = 1e12;
@@ -40,7 +38,7 @@ export class AccountStore {
     return d;
   }
 
-  /** Sum of one channel (or SCALAR_KEY) across entries. */
+  /** Sum of one channel (or the scalar key '$') across entries. */
   amount(id: AccountId, channel: string): number {
     const st = this.state(id);
     let sum = 0;
@@ -150,7 +148,7 @@ export class AccountStore {
   }
 }
 
-export function validateAccountDef(def: AccountDef): void {
+function validateAccountDef(def: AccountDef): void {
   if (def.persist === 'acrossRounds') {
     if (def.cap === undefined) throw new Error(`account ${def.id}: acrossRounds accounts must declare cap`);
     if (def.lifetimeRounds === undefined) {
@@ -175,10 +173,6 @@ export function ageSnapshot(snapshot: AccountSnapshot, defs: AccountDef[], newRo
     );
   }
   return out;
-}
-
-export function isScalarChannel(channel: ChannelId): boolean {
-  return channel === SCALAR_KEY;
 }
 
 function cloneEntries(entries: AccountEntry[]): AccountEntry[] {

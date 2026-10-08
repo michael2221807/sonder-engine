@@ -117,7 +117,7 @@ export function pruneEdgesToImportant(
   );
 }
 
-export function collectImportantNpcNames(stateManager: StateManager, scope: ImportantNpcScope): Set<string> {
+function collectImportantNpcNames(stateManager: StateManager, scope: ImportantNpcScope): Set<string> {
   const raw = stateManager.get<NpcRelationshipEntry[]>(scope.relationshipsPath);
   const relationships = Array.isArray(raw) ? raw : [];
   const names = new Set<string>();

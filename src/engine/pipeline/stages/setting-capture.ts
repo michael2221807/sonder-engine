@@ -22,7 +22,7 @@ import { eventBus } from '../../core/event-bus';
 import type { PipelineStage, PipelineContext, EnginePathConfig } from '../types';
 import type { StateManager } from '../../core/state-manager';
 import type { RawSettingUpdate } from '../../ai/types';
-import type { WorldBook, WorldBookEntry, CapturedSettingKind } from '../../prompt/world-book';
+import type { WorldBook, CapturedSettingKind } from '../../prompt/world-book';
 import {
   scanSettingTags,
   normalizeForEvidence,
@@ -38,7 +38,6 @@ import {
   filterAnchors,
   normalizeForIdentity,
   upsertCapturedBook,
-  FALLBACK_CAPTURED_LABELS,
   MAX_ACTIVE_CAPTURED_ENTRIES,
   MAX_ANCHORS,
   MAX_CANDIDATES_PER_ROUND,
@@ -63,17 +62,17 @@ export type SettingRejectReason =
   | 'overflow'
   | 'internal_error';
 
-export interface AcceptedSettingMutation {
+interface AcceptedSettingMutation {
   entryId: string;
   candidate: SettingUpdateCandidate;
 }
 
-export interface SettingNoop {
+interface SettingNoop {
   candidate: SettingUpdateCandidate;
   existingEntryId: string;
 }
 
-export interface SettingRejection {
+interface SettingRejection {
   /** Null when the item was too malformed to even shape into a candidate. */
   candidate: SettingUpdateCandidate | null;
   reason: SettingRejectReason;
@@ -115,9 +114,9 @@ export interface SettingCaptureLastRecord {
 }
 
 /** Cap on the persisted preview — enough to re-add by hand, small enough for a save. */
-export const SEGMENTS_PREVIEW_MAX_CHARS = 600;
+const SEGMENTS_PREVIEW_MAX_CHARS = 600;
 
-export const EMPTY_CAPTURE_RESULT: SettingCaptureResult = {
+const EMPTY_CAPTURE_RESULT: SettingCaptureResult = {
   accepted: [],
   noops: [],
   rejected: [],
@@ -634,9 +633,3 @@ export class SettingCaptureStage implements PipelineStage {
   }
 }
 
-/** Entries of the captured book in a slot book list — small helper for consumers. */
-export function readCapturedEntries(books: WorldBook[] | undefined): WorldBookEntry[] {
-  return findCapturedBook(books)?.entries ?? [];
-}
-
-export { FALLBACK_CAPTURED_LABELS };

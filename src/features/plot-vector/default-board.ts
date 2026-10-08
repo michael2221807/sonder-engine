@@ -1,7 +1,7 @@
 import type { BoardDef, EffectDef, Provenance } from '../../engine/plot-vector/core/types';
 import { SHUTTLE_ACCOUNT } from '../../engine/plot-vector/core/runner';
 
-export const SIX_CELL_ID = 'six-cell';
+const SIX_CELL_ID = 'six-cell';
 export const SIX_CELL_RING_ID = 'six-cell-ring';
 export type SixCellTopology = 'line' | 'ring';
 export interface SixCellOptions {

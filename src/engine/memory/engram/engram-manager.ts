@@ -64,14 +64,9 @@ export interface ProcessResponseOptions {
 }
 // CR-8: 类型定义已迁移到 engram-types.ts
 export type {
-  EngramRetrievalMode,
-  EngramEmbeddingConfig,
-  EngramRerankConfig,
-  EngramTrimConfig,
   EngramConfig,
   EngramWriteSnapshot,
 } from './engram-types';
-export { DEFAULT_ENGRAM_CONFIG } from './engram-types';
 import { ENGRAM_SCHEMA_VERSION, EDGE_CAPACITY_DEFAULT } from './engram-types';
 import type { EngramStateData } from './engram-types';
 import {

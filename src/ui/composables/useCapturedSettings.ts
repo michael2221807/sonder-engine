@@ -20,7 +20,6 @@ import type { EngramEdge } from '@/engine/memory/engram/knowledge-edge';
 import type { SettingCaptureLastRecord } from '@/engine/pipeline/stages/setting-capture';
 import {
   CapturedSettingCoordinator,
-  type CapturedMutationResult,
   type CapturedSettingStatePort,
   type CapturedEngramBridge,
 } from '@/engine/prompt/captured-setting-coordinator';
@@ -196,4 +195,3 @@ export function useCapturedSettings() {
   };
 }
 
-export type { CapturedMutationResult };

@@ -13,7 +13,7 @@
 export type DimensionId = string;
 /** A channel is one non-negative quantity carried by the shuttle. Bipolar dims own two. */
 export type ChannelId = string;
-export type Pole = 'positive' | 'negative';
+type Pole = 'positive' | 'negative';
 
 export interface LocalizedLabel {
   zh: string;
@@ -36,7 +36,7 @@ export interface ChannelMeta {
 
 // ─── Provenance ────────────────────────────────────────────────────────
 
-export type RuleSource = 'PO' | 'Codex' | 'Claude' | 'Model';
+type RuleSource = 'PO' | 'Codex' | 'Claude' | 'Model';
 
 /** Whose idea a rule is and who wrote its numbers (kept apart on purpose). */
 export interface Provenance {
@@ -46,7 +46,7 @@ export interface Provenance {
 
 // ─── Accounts ──────────────────────────────────────────────────────────
 
-export type OwnerKind = 'shuttle' | 'cell' | 'card' | 'runner';
+type OwnerKind = 'shuttle' | 'cell' | 'card' | 'runner';
 
 export interface OwnerRef {
   kind: OwnerKind;
@@ -74,9 +74,6 @@ export interface AccountDef {
   label?: LocalizedLabel;
 }
 
-/** Key used for the single quantity of a scalar account. */
-export const SCALAR_KEY = '$';
-
 export interface AccountEntry {
   /** Round index in which the entry was created (for lifetime expiry). */
   round: number;
@@ -93,7 +90,7 @@ export type AccountSnapshot = Record<AccountId, AccountEntry[]>;
 
 // ─── Effects & operations ──────────────────────────────────────────────
 
-export type EffectEvent = 'beforeCard' | 'onVisit' | 'afterCard' | 'onExit' | 'onTraverse' | 'modifyOperation';
+type EffectEvent = 'beforeCard' | 'onVisit' | 'afterCard' | 'onExit' | 'onTraverse' | 'modifyOperation';
 
 export type PortId = string;
 
@@ -119,7 +116,7 @@ export type OperationDef =
 
 export type OperationKind = OperationDef['op'];
 
-export interface ModifierSelector {
+interface ModifierSelector {
   ownerKind: OwnerKind;
   opKind: OperationKind;
 }
@@ -152,7 +149,7 @@ export interface EffectDef {
 // ─── Board objects ─────────────────────────────────────────────────────
 
 /** The template roles a cell can have. Cross-round, content-free. */
-export type CellKind = 'resonance' | 'converter' | 'effectSlot' | 'plain';
+type CellKind = 'resonance' | 'converter' | 'effectSlot' | 'plain';
 
 export interface CellDef {
   id: string;
@@ -167,7 +164,7 @@ export interface CellDef {
   provenance?: Provenance;
 }
 
-export interface EdgeEndpoint {
+interface EdgeEndpoint {
   cell: string;
   port: PortId;
 }
@@ -182,7 +179,7 @@ export interface EdgeDef {
 }
 
 /** A repeatable source that hands out uses after an accepted round. */
-export interface CardSupplyRule {
+interface CardSupplyRule {
   trigger: 'roundAccepted';
   amount: number;
   sourceId: string;
@@ -190,7 +187,7 @@ export interface CardSupplyRule {
 }
 
 /** Only the basic filler cards have uses; story cards are unlimited (charter I12). */
-export interface CardUsage {
+interface CardUsage {
   kind: 'consumable';
   initialStock: number;
   maxStock: number;
@@ -389,7 +386,7 @@ export interface VectorPacket {
   sourceSummary: Array<{ owner: OwnerRef; effectId: string; label: LocalizedLabel; magnitude: number }>;
 }
 
-export interface FinalState {
+interface FinalState {
   shuttle: Record<ChannelId, number>;
   net: NetVector;
   accounts: Record<AccountId, { total: number; byChannel: Record<string, number> }>;
@@ -414,7 +411,7 @@ export interface RunDone {
   triggeredCards: string[];
 }
 
-export interface RunFailed {
+interface RunFailed {
   status: 'failed';
   reason: string;
   partialTrace: TraceEvent[];

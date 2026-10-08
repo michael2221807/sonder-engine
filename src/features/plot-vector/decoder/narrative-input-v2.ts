@@ -6,7 +6,7 @@ export interface NarrativeAxis { id: string; meaning: string; negative?: string;
  * dimension's meaning and tendency, its value, the strength. How to use it (a light nudge, never a verdict)
  * is said once, in the pack's plot-vector mode text, which every such request carries.
  */
-export const LAB_NARRATIVE_AXES_V2: readonly NarrativeAxis[] = [
+const LAB_NARRATIVE_AXES_V2: readonly NarrativeAxis[] = [
   { id: 'S', meaning: '事情推进的顺逆倾向', negative: '已在进行的事更容易遇到一点小阻力，仍留着绕行或稍后再试的余地', positive: '已在进行的事更容易顺着走' },
   { id: 'Y', meaning: '建立联系和沟通的容易程度', positive: '已经存在的交流、已经有动机的人更容易给出自然的回应' },
   { id: 'J', meaning: '出现可利用选择的倾向', positive: '情境里本来就有的余地更容易被看见' },

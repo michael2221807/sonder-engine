@@ -45,14 +45,14 @@ export interface InlineSite {
   readonly symbol: string;
 }
 
-export interface FlowModuleRef {
+interface FlowModuleRef {
   readonly promptId: string;
   /** The module's `condition` variable, absent for an unconditional module. */
   readonly condition?: string;
   readonly flows: readonly RoundFlowKey[];
 }
 
-export interface FlowPlaceholder {
+interface FlowPlaceholder {
   /** The pack prompt that has to contain `{{variable}}`. */
   readonly promptId: string;
   readonly variable: string;
@@ -72,7 +72,7 @@ export interface FlowSide {
   readonly inline?: InlineSite;
 }
 
-export type Side = 'builder' | 'flow';
+type Side = 'builder' | 'flow';
 
 export interface RoundInjection {
   readonly id: string;

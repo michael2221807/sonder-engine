@@ -58,7 +58,7 @@ const ALL_USAGE_TYPES: UsageType[] = [
 ];
 
 /** 默认 Rerank 路由路径 */
-export const DEFAULT_RERANK_ROUTING_PATH = '/rerank';
+const DEFAULT_RERANK_ROUTING_PATH = '/rerank';
 
 export const useAPIManagementStore = defineStore('apiManagement', () => {
   // ─── State ───

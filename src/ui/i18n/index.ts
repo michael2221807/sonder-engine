@@ -1,7 +1,7 @@
 import { createI18n } from 'vue-i18n';
 import zhCN from './locales/zh-CN/index';
 
-export type MessageSchema = typeof zhCN;
+type MessageSchema = typeof zhCN;
 
 export const SUPPORTED_LOCALES = ['zh-CN', 'en'] as const;
 export type SupportedLocale = typeof SUPPORTED_LOCALES[number];

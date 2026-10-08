@@ -16,7 +16,7 @@ export interface BodyEditPart {
   特殊印记: string;
 }
 export interface BodyEditRecord { _id: number; 日期: string; 描述: string }
-export interface BodyEditUterus { 状态: string; 宫口状态: string; 内射记录: BodyEditRecord[] }
+interface BodyEditUterus { 状态: string; 宫口状态: string; 内射记录: BodyEditRecord[] }
 export interface BodyEditForm {
   身高: number; 体重: number;
   胸围: number; 腰围: number; 臀围: number;

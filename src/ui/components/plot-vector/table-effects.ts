@@ -10,7 +10,7 @@ import { prefersReducedMotion } from './use-trip-walk';
 const EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
 const SOFT = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
 
-export const tierColor = (tier: CardTier | undefined): string => (tier ? `var(--tier-${tier})` : 'var(--color-sage-400)');
+const tierColor = (tier: CardTier | undefined): string => (tier ? `var(--tier-${tier})` : 'var(--color-sage-400)');
 const TIER_RANK: Record<CardTier, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
 export const tierRank = (tier: CardTier | undefined): number => (tier ? TIER_RANK[tier] : -1);
 /** The rarest of some tiers (for the badge's glow). */
@@ -26,7 +26,7 @@ export function buzz(ms = 8): void {
 }
 
 /** Waves that leave `card` from its own edge: an outline that grows outward and fades. */
-export function edgeWaves(card: HTMLElement, color: string, count: number, spread = 20, gap = 160): void {
+function edgeWaves(card: HTMLElement, color: string, count: number, spread = 20, gap = 160): void {
   if (prefersReducedMotion() || count <= 0) return;
   const radius = getComputedStyle(card).borderRadius || '11px';
   for (let i = 0; i < count; i++) {
@@ -41,7 +41,7 @@ export function edgeWaves(card: HTMLElement, color: string, count: number, sprea
 }
 
 /** Sparks thrown out from the centre of `host`. */
-export function sparks(host: HTMLElement, color: string, count: number, reach = 60): void {
+function sparks(host: HTMLElement, color: string, count: number, reach = 60): void {
   if (prefersReducedMotion()) return;
   for (let i = 0; i < count; i++) {
     const spark = document.createElement('i');

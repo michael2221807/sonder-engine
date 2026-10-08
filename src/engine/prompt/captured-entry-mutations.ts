@@ -151,7 +151,7 @@ export function buildCapturedTitle(
  * the entry becomes a permanent budget resident and the anchor gate stops constraining
  * anything. Design §6.2 rule 6 requires filtering these out.
  */
-export const MIN_ANCHOR_LENGTH = 2;
+const MIN_ANCHOR_LENGTH = 2;
 
 /**
  * Drop anchors that cannot function as retrieval keywords.

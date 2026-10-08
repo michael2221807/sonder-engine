@@ -1,6 +1,6 @@
 import type { CompiledBoard, ModifierDef, ModifierRecord, OperationKind, OwnerRef } from './types';
 
-export interface AdjacencyNeighbor {
+interface AdjacencyNeighbor {
   cellId: string;
   tags: string[];
   hasCard: boolean;

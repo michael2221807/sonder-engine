@@ -14,7 +14,7 @@
  */
 import type { Page, Route } from '@playwright/test';
 
-export const BLOCKED_PATTERNS: string[] = [
+const BLOCKED_PATTERNS: string[] = [
   '**/v1/chat/completions',      // OpenAI / DeepSeek / custom LLM
   '**/v1/messages',              // Claude
   '**/v1beta/**',                // Gemini generateContent / streamGenerateContent

@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { expect } from '@playwright/test';
 
 /** The subset of the card bundle our export assertions read. */
-export interface CardBundle {
+interface CardBundle {
   bundleType: string;
   cardMeta: { title: string; packId: string } & Record<string, unknown>;
   engram: { entities: unknown[] } & Record<string, unknown>;

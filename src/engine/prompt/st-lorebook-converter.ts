@@ -8,7 +8,7 @@ import type { WorldBook, WorldBookEntry, WorldBookInjectionMode } from './world-
 
 // ─── ST Types (subset of fields we actually read) ──────────
 
-export interface STLorebookEntry {
+interface STLorebookEntry {
   uid?: number;
   key?: string[];
   keysecondary?: string[];

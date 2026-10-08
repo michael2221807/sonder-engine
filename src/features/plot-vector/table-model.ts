@@ -41,7 +41,7 @@ export interface TableCard {
   /** No use left now; a recharging card waits in the hand until it regains one. */
   resting: boolean;
 }
-export type CellRole = 'resonance' | 'converter' | 'effect' | 'status';
+type CellRole = 'resonance' | 'converter' | 'effect' | 'status';
 export interface TableCell { id: string; role: CellRole; card: string | null }
 /** An obtained entry whose ability is not usable yet (4A: never placeable; the retry lives in its details). */
 export interface FormingCard { id: string; kind: TableCardKind; name: string; failed: boolean }
@@ -81,7 +81,7 @@ export function rateStoryCard(view: BoardView, id: string): CardRating | undefin
  * Every card the prepared board knows, with its face and marks. `worked` holds the ratings the table worked out
  * for story cards not rated yet (display only); a current saved rating wins over it.
  */
-export function tableCards(view: BoardView, prepared: PreparedVector, worked?: ReadonlyMap<string, CardRating>): Record<string, TableCard> {
+function tableCards(view: BoardView, prepared: PreparedVector, worked?: ReadonlyMap<string, CardRating>): Record<string, TableCard> {
   const states = view.state.session.cardStates;
   const progress = new Map((prepared.progress ?? []).map(p => [p.cardId, p.rows]));
   const story = new Map(view.state.cards.map(c => [c.task.entry.id, c]));
@@ -165,7 +165,7 @@ export function sweep(layout: Layout): Layout {
 
 /** What a card did at one pass, as one sign for the animation. */
 export type PassSign = 'push' | 'drag' | 'social' | 'chance' | 'route' | 'store';
-export interface WalkStep { cell: string; back: boolean; acted: Array<{ card: string; sign: PassSign }> }
+interface WalkStep { cell: string; back: boolean; acted: Array<{ card: string; sign: PassSign }> }
 export interface TripWalk {
   /** Cards that acted at departure (environment, like weather). */
   departure: Array<{ card: string; sign: PassSign }>;
@@ -217,7 +217,7 @@ export function tripWalk(result: RunDone): TripWalk {
  * with the signs of the cards that acted — and then where it leaned and the round's push in two words. Pure: the
  * adapter sends it when it prepares the round; the UI supplies the words.
  */
-export interface OpeningCell { id: string; status: boolean; card?: { name: LocalizedLabel; tier?: CardTier } }
+interface OpeningCell { id: string; status: boolean; card?: { name: LocalizedLabel; tier?: CardTier } }
 export interface RoundOpening {
   /** The trip's id (slot and round). */
   id: string;

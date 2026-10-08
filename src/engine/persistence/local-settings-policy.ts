@@ -27,7 +27,7 @@ export const LS_KEY_PREFIXES = ['aga_', 'aga-'] as const;
  * - rollback: the snapshot of an own-sync download records them (absent too), so a failed download puts them back
  *   exactly; any other import's snapshot leaves them out, and its rollback leaves them as they are now.
  */
-export const LS_OWN_SYNC_KEYS: ReadonlySet<string> = new Set([PLOT_VECTOR_CONTROL_KEY]);
+const LS_OWN_SYNC_KEYS: ReadonlySet<string> = new Set([PLOT_VECTOR_CONTROL_KEY]);
 
 /**
  * 从 localStorage 收集引擎设置

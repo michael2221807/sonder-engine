@@ -17,7 +17,7 @@ export interface ConnectionTestResult {
 }
 
 /** The raw form/config values the APIPanel test button holds. */
-export interface ConnectionTestConfig {
+interface ConnectionTestConfig {
   url: string;
   apiKey: string;
   model: string;

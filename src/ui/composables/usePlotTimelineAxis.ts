@@ -10,8 +10,8 @@
  */
 import type { AxisMode } from '@/ui/components/panels/plot/scheduler-layout';
 
-export const PLOT_SETTINGS_STORAGE_KEY = 'aga_plot_settings';
-export const PLOT_TIMELINE_AXIS_PATH = '系统.设置.plot.timelineAxis';
+const PLOT_SETTINGS_STORAGE_KEY = 'aga_plot_settings';
+const PLOT_TIMELINE_AXIS_PATH = '系统.设置.plot.timelineAxis';
 
 export function writePlotTimelineAxis(
   setValue: (path: string, value: unknown) => void,

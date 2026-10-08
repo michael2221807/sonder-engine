@@ -40,7 +40,7 @@ import {
 } from '../../providers/doubao-ws-protocol';
 
 export const DOUBAO_TTS_DEFAULT_PATH = '/api/v3/plan/tts/unidirectional/stream';
-export const DOUBAO_TTS_DEFAULT_RESOURCE_ID = 'seed-tts-2.0';
+const DOUBAO_TTS_DEFAULT_RESOURCE_ID = 'seed-tts-2.0';
 
 /**
  * Built-in speakers — every id below produced real audio in the 2026-08-27

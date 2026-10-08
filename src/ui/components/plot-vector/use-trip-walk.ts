@@ -7,7 +7,7 @@ import { onBeforeUnmount, ref, shallowRef } from 'vue';
 import type { PassSign, TripWalk } from '@/features/plot-vector/table-model';
 
 export interface WalkFloat { id: number; cell: string; sign: PassSign }
-export const WALK_STEP_MS = 190;
+const WALK_STEP_MS = 190;
 
 export function prefersReducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;

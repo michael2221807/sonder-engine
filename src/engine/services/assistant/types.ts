@@ -29,7 +29,7 @@
  *   导致无关项被污染（模型在重写时可能无意识修改其他 item），所以对于"新增一项"
  *   场景强烈推荐 insert-item / append-item。
  */
-export type AssistantPatchOp =
+type AssistantPatchOp =
   | 'set-field'
   | 'append-item'
   | 'insert-item'    // 2026-04-14 新增：精确位置插入（按名称定位，非下标）
@@ -107,7 +107,7 @@ export interface KnowledgeFact {
 // ─── Validator 输出 ────────────────────────────────────────
 
 /** 校验状态 —— ok 可注入；warn 可注入但提示用户；error 必须修复后才能注入 */
-export type PatchValidationStatus = 'ok' | 'warn' | 'error';
+type PatchValidationStatus = 'ok' | 'warn' | 'error';
 
 /**
  * 校验后的 patch —— 在原 patch 基础上加 status + issues
@@ -129,7 +129,7 @@ export interface ValidatedPatch extends AssistantPatch {
  * - context：仅作为上下文喂给 AI（read-only）；可多个
  * - target：AI 应该返回 patch 修改这条；MVP 限制单个
  */
-export type AttachmentScope = 'context' | 'target';
+type AttachmentScope = 'context' | 'target';
 
 /**
  * 用户在 picker 中选定的 attach 描述（输入端）
@@ -171,7 +171,7 @@ export interface AttachmentPayload extends AttachmentSummary {
 
 // ─── Conversation 数据模型 ────────────────────────────────
 
-export type AssistantMessageRole = 'user' | 'assistant' | 'system';
+type AssistantMessageRole = 'user' | 'assistant' | 'system';
 
 /**
  * Synthetic system message 的种类
@@ -220,7 +220,7 @@ export interface AssistantSession {
 
 // ─── Payload Draft（可注入数据状态机） ─────────────────────
 
-export type PayloadDraftStatus = 'pending' | 'injected' | 'discarded';
+type PayloadDraftStatus = 'pending' | 'injected' | 'discarded';
 
 /**
  * Payload 草稿 —— 挂在 assistant message 上
@@ -369,8 +369,4 @@ export function generateAssistantMessageId(): string {
   const ts = Date.now().toString(36);
   const rand = Math.random().toString(36).slice(2, 8);
   return `${ID_PREFIX}${ts}_${rand}`;
-}
-
-export function isAssistantMessageId(id: unknown): boolean {
-  return typeof id === 'string' && id.startsWith(ID_PREFIX);
 }

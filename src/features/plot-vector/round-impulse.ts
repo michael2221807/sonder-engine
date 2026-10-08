@@ -6,9 +6,9 @@ import type { VectorPacket } from '../../engine/plot-vector/core/types';
 import { narrativePromptFor, type VectorState } from './runtime';
 
 /** Going well, level, some resistance, heavy resistance. */
-export type ImpulseTone = 'with' | 'even' | 'against' | 'hard';
+type ImpulseTone = 'with' | 'even' | 'against' | 'hard';
 /** Which of relations or openings leans more. */
-export type ImpulseLean = 'social' | 'chance';
+type ImpulseLean = 'social' | 'chance';
 export interface RoundImpulse { tone: ImpulseTone; lean?: ImpulseLean }
 
 /**

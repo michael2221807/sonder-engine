@@ -31,7 +31,7 @@ export interface CommitReviseOptions {
   expectedPendingIds?: string[];
 }
 
-export type CommitReviseError = 'not_found' | 'not_revisable' | 'stale' | 'empty_nodes' | 'busy';
+type CommitReviseError = 'not_found' | 'not_revisable' | 'stale' | 'empty_nodes' | 'busy';
 
 export interface CommitReviseReport {
   ok: boolean;
@@ -146,7 +146,7 @@ function newGauge(p: ReviseGauge): Omit<PlotGauge, 'id'> {
 }
 
 /** One field-level change for the preview's expandable rows. `before` absent = brand-new value. */
-export interface ReviseFieldDiff {
+interface ReviseFieldDiff {
   field: string;
   before?: string;
   after: string;

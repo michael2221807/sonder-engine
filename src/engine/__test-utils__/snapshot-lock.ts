@@ -8,7 +8,7 @@
 import { createHash } from 'node:crypto';
 import { openDB } from 'idb';
 
-export const UNDEFINED_MARK = '__undefined__';
+const UNDEFINED_MARK = '__undefined__';
 
 /** Same writing as the R2/R3 corpora: key order kept, undefined written as a mark, trailing newline. */
 export function serialize(value: unknown): string {
@@ -30,7 +30,7 @@ export function errorInfo(err: unknown): { name: string; message: string } {
 }
 
 /** Deep copy for recording, with Blobs turned into `{blob, type, size, sha256}` and typed arrays into a hash. */
-export async function plainify(value: unknown): Promise<unknown> {
+async function plainify(value: unknown): Promise<unknown> {
   if (value instanceof Blob) {
     const bytes = new Uint8Array(await value.arrayBuffer());
     return { blob: true, type: value.type, size: value.size, sha256: sha256Hex(bytes) };
@@ -104,9 +104,4 @@ export function diffLocalStorage(
   }
   for (const k of Object.keys(before)) if (!(k in after)) removed.push(k);
   return { added, removed, changed };
-}
-
-/** Lets fire-and-forget IndexedDB work land. Timers other than Date stay real (fake-indexeddb needs them). */
-export async function settle(ticks = 40): Promise<void> {
-  for (let i = 0; i < ticks; i++) await new Promise<void>((resolve) => setTimeout(resolve, 0));
 }

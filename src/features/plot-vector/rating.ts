@@ -23,7 +23,7 @@ export const CARD_TIERS: readonly CardTier[] = ['common', 'uncommon', 'rare', 'e
 export type RatingPlace = 'placed' | 'status' | 'departs';
 
 /** The four quantities by their domain names (push, drag, social, chance). */
-export interface ChannelValues { push: number; drag: number; social: number; chance: number }
+interface ChannelValues { push: number; drag: number; social: number; chance: number }
 
 /**
  * What a card does, measured on the same trips as its rating (PO 2026-10-01: the table explains a card from the

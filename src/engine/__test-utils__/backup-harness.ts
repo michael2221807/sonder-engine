@@ -19,8 +19,8 @@ import type { WorldBook, BuiltinPromptEntry } from '../prompt/world-book';
 import type { ConfigOverlay } from '../types/config';
 
 export const FIXED_NOW = new Date('2026-10-08T00:00:00.000Z');
-export const FIXED_RANDOM = 0.123456;
-export const DEVICE_ID = 'dev_0a0b0c0d';
+const FIXED_RANDOM = 0.123456;
+const DEVICE_ID = 'dev_0a0b0c0d';
 export const GH_TOKEN = 'ghp_FAKE0000';
 
 /** 'full' = the rich source machine, 'local' = a different small machine to import into, 'empty' = nothing. */
@@ -59,9 +59,9 @@ async function importModules() {
   };
 }
 
-export type HarnessModules = Awaited<ReturnType<typeof importModules>>;
+type HarnessModules = Awaited<ReturnType<typeof importModules>>;
 
-export interface Recorded { event: string; payload: unknown }
+interface Recorded { event: string; payload: unknown }
 
 export interface BackupHarness {
   mods: HarnessModules;
@@ -85,7 +85,7 @@ export interface BackupHarness {
   putBook(profileId: string, id: string, entryCount?: number): Promise<void>;
 }
 
-export function profileMeta(profileId: string, characterName: string, slotIds: string[]): ProfileMeta {
+function profileMeta(profileId: string, characterName: string, slotIds: string[]): ProfileMeta {
   const slots: ProfileMeta['slots'] = {};
   for (const slotId of slotIds) {
     slots[slotId] = { slotId, slotName: `Slot ${slotId}`, lastSavedAt: null, packId: 'tianming', packVersion: '1.0.0' };
@@ -93,14 +93,14 @@ export function profileMeta(profileId: string, characterName: string, slotIds: s
   return { profileId, createdAt: '2026-10-01T00:00:00.000Z', packId: 'tianming', characterName, slots, activeSlotId: slotIds[0] ?? null };
 }
 
-export function imageAsset(id: string, text: string, sizeBytes?: number): ImageAsset {
+function imageAsset(id: string, text: string, sizeBytes?: number): ImageAsset {
   return {
     id, taskId: `task_${id}`, storageKey: id, mimeType: 'image/png', width: 8, height: 8,
     sizeBytes: sizeBytes ?? text.length, backend: 'novelai', createdAt: 1, origin: 'generated',
   };
 }
 
-export function worldBook(id: string, entryCount = 2): WorldBook {
+function worldBook(id: string, entryCount = 2): WorldBook {
   const entries = [];
   for (let i = 1; i <= entryCount; i++) {
     entries.push({

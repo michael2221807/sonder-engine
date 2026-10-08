@@ -31,7 +31,6 @@ export type {
   SaveSlotMeta,
   ProfileMeta,
   StorageRoot,
-  Migration,
 } from './persistence';
 
 // ─── Game Pack ───
@@ -43,15 +42,8 @@ export type {
   FormFieldConfig,
   DetailField,
   PromptFlowConfig,
-  PromptFlowModule,
   CustomPresetSchema,
-  CustomPresetField,
   PresetEntry,
-  WorldPresetEntry,
-  CreationChoicePresetEntry,
-  CreationGenre,
-  CreationContentRating,
-  CreationGenreScope,
 } from './game-pack';
 
 // ─── Behavior Module Configs ───
