@@ -12,6 +12,7 @@ import type { PromptAssembler } from '../prompt/prompt-assembler';
 import type { StateManager } from '../core/state-manager';
 import type { EnginePathConfig } from '../pipeline/types';
 import { formatMemoryEntry } from './npc-memory-format';
+import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 
 interface NpcMemoryConfig {
   threshold: number;
@@ -122,6 +123,6 @@ export class NpcMemorySummarizer {
   private getCurrentGameTime(): string {
     const t = this.stateManager.get<Record<string, unknown>>(this.paths.gameTime);
     if (!t || typeof t !== 'object') return '未知';
-    return `${t['年'] ?? 0}年${t['月'] ?? 0}月${t['日'] ?? 0}日`;
+    return `${t[DEFAULT_ENGINE_PATHS.gameTimeFieldNames.year] ?? 0}年${t[DEFAULT_ENGINE_PATHS.gameTimeFieldNames.month] ?? 0}月${t[DEFAULT_ENGINE_PATHS.gameTimeFieldNames.day] ?? 0}日`;
   }
 }

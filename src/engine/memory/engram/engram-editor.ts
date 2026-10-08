@@ -19,6 +19,7 @@ import type { EngramEntity } from './entity-builder';
 import { inferEntityType } from './entity-builder';
 import type { EngramRelation } from './engram-types';
 import type { EngramEventNode } from './event-builder';
+import { DEFAULT_ENGINE_PATHS } from '../../pipeline/types';
 
 // ─── Minimal interface for EngramManager methods we depend on ───
 // Using an interface instead of importing the class avoids coupling to its
@@ -172,14 +173,14 @@ export class EngramEditor {
   ) {
     this.stateManager = stateManager;
     this.engramManager = engramManager;
-    this.engramPath = pathOverrides?.engramMemory ?? '系统.扩展.engramMemory';
-    this.roundNumberPath = pathOverrides?.roundNumber ?? '元数据.回合序号';
-    this.relationshipsPath = pathOverrides?.relationships ?? '社交.关系';
-    this.locationsPath = pathOverrides?.locations ?? '世界.地点信息';
-    this.npcNameField = pathOverrides?.npcNameField ?? '名称';
-    this.npcTypeField = pathOverrides?.npcTypeField ?? '类型';
-    this.npcTypeExclude = pathOverrides?.npcTypeExclude ?? '普通';
-    this.locationNameField = pathOverrides?.locationNameField ?? '名称';
+    this.engramPath = pathOverrides?.engramMemory ?? DEFAULT_ENGINE_PATHS.engramMemory;
+    this.roundNumberPath = pathOverrides?.roundNumber ?? DEFAULT_ENGINE_PATHS.roundNumber;
+    this.relationshipsPath = pathOverrides?.relationships ?? DEFAULT_ENGINE_PATHS.relationships;
+    this.locationsPath = pathOverrides?.locations ?? DEFAULT_ENGINE_PATHS.locations;
+    this.npcNameField = pathOverrides?.npcNameField ?? DEFAULT_ENGINE_PATHS.npcFieldNames.name;
+    this.npcTypeField = pathOverrides?.npcTypeField ?? DEFAULT_ENGINE_PATHS.npcFieldNames.type;
+    this.npcTypeExclude = pathOverrides?.npcTypeExclude ?? DEFAULT_ENGINE_PATHS.npcTypeExclude;
+    this.locationNameField = pathOverrides?.locationNameField ?? DEFAULT_ENGINE_PATHS.locationFieldNames.name;
   }
 
   // ─── Entity CRUD ───

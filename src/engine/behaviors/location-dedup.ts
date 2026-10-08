@@ -17,6 +17,10 @@
  * 在 PostProcessStage 每回合末调用。
  */
 import type { StateManager } from '../core/state-manager';
+import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
+
+/** Separator between the levels of a hierarchical location name. */
+const SEP = DEFAULT_ENGINE_PATHS.locationPathSeparator;
 
 interface LocEntry {
   名称: string;
@@ -48,7 +52,7 @@ export function deduplicateLocations(
   const byLastSeg = new Map<string, LocEntry[]>();
   for (const loc of locs) {
     if (!loc?.名称) continue;
-    const segs = loc.名称.split('·');
+    const segs = loc.名称.split(SEP);
     const last = segs[segs.length - 1];
     const group = byLastSeg.get(last);
     if (group) group.push(loc);
@@ -74,8 +78,8 @@ export function deduplicateLocations(
         if (renames.has(long.名称)) continue;
 
         // 检查短名是否是长名的后缀
-        // "S市" 是 "中国·S市" 的后缀 → long.名称.endsWith('·' + short.名称)
-        if (long.名称.endsWith('·' + short.名称) || long.名称 === short.名称) {
+        // "S市" 是 "中国·S市" 的后缀 → long.名称.endsWith(SEP + short.名称)
+        if (long.名称.endsWith(SEP + short.名称) || long.名称 === short.名称) {
           renames.set(short.名称, long.名称);
           break; // 一个短名只匹配第一个长名
         }
@@ -93,7 +97,7 @@ export function deduplicateLocations(
       if (!loc?.名称) continue;
       if (loc.名称 === oldPrefix) {
         fullRenames.set(oldPrefix, newPrefix);
-      } else if (loc.名称.startsWith(oldPrefix + '·')) {
+      } else if (loc.名称.startsWith(oldPrefix + SEP)) {
         const suffix = loc.名称.slice(oldPrefix.length);
         fullRenames.set(loc.名称, newPrefix + suffix);
       }
@@ -156,9 +160,9 @@ export function deduplicateLocations(
   const mergedNames = new Set(merged.map((m) => m.名称));
   for (const loc of merged) {
     if (loc.上级) continue; // 已有上级
-    const segs = loc.名称.split('·');
+    const segs = loc.名称.split(SEP);
     if (segs.length < 2) continue; // 真正的 root（如 "中国"），不需要上级
-    const inferredParent = segs.slice(0, -1).join('·');
+    const inferredParent = segs.slice(0, -1).join(SEP);
     if (mergedNames.has(inferredParent)) {
       loc.上级 = inferredParent;
     }

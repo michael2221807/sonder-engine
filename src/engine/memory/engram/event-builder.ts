@@ -18,6 +18,7 @@
  */
 import type { AIResponse } from '../../ai/types';
 import type { StatePath } from '../../types';
+import { DEFAULT_ENGINE_PATHS } from '../../pipeline/types';
 
 /**
  * 最小化状态读取接口 —— EventBuilder 只需要 `.get()`，
@@ -118,11 +119,12 @@ function extractTitle(text: string, max = 48): string {
 function formatGameTime(time: unknown): string {
   if (time === null || typeof time !== 'object') return '';
   const t = time as Record<string, unknown>;
-  const year = typeof t['年'] === 'number' ? t['年'] : undefined;
-  const month = typeof t['月'] === 'number' ? t['月'] : undefined;
-  const day = typeof t['日'] === 'number' ? t['日'] : undefined;
-  const hour = typeof t['小时'] === 'number' ? t['小时'] : undefined;
-  const minute = typeof t['分钟'] === 'number' ? t['分钟'] : undefined;
+  const F = DEFAULT_ENGINE_PATHS.gameTimeFieldNames;
+  const year = typeof t[F.year] === 'number' ? t[F.year] : undefined;
+  const month = typeof t[F.month] === 'number' ? t[F.month] : undefined;
+  const day = typeof t[F.day] === 'number' ? t[F.day] : undefined;
+  const hour = typeof t[F.hour] === 'number' ? t[F.hour] : undefined;
+  const minute = typeof t[F.minute] === 'number' ? t[F.minute] : undefined;
   if (year === undefined && month === undefined && day === undefined) return '';
   const datePart = `${year ?? 0}年${month ?? 0}月${day ?? 0}日`;
   if (hour !== undefined && minute !== undefined) {

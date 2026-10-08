@@ -24,6 +24,9 @@ import { loadEngramConfig } from './engram-config';
 import { parseJsonWithRepairs } from '../../ai/json-escape-sanitize';
 import { stringifySnapshotForPrompt } from '../../memory/snapshot-sanitizer';
 import { SUB_PIPELINE_HISTORY_PAIRS } from '../../prompt/context-compiler';
+import { SYSTEM_PATHS } from '../../pipeline/system-paths';
+import { DEFAULT_ENGINE_PATHS } from '../../pipeline/types';
+import { TIANMING_MEMORY_ENTRY_CONTENT_KEY } from '../../pack/tianming-coupling';
 
 // ─── MissingReport ───
 
@@ -647,7 +650,7 @@ export class EngramBatchSolidifyPipeline {
 
   private buildGameStateJson(): string {
     try {
-      const nsfwMode = this.deps.stateManager.get<boolean>('系统.nsfwMode') === true;
+      const nsfwMode = this.deps.stateManager.get<boolean>(SYSTEM_PATHS.nsfwMode) === true;
       return stringifySnapshotForPrompt(this.deps.stateManager.toSnapshot(), nsfwMode, 0);
     } catch {
       return '{}';
@@ -661,14 +664,14 @@ export class EngramBatchSolidifyPipeline {
         if (retrieved?.trim()) return retrieved;
       } catch { /* fallback */ }
     }
-    const shortTerm = this.deps.stateManager.get<unknown[]>('记忆.短期') ?? [];
+    const shortTerm = this.deps.stateManager.get<unknown[]>(DEFAULT_ENGINE_PATHS.shortTermMemory) ?? [];
     if (!Array.isArray(shortTerm) || shortTerm.length === 0) return '（暂无记忆）';
     return shortTerm
       .slice(-8)
       .map(m => {
         if (typeof m === 'string') return `- ${m}`;
         if (m && typeof m === 'object') {
-          const content = (m as Record<string, unknown>)['内容'] ?? (m as Record<string, unknown>)['content'];
+          const content = (m as Record<string, unknown>)[TIANMING_MEMORY_ENTRY_CONTENT_KEY] ?? (m as Record<string, unknown>)['content'];
           return typeof content === 'string' ? `- ${content}` : '';
         }
         return '';

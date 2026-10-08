@@ -20,6 +20,7 @@ import type {
   ScoredCandidateTrace,
   ScoredComponent,
 } from './engram-types';
+import { DEFAULT_ENGINE_PATHS } from '../../pipeline/types';
 
 // ─── 类型定义 ───
 
@@ -79,8 +80,8 @@ export class UnifiedRetriever {
     private getActiveSlot?: () => { profileId: string; slotId: string } | null,
     paths?: { engramMemory?: string; roundNumber?: string },
   ) {
-    this.engramPath = paths?.engramMemory ?? '系统.扩展.engramMemory';
-    this.roundNumberPath = paths?.roundNumber ?? '元数据.回合序号';
+    this.engramPath = paths?.engramMemory ?? DEFAULT_ENGINE_PATHS.engramMemory;
+    this.roundNumberPath = paths?.roundNumber ?? DEFAULT_ENGINE_PATHS.roundNumber;
   }
 
   /** 动态读取配置：支持静态对象或 getter 函数（每次调用都读最新值） */

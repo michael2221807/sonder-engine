@@ -23,6 +23,7 @@ import type { BehaviorModule } from './types';
 import type { StateManager } from '../core/state-manager';
 import type { ChangeLog, CalendarConfig } from '../types';
 import type { EnginePathConfig } from '../pipeline/types';
+import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 
 /**
  * 时间字段在状态树中的标准字段名
@@ -68,7 +69,7 @@ export class TimeService implements BehaviorModule {
   private characterAgePath: string;
 
   constructor(config: CalendarConfig, characterAgePath?: string) {
-    this.characterAgePath = characterAgePath ?? '角色.基础信息.年龄';
+    this.characterAgePath = characterAgePath ?? DEFAULT_ENGINE_PATHS.characterAge;
     this.config = config;
     /*
      * timeFieldFormat 的 key 按照从大到小的约定排列（年、月、日、时、分），

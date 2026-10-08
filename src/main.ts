@@ -399,10 +399,10 @@ async function bootstrap(): Promise<void> {
   // - 隐式中期和短期 1:1 配对，由 MemoryManager.shiftAndPromoteOldest 同步 shift
   // - MemoryRetriever 现在依赖 MemoryManager 做隐式中期的相关角色过滤
   const memoryPathConfig = {
-    shortTermPath: '记忆.短期',
-    midTermPath: '记忆.中期',
-    longTermPath: '记忆.长期',
-    implicitMidTermPath: '记忆.隐式中期',
+    shortTermPath: DEFAULT_ENGINE_PATHS.shortTermMemory,
+    midTermPath: DEFAULT_ENGINE_PATHS.memoryMidTerm,
+    longTermPath: DEFAULT_ENGINE_PATHS.memoryLongTerm,
+    implicitMidTermPath: DEFAULT_ENGINE_PATHS.implicitMidTermMemory,
     semanticMemoryPath: DEFAULT_ENGINE_PATHS.engramMemory,
     // 默认值 —— 可被 localStorage `aga_memory_settings` 运行时覆盖（SettingsPanel UI）
     shortTermCapacity: 5,
@@ -513,9 +513,9 @@ async function bootstrap(): Promise<void> {
 
   // Story 1: EngramEditor for user-driven entity/edge CRUD
   const engramEditor = new EngramEditor(stateManager, engramManager, {
-    engramMemory: '系统.扩展.engramMemory',
-    roundNumber: '元数据.回合序号',
-    relationships: '社交.关系',
+    engramMemory: DEFAULT_ENGINE_PATHS.engramMemory,
+    roundNumber: DEFAULT_ENGINE_PATHS.roundNumber,
+    relationships: DEFAULT_ENGINE_PATHS.relationships,
     locations: DEFAULT_ENGINE_PATHS.locations,
     npcNameField: DEFAULT_ENGINE_PATHS.npcFieldNames.name,
     npcTypeField: DEFAULT_ENGINE_PATHS.npcFieldNames.type,
