@@ -17,6 +17,7 @@ function harness() {
   };
   Object.assign(host, { abortController: null, _subPipelineActive: false, requestedSaveActive: false,
     stateRevision: 0, pendingSave: null, subPipelines: {}, _getActiveSlot: () => slot,
+    ports: { actionQueue: { consumeActions: () => [] } }, // R5 step 4: the host reads stores through ports
     _stateManager: { liveTree: () => ({ round }) }, _saveManager: { saveGame: save } });
   return { host, save, queue: () => { host.pendingSave = { ...slot }; },
     round: (value: number) => { round = value; }, slot: (id: string) => { slot = { ...slot, slotId: id }; } };

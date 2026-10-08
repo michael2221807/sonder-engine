@@ -27,6 +27,8 @@ import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 import type { PipelineContext, EnginePathConfig } from '../pipeline/types';
 import { AI_SETTINGS_STORAGE_KEY } from '../ai/ai-service';
 import { useEngineStateStore } from '../stores/engine-state';
+import { useActionQueueStore } from '../stores/engine-action-queue';
+import { usePromptDebugStore } from '../stores/engine-prompt';
 import { loadPackFromDisk } from '../__test-utils__/load-pack-from-disk';
 import { createMockLocalStorage } from '../__test-utils__/local-storage.mock';
 import type { GamePack } from '../types';
@@ -342,6 +344,19 @@ function buildHost(opts: HostOptions = {}): Host {
     P,
     undefined,
     bundle,
+    {
+      // Same closures main.ts injects; the stores are mocked above.
+      getActiveSlot: () => {
+        const s = useEngineStateStore();
+        if (!s.activeProfileId || !s.activeSlotId) return null;
+        return { profileId: s.activeProfileId, slotId: s.activeSlotId };
+      },
+      actionQueue: { consumeActions: () => useActionQueueStore().consumeActions() },
+      promptDebug: {
+        recordAssembly: (...args) => usePromptDebugStore().recordAssembly(...args),
+        attachResponse: (...args) => usePromptDebugStore().attachResponse(...args),
+      },
+    },
   );
   const priv = orch as unknown as Priv;
 

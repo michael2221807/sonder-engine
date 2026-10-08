@@ -22,9 +22,7 @@ import { addRoundStages, buildOpeningStages } from './stage-assembly';
 import { readAISettings, generateId } from './round-settings';
 
 import { eventBus } from './event-bus';
-import { useEngineStateStore } from '../stores/engine-state';
-import { useActionQueueStore } from '../stores/engine-action-queue';
-import { usePromptDebugStore } from '../stores/engine-prompt';
+import type { usePromptDebugStore } from '../stores/engine-prompt';
 import type { AIMessage } from '../ai/types';
 import type { StateManager } from './state-manager';
 import type { CommandExecutor } from './command-executor';
@@ -39,6 +37,7 @@ import type {
   IEngramManager,
   IUnifiedRetriever,
   EnginePathConfig,
+  IActionQueueConsumer,
   PipelineContext,
   CompileTrace,
 } from '../pipeline/types';
@@ -58,6 +57,19 @@ import type { NpcMemorySummarizer } from '../social/npc-memory-summarizer';
 import type { ImageService } from '../image/image-service';
 import type { TtsService } from '../tts/tts-service';
 import type { OpeningStages } from '../pipeline/sub-pipelines/enhanced-opening';
+
+/**
+ * Store access injected by main.ts (R5 step 4). Each port is a closure that resolves its Pinia
+ * store at CALL time, so no store is created before the app has installed Pinia.
+ */
+export interface OrchestratorPorts {
+  /** Active profile/slot from the engine-state store; null when none is selected. */
+  getActiveSlot: () => { profileId: string; slotId: string } | null;
+  /** Action-queue store: drained by PreProcessStage and on rollback. */
+  actionQueue: IActionQueueConsumer;
+  /** Prompt-debug store: receives assembly records and AI response backfill. */
+  promptDebug: Pick<ReturnType<typeof usePromptDebugStore>, 'recordAssembly' | 'attachResponse'>;
+}
 
 /**
  * 子管线包 — 由 main.ts 在 bootstrap 期间构造并注入 GameOrchestrator。
@@ -173,6 +185,7 @@ export class GameOrchestrator {
   private readonly _pack: GamePack;
   private readonly _paths: EnginePathConfig;
   private readonly _unifiedRetriever?: IUnifiedRetriever;
+  private readonly ports: OrchestratorPorts;
   private readonly _getActiveSlot: () => { profileId: string; slotId: string } | null;
 
   constructor(
@@ -189,9 +202,11 @@ export class GameOrchestrator {
     pack: GamePack,
     paths: EnginePathConfig,
     /** E.2: 统一检索器（hybrid 模式时由 ContextAssemblyStage 使用；可选） */
-    unifiedRetriever?: IUnifiedRetriever,
+    unifiedRetriever: IUnifiedRetriever | undefined,
     /** §G2: 子管线包（记忆总结/精炼、世界心跳、NPC 生成） */
     subPipelines: SubPipelineBundle = {},
+    /** R5 step 4: store access injected by main.ts */
+    ports: OrchestratorPorts,
   ) {
     this.subPipelines = subPipelines;
     this.engramManager = engramManager;
@@ -210,20 +225,13 @@ export class GameOrchestrator {
     this._paths = paths;
     this._unifiedRetriever = unifiedRetriever;
 
-    // PostProcessStage 需要 profileId/slotId，通过闭包从 Pinia store 读取。
-    // 这里读取是安全的：闭包只在 autoSave() 中被调用，
-    // 彼时 Vue 应用已挂载、Pinia 已激活。
-    const getActiveSlot = (): { profileId: string; slotId: string } | null => {
-      const store = useEngineStateStore();
-      if (!store.activeProfileId || !store.activeSlotId) return null;
-      return { profileId: store.activeProfileId, slotId: store.activeSlotId };
-    };
+    // PostProcessStage needs profileId/slotId; the port reads the Pinia store lazily (see OrchestratorPorts).
+    const getActiveSlot = ports.getActiveSlot;
     this._getActiveSlot = getActiveSlot;
+    this.ports = ports;
 
-    // PreProcessStage 消费 action queue；同理通过闭包延迟读取 Pinia store。
-    const actionQueue = {
-      consumeActions: () => useActionQueueStore().consumeActions(),
-    };
+    // PreProcessStage consumes the action queue through the port.
+    const actionQueue = ports.actionQueue;
 
     this.runner = new PipelineRunner();
     addRoundStages(this.runner, {
@@ -293,7 +301,7 @@ export class GameOrchestrator {
       }>('ui:debug-prompt', (payload) => {
         if (!payload) return;
         try {
-          usePromptDebugStore().recordAssembly(
+          this.ports.promptDebug.recordAssembly(
             payload.flow,
             payload.messages ?? [],
             payload.variables ?? {},
@@ -322,7 +330,7 @@ export class GameOrchestrator {
       }>('ui:debug-prompt-response', (payload) => {
         if (!payload) return;
         try {
-          usePromptDebugStore().attachResponse(
+          this.ports.promptDebug.attachResponse(
             { generationId: payload.generationId, flowId: payload.flow },
             { thinking: payload.thinking, rawResponse: payload.rawResponse },
           );
@@ -369,7 +377,7 @@ export class GameOrchestrator {
 
     // The story goes back; the player's settings stay as they are now (PO 2026-10-03).
     stateManager.rollbackTo(snapshot, PREFERENCE_PATHS);
-    useActionQueueStore().consumeActions(); // 清空 action queue
+    this.ports.actionQueue.consumeActions(); // 清空 action queue
     this.memoryManager.clearConfigCache(); // R-04: 清除记忆配置缓存
 
     // Engram 向量同步：状态树已回退，删除 IndexedDB 中被回退回合产生的孤立向量

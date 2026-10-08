@@ -152,6 +152,7 @@ import { Reranker } from './engine/memory/engram/reranker';
 import { useEngramDebugStore } from './engine/stores/engram-debug';
 
 import { useActionQueueStore } from './engine/stores/engine-action-queue';
+import { usePromptDebugStore } from './engine/stores/engine-prompt';
 import { useAPIManagementStore } from './engine/stores/engine-api';
 
 async function bootstrap(): Promise<void> {
@@ -829,6 +830,25 @@ async function bootstrap(): Promise<void> {
         plotVector: plotVectorAdapter = new AgaPlotVectorAdapter(stateManager, aiService, saveManager, getActiveSlot, vectorNativeRules,
           vectorPromptPolicy, vectorSupplyRules),
         stateEditInProgress: () => plotVectorBoard.isSaving,
+      },
+      {
+        // Closures moved verbatim from GameOrchestrator: each resolves its Pinia store at CALL time.
+        // PostProcessStage 需要 profileId/slotId，通过闭包从 Pinia store 读取。
+        // 这里读取是安全的：闭包只在 autoSave() 中被调用，
+        // 彼时 Vue 应用已挂载、Pinia 已激活。
+        getActiveSlot: (): { profileId: string; slotId: string } | null => {
+          const store = useEngineStateStore();
+          if (!store.activeProfileId || !store.activeSlotId) return null;
+          return { profileId: store.activeProfileId, slotId: store.activeSlotId };
+        },
+        // PreProcessStage 消费 action queue；同理通过闭包延迟读取 Pinia store。
+        actionQueue: {
+          consumeActions: () => useActionQueueStore().consumeActions(),
+        },
+        promptDebug: {
+          recordAssembly: (...args) => usePromptDebugStore().recordAssembly(...args),
+          attachResponse: (...args) => usePromptDebugStore().attachResponse(...args),
+        },
       },
     );
   }
