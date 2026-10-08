@@ -313,34 +313,13 @@ export class GameCardImportService {
     try {
       // 1a. Protagonist. fixed: 角色 is authoritative as-is (CONTRACT-OD4, no re-derivation).
       //     template: apply ONLY the player's edits on allowed/gray paths (blacklist/unknown ignored).
-      if (bundle.protagonist.mode === 'template' && options.protagonistEdits) {
-        const declared = new Set(bundle.protagonist.editableFields ?? []);
-        const editPaths = Object.keys(options.protagonistEdits);
-        const { allowed, downgraded } = validateEditableFields(editPaths, policy);
-        const applyable = new Set([...allowed, ...downgraded]);
-        for (const p of editPaths) {
-          if (!applyable.has(p)) continue;                       // policy reject / unknown → ignore
-          if (declared.size > 0 && !declared.has(p)) continue;   // honor the card's declared editable set
-          const abs = p.startsWith(characterRoot + '.') ? p : `${characterRoot}.${p}`;
-          // Defense-in-depth vs prototype pollution: the whitelist already rejects these, but
-          // guard the lodash _set call itself so a careless future policy entry can't pollute.
-          if (/(^|[.[])(__proto__|constructor|prototype)([.\]]|$)/.test(abs)) continue;
-          _set(mergedTree, abs, options.protagonistEdits[p]);
-        }
-      }
+      this.applyProtagonistEdits(bundle, mergedTree, options, policy, characterRoot);
 
       // 1b. Engram block into the merged tree (P3). events:[] guard inside the builder.
       _set(mergedTree, paths.engramMemory, buildImportedEngramState(bundle.engram));
 
       // 1c. Images: namespace ids (entry.id + metadata.id) + rewrite refs in the tree (P4).
-      //     Namespace = cardId (stable; the profile doesn't exist yet). Falls back to profileId.
-      const namespace = bundle.cardMeta.cardId || profileId;
-      let namespacedImages: CardImageAssetEntry[] = [];
-      if (Array.isArray(bundle.imageAssets) && bundle.imageAssets.length > 0) {
-        const { entries, idMap } = namespaceImageEntries(bundle.imageAssets, namespace);
-        namespacedImages = entries;
-        rewriteAssetRefs(mergedTree, idMap);
-      }
+      const namespacedImages = this.namespaceBundleImages(bundle, mergedTree, profileId);
 
       // 2. Save-scoped IDB writes (profileId known; orphan-safe before profile metadata exists).
       await applyCustomPresets(d.customPresetStore, packId, bundle.customPresets);
@@ -357,25 +336,11 @@ export class GameCardImportService {
       globalBackup = await captureGlobalSettingsBackup(d, packId, opt, options.enableNsfw);
 
       // 3. Global opt-in payloads (only when ticked; default OFF). apiTemplate NEVER applied.
-      if (opt.has('configOverlays')) await applyGlobalConfigOverlays(d.configStore, bundle.configOverlays);
-      if (opt.has('promptOverrides')) await applyGlobalPromptOverrides(d.promptStorage, bundle.promptOverrides);
-      if (opt.has('builtinPromptOverrides')) {
-        const prompts = this.getPack()?.prompts;
-        applyGlobalPromptEdits(packId, bundle, prompts ? new Set(Object.keys(prompts)) : undefined);
-      }
-      if (opt.has('settings')) applyGlobalSettings(bundle.settings);
+      await this.applyGlobalOptIns(d, packId, bundle, opt);
 
       // 4. NSFW gate: write localStorage BEFORE activation (P0-2 — loadGame's
       //    syncNsfwFromLocalStorage is the ONLY path that carries nsfwMode into the tree).
-      if (options.enableNsfw) {
-        try {
-          const raw = localStorage.getItem(NSFW_SETTINGS_KEY);
-          const cur: Record<string, unknown> = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
-          localStorage.setItem(NSFW_SETTINGS_KEY, JSON.stringify({ ...cur, nsfwMode: true }));
-        } catch {
-          /* best-effort */
-        }
-      }
+      if (options.enableNsfw) this.writeNsfwGate();
 
       // 5. Activate: load merged tree into the live StateManager + set active ids (Pinia loadGame).
       //    syncNsfwFromLocalStorage runs here → 系统.nsfwMode reflects step 4.
@@ -389,35 +354,11 @@ export class GameCardImportService {
       }
 
       // 7. Re-embed engram — ONLY if an embedder is configured (else pseudoEmbed would fake success).
-      let retrievalDegraded = false;
-      if (!d.hasEmbedder()) {
-        retrievalDegraded = true; // no embedder → graph loads, retrieval degraded (never blocks)
-      } else {
-        try {
-          await d.engramManager.vectorizePending(d.stateManager);
-        } catch {
-          retrievalDegraded = true; // embedding failure is non-fatal
-        }
-      }
+      const retrievalDegraded = await this.reembedEngram(d);
 
       // 8. Opening (Phase E–F–G on the card-populated tree). Non-fatal: a failure leaves the
       //    narrative empty but the save is still created (first main-round will fill it).
-      let openingDegraded = false;
-      if (d.runOpening) {
-        const nsfwMode = d.stateManager.get<boolean>(SYSTEM_PATHS.nsfwMode) === true;
-        try {
-          await d.runOpening({
-            nsfwMode,
-            onProgress: options.onOpeningProgress,
-            abortSignal: options.abortSignal,
-            firstRoundSetup: bundle.opening?.firstRoundSetup,
-          });
-        } catch {
-          // Surface this instead of swallowing it silently: the user would otherwise enter a
-          // game with a blank narrative and no idea why (typically an unconfigured/failing LLM API).
-          openingDegraded = true;
-        }
-      }
+      const openingDegraded = await this.runOpeningStep(d, options, bundle);
 
       // 9. Persist LAST (OD-N): profile metadata appears only now.
       const characterName = this.extractCharacterName(d.stateManager, paths.playerName, bundle.cardMeta.title);
@@ -473,6 +414,120 @@ export class GameCardImportService {
       this.lastGlobalBackup = null;
       throw err instanceof Error ? err : new Error(String(err));
     }
+  }
+
+
+  /** Step 1a: template protagonist — apply only the player's allowed edits onto the merged tree. */
+  private applyProtagonistEdits(
+    bundle: GameCardBundle,
+    mergedTree: Record<string, unknown>,
+    options: ImportOptions,
+    policy: ReturnType<typeof buildDefaultProtagonistPolicy>,
+    characterRoot: string,
+  ): void {
+    // fixed: 角色 is authoritative as-is (CONTRACT-OD4, no re-derivation).
+    // template: apply ONLY the player's edits on allowed/gray paths (blacklist/unknown ignored).
+    if (bundle.protagonist.mode === 'template' && options.protagonistEdits) {
+      const declared = new Set(bundle.protagonist.editableFields ?? []);
+      const editPaths = Object.keys(options.protagonistEdits);
+      const { allowed, downgraded } = validateEditableFields(editPaths, policy);
+      const applyable = new Set([...allowed, ...downgraded]);
+      for (const p of editPaths) {
+        if (!applyable.has(p)) continue;                       // policy reject / unknown → ignore
+        if (declared.size > 0 && !declared.has(p)) continue;   // honor the card's declared editable set
+        const abs = p.startsWith(characterRoot + '.') ? p : `${characterRoot}.${p}`;
+        // Defense-in-depth vs prototype pollution: the whitelist already rejects these, but
+        // guard the lodash _set call itself so a careless future policy entry can't pollute.
+        if (/(^|[.[])(__proto__|constructor|prototype)([.\]]|$)/.test(abs)) continue;
+        _set(mergedTree, abs, options.protagonistEdits[p]);
+      }
+    }
+  }
+
+  /**
+   * Step 1c: namespace image entry ids (entry.id + metadata.id) and rewrite the refs in the tree (P4).
+   * Namespace = cardId (stable; the profile doesn't exist yet). Falls back to profileId.
+   */
+  private namespaceBundleImages(
+    bundle: GameCardBundle,
+    mergedTree: Record<string, unknown>,
+    profileId: string,
+  ): CardImageAssetEntry[] {
+    const namespace = bundle.cardMeta.cardId || profileId;
+    let namespacedImages: CardImageAssetEntry[] = [];
+    if (Array.isArray(bundle.imageAssets) && bundle.imageAssets.length > 0) {
+      const { entries, idMap } = namespaceImageEntries(bundle.imageAssets, namespace);
+      namespacedImages = entries;
+      rewriteAssetRefs(mergedTree, idMap);
+    }
+    return namespacedImages;
+  }
+
+  /** Step 3: the opt-in global payloads (only the ticked ones). apiTemplate is never applied. */
+  private async applyGlobalOptIns(
+    d: ImportServiceDeps,
+    packId: string,
+    bundle: GameCardBundle,
+    opt: ImportOptions['optInGlobals'],
+  ): Promise<void> {
+    if (opt.has('configOverlays')) await applyGlobalConfigOverlays(d.configStore, bundle.configOverlays);
+    if (opt.has('promptOverrides')) await applyGlobalPromptOverrides(d.promptStorage, bundle.promptOverrides);
+    if (opt.has('builtinPromptOverrides')) {
+      const prompts = this.getPack()?.prompts;
+      applyGlobalPromptEdits(packId, bundle, prompts ? new Set(Object.keys(prompts)) : undefined);
+    }
+    if (opt.has('settings')) applyGlobalSettings(bundle.settings);
+  }
+
+  /** Step 4: best-effort write of the adult-mode flag (must happen BEFORE activation). */
+  private writeNsfwGate(): void {
+    try {
+      const raw = localStorage.getItem(NSFW_SETTINGS_KEY);
+      const cur: Record<string, unknown> = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+      localStorage.setItem(NSFW_SETTINGS_KEY, JSON.stringify({ ...cur, nsfwMode: true }));
+    } catch {
+      /* best-effort */
+    }
+  }
+
+  /** Step 7: re-embed the imported engram. Returns `retrievalDegraded` (never throws). */
+  private async reembedEngram(d: ImportServiceDeps): Promise<boolean> {
+    let retrievalDegraded = false;
+    if (!d.hasEmbedder()) {
+      retrievalDegraded = true; // no embedder → graph loads, retrieval degraded (never blocks)
+    } else {
+      try {
+        await d.engramManager.vectorizePending(d.stateManager);
+      } catch {
+        retrievalDegraded = true; // embedding failure is non-fatal
+      }
+    }
+    return retrievalDegraded;
+  }
+
+  /** Step 8: generate the opening. Returns `openingDegraded` (never throws). */
+  private async runOpeningStep(
+    d: ImportServiceDeps,
+    options: ImportOptions,
+    bundle: GameCardBundle,
+  ): Promise<boolean> {
+    let openingDegraded = false;
+    if (d.runOpening) {
+      const nsfwMode = d.stateManager.get<boolean>(SYSTEM_PATHS.nsfwMode) === true;
+      try {
+        await d.runOpening({
+          nsfwMode,
+          onProgress: options.onOpeningProgress,
+          abortSignal: options.abortSignal,
+          firstRoundSetup: bundle.opening?.firstRoundSetup,
+        });
+      } catch {
+        // Surface this instead of swallowing it silently: the user would otherwise enter a
+        // game with a blank narrative and no idea why (typically an unconfigured/failing LLM API).
+        openingDegraded = true;
+      }
+    }
+    return openingDegraded;
   }
 
   /** Read the protagonist name from the activated tree; fall back to the card title. */
