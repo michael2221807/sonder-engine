@@ -33,11 +33,11 @@ function extractLiteral(tsRelPath, varName) {
 }
 
 const defaultPrompt = extractLiteral(
-  'src/engine/prompts/body-polish-default.ts',
+  'src/engine/prompt/body-polish-default.ts',
   'DEFAULT_BODY_POLISH_PROMPT',
 );
 const cotPrompt = extractLiteral(
-  'src/engine/prompts/body-polish-cot.ts',
+  'src/engine/prompt/body-polish-cot.ts',
   'BODY_POLISH_COT',
 );
 

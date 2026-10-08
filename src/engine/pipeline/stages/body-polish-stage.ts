@@ -33,8 +33,8 @@ import type { AIService } from '../../ai/ai-service';
 import type { PromptAssembler } from '../../prompt/prompt-assembler';
 import type { StateManager } from '../../core/state-manager';
 import type { AIMessage } from '../../ai/types';
-import { DEFAULT_BODY_POLISH_PROMPT } from '../../prompts/body-polish-default';
-import { BODY_POLISH_COT } from '../../prompts/body-polish-cot';
+import { DEFAULT_BODY_POLISH_PROMPT } from '../../prompt/body-polish-default';
+import { BODY_POLISH_COT } from '../../prompt/body-polish-cot';
 import {
   emitPromptAssemblyDebug,
   emitPromptResponseDebug,
