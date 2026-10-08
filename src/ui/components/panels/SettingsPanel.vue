@@ -6,7 +6,8 @@
  * B.2 扩展：行动选项深度 + 心跳高级参数 + NPC设置 + 高级(Debug/文本替换/导入导出)
  * Persists to localStorage / game state tree.
  */
-import { ref, computed, watch, onMounted, onBeforeUnmount, inject, nextTick } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useRouter, useRoute } from 'vue-router';
 import { eventBus } from '@/engine/core/event-bus';
 import { AI_SETTINGS_STORAGE_KEY } from '@/engine/ai/ai-service';
@@ -16,8 +17,6 @@ import TtsSettingsSection from '../settings/TtsSettingsSection.vue';
 import SttSettingsSection from '../settings/SttSettingsSection.vue';
 import PlotVectorSettingsSection from '../settings/PlotVectorSettingsSection.vue';
 import { useGameState } from '@/ui/composables/useGameState';
-import type { ProfileManager } from '@/engine/persistence/profile-manager';
-import type { SaveManager } from '@/engine/persistence/save-manager';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
 import { DEFAULT_MAX_ACTIVE_THREADS } from '@/engine/plot/types';
@@ -755,8 +754,8 @@ watch(textSpeed, (val) => {
 
 // ─── 6.1 数据管理 ─────────────────────────────────────────────
 
-const profileManager = inject<ProfileManager>('profileManager');
-const saveManager = inject<SaveManager>('saveManager');
+const profileManager = injectService('profileManager');
+const saveManager = injectService('saveManager');
 const router = useRouter();
 
 const isExportingAllSaves = ref(false);

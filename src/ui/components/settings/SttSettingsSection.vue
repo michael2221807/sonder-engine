@@ -10,7 +10,8 @@
  * 设计文档：docs/design/stt-streaming-handoff.md §5
  * App doc：docs/user-guide/pages/game-main.md §3.14 语音输入
  */
-import { ref, inject } from 'vue';
+import { ref } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
@@ -18,10 +19,9 @@ import { loadSttSettings, saveSttSettings } from '@/engine/stt/stt-settings';
 import { useSttLexicon } from '@/ui/composables/useSttLexicon';
 import { providerCatalog } from '@/engine/providers';
 import type { SttSettings, SttBackendType, SttInputMode, SttLatencyProfile, SttHotwordStrength, SttPauseTolerance } from '@/engine/stt/types';
-import type { SttService } from '@/engine/stt/stt-service';
 
 const { t } = useI18n();
-const stt = inject<SttService | undefined>('sttService', undefined);
+const stt = injectService('sttService', undefined);
 const settings = ref<SttSettings>(loadSttSettings());
 const lexicon = useSttLexicon();
 const newTerm = ref('');

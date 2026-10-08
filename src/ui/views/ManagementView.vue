@@ -32,18 +32,13 @@
  *   - 'saveManager'    → SaveManager
  *   - 'backupService'  → BackupService（M5 全量备份）
  */
-import { ref, inject, onMounted, computed } from 'vue';
+import { ref, onMounted, computed } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import type { ProfileManager } from '@/engine/persistence/profile-manager';
-import type { SaveManager } from '@/engine/persistence/save-manager';
-import type { BackupService } from '@/engine/persistence/backup-service';
-import type { VectorStore } from '@/engine/memory/engram/vector-store';
 import { adaptDemoSave } from '@/engine/persistence/demo-save-adapter';
 import type { ProfileMeta, SaveSlotMeta } from '@/engine/types/persistence';
 import type { GameStateTree } from '@/engine/types';
-import type { AIService } from '@/engine/ai/ai-service';
-import type { TtsService } from '@/engine/tts/tts-service';
 import { applyPersistedAISettings } from '@/engine/ai/ai-service';
 import { useEngineStateStore } from '@/engine/stores/engine-state';
 import { useAPIManagementStore } from '@/engine/stores/engine-api';
@@ -58,12 +53,12 @@ const { t } = useI18n();
 const { formatDateTime: localeFormatDateTime } = useLocale();
 const engineState = useEngineStateStore();
 
-const profileManager = inject<ProfileManager>('profileManager');
-const saveManager = inject<SaveManager>('saveManager');
-const backupService = inject<BackupService>('backupService');
-const vectorStore = inject<VectorStore>('vectorStore');
-const aiService = inject<AIService | undefined>('aiService', undefined);
-const ttsService = inject<TtsService | undefined>('ttsService', undefined);
+const profileManager = injectService('profileManager');
+const saveManager = injectService('saveManager');
+const backupService = injectService('backupService');
+const vectorStore = injectService('vectorStore');
+const aiService = injectService('aiService', undefined);
+const ttsService = injectService('ttsService', undefined);
 
 // ─── Reactive state ───────────────────────────────────────────
 

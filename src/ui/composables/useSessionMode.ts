@@ -13,11 +13,10 @@
  * 保证 watcher 不随子面板卸载而断（见 plan P2）。其余组件只读 isWorldBuilding。
  */
 import { ref, computed } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import type { ComputedRef, Ref } from 'vue';
-import { inject } from 'vue';
 import { useEngineStateStore } from '@/engine/stores/engine-state';
 import { eventBus } from '@/engine/core/event-bus';
-import type { ProfileManager } from '@/engine/persistence/profile-manager';
 import type { SessionType } from '@/engine/types/persistence';
 // App doc: docs/user-guide/pages/game-overview.md §4.0.5
 
@@ -44,7 +43,7 @@ export interface UseSessionModeReturn {
 export function useSessionMode(): UseSessionModeReturn {
   const store = useEngineStateStore();
   // 与 SavePanel / HomeView / CardExportFlow 同一注入 key
-  const profileManager = inject<ProfileManager | undefined>('profileManager', undefined);
+  const profileManager = injectService('profileManager', undefined);
 
   const isWorldBuilding = computed(() => sessionType.value === 'worldBuilding');
 

@@ -21,12 +21,11 @@
  * The engine state store is used to push the loaded state tree into the
  * reactive layer before navigating to the game view.
  */
-import { ref, computed, onMounted, inject } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import type { ProfileManager } from '@/engine/persistence/profile-manager';
-import type { SaveManager } from '@/engine/persistence/save-manager';
-import type { GamePack, GamePackManifest } from '@/engine/types/game-pack';
+import type { GamePackManifest } from '@/engine/types/game-pack';
 import type { ProfileMeta, SaveSlotMeta } from '@/engine/types/persistence';
 import { useEngineStateStore } from '@/engine/stores/engine-state';
 import Modal from '@/ui/components/common/Modal.vue';
@@ -35,7 +34,7 @@ import SettingsPanel from '@/ui/components/panels/SettingsPanel.vue';
 import CardImportFlow from '@/ui/components/panels/CardImportFlow.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
-import type { GitHubSyncService, SyncStatus, CloudFormat } from '@/engine/sync/github-sync';
+import type { SyncStatus, CloudFormat } from '@/engine/sync/github-sync';
 import CloudSlotsSection from '@/ui/components/cloud/CloudSlotsSection.vue';
 import { eventBus } from '@/engine/core/event-bus';
 import { useLocale } from '@/ui/composables/useLocale';
@@ -46,9 +45,9 @@ const { t } = useI18n();
 const { formatRelativeTime, formatDateTime } = useLocale();
 const engineState = useEngineStateStore();
 
-const profileManager = inject<ProfileManager>('profileManager');
-const saveManager = inject<SaveManager>('saveManager');
-const gamePack = inject<GamePack>('gamePack');
+const profileManager = injectService('profileManager');
+const saveManager = injectService('saveManager');
+const gamePack = injectService('gamePack');
 
 // ─── Reactive data ────────────────────────────────────────────
 
@@ -263,7 +262,7 @@ async function tryAutoResumeAfterImport(): Promise<void> {
 
 // ─── GitHub Cloud Sync ───────────────────────────────────────
 
-const githubSync = inject<GitHubSyncService>('githubSync');
+const githubSync = injectService('githubSync');
 const showSyncModal = ref(false);
 const ghToken = ref(githubSync?.getToken() ?? '');
 const ghRepoName = ref(githubSync?.getRepoName() ?? 'aga-cloud-save');

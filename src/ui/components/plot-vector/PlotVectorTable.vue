@@ -8,6 +8,7 @@
  * in the save file when the table closes (PO 2026-09-30 B). Numbers stay behind the "?".
  */
 import { computed, inject, nextTick, onActivated, onBeforeUnmount, onDeactivated, onUnmounted, reactive, ref, shallowRef, watch } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { cloneDeep } from 'lodash-es';
 import Tooltip from '../shared/Tooltip.vue';
@@ -26,7 +27,7 @@ import { eventBus } from '@/engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS as P } from '@/engine/pipeline/types';
 import { readPlotVectorControl, subscribePlotVectorControl } from '@/engine/plot-vector/feature-control';
 import type { Layout, LocalizedLabel } from '@/engine/plot-vector/core/types';
-import type { VectorBoardAccess, BoardView } from '@/features/plot-vector/board-access';
+import type { BoardView } from '@/features/plot-vector/board-access';
 import { readVectorState, type PreparedVector } from '@/features/plot-vector/runtime';
 import { readBoardShape, type BoardShape } from '@/features/plot-vector/vector-board';
 import { SIX_CELL_RING_ID } from '@/features/plot-vector/default-board';
@@ -50,7 +51,7 @@ import { cardTripReceipt } from '@/features/plot-vector/card-trip-receipt';
 const props = defineProps<{ generating: boolean }>();
 const { t, locale } = useI18n();
 const label = (value?: LocalizedLabel) => value ? (locale.value === 'en' ? value.en : value.zh) : '';
-const access = inject<VectorBoardAccess | undefined>('plotVectorBoard', undefined);
+const access = injectService('plotVectorBoard', undefined);
 const enabled = ref(readPlotVectorControl().enabled);
 
 // ── Per-viewer conveniences (not game state): the two switches in "?", and which cards were already seen. ──

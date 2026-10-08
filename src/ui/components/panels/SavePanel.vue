@@ -11,7 +11,8 @@
  * - 自动存档设置：时间点存档间隔
  * - 完整备份导出 / 恢复（BackupService）
  */
-import { ref, computed, watch, onUnmounted, inject } from 'vue';
+import { ref, computed, watch, onUnmounted } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useGameState } from '@/ui/composables/useGameState';
@@ -26,24 +27,18 @@ import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import { eventBus } from '@/engine/core/event-bus';
 import type { SaveSlotMeta } from '@/engine/types/persistence';
 import type { GameStateTree } from '@/engine/types';
-import type { ProfileManager } from '@/engine/persistence/profile-manager';
-import type { SaveManager } from '@/engine/persistence/save-manager';
-import type { VectorStore } from '@/engine/memory/engram/vector-store';
-import type { Embedder } from '@/engine/memory/engram/embedder';
-import type { BackupService } from '@/engine/persistence/backup-service';
-import type { CustomPresetStore } from '@/engine/persistence/custom-preset-store';
 import { loadEngramConfig } from '@/engine/memory/engram/engram-config';
 
 const { t } = useI18n();
 const { formatDateTime } = useLocale();
 const { isLoaded, activePackId, activeProfileId, activeSlotId, store } = useGameState();
 
-const profileManager = inject<ProfileManager>('profileManager');
-const saveManager = inject<SaveManager>('saveManager');
-const vectorStore = inject<VectorStore>('vectorStore');
-const embedder = inject<Embedder>('embedder');
-const backupService = inject<BackupService>('backupService');
-const customPresetStore = inject<CustomPresetStore | undefined>('customPresetStore', undefined);
+const profileManager = injectService('profileManager');
+const saveManager = injectService('saveManager');
+const vectorStore = injectService('vectorStore');
+const embedder = injectService('embedder');
+const backupService = injectService('backupService');
+const customPresetStore = injectService('customPresetStore', undefined);
 
 // Story 5: game-card export modal
 const showCardExport = ref(false);
@@ -720,11 +715,11 @@ async function executeImport(): Promise<void> {
 
 // ─── GitHub Cloud Sync ───────────────────────────────────────
 
-import type { GitHubSyncService, SyncStatus, DegradedUploadDetail, CloudFormat, CloudInfo } from '@/engine/sync/github-sync';
+import type { SyncStatus, DegradedUploadDetail, CloudFormat, CloudInfo } from '@/engine/sync/github-sync';
 import { DegradedUploadError } from '@/engine/sync/github-sync';
 import CloudSlotsSection from '@/ui/components/cloud/CloudSlotsSection.vue';
 
-const githubSync = inject<GitHubSyncService>('githubSync');
+const githubSync = injectService('githubSync');
 
 // 云端格式（由 CloudSlotsSection 探测上报）：v3/empty → 插槽列表接管，
 // 经典整包上传/下载行隐藏；v2/unknown → 维持现状 UI（+ v2 时插槽区渲染迁移入口）
@@ -867,9 +862,8 @@ const {
 
 // ─── LAN Sync ────────────────────────────────────────────────
 
-import type { LanSyncService } from '@/engine/sync/lan-sync';
 
-const lanSync = inject<LanSyncService>('lanSync');
+const lanSync = injectService('lanSync');
 const lanAvailable = ref(false);
 const lanEnabled = ref(lanSync?.isEnabled() ?? true);
 const lanStatus = ref('');

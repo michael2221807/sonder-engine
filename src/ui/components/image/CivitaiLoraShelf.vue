@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, inject } from 'vue';
+import { ref, computed } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useGameState } from '@/ui/composables/useGameState';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
@@ -12,7 +13,6 @@ import {
   mergeAdditionalNetworks,
 } from '@/engine/image/civitai-lora';
 import { fetchCivitaiLoraMetadata, trainedWordsToTriggers } from '@/engine/image/civitai-metadata';
-import type { AIService } from '@/engine/ai/ai-service';
 import type {
   CivitaiLoraShelfItem,
   CivitaiLoraScope,
@@ -200,7 +200,7 @@ function deleteTrigger(loraId: string, triggerId: string) {
 }
 
 // ── Metadata import ──
-const aiService = inject<AIService | undefined>('aiService', undefined);
+const aiService = injectService('aiService', undefined);
 const metadataLoading = ref<string | null>(null);
 const metadataError = ref('');
 

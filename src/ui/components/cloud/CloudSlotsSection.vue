@@ -18,7 +18,8 @@
  *   云端，高亮建议的那个按钮；用旧存档盖新存档（上传 / 下载）前多一道对照确认。
  *   只挂手动按钮，自动上传的基线冲突检测不动。
  */
-import { ref, computed, inject, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import Modal from '@/ui/components/common/Modal.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
@@ -26,14 +27,13 @@ import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import { eventBus } from '@/engine/core/event-bus';
 import {
   DegradedUploadError, GLOBAL_SLOT_KEY,
-  type GitHubSyncService, type CloudFormat, type CloudSlotInfo, type SyncStatus, type DegradedUploadDetail,
+  type CloudFormat, type CloudSlotInfo, type SyncStatus, type DegradedUploadDetail,
 } from '@/engine/sync/github-sync';
 import { deriveProfileSaveStamp, compareSaveStamps, type SaveStamp, type SaveFreshness } from '@/engine/sync/save-freshness';
-import type { ProfileManager } from '@/engine/persistence/profile-manager';
 
 const { t } = useI18n();
-const githubSync = inject<GitHubSyncService>('githubSync');
-const profileManager = inject<ProfileManager>('profileManager');
+const githubSync = injectService('githubSync');
+const profileManager = injectService('profileManager');
 
 const emit = defineEmits<{
   /** 云端格式探测结果，父级据此隐藏/显示经典 v2 整包 UI */

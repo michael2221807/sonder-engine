@@ -95,6 +95,7 @@ export function provideService<K extends keyof AppServices>(app: VueApp, key: K,
  */
 export function injectService<K extends keyof AppServices>(key: K): AppServices[K] | undefined;
 export function injectService<K extends keyof AppServices>(key: K, defaultValue: AppServices[K] | null): AppServices[K] | null;
+export function injectService<K extends keyof AppServices>(key: K, defaultValue: undefined): AppServices[K] | undefined;
 export function injectService<K extends keyof AppServices>(key: K, ...rest: unknown[]): unknown {
   // Vue's inject has overloads that cannot be spread directly; the cast keeps its runtime behavior.
   return (inject as unknown as (k: string, ...r: unknown[]) => unknown)(key, ...rest);

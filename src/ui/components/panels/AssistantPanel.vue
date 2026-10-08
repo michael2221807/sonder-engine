@@ -16,7 +16,8 @@
  *
  * 对应 docs/status/plan-assistant-utility-2026-04-14.md §6 + Phase 5b。
  */
-import { ref, computed, nextTick, watch, onActivated, inject } from 'vue';
+import { ref, computed, nextTick, watch, onActivated } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import Modal from '@/ui/components/common/Modal.vue';
@@ -39,7 +40,6 @@ import type {
   PayloadDraft,
   WorldBuilderTask,
 } from '@/engine/services/assistant/types';
-import type { WorldBuilderService } from '@/engine/services/world-builder/world-builder-service';
 import type { WorldBuilderPaths } from '@/engine/services/world-builder/world-builder-service';
 import BatchSummaryView from '@/ui/components/assistant/BatchSummaryView.vue';
 import CustomSelect from '@/ui/components/common/CustomSelect.vue';
@@ -325,7 +325,7 @@ function payloadButtonLabel(draft: PayloadDraft): string {
 
 // ─── World Builder mode (Story 3 Phase 4) ──────────────
 
-const worldBuilderService = inject<WorldBuilderService | null>('worldBuilderService', null);
+const worldBuilderService = injectService('worldBuilderService', null);
 
 const isWorldBuilderMode = computed(() => settings.value.worldBuilderMode);
 const isWorldBuilderBusy = ref(false);

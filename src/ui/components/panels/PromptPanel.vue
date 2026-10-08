@@ -13,7 +13,8 @@
  * 2026-10-05（PO 6A）：去掉了每条的权重和编辑框里的类型 / 注入方式 / 作用范围 / 关键词——只有本页自己读写，
  * 引擎从没读过。内置提示词只剩内容、开关、恢复默认。
  */
-import { ref, computed, inject, watch, onActivated } from 'vue';
+import { ref, computed, watch, onActivated } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import Modal from '@/ui/components/common/Modal.vue';
@@ -24,19 +25,17 @@ import Tooltip from '@/ui/components/shared/Tooltip.vue';
 
 const { t } = useI18n();
 import { eventBus } from '@/engine/core/event-bus';
-import type { GamePack } from '@/engine/types/game-pack';
 import { useGameState } from '@/ui/composables/useGameState';
 import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio, actionOptionsOn, wordCountOf, type PromptSettings } from '@/engine/prompt/world-book';
 import { BUILTIN_SLOTS, ROUND_REQUIRED_PROMPT_IDS, RADIO_PROMPT_IDS, SETTING_PICKED_PROMPT_IDS, isPromptAlwaysOn } from '@/engine/prompt/builtin-slots';
 import { promptContentKey, promptEnabledKey, sameText } from '@/engine/prompt/prompt-edits';
 import { createEmptyHeroinePlan, type HeroinePlan, type HeroineEntry, type HeroineInteractionEvent } from '@/engine/story/heroine-plan';
-import type { PromptRegistry } from '@/engine/prompt/prompt-registry';
 import WorldBookTab from './WorldBookTab.vue';
 import NarrativeContractTab from './NarrativeContractTab.vue';
 import { useActionOptionsStyle } from '@/ui/composables/useActionOptionsStyle';
 
-const pack = inject<GamePack>('gamePack');
-const promptRegistry = inject<PromptRegistry>('promptRegistry');
+const pack = injectService('gamePack');
+const promptRegistry = injectService('promptRegistry');
 const { get, setValue } = useGameState();
 
 // ─── Tab state ──────────────────────────────────────────────

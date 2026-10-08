@@ -34,20 +34,17 @@
  *
  * Phase M4 — UI Composable Layer.
  */
-import { ref, computed, inject, onMounted, onUnmounted, readonly } from 'vue';
+import { ref, computed, onMounted, onUnmounted, readonly } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { eventBus } from '@/engine/core/event-bus';
 import type { Ref, ComputedRef, DeepReadonly } from 'vue';
 import type {
-  GamePack,
   CreationFlowConfig,
   CreationStep,
   PresetEntry,
 } from '@/engine/types';
-import type { AIService } from '@/engine/ai/ai-service';
-import type { PromptAssembler } from '@/engine/prompt/prompt-assembler';
-import type { ResponseParser } from '@/engine/ai/response-parser';
 import type { CreationChoices } from '@/engine/pipeline/sub-pipelines/character-init';
-import type { CustomPresetStore, CustomPresetEntry } from '@/engine/persistence/custom-preset-store';
+import type { CustomPresetEntry } from '@/engine/persistence/custom-preset-store';
 import {
   getCreationGenre,
   isChoicePresetVisible,
@@ -177,15 +174,15 @@ export interface UseCreationFlowReturn {
 
 export function useCreationFlow(): UseCreationFlowReturn {
   // ─── Dependency injection ────────────────────────────────────
-  const gamePack = inject<GamePack>('gamePack');
-  const aiService = inject<AIService>('aiService');
-  const promptAssembler = inject<PromptAssembler>('promptAssembler');
-  const responseParser = inject<ResponseParser>('responseParser');
+  const gamePack = injectService('gamePack');
+  const aiService = injectService('aiService');
+  const promptAssembler = injectService('promptAssembler');
+  const responseParser = injectService('responseParser');
   /**
    * 2026-04-14：用户自定义预设仓库（Phase 1 引入）
    * 注入失败（例如旧 host 未 provide）时退化为不显示用户预设、不允许添加。
    */
-  const customPresetStore = inject<CustomPresetStore | undefined>('customPresetStore', undefined);
+  const customPresetStore = injectService('customPresetStore', undefined);
 
   if (!gamePack) {
     throw new Error(

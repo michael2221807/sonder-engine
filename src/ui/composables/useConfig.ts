@@ -16,7 +16,8 @@
  *
  * Phase M4 — UI Composable Layer.
  */
-import { computed, inject } from 'vue';
+import { computed } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import type { ComputedRef } from 'vue';
 import type { GamePack, PresetEntry } from '@/engine/types';
 
@@ -44,7 +45,7 @@ export interface UseConfigReturn {
 }
 
 export function useConfig(): UseConfigReturn {
-  const pack = inject<GamePack>('gamePack');
+  const pack = injectService('gamePack');
 
   const hasPack = computed(() => pack != null);
 

@@ -16,13 +16,12 @@
  *
  * 全程通过 eventBus 触发 toast 给用户反馈（loading / success / error）。
  */
-import { ref, watch, inject, computed } from 'vue';
+import { ref, watch, computed } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import Modal from '@/ui/components/common/Modal.vue';
-import type { CustomPresetSchema, GamePack } from '@/engine/types';
-import type { AIService } from '@/engine/ai/ai-service';
+import type { CustomPresetSchema } from '@/engine/types';
 import { PresetAIGenerator } from '@/engine/services/preset-ai-generator';
-import type { PromptAssembler } from '@/engine/prompt/prompt-assembler';
 import { eventBus } from '@/engine/core/event-bus';
 
 const props = withDefaults(defineProps<{
@@ -45,10 +44,10 @@ const { t } = useI18n();
 
 // ─── Dependencies ─────────────────────────────────────────
 
-const aiService = inject<AIService>('aiService');
-const gamePack = inject<GamePack | null>('gamePack', null);
+const aiService = injectService('aiService');
+const gamePack = injectService('gamePack', null);
 // The prompt page's edits and switches reach the generator's jailbreak (item 2, PO 2026-10-05).
-const promptAssembler = inject<PromptAssembler | undefined>('promptAssembler', undefined);
+const promptAssembler = injectService('promptAssembler', undefined);
 
 // CR-2026-04-14 P2-3：缓存 generator 实例（aiService/gamePack 在 inject 后稳定）
 // 实例本身轻量，但避免每次 click 都 new 一份是良好实践。

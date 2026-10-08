@@ -14,12 +14,11 @@
  */
 // App doc: docs/user-guide/pages/game-relationship-graph.md
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useEngramEditor } from '@/ui/composables/useEngramEditor';
 import { useBatchSolidify } from '@/ui/composables/useBatchSolidify';
 import { loadEngramConfig } from '@/engine/memory/engram/engram-config';
-import { inject } from 'vue';
-import type { StateManager } from '@/engine/core/state-manager';
 import type { EngramEntity } from '@/engine/memory/engram/entity-builder';
 import type { EngramEdge } from '@/engine/memory/engram/knowledge-edge';
 import type { CoverageStats } from '@/engine/memory/engram/engram-editor';
@@ -38,7 +37,7 @@ const engramEnabled = ref(loadEngramConfig().enabled);
 let offEngramConfig: (() => void) | null = null;
 
 // ─── State manager + composable ───
-const stateManager = inject<StateManager>('stateManager');
+const stateManager = injectService('stateManager');
 
 let editor: ReturnType<typeof useEngramEditor> | null = null;
 try {

@@ -15,6 +15,7 @@
  * owner feeds the confirmed id set back via `edgeIdsOverride`.
  */
 import { ref, computed, watch } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useGameState } from '@/ui/composables/useGameState';
@@ -23,13 +24,8 @@ import ProtagonistModeSelector from '@/ui/components/panels/ProtagonistModeSelec
 import CardExportChecklist from '@/ui/components/panels/CardExportChecklist.vue';
 import CardStripPreview from '@/ui/components/panels/CardStripPreview.vue';
 import { eventBus } from '@/engine/core/event-bus';
-import { inject } from 'vue';
 import type { GameStateTree } from '@/engine/types';
-import type { SaveManager } from '@/engine/persistence/save-manager';
-import type { ProfileManager } from '@/engine/persistence/profile-manager';
-import type { EngramEditor, CoverageStats } from '@/engine/memory/engram/engram-editor';
-import type { GameCardExportService } from '@/engine/export/game-card-export-service';
-import type { ImageAssetCache } from '@/engine/image/asset-cache';
+import type { CoverageStats } from '@/engine/memory/engram/engram-editor';
 import type { EngramEdge } from '@/engine/memory/engram/knowledge-edge';
 import type { EngramEntity } from '@/engine/memory/engram/entity-builder';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
@@ -65,11 +61,11 @@ const { t } = useI18n();
 const router = useRouter();
 const { activeProfileId, activeSlotId, activePackId, store } = useGameState();
 
-const gameCardExportService = inject<GameCardExportService>('gameCardExportService');
-const engramEditor = inject<EngramEditor>('engramEditor');
-const saveManager = inject<SaveManager>('saveManager');
-const profileManager = inject<ProfileManager>('profileManager');
-const imageAssetCache = inject<ImageAssetCache | undefined>('imageAssetCache', undefined);
+const gameCardExportService = injectService('gameCardExportService');
+const engramEditor = injectService('engramEditor');
+const saveManager = injectService('saveManager');
+const profileManager = injectService('profileManager');
+const imageAssetCache = injectService('imageAssetCache', undefined);
 
 // ─── Form state ───────────────────────────────────────────────
 const mode = ref<ProtagonistMode>('fixed');

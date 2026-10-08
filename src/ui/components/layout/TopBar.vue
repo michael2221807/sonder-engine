@@ -184,7 +184,8 @@
 
 <script setup lang="ts">
 // App doc: docs/user-guide/pages/game-overview.md §4.0.1
-import { ref, computed, onMounted, onUnmounted, inject } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useEngineStateStore } from '@/engine/stores/engine-state';
@@ -193,13 +194,12 @@ import Modal from '@/ui/components/common/Modal.vue';
 import SessionModeBadge from '@/ui/components/shared/SessionModeBadge.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import { useSessionMode } from '@/ui/composables/useSessionMode';
-import type { SaveManager } from '@/engine/persistence/save-manager';
 import type { GameStateTree } from '@/engine/types';
 
 const router = useRouter();
 const { t } = useI18n();
 const engineState = useEngineStateStore();
-const saveManager = inject<SaveManager>('saveManager');
+const saveManager = injectService('saveManager');
 
 // Story 9 — session mode toggle (play ⇄ worldBuilding). Persisted per-slot via composable.
 const { isWorldBuilding, isPersisting: isModePersisting, toggle: toggleSessionMode } = useSessionMode();

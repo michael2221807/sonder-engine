@@ -29,21 +29,15 @@
  * CharacterInitPipeline 内部已经调用 saveManager.saveGame；
  * CreationView 不再需要读回存档，直接调 engineState.markLoaded() 即可。
  */
-import {
-  computed,
-  ref,
-  inject,
-  markRaw,
-  type Component,
-} from 'vue';
+import { computed, ref, markRaw, type Component } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { set as _set } from 'lodash-es';
 import { useCreationFlow } from '@/ui/composables/useCreationFlow';
 import { useEngineStateStore } from '@/engine/stores/engine-state';
-import type { CharacterInitPipeline, CharacterInitResult } from '@/engine/pipeline/sub-pipelines/character-init';
+import type { CharacterInitResult } from '@/engine/pipeline/sub-pipelines/character-init';
 import type { CreationStep, GameStateTree } from '@/engine/types';
-import type { GamePack } from '@/engine/types/game-pack';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 
 import StepSelectOne from '@/ui/components/creation/StepSelectOne.vue';
@@ -99,10 +93,10 @@ const {
 // ─── Optional pipeline injection ──────────────────────────────
 // The second argument is a factory returning undefined — satisfies inject's
 // overload that expects a default value or factory for optional deps.
-const characterInitPipeline = inject<CharacterInitPipeline | null>('characterInitPipeline', null);
+const characterInitPipeline = injectService('characterInitPipeline', null);
 // §C4 GAP_AUDIT: saveManager inject 已移除 —
 // CharacterInitPipeline 内部已经写存档，CreationView 不再需要读回
-const gamePackInjected = inject<GamePack | undefined>('gamePack');
+const gamePackInjected = injectService('gamePack');
 
 // ─── Finalization state ───────────────────────────────────────
 const isFinalizing = ref(false);

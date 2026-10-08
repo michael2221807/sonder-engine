@@ -9,7 +9,7 @@
  * Story 1 of Game Card Epic (§4.10, C2, NEW-C1).
  */
 // App doc: docs/user-guide/pages/game-relationship-graph.md
-import { inject } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { eventBus } from '@/engine/core/event-bus';
 import type { EngramEditor } from '@/engine/memory/engram/engram-editor';
@@ -23,7 +23,7 @@ import type {
 } from '@/engine/memory/engram/engram-editor';
 
 export function useEngramEditor() {
-  const editor = inject<EngramEditor>('engramEditor');
+  const editor = injectService('engramEditor');
   if (!editor) {
     throw new Error('[useEngramEditor] EngramEditor not provided — check main.ts wiring');
   }

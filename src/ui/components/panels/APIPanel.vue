@@ -9,7 +9,8 @@
  * B.1.4 AI 生成全局设置：流式输出开关 + 最大重试次数
  */
 // App doc: docs/user-guide/pages/home.md §1.3.1
-import { ref, reactive, computed, inject, onMounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useAPIManagementStore } from '@/engine/stores/engine-api';
 import Modal from '@/ui/components/common/Modal.vue';
@@ -21,13 +22,12 @@ import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import { eventBus } from '@/engine/core/event-bus';
 import { API_PROVIDER_PRESETS, requestTimeoutMinutesToMs, REQUEST_TIMEOUT_MIN_MINUTES, REQUEST_TIMEOUT_MAX_MINUTES, REQUEST_TIMEOUT_DEFAULT_MINUTES } from '@/engine/ai/types';
 import { AI_SETTINGS_STORAGE_KEY } from '@/engine/ai/ai-service';
-import type { AIService } from '@/engine/ai/ai-service';
 import type { APIConfig, APIProviderType, UsageType, APICategory } from '@/engine/ai/types';
 import { providerCatalog } from '@/engine/providers';
 
 const { t } = useI18n();
 const apiStore = useAPIManagementStore();
-const aiService = inject<AIService | undefined>('aiService', undefined);
+const aiService = injectService('aiService', undefined);
 
 onMounted(() => {
   apiStore.loadFromStorage();

@@ -14,12 +14,13 @@
  * `proposeNow()` is the player-triggered run of the same world-proposal pipeline the
  * post-round hook uses (PO request 2026-09-07: an old save should not wait five rounds).
  */
-import { computed, inject, ref } from 'vue';
+import { computed, ref } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useGameState } from './useGameState';
 import { eventBus } from '@/engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
-import type { CharacterVectorProposePipeline, CharacterVectorProposeResult } from '@/engine/pipeline/sub-pipelines/character-vector-propose';
+import type { CharacterVectorProposeResult } from '@/engine/pipeline/sub-pipelines/character-vector-propose';
 import {
   readCharacterVectors,
   activeVectorEntries,
@@ -59,7 +60,7 @@ function clampFields(fields: Partial<CharacterVectorFields>): CharacterVectorFie
 export function useCharacterVectors() {
   const { get, setValue, useValue } = useGameState();
   const { t } = useI18n();
-  const proposer = inject<CharacterVectorProposePipeline | null>('characterVectorPropose', null);
+  const proposer = injectService('characterVectorPropose', null);
 
   const raw = useValue<unknown>(paths.characterVectors);
   const relationships = useValue<unknown>(paths.relationships);

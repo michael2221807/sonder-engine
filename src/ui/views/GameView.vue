@@ -30,14 +30,13 @@
  * belong to GameLayout and the individual panel components respectively.
  * This separation keeps GameView thin and focused on its guard/provision role.
  */
-import { watch, provide, onMounted, inject, computed } from 'vue';
+import { watch, provide, onMounted, computed } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useRouter } from 'vue-router';
 import { useGameState } from '@/ui/composables/useGameState';
 import { useTheme } from '@/ui/composables/useTheme';
 import { useEngineStateStore } from '@/engine/stores/engine-state';
 import { useMobile } from '@/ui/composables/useMobile';
-import type { EventBus } from '@/engine/core/event-bus';
-import type { GamePack } from '@/engine/types/game-pack';
 import GameLayout from '@/ui/layouts/GameLayout.vue';
 
 const router = useRouter();
@@ -47,8 +46,8 @@ const keepAliveMax = computed(() => isMobile.value ? 4 : undefined);
 const engineState = useEngineStateStore();
 
 // ─── Injected dependencies ────────────────────────────────────
-const eventBus = inject<EventBus>('eventBus');
-const gamePack = inject<GamePack>('gamePack');
+const eventBus = injectService('eventBus');
+const gamePack = injectService('gamePack');
 
 // ─── Theme application ───────────────────────────────────────
 // useTheme reads the injected gamePack's theme config and applies

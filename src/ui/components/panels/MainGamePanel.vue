@@ -43,16 +43,8 @@
  *   - useGameState()  → reads narrative history, round number
  *   - inject('eventBus') → pipeline communication
  */
-import {
-  ref,
-  computed,
-  watch,
-  nextTick,
-  onMounted,
-  onActivated,
-  onBeforeUnmount,
-  inject,
-} from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onActivated, onBeforeUnmount } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useGameState } from '@/ui/composables/useGameState';
 import { useSessionMode } from '@/ui/composables/useSessionMode';
@@ -60,7 +52,6 @@ import { useRoundJump } from '@/ui/composables/useRoundJump';
 import { useSaveHealthGate } from '@/ui/composables/useSaveHealthGate';
 import { useRouter } from 'vue-router';
 import type { SaveHealthReport } from '@/engine/persistence/save-health';
-import type { EventBus } from '@/engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS, type BookmarkedRound } from '@/engine/pipeline/types';
 import { actionOptionsOn, type PromptSettings } from '@/engine/prompt/world-book';
 import Modal from '@/ui/components/common/Modal.vue';
@@ -80,7 +71,6 @@ import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import VoiceQuickSwitch from '@/ui/components/panels/VoiceQuickSwitch.vue';
 import PlotVectorTable from '@/ui/components/plot-vector/PlotVectorTable.vue';
 import RoundImpulseChip from '@/ui/components/plot-vector/RoundImpulseChip.vue';
-import type { TtsService } from '@/engine/tts/tts-service';
 import type { TtsStateEvent, TtsCacheEvent } from '@/engine/tts/types';
 import {
   findFirstAssistantIdx,
@@ -149,8 +139,8 @@ const { useValue, setValue } = useGameState();
 // Story 9 — in worldBuilding mode the player isn't advancing turns, so the
 // turn-advancement controls (composer, live streaming indicator) are hidden.
 const { isWorldBuilding } = useSessionMode();
-const eventBus = inject<EventBus>('eventBus');
-const ttsService = inject<TtsService | undefined>('ttsService', undefined);
+const eventBus = injectService('eventBus');
+const ttsService = injectService('ttsService', undefined);
 
 // ─── TTS 配音 (2026-07-20) ────────────────────────────────────
 // Play button per round + status-bar quick switcher. Playback state is a

@@ -8,14 +8,12 @@
  * This composable builds that coordinator once, wired to the Pinia state tree and the
  * engine's save event, and exposes read-side helpers on top.
  */
-import { computed, inject } from 'vue';
+import { computed } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useEngineStateStore } from '@/engine/stores/engine-state';
 import { eventBus } from '@/engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
-import type { GamePack } from '@/engine/types/game-pack';
 import type { WorldBook, WorldBookEntry } from '@/engine/prompt/world-book';
-import type { EngramManager } from '@/engine/memory/engram/engram-manager';
-import type { StateManager } from '@/engine/core/state-manager';
 import type { CanonMutationInput } from '@/engine/memory/engram/canon-projection';
 import { findCanonEdges, isProjectableRelationship } from '@/engine/memory/engram/canon-projection';
 import type { EngramEdge } from '@/engine/memory/engram/knowledge-edge';
@@ -39,7 +37,7 @@ const paths = DEFAULT_ENGINE_PATHS;
 export function useCapturedSettings() {
   const engineState = useEngineStateStore();
 
-  const pack = inject<GamePack | undefined>('gamePack', undefined);
+  const pack = injectService('gamePack', undefined);
 
   /**
    * State port over the Pinia store — no casts needed.
@@ -82,11 +80,11 @@ export function useCapturedSettings() {
    * working alone. That is the designed relationship: the book is the authority, the
    * graph is a projection.
    */
-  const engramManager = inject<EngramManager | null>('engramManager', null);
+  const engramManager = injectService('engramManager', null);
   // The graph methods take the real StateManager (they read/write the engram subtree,
   // not the world book). It is the same instance the store writes through, so there is
   // one source of truth — this is not a second write path.
-  const stateManager = inject<StateManager | null>('stateManager', null);
+  const stateManager = injectService('stateManager', null);
 
   const engramBridge: CapturedEngramBridge | undefined = engramManager && stateManager
     ? {

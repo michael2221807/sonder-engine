@@ -10,7 +10,8 @@
  *
  * 2026-04-08 升级：英雄头像区、Tab 结构（基础/属性/关系/身体）
  */
-import { ref, reactive, computed, inject, watch, onUnmounted } from 'vue';
+import { ref, reactive, computed, watch, onUnmounted } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useGameState } from '@/ui/composables/useGameState';
 import { useConfig } from '@/ui/composables/useConfig';
@@ -32,9 +33,7 @@ import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import { readStatFields } from '@/engine/pack/stat-section-reader';
 import { extractAnchorViaAI } from '@/engine/image/anchor-extractor';
 import { providerCatalog } from '@/engine/providers';
-import type { AIService } from '@/engine/ai/ai-service';
 import { useAPIManagementStore } from '@/engine/stores/engine-api';
-import type { ImageService } from '@/engine/image/image-service';
 import type { ImageBackendType, CivitaiLoraSnapshot, SecretPartType } from '@/engine/image/types';
 import { buildPromptStyleInjection, type PromptStylePresetLike } from '@/engine/image/style-preset-injection';
 import { resolveStyleParams } from '@/engine/image/style-param-resolver';
@@ -61,8 +60,8 @@ const { t } = useI18n();
 const { isLoaded, useValue, setValue, get } = useGameState();
 const charEditor = useCharacterEditor();
 const router = useRouter();
-const imageService = inject<ImageService>('imageService');
-const aiService = inject<AIService | undefined>('aiService', undefined);
+const imageService = injectService('imageService');
+const aiService = injectService('aiService', undefined);
 const apiStore = useAPIManagementStore();
 
 // Catalog-derived (epic P0 §3.3) — mirrors ImagePanel.configuredBackends.

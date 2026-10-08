@@ -9,7 +9,8 @@
  * 设计文档：docs/design/tts-system-design.md §6.2
  * App doc：docs/user-guide/pages/game-main.md §3.13 配音
  */
-import { ref, computed, inject, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
@@ -19,11 +20,10 @@ import { eventBus } from '@/engine/core/event-bus';
 import { loadTtsSettings, saveTtsSettings } from '@/engine/tts/tts-settings';
 import { TTS_RATE_MIN, TTS_RATE_MAX } from '@/engine/tts/types';
 import type { TtsSettings, TtsVoiceFavorite, TtsBackendType } from '@/engine/tts/types';
-import type { TtsService } from '@/engine/tts/tts-service';
 import { providerCatalog } from '@/engine/providers';
 
 const { t } = useI18n();
-const ttsService = inject<TtsService | undefined>('ttsService', undefined);
+const ttsService = injectService('ttsService', undefined);
 
 // 分段控件的滑杆区间(实用范围;normalize 另有 [20,1000]/[1,30] 硬夹持兜底）
 const SEG_CHARS_UI_MIN = 40;

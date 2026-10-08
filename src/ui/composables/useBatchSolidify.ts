@@ -7,11 +7,11 @@
  * - Progress phase tracking
  * - Coverage stats refresh
  */
-import { ref, inject } from 'vue';
+import { ref } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { eventBus } from '@/engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
-import type { IMemoryRetriever } from '@/engine/pipeline/types';
 import {
   EngramBatchSolidifyPipeline,
   detectMissingEngramData,
@@ -19,23 +19,17 @@ import {
   type BatchSolidifyResult,
   type BatchSolidifyPaths,
 } from '@/engine/memory/engram/batch-solidify-pipeline';
-import type { EngramEditor } from '@/engine/memory/engram/engram-editor';
-import type { EngramManager } from '@/engine/memory/engram/engram-manager';
-import type { AIService } from '@/engine/ai/ai-service';
-import type { StateManager } from '@/engine/core/state-manager';
-import type { GamePack } from '@/engine/types';
-import type { PromptAssembler } from '@/engine/prompt/prompt-assembler';
 
 const JAILBREAK_KEY = 'jailbreak';
 
 export function useBatchSolidify() {
-  const engramEditor = inject<EngramEditor>('engramEditor');
-  const engramManager = inject<EngramManager>('engramManager');
-  const aiService = inject<AIService>('aiService');
-  const stateManager = inject<StateManager>('stateManager');
-  const gamePack = inject<GamePack | null>('gamePack', null);
-  const promptAssembler = inject<PromptAssembler | undefined>('promptAssembler', undefined);
-  const memoryRetriever = inject<IMemoryRetriever | null>('memoryRetriever', null);
+  const engramEditor = injectService('engramEditor');
+  const engramManager = injectService('engramManager');
+  const aiService = injectService('aiService');
+  const stateManager = injectService('stateManager');
+  const gamePack = injectService('gamePack', null);
+  const promptAssembler = injectService('promptAssembler', undefined);
+  const memoryRetriever = injectService('memoryRetriever', null);
 
   const available = !!(engramEditor && engramManager && aiService && stateManager);
 

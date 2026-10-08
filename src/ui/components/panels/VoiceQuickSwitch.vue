@@ -10,7 +10,8 @@
  *
  * 设计文档：docs/design/tts-system-design.md §6.3
  */
-import { ref, computed, inject, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
@@ -18,13 +19,12 @@ import { eventBus } from '@/engine/core/event-bus';
 import { loadTtsSettings, saveTtsSettings } from '@/engine/tts/tts-settings';
 import { TTS_RATE_MIN, TTS_RATE_MAX } from '@/engine/tts/types';
 import type { TtsSettings, TtsVoiceFavorite, TtsBackendType } from '@/engine/tts/types';
-import type { TtsService } from '@/engine/tts/tts-service';
 import { providerCatalog } from '@/engine/providers';
 
 defineProps<{ speaking?: boolean }>();
 
 const { t } = useI18n();
-const ttsService = inject<TtsService | undefined>('ttsService', undefined);
+const ttsService = injectService('ttsService', undefined);
 
 const settings = ref<TtsSettings>(ttsService?.getSettings() ?? loadTtsSettings());
 const open = ref(false);

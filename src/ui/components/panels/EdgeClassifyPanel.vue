@@ -15,15 +15,14 @@
  * Bulk editing: global select-all / clear / invert, plus per-group pagination
  * with page-level select-all / clear (lists can run into the hundreds of edges).
  */
-import { ref, computed, watch, onUnmounted, inject } from 'vue';
+import { ref, computed, watch, onUnmounted } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import {
   CardEdgeClassifyPipeline,
   type EdgeCategory,
 } from '@/engine/export/card-edge-classify-pipeline';
 import { eventBus } from '@/engine/core/event-bus';
-import type { AIService } from '@/engine/ai/ai-service';
-import type { PromptAssembler } from '@/engine/prompt/prompt-assembler';
 import type { EngramEdge } from '@/engine/memory/engram/knowledge-edge';
 import type { EngramEntity } from '@/engine/memory/engram/entity-builder';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
@@ -42,8 +41,8 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 
-const aiService = inject<AIService | undefined>('aiService', undefined);
-const promptAssembler = inject<PromptAssembler | undefined>('promptAssembler', undefined);
+const aiService = injectService('aiService', undefined);
+const promptAssembler = injectService('promptAssembler', undefined);
 
 const PAGE_SIZE = 20;
 type GroupKey = 'worldview' | 'plotEvent' | 'pending';

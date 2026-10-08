@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // App doc: docs/user-guide/pages/game-plot.md
-import { ref, computed, watch, inject } from 'vue';
+import { ref, computed, watch } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useGameState } from '@/ui/composables/useGameState';
 import { usePlotStore } from '@/engine/plot/plot-store';
@@ -12,7 +13,7 @@ import { DEFAULT_GAUGE_MAX_DELTA } from '@/engine/plot/types';
 import { DEFAULT_MAX_ACTIVE_THREADS } from '@/engine/plot/plot-store';
 import { toGameTimeStamp } from '@/engine/plot/game-time-stamp';
 import type { PlotDirectionState, PlotArc, PlotNode } from '@/engine/plot/types';
-import type { PlotDecomposer, MultiDecomposeResult, DecomposedThread } from '@/engine/plot/plot-decomposer';
+import type { MultiDecomposeResult, DecomposedThread } from '@/engine/plot/plot-decomposer';
 import { commitDecomposedThreads, unresolvedThreadRefs, overCapThreadTitles } from '@/engine/plot/plot-threads-commit';
 import Modal from '@/ui/components/common/Modal.vue';
 import GaugeBar from './plot/GaugeBar.vue';
@@ -33,10 +34,10 @@ import { usePlotEditor } from '@/ui/composables/editors';
 const { isLoaded, useValue, setValue } = useGameState();
 const plotStore = usePlotStore();
 const plotEditor = usePlotEditor();
-const plotDecomposer = inject<PlotDecomposer | null>('plotDecomposer', null);
-const plotEvaluation = inject<import('@/engine/plot/plot-evaluation-pipeline').PlotEvaluationPipeline | null>('plotEvaluation', null);
+const plotDecomposer = injectService('plotDecomposer', null);
+const plotEvaluation = injectService('plotEvaluation', null);
 // Only used for the revise button's visibility — the flow modal injects its own.
-const plotReviser = inject<import('@/engine/plot/plot-reviser').PlotReviser | null>('plotReviser', null);
+const plotReviser = injectService('plotReviser', null);
 
 const plotState = useValue<PlotDirectionState | undefined>(DEFAULT_ENGINE_PATHS.plotDirection);
 const currentRound = useValue<number>(DEFAULT_ENGINE_PATHS.roundNumber);

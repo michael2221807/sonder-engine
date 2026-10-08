@@ -9,14 +9,11 @@
  * back into the save tree as the next baseline. The same writer is exposed to the
  * world-book tab so deliberate creates / deletes / imports move the baseline with them.
  */
-import { inject } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useEngineStateStore } from '@/engine/stores/engine-state';
 import { useSaveHealthStore } from '@/engine/stores/save-health';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import type { GameStateTree } from '@/engine/types';
-import type { ImageAssetCache } from '@/engine/image/asset-cache';
-import type { WorldBookStorage } from '@/engine/prompt/world-book-storage';
-import type { VectorStore } from '@/engine/memory/engram/vector-store';
 import { runSaveHealthCheck, canRecordWorldBookBaseline, type SaveHealthReport } from '@/engine/persistence/save-health';
 import { baselineDiffers, buildStorageHealthBaseline } from '@/engine/persistence/save-health-baseline';
 
@@ -25,9 +22,9 @@ const paths = DEFAULT_ENGINE_PATHS;
 export function useSaveHealthGate() {
   const engineState = useEngineStateStore();
   const store = useSaveHealthStore();
-  const imageCache = inject<ImageAssetCache | null>('imageAssetCache', null);
-  const worldBookStorage = inject<WorldBookStorage | null>('worldBookStorage', null);
-  const vectorStore = inject<VectorStore | null>('vectorStore', null);
+  const imageCache = injectService('imageAssetCache', null);
+  const worldBookStorage = injectService('worldBookStorage', null);
+  const vectorStore = injectService('vectorStore', null);
 
   /**
    * Persist the confirmed profile-book ids into the save tree (no-op when unchanged).

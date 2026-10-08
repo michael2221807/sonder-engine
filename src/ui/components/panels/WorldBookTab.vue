@@ -1,10 +1,10 @@
 <script setup lang="ts">
 // App doc: docs/user-guide/pages/game-prompts.md §4
-import { ref, computed, inject, onUnmounted, watch } from 'vue';
+import { ref, computed, onUnmounted, watch } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { eventBus } from '@/engine/core/event-bus';
 import { useEngineStateStore } from '@/engine/stores/engine-state';
-import type { WorldBookStorage } from '@/engine/prompt/world-book-storage';
 import type { WorldBook, WorldBookEntry, WorldBookEntryType, WorldBookScope, WorldBookEntryShape, WorldBookExportData } from '@/engine/prompt/world-book';
 import { isSTLorebook, convertSTLorebook } from '@/engine/prompt/st-lorebook-converter';
 import { useRoute, useRouter } from 'vue-router';
@@ -18,7 +18,7 @@ import Tooltip from '@/ui/components/shared/Tooltip.vue';
 
 const { t } = useI18n();
 const engineState = useEngineStateStore();
-const worldBookStorage = inject<WorldBookStorage>('worldBookStorage');
+const worldBookStorage = injectService('worldBookStorage');
 
 const SCOPE_OPTIONS: Array<{ value: WorldBookScope; labelKey: string }> = [
   { value: 'main', labelKey: 'prompt.scope.main' },

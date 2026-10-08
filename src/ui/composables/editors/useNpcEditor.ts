@@ -7,11 +7,10 @@
  *
  * Story 2 — Phase 1 foundation.
  */
-import { inject } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useGameState } from '@/ui/composables/useGameState';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import { eventBus } from '@/engine/core/event-bus';
-import type { EngramEditor } from '@/engine/memory/engram/engram-editor';
 import type {
   EditorResult,
   NpcFormData,
@@ -37,7 +36,7 @@ export function useNpcEditor(): UseNpcEditorReturn {
   const P = DEFAULT_ENGINE_PATHS;
   const F = P.npcFieldNames;
 
-  const _engramEditor = inject<EngramEditor | null>('engramEditor', null);
+  const _engramEditor = injectService('engramEditor', null);
 
   function save(index: number, formData: NpcFormData): EditorResult {
     let list = [...(get<NpcRelation[]>(P.relationships) ?? [])];

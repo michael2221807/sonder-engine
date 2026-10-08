@@ -14,14 +14,14 @@
  *
  * gated:仅当 设置启用 + sttService.isReady() + 浏览器支持 时显示麦克风键(非死控件)。
  */
-import { ref, computed, inject, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import { eventBus } from '@/engine/core/event-bus';
 import { loadSttSettings } from '@/engine/stt/stt-settings';
 import { useAPIManagementStore } from '@/engine/stores/engine-api';
 import { useSttLexicon } from '@/ui/composables/useSttLexicon';
-import type { SttService } from '@/engine/stt/stt-service';
 import { VAD_MAX_SILENCE_MS } from '@/engine/stt/types';
 import type { SttStreamHandle, SttLatencyProfile } from '@/engine/stt/types';
 
@@ -39,7 +39,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const stt = inject<SttService | undefined>('sttService', undefined);
+const stt = injectService('sttService', undefined);
 const lexicon = useSttLexicon();
 // 本次录音的快照(开录时定;流式握手用)。热词:偏置关或无词 → ''。停顿容忍:映射自设置。
 let sessionHotwords = '';

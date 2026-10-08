@@ -11,7 +11,8 @@
  * Emits `confirm` with the chosen backend + edited prompts; caller owns
  * calling `ImageService.regenerateFromPrompts` with its own subject params.
  */
-import { ref, computed, watch, inject, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import type { ImageBackendType, CivitaiLoraSnapshot, ImageReferenceInput } from '@/engine/image/types';
 
@@ -118,7 +119,7 @@ async function onExtraRefFiles(files: FileList): Promise<void> {
   });
 }
 
-const imageService = inject<{ getAssetCache(): { retrieve(id: string): Promise<{ blob: Blob } | null> } } | null>('imageService', null);
+const imageService = injectService('imageService', null);
 
 watch(() => props.availableBackends, (opts) => {
   if (opts?.length && !opts.some((o) => o.value === chosenBackend.value)) {

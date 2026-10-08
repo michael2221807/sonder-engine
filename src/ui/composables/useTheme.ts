@@ -23,9 +23,9 @@
  *
  * Phase M4 — UI Composable Layer.
  */
-import { ref, watch, inject, onMounted } from 'vue';
+import { ref, watch, onMounted } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import type { Ref } from 'vue';
-import type { GamePack } from '@/engine/types';
 
 /** Flat map of CSS variable name → value, for inspection/debugging */
 type CSSVariableMap = Record<string, string>;
@@ -42,7 +42,7 @@ export interface UseThemeReturn {
 }
 
 export function useTheme(): UseThemeReturn {
-  const pack = inject<GamePack>('gamePack');
+  const pack = injectService('gamePack');
 
   /** Track whether a theme is currently active */
   const isApplied = ref(false);

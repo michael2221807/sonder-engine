@@ -6,10 +6,10 @@
  * This is a simplified first-pass that provides actual usable controls.
  * Full ImageManagerModal (7-tab system) will be built on top of this foundation.
  */
-import { ref, computed, inject, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
-import type { ImageService } from '@/engine/image/image-service';
 import type { ImageBackendType, ImageTask, StylePreset } from '@/engine/image/types';
 import { generateReferenceId } from '@/engine/image/utils';
 import { listConfiguredImageBackends, extractLoraSnapshot, copyAssetToReferenceLibrary } from '@/ui/composables/image/image-backends';
@@ -35,7 +35,6 @@ import { useBackdropClose } from '@/ui/composables/useBackdropClose';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import { eventBus } from '@/engine/core/event-bus';
 import { providerCatalog } from '@/engine/providers';
-import type { AIService } from '@/engine/ai/ai-service';
 import { useAPIManagementStore } from '@/engine/stores/engine-api';
 import { getDefaultPresets, getDefaultModelBundles } from '@/engine/image/transformer-presets';
 import { SCENE_PORTRAIT_SIZE_OPTIONS, SCENE_LANDSCAPE_SIZE_OPTIONS, sizeOptionsToSelectOptions } from '@/engine/image/image-size-options';
@@ -61,8 +60,8 @@ import { useSecretParts } from '@/ui/composables/image/secret-parts';
 import { useSettingsTab } from '@/ui/composables/image/settings-tab';
 
 const { t } = useI18n();
-const imageService = inject<ImageService>('imageService');
-const aiService = inject<AIService | undefined>('aiService', undefined);
+const imageService = injectService('imageService');
+const aiService = injectService('aiService', undefined);
 const apiStore = useAPIManagementStore();
 const { isLoaded, get, setValue, useValue } = useGameState();
 const relationships = useValue<Array<Record<string, unknown>>>(DEFAULT_ENGINE_PATHS.relationships);

@@ -17,7 +17,8 @@
  * - upload() 自身的并发锁 + 上传原子性由引擎保证。
  * - D4 成功也给一个轻 toast。
  */
-import { ref, onMounted, onBeforeUnmount, inject } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useLocale } from '@/ui/composables/useLocale';
 import Modal from '@/ui/components/common/Modal.vue';
@@ -30,14 +31,13 @@ import {
   type GitHubSyncService,
   type CloudFormat,
 } from '@/engine/sync/github-sync';
-import type { ProfileManager } from '@/engine/persistence/profile-manager';
 import { shouldAttemptAutoUpload } from './cloud-autosync';
 import { useSaveHealthStore } from '@/engine/stores/save-health';
 
 const { t } = useI18n();
 const { formatDateTime } = useLocale();
-const githubSync = inject<GitHubSyncService>('githubSync');
-const profileManager = inject<ProfileManager>('profileManager');
+const githubSync = injectService('githubSync');
+const profileManager = injectService('profileManager');
 const saveHealth = useSaveHealthStore();
 
 // ─── Local session state ──────────────────────────────────────

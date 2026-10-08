@@ -10,7 +10,8 @@
  * The engine returns CODES only; this component resolves them to i18n. Decode/preview use the
  * pure `decodeAndValidateCard`; the actual write goes through `GameCardImportService.importCard`.
  */
-import { ref, computed, watch, nextTick, inject } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { get as _get } from 'lodash-es';
@@ -19,7 +20,6 @@ import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import { getBootstrapGamePack } from '@/engine/bootstrap-pack';
 import { decodeAndValidateCard, type ValidatedCard } from '@/engine/export/game-card-import-service';
 import { readImportedCardLedger } from '@/engine/export/card-import-payloads';
-import type { GameCardImportService } from '@/engine/export/game-card-import-service';
 import type { GameCardBundle, ProtagonistMode } from '@/engine/export/game-card-bundle.types';
 import type { GlobalOptInFlag, ImportErrorCode, PackVersionDrift } from '@/engine/export/game-card-import.types';
 import { validateEditableFields } from '@/engine/export/protagonist-template';
@@ -34,7 +34,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const router = useRouter();
-const importService = inject<GameCardImportService>('gameCardImportService');
+const importService = injectService('gameCardImportService');
 
 type Stage =
   | 'upload' | 'decode' | 'preview' | 'nsfw'

@@ -16,7 +16,8 @@
  *
  * 对应 docs/status/plan-assistant-utility-2026-04-14.md §6.3 + Phase 5b。
  */
-import { ref, computed, watch, inject, nextTick } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import Modal from '@/ui/components/common/Modal.vue';
 import JsonEditor from '@/ui/components/editing/JsonEditor.vue';
@@ -31,7 +32,6 @@ import type {
 import { PayloadValidator } from '@/engine/services/assistant/payload-validator';
 import { useGameState } from '@/ui/composables/useGameState';
 import type { StateManager } from '@/engine/core/state-manager';
-import type { GamePack } from '@/engine/types';
 
 const props = withDefaults(defineProps<{
   modelValue: boolean;
@@ -51,8 +51,8 @@ const emit = defineEmits<{
 
 // ─── Validator instance for re-validation after edits ───
 
-const stateManager = inject<StateManager>('stateManager');
-const gamePack = inject<GamePack | null>('gamePack', null);
+const stateManager = injectService('stateManager');
+const gamePack = injectService('gamePack', null);
 const { tree, get } = useGameState();
 void tree;
 // Note: stateManager 通过 inject；fallback to a minimal mock that uses useGameState for `get`

@@ -19,7 +19,8 @@
  *   - modelValue: 控制 modal 显示（v-model）
  *   - npc: 目标 NPC 对象（包含 名称/类型/好感度/描述 等字段）
  */
-import { ref, computed, watch, nextTick, inject } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useGameState } from '@/ui/composables/useGameState';
 import { useLocale } from '@/ui/composables/useLocale';
@@ -28,7 +29,7 @@ import { eventBus } from '@/engine/core/event-bus';
 import FormattedText from '@/ui/components/common/FormattedText.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import MicInputButton from '@/ui/components/shared/MicInputButton.vue';
-import type { NpcChatPipeline, NpcChatMessage } from '@/engine/pipeline/sub-pipelines/npc-chat';
+import type { NpcChatMessage } from '@/engine/pipeline/sub-pipelines/npc-chat';
 
 interface NpcForChat {
   名称: string;
@@ -51,7 +52,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const { formatDate, formatTime } = useLocale();
-const npcChatPipeline = inject<NpcChatPipeline | null>('npcChatPipeline', null);
+const npcChatPipeline = injectService('npcChatPipeline', null);
 const { useValue } = useGameState();
 
 // ─── 响应式读取 NPC 私聊历史 ─────────────────────────────────

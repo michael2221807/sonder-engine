@@ -10,10 +10,10 @@
  *
  * 对应 docs/status/plan-assistant-utility-2026-04-14.md Phase 5b。
  */
-import { ref, computed, inject, onMounted, onUnmounted, type Ref } from 'vue';
+import { ref, computed, onMounted, onUnmounted, type Ref } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import type {
-  AssistantService,
   AssistantSendError,
 } from '@/engine/services/assistant/assistant-service';
 import type {
@@ -29,7 +29,7 @@ const SESSION_ID = 'default';
 
 export function useAssistant() {
   const { t } = useI18n();
-  const service = inject<AssistantService>('assistantService');
+  const service = injectService('assistantService');
   if (!service) {
     throw new Error('[useAssistant] AssistantService not provided');
   }

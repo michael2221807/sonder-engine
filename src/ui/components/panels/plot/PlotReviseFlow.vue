@@ -7,11 +7,12 @@
 // warnings BEFORE apply) → applied. The engine owns all rules: PlotReviser
 // generates, previewRevise computes the diff, commitRevise applies with the
 // optimistic pending-id lock taken at generation time.
-import { ref, computed, watch, inject, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { usePlotStore } from '@/engine/plot/plot-store';
 import type { PlotArc } from '@/engine/plot/types';
-import type { PlotReviser, ReviseResult, ReviseNodeChainItem } from '@/engine/plot/plot-reviser';
+import type { ReviseResult, ReviseNodeChainItem } from '@/engine/plot/plot-reviser';
 import { previewRevise, commitRevise, type CommitReviseReport } from '@/engine/plot/plot-revise-commit';
 import Modal from '@/ui/components/common/Modal.vue';
 import AgaLoader from '@/ui/components/shared/AgaLoader.vue';
@@ -28,7 +29,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const plotStore = usePlotStore();
-const plotReviser = inject<PlotReviser | null>('plotReviser', null);
+const plotReviser = injectService('plotReviser', null);
 
 const request = ref('');
 const generating = ref(false);

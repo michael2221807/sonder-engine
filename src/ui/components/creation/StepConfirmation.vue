@@ -7,11 +7,10 @@
  * 以摘要卡片形式展示角色预览信息（名称、特征、属性等），
  * 并提供 "开始游戏" 按钮。
  */
-import { computed, ref, inject, onMounted } from 'vue';
+import { computed, ref, onMounted } from 'vue';
+import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import type { CreationStep } from '@/engine/types';
-import type { ConfigResolver } from '@/engine/core/config-system';
-import type { GamePack } from '@/engine/types/game-pack';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
 import type { SelectOption } from '@/ui/components/shared/AgaSelect.vue';
@@ -20,8 +19,8 @@ import type { BudgetSummary } from '@/engine/creation/creation-budget';
 
 const { t } = useI18n();
 
-const configResolver = inject<ConfigResolver>('configResolver')!;
-const gamePack = inject<GamePack>('gamePack')!;
+const configResolver = injectService('configResolver')!;
+const gamePack = injectService('gamePack')!;
 
 const ENHANCED_OPENING_DOMAIN = 'enhancedOpening';
 
