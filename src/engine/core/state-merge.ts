@@ -11,7 +11,7 @@
  * - Arrays are REPLACED wholesale by the overlay's array — NOT lodash's default
  *   by-index merge. A card array field is an authoritative snapshot, not a
  *   positional patch (e.g. a 3-item card array must not leave element 4 of a longer
- *   base array dangling). Same rationale as `core/config-system.ts:160-167`.
+ *   base array dangling). Same rationale as the array-replace merge in `core/config-system.ts`.
  * - Keys ABSENT from the overlay keep the base (schema-default) value — this is what
  *   makes the sparse overlay safe: stripped keys fall back to their schema default.
  * - `undefined` overlay values are skipped by lodash `mergeWith` (base survives);

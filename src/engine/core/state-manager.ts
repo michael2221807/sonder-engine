@@ -4,7 +4,7 @@
  * 核心设计：
  * - 使用 Vue 的 reactive() 包装状态树 → 组件可直接响应式绑定
  * - 通过 lodash-es 的 get/set/unset 做 dot-path 操作
- * - 所有修改都经过变更追踪，生成 StateChange 记录
+ * - 经 set/add/delete/push/pull 的修改会生成 StateChange 记录（变更追踪）
  *
  * 引擎不关心状态树的具体字段含义（那是 Game Pack 定义的），
  * 只提供 dot-path 的 CRUD 操作。

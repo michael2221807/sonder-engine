@@ -4,7 +4,7 @@
  * 背景（2026-07-19）：经 gproxy 转发到 claude-opus-4-8 时，AGA 主回合消息里
  * 夹在对话中间的 system（剧情引导 / CoT 伪装）会被转成 Anthropic 的
  * `mid_conv_system` 块并放错位置 → 400；且该模型要求对话以 user 结尾（不支持
- * assistant prefill）。此变换同时消除这两类结构。真实结构见对话中的请求截图。
+ * assistant prefill）。此变换同时消除这两类结构。
  */
 import { describe, it, expect } from 'vitest';
 import { applyStrictMessageFormat } from './ai-service';

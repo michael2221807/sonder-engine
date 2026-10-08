@@ -31,7 +31,7 @@ const DOUBAO_VOICE_CREDENTIALS: CredentialFieldSpec[] = [
 ];
 
 export function registerBuiltinProviders(catalog: ProviderCatalog): void {
-  // ── LLM presets (previously API_PROVIDER_PRESETS in ai/types.ts) ──
+  // ── LLM presets ──
   catalog.register({
     id: 'openai', category: 'llm',
     urlPreset: 'https://api.openai.com',

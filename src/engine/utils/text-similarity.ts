@@ -11,7 +11,7 @@
  * pathological repetition does not occur in practice.
  *
  * Used by:
- * - CommandExecutor push-dedup guard (prevents AI from pushing duplicate
+ * - social/memory-dedup.ts (the push-dedup guard: prevents AI from pushing duplicate
  *   memory entries via commands across rounds)
  * - NpcChatPipeline.appendNpcMemory (prevents duplicate memoryEntry from
  *   private chat)

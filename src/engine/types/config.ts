@@ -39,7 +39,7 @@ export interface ConfigOverlay {
   domainId: ConfigDomainId;
   /** 所属游戏包 ID — 不同包的用户配置互不干扰 */
   packId: string;
-  /** 用户修改的字段（shallow merge 到默认值上） */
+  /** 用户修改的字段（深合并到默认值上，数组整体替换，见 core/config-system.ts） */
   patches: Record<string, unknown>;
   /** 配置版本号 — 与 ConfigDomain.version 对应 */
   version: number;

@@ -35,7 +35,7 @@ export interface CredentialFieldSpec {
  * Descriptor for one backend within one API category.
  *
  * A vendor serving several categories registers one descriptor per category
- * (Volcano Ark will register llm + image; Doubao voice tts + stt).
+ * (Volcano Ark registers llm + image; Doubao voice tts + stt).
  */
 export interface ProviderDescriptor {
   /**

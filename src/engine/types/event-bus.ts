@@ -1,6 +1,6 @@
 /**
  * Engine event names — typed union for known events, plus open-ended custom events.
- * UI components (Toast, Modal, LoadingOverlay) listen to 'ui:*' events.
+ * UI components (e.g. Toast) listen to 'ui:*' events.
  */
 export type EngineEventName =
   | 'engine:initialized'

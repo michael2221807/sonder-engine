@@ -6,6 +6,8 @@
  * 2. tryParseJson: 多策略提取 JSON（直接解析 / 代码块 / 花括号范围）
  * 3. 从 JSON 中提取 text, commands, midTermMemory, actionOptions 等
  *
+ * 以上是主干；旁路块提取、`<正文>` 判定、信封抢救、CoT 伪标签剥离等步骤见 parse() 内的分节注释。
+ *
  * 兼容说明：
  * - 优先使用 "commands" 字段（新键名）
  * - 回退到 "tavern_commands"（demo 遗留键名）
@@ -553,7 +555,7 @@ export class ResponseParser {
    *
    * - 非字符串或空字符串 → `undefined`（让 AIResponse.memoryEntry 不出现）
    * - 合法字符串 → trim 后返回
-   * - 50 字软上限 — 超出时截断（AI 有时不守字数规则）
+   * - 80 字软上限 — 超出时截断（AI 有时不守字数规则）
    */
   private normalizeMemoryEntry(raw: unknown): string | undefined {
     if (typeof raw !== 'string') return undefined;

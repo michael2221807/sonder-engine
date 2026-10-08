@@ -30,9 +30,8 @@
  *       },
  *     });
  *
- * 当前（2026-04-11）注册表**为空** —— AutoGameAgent 还没经历过破坏性 schema
- * 升级。首次真正升级时在下方 `registerDefaultMigrations()` 或在 `main.ts` 启动
- * 序列中调用 `migrationRegistry.register()`。
+ * 内置迁移在启动序列里注册（见 bootstrap/pack-and-migrations.ts 对
+ * `migrationRegistry.register()` 的调用）；新增迁移时在那里加。
  */
 
 /**

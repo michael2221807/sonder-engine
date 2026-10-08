@@ -2,20 +2,14 @@ import { parseJsonWithRepairs } from './json-escape-sanitize';
 import { stripThinkOrThinkingBlocks } from './thinking-tags';
 
 /**
- * JSON 块提取工具 — 2026-04-11 CR M-08 修复
+ * JSON 块提取工具
  *
- * 背景：记忆子管线（mid-term-refine / memory-summary / long-term-compact）需要
- * 从 AI 响应中提取特定 key 的 JSON 对象作为 last-resort fallback。旧版本用贪婪
- * 正则 `/\{[\s\S]*"key"[\s\S]*\}/`，在以下场景会失败：
+ * 记忆子管线（mid-term-refine / memory-summary / long-term-compact）用它从 AI 响应中
+ * 提取特定 key 的 JSON 对象作为 last-resort fallback。不用贪婪正则：响应里可能有多个
+ * JSON 块（CoT 块 + 正式输出）、markdown 代码栅栏、或 key 只出现在嵌套的内层对象。
+ * Changelog: 2026-04-11 CR M-08。
  *
- * 1. AI 响应同时包含多个 JSON 块（比如一个 chain-of-thought 块 + 一个正式输出
- *    块），贪婪正则会从第一个 `{` 匹配到最后一个 `}`，把两块中间的文本也吞进去，
- *    JSON.parse 必然失败
- * 2. AI 用 markdown 代码栅栏包裹 JSON（```json ... ```），围栏字符和说明文字
- *    混入匹配结果
- * 3. 嵌套 JSON 中 key 只在内层出现，贪婪会抓到外层对象
- *
- * 解决方案：
+ * 做法：
  *
  * 1. 先把 markdown 代码栅栏剥离（`stripMarkdownFences`）
  * 2. 用括号平衡扫描找出所有顶层 `{...}` 块（`findBalancedJsonBlocks`）

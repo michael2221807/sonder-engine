@@ -5,9 +5,8 @@
  * including stage progression, individual heroine entries, interaction events,
  * and scene/camera planning.
  *
- * This system is optional — enabled via 系统.设置.prompt.enableHeroinePlan.
- * When enabled, its data is stored at 元数据.女主规划 in the state tree
- * and injected as a context piece by SystemPromptBuilder.
+ * This system is optional — it has no switch: whenever 元数据.女主规划 holds data in the
+ * state tree, SystemPromptBuilder injects it as a context piece.
  */
 
 // ─── Stage Progression ──────────────────────────────────────

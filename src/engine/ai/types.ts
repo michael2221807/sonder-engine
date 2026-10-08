@@ -20,11 +20,12 @@ export type APIProviderType = 'openai' | 'claude' | 'gemini' | 'deepseek' | 'cus
  * - 'llm':       chat completion 类型的 API（/v1/chat/completions 或等效）
  * - 'embedding': 向量化 API（/v1/embeddings）
  * - 'rerank':    重排序 API（/v1/rerank，Cohere/SiliconFlow 格式）
+ * - 'image' / 'tts' / 'stt': 生图、语音合成、语音识别后端（各自的协议，见 providers/catalog-entries.ts）
  *
  * 默认 `'llm'` — 向后兼容没有此字段的旧配置。
  *
  * 功能分配（APIAssignment）会按此字段过滤：embedding usage 只能选 'embedding' 类 API，
- * rerank 只能选 'rerank' 类，其他 usage 只能选 'llm' 类。
+ * rerank 只能选 'rerank' 类，image/tts/stt 各选自己的类，其他 usage 只能选 'llm' 类。
  */
 export type APICategory = 'llm' | 'embedding' | 'rerank' | 'image' | 'tts' | 'stt';
 

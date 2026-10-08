@@ -134,7 +134,7 @@ export class CommandExecutor {
    * §11.4: 已警告过的未知路径根 — 避免同一 session 重复刷屏
    *
    * 每个 session 第一次遇到某个未知 root 时 console.warn 一次 + 发一个 toast，
-   * 之后再遇到同名 root 保持静默（但命令仍执行）。用户刷新页面后重置。
+   * 之后再遇到同名 root 保持静默（处理方式不变：归位或拒绝，见 resolvePathRoot）。用户刷新页面后重置。
    */
   private warnedUnknownRoots = new Set<string>();
 
@@ -148,7 +148,7 @@ export class CommandExecutor {
      *
      * 例如天命 pack = `['元数据', '角色', '世界', '社交', 'NPC列表', '记忆', '系统']`
      *
-     * 传入时：写入的 path 根段不在白名单 → 一次性 console.warn + toast，但**仍然执行**
+     * 传入时：写入的 path 根段不在白名单 → 一次性 console.warn + toast，并归位到唯一合适的位置或拒绝（见 resolvePathRoot）
      * 传入 null：禁用验证（测试或向后兼容）
      */
     private pathRootWhitelist: readonly string[] | null = null,

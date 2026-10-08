@@ -452,9 +452,7 @@ export class CustomPresetStore {
   /**
    * 清除某 pack 的全部用户预设
    *
-   * 用于：
-   * 1. 全量备份导入前的 wipeAll
-   * 2. SettingsPanel 的"清除自定义预设"按钮
+   * 用于：导入时清除来包里没有的 pack 的预设（backup-service 里的 customPresetStore.clear 调用）。
    */
   async clear(packId: string): Promise<void> {
     if (!packId) return;

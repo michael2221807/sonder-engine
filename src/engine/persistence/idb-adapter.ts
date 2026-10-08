@@ -278,7 +278,7 @@ export const idbAdapter = {
     return allKeys.map(String);
   },
 
-  /** 清空整个 store — 慎用，仅测试/重置时使用 */
+  /** 清空整个 store — 慎用：测试、重置，以及全量备份导入前的擦除（backup-service）都会用到 */
   async clear(): Promise<void> {
     await withDB((db) => db.clear(STORE_NAME));
   },

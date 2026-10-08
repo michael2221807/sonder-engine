@@ -3,17 +3,15 @@
  * 游戏编排器 — 接通 pipeline:user-input 事件到 PipelineRunner
  *
  * 职责：
- * 1. 组装 PipelineRunner 的 6 个 Stage（依赖注入）
+ * 1. 组装 PipelineRunner 的 Stage（依赖注入；顺序与个数见 core/stage-assembly.ts）
  * 2. 订阅 pipeline:user-input 事件，构建 PipelineContext 并触发 runner.run()
  * 3. 订阅 pipeline:cancel 事件，通过 AbortController 取消当前 AI 生成
  * 4. 向 PostProcessStage 提供 getActiveSlot() — 在 Vue 上下文中读取 Pinia store
  *
  * 为什么用 Orchestrator 而非直接在 main.ts 拼装：
  * - main.ts 已经很长，Orchestrator 封装了"游戏主循环"的所有细节
- * - Orchestrator 是引擎核心的一部分，可以独立测试（mock 各 Stage）
+ * - Orchestrator 是引擎核心的一部分；阶段在 stage-assembly 里构造，测试通过 ports 注入替身
  * - getActiveSlot 的闭包在此统一管理，避免多处读 Pinia store
- *
- * 对应 CODE_REVIEW P0 #1。
  */
 import { PipelineRunner } from '../pipeline/pipeline-runner';
 import { RoundOwnership, type RoundSlot } from './round-ownership';
@@ -531,15 +529,9 @@ export class GameOrchestrator {
   }
 
   /**
-   * 主回合完成后的子管线调度
+   * 主回合完成后的子管线调度。
    *
-   * 四个触发源：
-   * 1. ctx.meta.pendingSummary — 短期记忆满 → MemorySummaryPipeline
-   * 2. (记忆总结后) 中期记忆满 → MidTermRefinePipeline
-   * 3. ctx.meta.pendingHeartbeat — 到达心跳周期 → WorldHeartbeatPipeline
-   * 4. 玩家位置变更 + 新地点无 NPC → NpcGenerationPipeline
-   *
-   * 所有子管线都包在独立 try/catch 中，避免一个失败污染其他子管线。
+   * 触发源、调度顺序和失败隔离的实际规则以 core/post-round/index.ts 的 runPostRound 为准。
    */
   private runPostRoundSubPipelines(
     ctx: PipelineContext,

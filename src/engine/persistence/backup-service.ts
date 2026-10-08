@@ -8,7 +8,8 @@
  *
  * 设计决策：
  * - 使用 JSON 序列化（而非二进制格式），便于调试和手动修复
- * - 导入采用"尽力恢复"策略：某模块失败不中断其他模块的导入
+ * - 全量替换导入失败时从导入前快照整体回滚（见 importFullReplace / restoreFromSnapshot）；
+ *   档案合并导入 importProfileMerge 只增不删、无回滚
  * - 引擎设置从 localStorage 中以 `aga_` / `aga-` 前缀筛选，避免采集无关数据
  * - 使用 structuredClone 深拷贝，切断响应式 proxy 和原始数据的引用
  * - 单档案导出 exportProfile 仅包含该角色相关数据（不含全局配置/prompt）
@@ -970,7 +971,7 @@ export class BackupService {
     try {
       configOverlays = await this.configStore.exportAll();
     } catch {
-      /* 如果 configStore 未初始化或读取失败，快照仍可用 idb 兜底 */
+      /* configStore 未初始化或读取失败：快照里这一段留 null（configs 在独立 IDB 库，不在 idb 段里） */
     }
     try {
       promptEntries = await this.promptStorage.exportAll();
@@ -1005,8 +1006,8 @@ export class BackupService {
   /**
    * 收集所有 pack 的用户自定义预设（按 packId 索引）
    *
-   * 调用方：exportAll、captureCurrentState
-   * 失败时返回 null（保留与 PreImportSnapshot.customPresets 类型一致）
+   * 调用方：各导出路径和各导入前的快照捕获（grep collectCustomPresets）。
+   * 失败时返回已收集到的部分（可能是空对象 {}），不会返回 null。
    */
   private async collectCustomPresets(): Promise<
     Record<string, Record<string, CustomPresetEntry[]>>
@@ -1030,7 +1031,7 @@ export class BackupService {
   /**
    * 恢复用户自定义预设到 IDB（按 packId）
    *
-   * 调用方：importFullReplace、importProfileMerge
+   * 调用方：全量 / 档案 / 全局导入及其回滚路径（importProfileMerge 不调用它）。
    * Optional —— bundle 可能不带 customPresets（旧 backup），此时静默跳过。
    */
   private async restoreCustomPresets(
@@ -1087,9 +1088,8 @@ export class BackupService {
     // Loudness: the state references image assets but the cache returned fewer (or
     // none). The local image cache was evicted/cleared (separate `aga_image_cache`
     // IndexedDB). Surface it NOW so the user sees the loss BEFORE this degraded
-    // backup overwrites a healthy cloud/file backup. This is the exact fingerprint
-    // of the 2026-07-10 corruption incident (126 refs, 0 exported), and also fires
-    // on PARTIAL eviction (e.g. 15/21) — which the sync guard now hard-blocks too.
+    // backup overwrites a healthy cloud/file backup. Same fingerprint as the 2026-07-10
+    // corruption incident; also fires on PARTIAL eviction, which the sync guard hard-blocks too.
     if (exported.length < assetIds.size) {
       const missing = assetIds.size - exported.length;
       eventBus.emit('ui:toast', {
@@ -1256,8 +1256,7 @@ export class BackupService {
 
     // 4. 图片缓存不在此清空 —— 移到 restoreImageAssets（导入的最后一步）做
     //    clear-then-import，确保任一较早步骤失败时图片仍在，回滚不会丢图。
-    //    （历史：wipeAll 曾在此 clear()，一旦后续 restore 失败，captureCurrentState
-    //    没有快照图片缓存 → 回滚也补不回图片 → 图片永久丢失。）
+    //    （快照不含图片缓存，擦掉就补不回来。Changelog: wipeAll 曾在此 clear() 导致回滚后图片永久丢失。）
 
     // 5. 清空世界书 IDB (aga-worldbook) 里的内置提示词覆盖 + 预设组。
     //    `worldbooks` store 不在此清：由 restoreWorldBooks 在来包确实携带 worldBooks 段时

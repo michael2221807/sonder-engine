@@ -403,7 +403,7 @@ export class AIService {
    * 创建兼顾用户取消和超时的 AbortSignal
    *
    * 返回 signal + cleanup 函数，调用方必须在 finally 中调用 cleanup()
-   * 以释放定时器和事件监听器，避免长达 5 分钟的内存泄漏。
+   * 以释放定时器和事件监听器，避免它们在请求结束后继续挂着。
    */
   private createTimeoutSignal(callerSignal?: AbortSignal): { signal: AbortSignal; cleanup: () => void } {
     const controller = new AbortController();

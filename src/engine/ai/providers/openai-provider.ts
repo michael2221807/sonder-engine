@@ -8,7 +8,7 @@
  * 移植自 demo aiService.ts callOpenAICompatibleAPI / streamingRequestOpenAI。
  * 关键差异：
  * - 使用 fetch 代替 axios（减少依赖；非流式也可用 fetch）
- * - DeepSeek R1 的 reasoning_content 字段兼容已在 BaseProvider 的 SSE 过滤中处理
+ * - DeepSeek R1 的 reasoning_content 字段在本文件的流式/非流式解析中转换（BaseProvider 只做 SSE 过滤）
  *
  * 对应 STEP-03B M2.3。
  */

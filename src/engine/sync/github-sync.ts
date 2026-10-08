@@ -567,7 +567,7 @@ export class GitHubSyncService {
     const manifest = await this.uploadBundleToDir(
       owner, repo, `${SLOTS_DIR}/${profileId}`, blob, emit,
       (m) => { m.slotMeta = displayMeta; },
-      // 提交点即写基线（清理之前）：清理中断不得制造幻影冲突（v2 :397 同款语义）
+      // 提交点即写基线（清理之前）：清理中断不得制造幻影冲突（与 v2 上传同款语义）
       (m) => this.setSlotBaseline(profileId, m.createdAt),
     );
     emit('done', '上传完成');
@@ -575,7 +575,7 @@ export class GitHubSyncService {
   }
 
   /**
-   * 上传全局设置插槽 global/。先比对本次导出与云端 manifest 的 bundleChecksum，
+   * 上传全局设置插槽 global/。先比对本次导出与云端 manifest 的内容指纹（contentChecksum，剔除时间戳），
    * **内容未变则跳过**（设置极少变化，避免每回合白传 + 多设备写热点）。
    */
   async uploadGlobal(onStatus?: (s: SyncStatus) => void): Promise<{ skipped: boolean; manifest?: SlotManifest }> {

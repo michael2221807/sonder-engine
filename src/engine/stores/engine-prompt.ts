@@ -1,5 +1,5 @@
 /**
- * Prompt 调试 Pinia Store — 记录最近 N 次 prompt 组装的快照（环形缓冲）
+ * Prompt 调试 Pinia Store — 记录当前回合 prompt 组装的快照（新回合到来时清除旧回合）
  *
  * B.5 扩展：
  * - snapshots 数组保留当前回合的所有快照（新回合到来时清除旧回合）
