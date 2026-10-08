@@ -31,6 +31,27 @@ function tryParseWithSanitizer(src: string): Record<string, unknown> | null {
   return parsed === undefined ? null : (parsed as Record<string, unknown>);
 }
 
+/** Where a scan over a reply stands: inside how many objects, and inside a JSON string (after a backslash or not). */
+interface ObjectScanState { depth: number; inString: boolean; escaped: boolean }
+
+function newObjectScan(): ObjectScanState {
+  return { depth: 0, inString: false, escaped: false };
+}
+
+/**
+ * One character of the string-aware scan the reply scanners share: string state is tracked only inside an object
+ * (`depth > 0`); outside JSON, quotes do not matter. Each scanner keeps its own checks around this step.
+ */
+function stepObjectScan(s: ObjectScanState, c: string): void {
+  if (s.inString) {
+    if (s.escaped) s.escaped = false;
+    else if (c === '\\') s.escaped = true;
+    else if (c === '"') s.inString = false;
+  } else if (c === '{') s.depth++;
+  else if (c === '}' && s.depth > 0) s.depth--;
+  else if (c === '"' && s.depth > 0) s.inString = true;
+}
+
 /**
  * Lift `<tag>…</tag>` blocks out of a reply: the text without them, and each tag's contents (several blocks
  * of one tag are joined by a blank line). One pass over the text: inside a JSON object, string state is
@@ -41,9 +62,10 @@ function tryParseWithSanitizer(src: string): Record<string, unknown> | null {
 export function liftSidecars(text: string, tags: readonly string[] | undefined): { text: string; sidecars: Record<string, string> } {
   const wanted = (tags ?? []).filter(Boolean);
   const found = new Map<string, string[]>();
-  let kept = '', depth = 0, inString = false, escaped = false, i = 0;
+  const scan = newObjectScan();
+  let kept = '', i = 0;
   while (i < text.length) {
-    const tag = inString ? undefined : wanted.find(t => text.startsWith(`<${t}>`, i));
+    const tag = scan.inString ? undefined : wanted.find(t => text.startsWith(`<${t}>`, i));
     if (tag) {
       const open = i + tag.length + 2, close = text.indexOf(`</${tag}>`, open);
       found.set(tag, [...(found.get(tag) ?? []), text.slice(open, close < 0 ? text.length : close).trim()]);
@@ -51,13 +73,7 @@ export function liftSidecars(text: string, tags: readonly string[] | undefined):
       continue;
     }
     const c = text[i];
-    if (inString) {
-      if (escaped) escaped = false;
-      else if (c === '\\') escaped = true;
-      else if (c === '"') inString = false;
-    } else if (c === '{') depth++;
-    else if (c === '}' && depth > 0) depth--;
-    else if (c === '"' && depth > 0) inString = true;
+    stepObjectScan(scan, c);
     kept += c;
     i++;
   }
@@ -77,7 +93,9 @@ const KNOWN_RESPONSE_KEYS = new Set([
   'memoryEntry', 'memory_entry', '记忆条目',
 ]);
 
-const ENVELOPE_HEAD = /^\{\s*"(?:text|叙事文本)"\s*:\s*"/;
+/** `{"text":` — how a reply envelope's narrative key opens (the key's alias included); the head patterns below all start from it. */
+export const ENVELOPE_KEY_HEAD = String.raw`\{\s*"(?:text|叙事文本)"\s*:`;
+export const ENVELOPE_HEAD = new RegExp(String.raw`^${ENVELOPE_KEY_HEAD}\s*"`);
 const ENVELOPE_ESCAPES: Record<string, string> = { n: '\n', t: '\t', r: '\r', b: '\b', f: '\f', '"': '"', '\\': '\\', '/': '/' };
 const QUOTED_KEY = /^"(?:[^"\\]|\\.)*"\s*:/;
 const LOOSE_KEY = /^(?:'([^'\\]*)'|([^\s'":,{}[\]]+))\s*:/;
@@ -107,19 +125,14 @@ function closesEnvelopeValue(text: string, from: number): boolean {
  * that is the envelope. A `"text"` nested inside another object is never the narrative. -1 without one.
  */
 function envelopeValueStart(text: string): number {
-  let depth = 0, inString = false, escaped = false;
+  const scan = newObjectScan();
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
-    if (inString) {
-      if (escaped) escaped = false;
-      else if (c === '\\') escaped = true;
-      else if (c === '"') inString = false;
-    } else if (c === '{') {
-      const head = depth === 0 ? ENVELOPE_HEAD.exec(text.slice(i, i + 200)) : null;
+    if (!scan.inString && c === '{') {
+      const head = scan.depth === 0 ? ENVELOPE_HEAD.exec(text.slice(i, i + 200)) : null;
       if (head) return i + head[0].length;
-      depth++;
-    } else if (c === '}' && depth > 0) depth--;
-    else if (c === '"' && depth > 0) inString = true;
+    }
+    stepObjectScan(scan, c);
   }
   // An unbalanced brace in the prose (`好的，{`) hides the envelope from the scan above. Then the first thing
   // that opens like a JSON object has to be the envelope itself.
@@ -174,13 +187,11 @@ const NARRATIVE_CLOSE = '</正文>';
  * inside objects like `liftSidecars`; outside JSON, quotes do not matter.
  */
 function narrativeTagOutsideJson(text: string): { content: string; start: number; end: number } | null {
-  let depth = 0, inString = false, escaped = false;
+  const scan = newObjectScan();
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
-    if (inString) {
-      if (escaped) escaped = false;
-      else if (c === '\\') escaped = true;
-      else if (c === '"') inString = false;
+    if (scan.inString) {
+      stepObjectScan(scan, c);
       continue;
     }
     if (text.startsWith(NARRATIVE_OPEN, i)) {
@@ -188,17 +199,19 @@ function narrativeTagOutsideJson(text: string): { content: string; start: number
       if (close < 0) return null;
       return { content: text.slice(i + NARRATIVE_OPEN.length, close).trim(), start: i, end: close + NARRATIVE_CLOSE.length };
     }
-    if (c === '{') depth++;
-    else if (c === '}' && depth > 0) depth--;
-    else if (c === '"' && depth > 0) inString = true;
+    stepObjectScan(scan, c);
   }
   return null;
 }
 
 /** A JSON string's content decoded leniently: known escapes decoded, any other `\\x` keeps its character. */
 function decodeLooseJsonString(s: string): string {
-  return s.replace(/\\(u[0-9a-fA-F]{4}|[\s\S])/g, (_, e: string) =>
-    e.length === 5 ? String.fromCharCode(parseInt(e.slice(1), 16)) : (ENVELOPE_ESCAPES[e] ?? e));
+  return s.replace(/\\(u[0-9a-fA-F]{4}|[\s\S])/g, escapeReplacer(ENVELOPE_ESCAPES));
+}
+
+/** The replacer for a `\\(uXXXX|x)` match: a `u` escape becomes its character, a known one is looked up in `table`, any other keeps its character. */
+function escapeReplacer(table: Readonly<Record<string, string>>): (match: string, e: string) => string {
+  return (_, e) => (e.length === 5 ? String.fromCharCode(parseInt(e.slice(1), 16)) : (table[e] ?? e));
 }
 
 /** The CoT protocol's blocks written after the story (`<正文>` comes first). */
@@ -228,15 +241,14 @@ export function escapedTwice(text: string): boolean {
  */
 export function decodeResidualEscapes(text: string): string {
   if (!escapedTwice(text)) return text;
-  return text.replace(RESIDUAL_ESCAPE, (_, e: string) =>
-    e.length === 5 ? String.fromCharCode(parseInt(e.slice(1), 16)) : (RESIDUAL_ESCAPES[e] ?? e));
+  return text.replace(RESIDUAL_ESCAPE, escapeReplacer(RESIDUAL_ESCAPES));
 }
 
 /** Whether a tag's content is a reply object (its narrative under `text`), maybe in a code fence. */
-const REPLY_HEAD = /^(?:```(?:json|JSON)?\s*)?\{\s*"(?:text|叙事文本)"\s*:/;
+export const REPLY_HEAD = new RegExp('^(?:```(?:json|JSON)?\\s*)?' + ENVELOPE_KEY_HEAD);
 
 /** A stored narrative that is really a reply's JSON envelope, bare or inside `<正文>` (both the 2026-10-02/03 leaks). */
-const STORED_ENVELOPE = /^(?:<正文>\s*)?\{\s*"(?:text|叙事文本)"\s*:/;
+export const STORED_ENVELOPE = new RegExp(String.raw`^(?:<正文>\s*)?${ENVELOPE_KEY_HEAD}`);
 
 /**
  * The narrative a stored round should have shown, when what was stored is the reply's JSON envelope (a parser

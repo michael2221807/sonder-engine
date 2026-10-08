@@ -15,7 +15,7 @@
  */
 import type { PipelineStage, PipelineContext, PromptMetrics, PromptStepMetrics } from '../types';
 import type { AIService } from '../../ai/ai-service';
-import { COT_BLOCKS, COT_PSEUDO_TAGS, RESIDUAL_ESCAPES, THINKING_TAGS, type ResponseParser } from '../../ai/response-parser';
+import { COT_BLOCKS, COT_PSEUDO_TAGS, ENVELOPE_KEY_HEAD, RESIDUAL_ESCAPES, THINKING_TAGS, type ResponseParser } from '../../ai/response-parser';
 import type { AIMessage, AIResponse } from '../../ai/types';
 import { eventBus } from '../../core/event-bus';
 import { emitPromptAssemblyDebug } from '../../core/prompt-debug';
@@ -413,6 +413,9 @@ function storyDisplay(emit: (text: string) => void) {
   return display;
 }
 
+/** Where the stream's story starts: the reply object's `{"text":"` head, maybe behind `<正文>` and a code fence. */
+export const PREFIX_RE = new RegExp('^\\s*(?:<正文>\\s*)?(?:```(?:json|JSON)?\\s*)?' + ENVELOPE_KEY_HEAD + '\\s*"');
+
 /**
  * Character-level state machine that shows the story of streamed AI output without its envelope. Works for
  * single-call (`{"text":"...","commands":...}`), splitGen step1 (`{"text":"..."}`), and the CoT protocol's own shape
@@ -439,7 +442,6 @@ function storyDisplay(emit: (text: string) => void) {
 export function createJsonTextStreamUnwrapper(
   onChunk: (chunk: string) => void,
 ): { onChunk: (chunk: string) => void; flush: () => void } {
-  const PREFIX_RE = /^\s*(?:<正文>\s*)?(?:```(?:json|JSON)?\s*)?\{\s*"(?:text|叙事文本)"\s*:\s*"/;
   /** A story written straight into the tag: `<正文>`, then neither an object nor a fence. */
   const TAGGED_RE = /^\s*<正文>\s*[^\s{`]/;
   const TAG_HEAD_RE = /^\s*<正文>\s*/;
@@ -580,10 +582,7 @@ export function createJsonTextStreamUnwrapper(
               hex = '';
               break;
             }
-            const ESCAPE_MAP: Record<string, string> = {
-              n: '\n', t: '\t', r: '\r', '"': '"', '\\': '\\', '/': '/',
-            };
-            put(ESCAPE_MAP[ch] ?? '\\' + ch);
+            put(RESIDUAL_ESCAPES[ch] ?? '\\' + ch);
             state = 'text';
             break;
           }
