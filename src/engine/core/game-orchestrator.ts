@@ -17,6 +17,7 @@
  */
 import { PipelineRunner } from '../pipeline/pipeline-runner';
 import { RoundOwnership, type RoundSlot } from './round-ownership';
+import { runPostRound } from './post-round';
 import { SettingCaptureStage } from '../pipeline/stages/setting-capture';
 import { parseSettingTagNames } from '../prompt/setting-tag-scanner';
 import { parseAnchorStopwords } from '../prompt/captured-entry-mutations';
@@ -88,10 +89,6 @@ import type {
 } from '../pipeline/types';
 import { DEFAULT_ENGINE_PATHS, PREFERENCE_PATHS } from '../pipeline/types';
 import type { GamePack } from '../types';
-import type { GameTime } from '../image/scene-context';
-import type { ImageBackendType, StylePreset } from '../image/types';
-import { parseSizeString } from '../image/image-size-options';
-import { ART_STYLE_PROMPT_LABELS } from '../image/tokenizer';
 import type { MemorySummaryPipeline } from '../pipeline/sub-pipelines/memory-summary';
 import type { MidTermRefinePipeline } from '../pipeline/sub-pipelines/mid-term-refine';
 import { CharacterVectorProposePipeline } from '../pipeline/sub-pipelines/character-vector-propose';
@@ -105,10 +102,8 @@ import type { FieldRepairPipeline } from '../pipeline/sub-pipelines/field-repair
 import type { NpcMemorySummarizer } from '../social/npc-memory-summarizer';
 import type { ImageService } from '../image/image-service';
 import type { TtsService } from '../tts/tts-service';
-import type { PrivacyIncompleteReport } from '../validators/privacy-profile-validator';
 import type { OpeningStages } from '../pipeline/sub-pipelines/enhanced-opening';
 import { SYSTEM_PATHS } from '../pipeline/system-paths';
-import { TIANMING_GENDER_VALUES, TIANMING_IMAGE_ARCHIVE_KEYS, TIANMING_LEGACY_NPC_KEYS } from '../pack/tianming-coupling';
 
 /**
  * 子管线包 — 由 main.ts 在 bootstrap 期间构造并注入 GameOrchestrator。
@@ -670,386 +665,18 @@ export class GameOrchestrator {
    *
    * 所有子管线都包在独立 try/catch 中，避免一个失败污染其他子管线。
    */
-  private async runPostRoundSubPipelines(
+  private runPostRoundSubPipelines(
     ctx: PipelineContext,
     stateManager: StateManager,
     locationBefore: string | null,
   ): Promise<void> {
-    // ── 1. 记忆层级触发（2026-04-11 重构） ──
-    //
-    // 四层记忆系统（short/implicit mid / mid / long），参照 demo + design note。
-    //
-    // 短→中的升级是**同步**完成的（`PostProcessStage` 调
-    // `MemoryManager.shiftAndPromoteOldest()`，无 AI 调用）。所以这里不再
-    // 检查 `pendingSummary` 标记，而是直接按**中期记忆当前条数**判断是否
-    // 触发 AI 子管线。
-    //
-    // If-else 二选一（优先级：长期汇总 > in-place 精炼）：
-    //   - mid >= 50 (longTermSummaryThreshold) → MemorySummaryPipeline
-    //     执行 "worldview evolution" 产出 1-3 条长期记忆 + 消费掉旧中期
-    //   - 否则 mid >= 25 (midTermRefineThreshold) → MidTermRefinePipeline
-    //     执行 in-place 精炼（去重合并，标记 `已精炼`，不删减记忆点）
-    //   - 否则 no-op
-    //
-    // 之所以 if-else：如果同时达到两个阈值（比如 mid=50 → 先 summary 消费
-    // 到 mid=20），refine 就没必要再跑了。优先长期汇总让系统减负最多。
-    //
-    // 详见 `memory-manager.ts` 顶部 JSDoc 的"四层设计"。
-    const memMgr = this.subPipelines.memoryManager;
-    let vectorProposeDue = false;
-    if (memMgr) {
-      if (memMgr.shouldSummarizeLongTerm() && this.subPipelines.memorySummary) {
-        try {
-          const ok = await this.subPipelines.memorySummary.execute();
-          if (ok) console.log('[Orchestrator] MemorySummaryPipeline (worldview evolution) completed');
-        } catch (err) {
-          console.error('[Orchestrator] MemorySummaryPipeline failed:', err);
-        }
-      } else if (memMgr.shouldRefineMidTerm() && this.subPipelines.midTermRefine) {
-        try {
-          const ok = await this.subPipelines.midTermRefine.execute();
-          if (ok) {
-            console.log('[Orchestrator] MidTermRefinePipeline (in-place compress) completed');
-            vectorProposeDue = true;
-          }
-        } catch (err) {
-          console.error('[Orchestrator] MidTermRefinePipeline failed:', err);
-        }
-      }
-
-      // ── Character Vectors (R2 second half): the world proposes per-NPC vectors ──
-      // Fires after a successful refine (fresh, deduplicated material) and on a fixed
-      // cadence in between, so a save sees proposals long before the refine threshold.
-      const roundNow = stateManager.get<number>(this._paths.roundNumber) ?? 0;
-      if (this.subPipelines.characterVectorPropose && (vectorProposeDue || CharacterVectorProposePipeline.isCadenceRound(roundNow))) {
-        try {
-          const ok = await this.subPipelines.characterVectorPropose.execute();
-          if (ok) console.log('[Orchestrator] CharacterVectorProposePipeline completed');
-        } catch (err) {
-          console.error('[Orchestrator] CharacterVectorProposePipeline failed:', err);
-        }
-      }
-
-      // ── 长期记忆溢出 → 二级精炼 → fallback FIFO ──
-      //
-      // 2026-04-11 新增（Feature B）：上一步 memorySummary 可能把新长期记忆
-      // push 进来，如果导致长期记忆超过 cap，触发 LongTermCompactPipeline。
-      // Compact 成功则 old entries 被合并为"主题存档"，否则 fallback 到 FIFO。
-      //
-      // 这里独立于上面的 if-else —— 因为 memorySummary 执行成功后可能新条目
-      // 使长期记忆恰好溢出，需要**同轮**紧接着处理，不等下一回合。
-      if (memMgr.shouldCompactLongTerm()) {
-        let compacted = false;
-        if (this.subPipelines.longTermCompact) {
-          try {
-            compacted = await this.subPipelines.longTermCompact.execute();
-            if (compacted) console.log('[Orchestrator] LongTermCompactPipeline (theme archive) completed');
-          } catch (err) {
-            console.error('[Orchestrator] LongTermCompactPipeline failed:', err);
-          }
-        }
-        // AI compact 失败或不可用 → fallback FIFO 兜底
-        if (!compacted) {
-          const trimmed = memMgr.fallbackTrimLongTerm();
-          if (trimmed > 0) {
-            console.log(`[Orchestrator] Long-term FIFO fallback trimmed ${trimmed} oldest entries`);
-          }
-        }
-      }
-    }
-
-    // ── 3. 世界心跳 ──
-    if (ctx.meta['pendingHeartbeat'] === true && this.subPipelines.worldHeartbeat) {
-      try {
-        const ok = await this.subPipelines.worldHeartbeat.execute();
-        if (ok && this.subPipelines.paths) {
-          // 心跳成功 → 记录本回合为最新心跳回合（供下次周期判断）
-          stateManager.set(
-            this.subPipelines.paths.lastHeartbeatRound,
-            ctx.roundNumber,
-            'system',
-          );
-        }
-      } catch (err) {
-        console.error('[Orchestrator] WorldHeartbeatPipeline failed:', err);
-      }
-    }
-
-    // ── 3.5. Plot evaluation (Sprint Plot-1 P3, GAP-02 fix) ──
-    if (ctx.meta['pendingPlotEval'] === true && this.subPipelines.plotEvaluation) {
-      // Set evaluating flag on state tree so PlotPanel's store watch can block hot-swap
-      if (this.subPipelines.paths) {
-        stateManager.set(this.subPipelines.paths.plotDirection + '._evaluating', true, 'system');
-      }
-      try {
-        const ok = await this.subPipelines.plotEvaluation.execute();
-        if (ok) {
-          console.debug('[Orchestrator] PlotEvaluationPipeline completed');
-        } else {
-          console.debug('[Orchestrator] PlotEvaluationPipeline skipped (no active arc/node)');
-        }
-      } catch (err) {
-        console.error('[Orchestrator] PlotEvaluationPipeline failed:', err);
-      } finally {
-        if (this.subPipelines.paths) {
-          stateManager.set(this.subPipelines.paths.plotDirection + '._evaluating', false, 'system');
-        }
-      }
-    }
-
-    // ── 4. NPC 自动生成（玩家移动到新地点时触发） ──
-    if (
-      this.subPipelines.npcGeneration &&
-      this.subPipelines.paths
-    ) {
-      const locationAfter = stateManager.get<string>(this.subPipelines.paths.playerLocation) ?? null;
-      if (locationAfter && locationAfter !== locationBefore) {
-        try {
-          const ok = await this.subPipelines.npcGeneration.execute(locationAfter);
-          if (ok) console.log(`[Orchestrator] NpcGenerationPipeline generated NPCs for "${locationAfter}"`);
-        } catch (err) {
-          console.error('[Orchestrator] NpcGenerationPipeline failed:', err);
-        }
-      }
-    }
-
-    // ── 5. §11.2 B: 私密信息修复（NSFW 核心） ──
-    // CommandExecutionStage 在 nsfwMode=true 时扫描并写 ctx.meta.pendingPrivacyRepair。
-    // 这里消费该 flag，通过 PrivacyProfileRepairPipeline 补齐缺失字段（带 retry）。
-    //
-    // 放在 npcGeneration 之后的原因：新生成的 NPC 也需要被扫描和补齐。
-    // 但 npcGeneration 本身不触发 validator（那是下一回合 CommandExecutionStage 的事）。
-    // 所以本回合的 privacy repair 只针对主管线 AI 生成/修改的 NPC。
-    const pendingPrivacy = ctx.meta['pendingPrivacyRepair'] as PrivacyIncompleteReport | undefined;
-    if (pendingPrivacy && this.subPipelines.privacyRepair) {
-      try {
-        const result = await this.subPipelines.privacyRepair.execute(pendingPrivacy);
-        if (result.success) {
-          console.log(`[Orchestrator] PrivacyProfileRepairPipeline completed in ${result.attempts} attempt(s)`);
-          eventBus.emit('ui:toast', {
-            type: 'success',
-            i18nKey: 'engine.toast.privacyFieldsRepaired',
-            message: '扩展字段已自动补齐',
-            duration: 1500,
-          });
-        } else {
-          console.warn(
-            `[Orchestrator] PrivacyProfileRepairPipeline finished with ${result.remaining.total} remaining after ${result.attempts} attempts`,
-          );
-          eventBus.emit('ui:toast', {
-            type: 'warning',
-            i18nKey: 'engine.toast.privacyFieldsIncomplete',
-            i18nParams: { count: result.remaining.total },
-            message: `仍有 ${result.remaining.total} 项扩展字段未补齐（已达重试上限）`,
-            duration: 3000,
-          });
-        }
-      } catch (err) {
-        console.error('[Orchestrator] PrivacyProfileRepairPipeline failed:', err);
-      }
-    }
-
-    // ── 6. 通用字段补齐（2026-04-18） ──
-    // Runs AFTER privacy repair so newly-populated 私密信息 (and its 4 required
-    // body parts, 初夜 fields etc.) don't get flagged as missing by the
-    // generic validator. Scans `rules/required-fields.json` against current
-    // state; fires repair pipeline only when at least one entity has gaps.
-    if (this.subPipelines.fieldRepair) {
-      try {
-        const result = await this.subPipelines.fieldRepair.execute();
-        // When the extra (feature-owned) task was the only work, the basic-fields messages do not apply.
-        const onlyExtra = !!result.extra && !result.fieldsNeeded && !result.entityEnrichResult && !result.edgeReviewResult;
-        if (result.extra && !result.extra.resolved) {
-          eventBus.emit('ui:toast', {
-            type: 'warning',
-            i18nKey: 'engine.toast.extraRepairIncomplete',
-            message: '部分自动修复未完成，本回合照常保留',
-            duration: 3000,
-          });
-        }
-        if (result.attempts > 0 && !onlyExtra) {
-          if (result.success) {
-            console.log(`[Orchestrator] FieldRepairPipeline completed in ${result.attempts} attempt(s)`);
-            eventBus.emit('ui:toast', {
-              type: 'success',
-              i18nKey: 'engine.toast.basicFieldsRepaired',
-              message: '基础字段已自动补齐',
-              duration: 1500,
-            });
-          } else {
-            console.warn(
-              `[Orchestrator] FieldRepairPipeline finished with ${result.remaining.total} remaining after ${result.attempts} attempts`,
-            );
-            eventBus.emit('ui:toast', {
-              type: 'warning',
-              i18nKey: 'engine.toast.basicFieldsIncomplete',
-              i18nParams: { count: result.remaining.total },
-              message: `仍有 ${result.remaining.total} 项字段未补齐（已达重试上限）`,
-              duration: 3000,
-            });
-          }
-        }
-        if (result.entityEnrichResult && result.entityEnrichResult.enriched > 0) {
-          console.log(
-            `[Orchestrator] EntityEnrich: ${result.entityEnrichResult.enriched} entity(s) enriched (${result.entityEnrichResult.remaining} still pending)`,
-          );
-        }
-        if (result.edgeReviewResult) {
-          if (result.edgeReviewResult.invalidated > 0) {
-            console.log(
-              `[Orchestrator] EdgeReview: ${result.edgeReviewResult.invalidated} edge(s) invalidated out of ${result.edgeReviewResult.reviewed} reviewed`,
-            );
-          }
-          const p = this.subPipelines.paths;
-          if (p) {
-            const history = stateManager.get<Array<Record<string, unknown>>>(p.narrativeHistory) ?? [];
-            for (let i = history.length - 1; i >= 0; i--) {
-              const entry = history[i];
-              if (entry._engramWrite) {
-                (entry._engramWrite as Record<string, unknown>).reviewResult = result.edgeReviewResult;
-                stateManager.set(p.narrativeHistory, history, 'system');
-                break;
-              }
-            }
-          }
-        }
-      } catch (err) {
-        console.error('[Orchestrator] FieldRepairPipeline failed:', err);
-      }
-    }
-
-    // ── Auto scene generation (post-round) ──
-    // D27: Skip ImageService during enhanced opening
-    if (this.subPipelines.imageService && !ctx.meta?.isEnhancedOpening) {
-      const autoScene = stateManager.get<boolean>(`${SYSTEM_PATHS.image.config}.autoSceneOnRound`) === true;
-      const imageEnabled = stateManager.get<boolean>(SYSTEM_PATHS.image.enabled) === true;
-      if (autoScene && imageEnabled && ctx.parsedResponse?.text) {
-        try {
-          const paths = this.subPipelines.paths;
-          const location = stateManager.get<string>(paths?.playerLocation ?? DEFAULT_ENGINE_PATHS.playerLocation) ?? '';
-          const defaultBackend = (stateManager.get<string>(`${SYSTEM_PATHS.image.config}.defaultBackend`) ?? 'novelai') as ImageBackendType;
-          eventBus.emit('ui:toast', { type: 'info', i18nKey: 'engine.toast.autoSceneGenStart', message: '正在自动生成场景图…', duration: 2000 });
-          // P3 env-tags port (2026-04-19): forward env state so auto-gen scene
-          // images reflect current weather/festival/environment (same plumbing
-          // as ImagePanel.vue manual generation).
-          const sceneAnchors = this.subPipelines.imageService.collectSceneRoleAnchors();
-          // Consume the auto-scene settings the Settings tab writes (they were
-          // previously dead controls): resolution → preset width/height,
-          // composition → pure_landscape / story_snapshot.
-          const autoResolution = parseSizeString(stateManager.get<string>(`${SYSTEM_PATHS.image.config}.auto.sceneResolution`) ?? '');
-          const autoOrientation = stateManager.get<string>(`${SYSTEM_PATHS.image.config}.auto.sceneOrientation`) === 'portrait' ? 'portrait' : 'landscape';
-          const fallbackSize = autoOrientation === 'portrait' ? { width: 576, height: 1024 } : { width: 1024, height: 576 };
-          const autoSize = autoResolution ?? fallbackSize;
-          const autoScenePreset: StylePreset = {
-            id: 'auto_scene', name: 'auto scene', positivePrefix: '', positiveSuffix: '', negative: '',
-            source: 'auto', width: autoSize.width, height: autoSize.height,
-          };
-          const autoComposition = stateManager.get<string>(`${SYSTEM_PATHS.image.config}.auto.sceneComposition`) === 'snapshot'
-            ? 'story_snapshot' as const : 'pure_landscape' as const;
-          this.subPipelines.imageService.generateSceneImage({
-            sceneDescription: ctx.parsedResponse.text.slice(0, 800),
-            location,
-            gameTime: paths ? stateManager.get<GameTime | null>(paths.gameTime) ?? undefined : undefined,
-            weather: paths ? stateManager.get<string>(paths.weather) : undefined,
-            festival: paths ? stateManager.get<unknown>(paths.festival) : undefined,
-            environment: paths ? stateManager.get<unknown>(paths.environmentTags) : undefined,
-            backend: defaultBackend,
-            compositionMode: autoComposition,
-            preset: autoScenePreset,
-            presentNpcs: sceneAnchors.presentNpcs,
-            roleAnchors: sceneAnchors.roleAnchors.length > 0 ? sceneAnchors.roleAnchors : undefined,
-          }).then(() => {
-            eventBus.emit('ui:toast', { type: 'success', i18nKey: 'engine.toast.autoSceneGenComplete', message: '场景图已生成', duration: 2000 });
-          }).catch((err) => console.debug('[Orchestrator] Auto scene gen failed:', err));
-        } catch (err) {
-          console.debug('[Orchestrator] Auto scene trigger error:', err);
-        }
-      }
-    }
-
-    // ── Auto NPC portrait (first appearance) ──
-    // D27: Skip ImageService during enhanced opening (same guard as auto scene above)
-    if (this.subPipelines.imageService && !ctx.meta?.isEnhancedOpening) {
-      const autoPortrait = stateManager.get<boolean>(`${SYSTEM_PATHS.image.config}.autoPortraitForMajorNpcs`) === true;
-      const imageEnabled = stateManager.get<boolean>(SYSTEM_PATHS.image.enabled) === true;
-      if (autoPortrait && imageEnabled) {
-        try {
-          const portraitPaths = this.subPipelines.paths ?? DEFAULT_ENGINE_PATHS;
-          const npcFields = portraitPaths.npcFieldNames;
-          const relations = stateManager.get<Array<Record<string, unknown>>>(portraitPaths.relationships) ?? [];
-          const genderFilter = stateManager.get<string>(`${SYSTEM_PATHS.image.config}.auto.genderFilter`) ?? 'all';
-          const importanceFilter = stateManager.get<string>(`${SYSTEM_PATHS.image.config}.auto.importanceFilter`) ?? 'major';
-          const defaultBackend = (stateManager.get<string>(`${SYSTEM_PATHS.image.config}.defaultBackend`) ?? 'novelai') as ImageBackendType;
-          // Consume the "NPC 默认画风" setting (was a dead control): stored as a
-          // style KEY ('generic'|'anime'|'realistic'|'chinese') → prompt label.
-          const npcStyleKey = stateManager.get<string>(`${SYSTEM_PATHS.image.config}.auto.npcStyle`) ?? 'generic';
-          const npcArtStyle = ART_STYLE_PROMPT_LABELS[npcStyleKey] ?? ART_STYLE_PROMPT_LABELS.generic;
-
-          for (const npc of relations) {
-            const name = String(npc[npcFields.name] ?? '');
-            if (!name) continue;
-            const isMajor = npc[npcFields.isMajorRole] === true;
-            if (importanceFilter === 'major' && !isMajor) continue;
-            const gender = String(npc[npcFields.gender] ?? '');
-            if (genderFilter === 'male' && gender !== TIANMING_GENDER_VALUES.male) continue;
-            if (genderFilter === 'female' && gender !== TIANMING_GENDER_VALUES.female) continue;
-
-            const archive = npc[DEFAULT_ENGINE_PATHS.npcFieldNames.imageArchive] as Record<string, unknown> | undefined;
-            const hasAvatar = !!archive?.[TIANMING_IMAGE_ARCHIVE_KEYS.selectedAvatarId];
-            if (hasAvatar) continue;
-
-            // No avatar yet — auto-generate
-            this.subPipelines.imageService.generateCharacterImage({
-              characterName: name,
-              description: String(npc[DEFAULT_ENGINE_PATHS.npcFieldNames.description] ?? ''),
-              appearance: String(npc[TIANMING_LEGACY_NPC_KEYS.appearanceAlias] ?? npc[DEFAULT_ENGINE_PATHS.npcFieldNames.description] ?? ''),
-              backend: defaultBackend,
-              artStyle: npcArtStyle,
-            }).then(() => {
-              eventBus.emit('ui:toast', { type: 'success', i18nKey: 'engine.toast.autoPortraitComplete', i18nParams: { name }, message: `${name} 自动肖像已生成`, duration: 2000 });
-            }).catch((err) => console.debug(`[Orchestrator] Auto portrait for ${name} failed:`, err));
-          }
-        } catch (err) {
-          console.debug('[Orchestrator] Auto portrait trigger error:', err);
-        }
-      }
-    }
-
-    // ── Auto narration (post-round TTS) ──
-    // Global preference (aga_tts_settings, held on TtsService). Fire-and-forget:
-    // TtsService.speak() is self-contained (splits/strips markers, plays via
-    // audio queue, swallows errors → toast). Skip during enhanced opening.
-    if (this.subPipelines.ttsService && !ctx.meta?.isEnhancedOpening) {
-      try {
-        // 下回合生成完毕 → 删除上一回合的全配音缓存(内存卫生 + 用户要求)。
-        // 若随后自动配音,speak() 会重新捕获本回合;否则缓存归零、下载入口隐藏。
-        this.subPipelines.ttsService.clearRoundAudio();
-        const ttsSettings = this.subPipelines.ttsService.getSettings();
-        if (ttsSettings.enabled && ttsSettings.autoNarrateOnRound && ctx.parsedResponse?.text) {
-          const roundNo = stateManager.get<number>(this.subPipelines.paths?.roundNumber ?? DEFAULT_ENGINE_PATHS.roundNumber) ?? 0;
-          // fire-and-forget — do NOT await (post-round pipeline must not block on TTS)
-          void this.subPipelines.ttsService.speak(ctx.parsedResponse.text, `round-${roundNo}`);
-        }
-      } catch (err) {
-        console.debug('[Orchestrator] Auto narration trigger error:', err);
-      }
-    }
-
-    // ── Sprint Social-5: per-NPC memory summarizer ──
-    if (this.subPipelines.npcMemorySummarizer) {
-      try {
-        const candidates = this.subPipelines.npcMemorySummarizer.findCandidates();
-        for (const npcName of candidates) {
-          await this.subPipelines.npcMemorySummarizer.summarize(npcName);
-          console.debug(`[Orchestrator] NpcMemorySummarizer completed for "${npcName}"`);
-        }
-      } catch (err) {
-        console.debug('[Orchestrator] NpcMemorySummarizer failed:', err);
-      }
-    }
-
-    // R-03: 子管线可能修改了记忆（refine/summary/compact）、NPC 列表、心跳状态等。
-    eventBus.emit('engine:request-save', undefined);
+    // Plain delegation (not `async`/`await`): the caller's continuation must resume in the
+    // same microtask as the original inline body's return.
+    return runPostRound(
+      { sub: this.subPipelines, stateManager, paths: this._paths },
+      ctx,
+      locationBefore,
+    );
   }
 
   /**
