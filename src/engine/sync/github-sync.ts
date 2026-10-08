@@ -19,9 +19,18 @@
 
 import type { BackupService, ExportImageIntegrity, ProfileDisplayMeta } from '../persistence/backup-service';
 import type { WorldBookIntegrity } from '../persistence/save-health-baseline';
-import { packChunks, unpack, sha256String, sha256Blob, type ChunkManifest } from './chunked-bundle-packer';
+import { packChunks, unpack, sha256Blob, type ChunkManifest } from './chunked-bundle-packer';
+import {
+  ApiError, fmtErr, stageError, uploadGenTag, withGenTag,
+  utf8ToBase64, base64ToBytes, safeBody, blobToBase64,
+} from './github-api';
+import { computeGlobalContentChecksum } from './global-fingerprint';
 import { getDeviceStamp } from './device-identity';
 import { LS_SYNC_BASELINE, LS_SYNC_PENDING, LS_SYNC_BASELINES, LS_SYNC_PENDING_MAP } from './sync-storage-keys';
+
+// Public names kept: moved to ./github-api and ./global-fingerprint (R6 step 5).
+export { ApiError } from './github-api';
+export { computeGlobalContentChecksum } from './global-fingerprint';
 
 // ─── 常量 ───
 
@@ -1107,32 +1116,6 @@ export class GitHubSyncService {
 
 // ─── 工具 ───
 
-export class ApiError extends Error {
-  constructor(public status: number, body: string) {
-    super(`GitHub API ${status}: ${body.slice(0, 300)}`);
-  }
-}
-
-function fmtErr(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
-
-/**
- * Per-upload generation tag. Chunk filenames are suffixed with it so each upload
- * writes to fresh paths and never overwrites a chunk the current cloud manifest
- * still references — the property that makes "manifest written last" atomic.
- * Timestamp + a small random suffix keeps it unique even for two uploads in the
- * same millisecond.
- */
-function uploadGenTag(): string {
-  return `${Date.now().toString(36)}${Math.floor(Math.random() * 0x10000).toString(16).padStart(4, '0')}`;
-}
-
-/** Insert the generation tag before the `.gz` extension: `v2/state-0.gz` → `v2/state-0.<tag>.gz`. */
-function withGenTag(path: string, tag: string): string {
-  return path.replace(/\.gz$/, `.${tag}.gz`);
-}
-
 /** Existing-cloud summary of a manifest (shared by the v2 and slot queries; each keeps its own corrupt-manifest handling). */
 function toCloudInfo(m: ChunkManifest): CloudInfo {
   return {
@@ -1164,43 +1147,6 @@ function validateSlotId(profileId: string): void {
   }
 }
 
-/**
- * 全局设置包的**内容指纹**：剔除每次导出必变的时间戳字段（顶层 exportedAt 与
- * builtinPromptOverrides.exportedAt）后，对与设置语义相关的 sections 做 SHA-256。
- * engineSettings 按 key 排序，localStorage 枚举顺序波动不产生假变更。
- * 供 uploadGlobal 跳传比对与 Phase 3 迁移复用；导出为公共函数以便单测锁定
- * "时间戳不同、内容相同 ⇒ 指纹相同"这一关键性质。
- */
-/**
- * 会话性易变键——每回合/每次输入都会变化、且对"设置是否变了"没有语义贡献的键。
- * 从内容指纹中剔除（仍随包携带，只是不触发重传）；不剔除的话 checksum-skip
- * 名存实亡（2026-07-23 真机验证：aga_pending_input 输入草稿每回合击穿跳传）。
- */
-const VOLATILE_FINGERPRINT_KEYS: ReadonlySet<string> = new Set([
-  'aga_pending_input', // 主输入框草稿——随玩家每次输入变化
-]);
-
-export async function computeGlobalContentChecksum(json: string): Promise<string> {
-  const parsed = JSON.parse(json) as Record<string, unknown>;
-  const bpo = parsed.builtinPromptOverrides as Record<string, unknown> | undefined;
-  const engineSettings = parsed.engineSettings as Record<string, unknown> | undefined;
-  const sortedSettings: Record<string, unknown> = {};
-  for (const k of Object.keys(engineSettings ?? {}).sort()) {
-    if (VOLATILE_FINGERPRINT_KEYS.has(k)) continue;
-    sortedSettings[k] = (engineSettings as Record<string, unknown>)[k];
-  }
-  const fingerprint = {
-    configs: parsed.configs,
-    prompts: parsed.prompts,
-    engineSettings: sortedSettings,
-    customPresets: parsed.customPresets,
-    builtinPromptOverrides: bpo
-      ? { version: bpo.version, entries: bpo.entries, packId: bpo.packId }
-      : undefined,
-  };
-  return sha256String(JSON.stringify(fingerprint));
-}
-
 /** 读取设备本地 JSON map 键；损坏/缺失 ⇒ 空对象（自愈，不抛错）。 */
 function readJsonMap<T = string>(lsKey: string): Record<string, T> {
   try {
@@ -1214,51 +1160,4 @@ function readJsonMap<T = string>(lsKey: string): Record<string, T> {
   } catch {
     return {};
   }
-}
-
-/**
- * Wrap a stage failure so the surfaced message names the failing step.
- *
- * `fetch()` (and `Response.blob()` over a failed CompressionStream) throws a
- * bare `TypeError: Failed to fetch` with no HTTP status and no Network-tab
- * entry — useless on its own. Prefixing the stage + a likely-cause hint turns
- * it into something actionable, while preserving the original stack.
- */
-function stageError(stage: string, err: unknown): Error {
-  const raw = err instanceof Error ? err.message : String(err);
-  const hint = /failed to fetch/i.test(raw)
-    ? '（网络中断、被浏览器/扩展拦截，或存档过大导致内存不足）'
-    : '';
-  const wrapped = new Error(`${stage}失败：${raw}${hint}`);
-  if (err instanceof Error && err.stack) wrapped.stack = err.stack;
-  return wrapped;
-}
-
-function utf8ToBase64(str: string): string {
-  return bytesToBase64(new TextEncoder().encode(str));
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  const CHUNK = 8192;
-  let bin = '';
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    bin += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-  }
-  return btoa(bin);
-}
-
-function base64ToBytes(b64: string): Uint8Array {
-  const cleaned = b64.replace(/\s/g, '');
-  const bin = atob(cleaned);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return bytes;
-}
-
-async function safeBody(res: Response): Promise<string> {
-  try { return await res.text(); } catch { return ''; }
-}
-
-async function blobToBase64(blob: Blob): Promise<string> {
-  return bytesToBase64(new Uint8Array(await blob.arrayBuffer()));
 }
