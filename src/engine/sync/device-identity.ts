@@ -14,7 +14,7 @@
  * exclusion: collect / wipe / restore / rollback-snapshot).
  */
 
-const LS_DEVICE_ID = 'aga_device_id';
+import { LS_DEVICE_ID } from './sync-storage-keys';
 
 /** Stamp written into a cloud manifest's `uploadedBy` field. */
 export interface UploadDeviceStamp {

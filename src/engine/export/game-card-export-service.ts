@@ -16,7 +16,8 @@ import type { CustomPresetStore } from '../persistence/custom-preset-store';
 import type { ImageAssetCache } from '../image/asset-cache';
 import type { EngramEntity } from '../memory/engram/entity-builder';
 import type { EngramEdge } from '../memory/engram/knowledge-edge';
-import { gzipCompress, sha256String } from '../sync/chunked-bundle-packer';
+import { gzipCompress, sha256String } from '../core/codec';
+import { ENGINE_VERSION } from '../core/engine-version';
 import { collectAssetIdsFromTree } from '../image/asset-refs';
 import { stripStateTreeForCard, getByPath, isRecord, collectStringsAtPath } from './card-stripper';
 import { buildDefaultCardStripPaths, type CardStripPaths } from './card-export-paths';
@@ -35,7 +36,6 @@ import {
 
 /** Bundle version lineage shared with BackupBundle. */
 const CARD_BUNDLE_VERSION = 1;
-const ENGINE_VERSION = '0.1.0';
 
 /** App localStorage keys for the API template (non-secret fields only are exported). */
 const API_MANAGEMENT_KEY = 'aga_api_management';

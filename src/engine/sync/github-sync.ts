@@ -21,6 +21,7 @@ import type { BackupService, ExportImageIntegrity, ProfileDisplayMeta } from '..
 import type { WorldBookIntegrity } from '../persistence/save-health-baseline';
 import { packChunks, unpack, sha256String, sha256Blob, type ChunkManifest } from './chunked-bundle-packer';
 import { getDeviceStamp } from './device-identity';
+import { LS_SYNC_BASELINE, LS_SYNC_PENDING, LS_SYNC_BASELINES, LS_SYNC_PENDING_MAP } from './sync-storage-keys';
 
 // ─── 常量 ───
 
@@ -36,12 +37,12 @@ const LS_REPO = 'aga_github_sync_repo';
 // manifest createdAt and must never travel, or another device would mis-detect
 // conflicts. See docs/design/github-auto-sync-design.md §5 + §7.
 const LS_AUTOSYNC = 'aga_github_autosync_enabled';
-const LS_BASELINE = 'aga_github_sync_baseline';
+const LS_BASELINE = LS_SYNC_BASELINE;
 // Device-local "there is a local save not yet auto-uploaded" flag. Persisted (not a
 // same-session ref) so a failed tail-flush is retried next session, and so a fresh
 // session that left data unsynced still uploads. Excluded from backup alongside the
 // baseline (backup-service LS_DEVICE_LOCAL_KEYS).
-const LS_PENDING = 'aga_github_sync_pending';
+const LS_PENDING = LS_SYNC_PENDING;
 const DEFAULT_REPO = 'aga-cloud-save';
 const API_VERSION = '2022-11-28';
 
@@ -51,8 +52,8 @@ const API_VERSION = '2022-11-28';
 // 与旧键一起列于 backup-service LS_DEVICE_LOCAL_KEYS 四处排除）。
 const SLOTS_DIR = 'slots';
 const GLOBAL_DIR = 'global';
-const LS_BASELINES = 'aga_github_sync_baselines';
-const LS_PENDING_MAP = 'aga_github_sync_pending_map';
+const LS_BASELINES = LS_SYNC_BASELINES;
+const LS_PENDING_MAP = LS_SYNC_PENDING_MAP;
 /** 全局设置插槽在 baselines/conflict API 中使用的 slotKey。 */
 export const GLOBAL_SLOT_KEY = 'global';
 

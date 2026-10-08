@@ -30,6 +30,9 @@ import type { ProfileMeta } from '../types';
 import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 import { computeWorldBookIntegrity, type WorldBookIntegrity } from './save-health-baseline';
 import { deriveProfileSaveStamp } from '../sync/save-freshness';
+import { LS_DEVICE_LOCAL_KEYS } from '../sync/sync-storage-keys';
+import { ENGINE_VERSION } from '../core/engine-version';
+import { serializeBundleJson } from '../core/codec';
 import { PLOT_VECTOR_CONTROL_KEY } from '../plot-vector/feature-control';
 import { collectAssetIdsFromTree } from '../image/asset-refs';
 
@@ -40,12 +43,6 @@ export { collectAssetIdsFromTree };
 
 /** 备份文件的格式版本 — 导入时用于兼容性校验和未来的格式迁移 */
 const BACKUP_FORMAT_VERSION = 1;
-
-/**
- * 引擎版本 — 标记导出时的引擎代码版本
- * 导入时可据此判断是否需要对备份数据做迁移变换
- */
-const ENGINE_VERSION = '0.1.0';
 
 /**
  * localStorage 中引擎相关 key 的前缀集合
@@ -61,40 +58,6 @@ const LS_KEY_PREFIXES = ['aga_', 'aga-'] as const;
  * 纯提示、不阻断：图片走分卷上传（每卷 ~20MB），大只是慢，不会失败。
  */
 const REFERENCE_LIBRARY_WARN_BYTES = 200 * 1024 * 1024;
-
-/**
- * Device-local localStorage keys that must NEVER travel in a backup / cloud sync.
- *
- * These hold per-device sync bookkeeping, not user content or portable settings.
- * Exporting them and restoring on another device would corrupt that device's own
- * state. Concretely `aga_github_sync_baseline` is *this* device's view of the
- * last-synced cloud manifest `createdAt` — the multi-device conflict token
- * (github-sync.ts). If device A's baseline landed on device B, B would either
- * miss a real conflict or raise a false one.
- *
- * Excluded from FOUR places: collect (never exported), wipe (a foreign
- * full-restore must not erase this device's sync state), restore (a bundle must
- * never write it), and the import-rollback snapshot write-back (restoreFromSnapshot).
- * Keys here still match LS_KEY_PREFIXES — the Set is the override that carves them
- * back out.
- *
- * Members (both from github-sync.ts):
- * - aga_github_sync_baseline — last-synced cloud manifest createdAt (conflict token)
- * - aga_github_sync_pending  — "this device has a local save not yet auto-uploaded"
- *   (survives across sessions so a failed tail-flush is retried next session)
- */
-const LS_DEVICE_LOCAL_KEYS: ReadonlySet<string> = new Set([
-  'aga_github_sync_baseline',
-  'aga_github_sync_pending',
-  // 存档插槽 epic（2026-07-23）：插槽化后基线/待传标志变为 per-slot JSON map，
-  // 语义仍是"本设备的同步记账"，同样绝不随备份/云同步迁移。旧两个标量键保留在
-  // 排除集——升级期间旧客户端仍在写它们。
-  'aga_github_sync_baselines',
-  'aga_github_sync_pending_map',
-  // 设备指纹（2026-08-21）：云上传审计用的本设备稳定 ID（device-identity.ts）。
-  // 若随备份迁移，恢复方会继承源设备的指纹，"这个存档是哪台设备传的"就失去意义。
-  'aga_device_id',
-]);
 
 /**
  * Keys that travel with the player's own cloud sync and nothing else (P3, PO 2026-10-04 A): the plot-momentum
@@ -499,7 +462,7 @@ export class BackupService {
       builtinPromptOverrides: builtinOverridesExport,
     };
 
-    const blob = new Blob([JSON.stringify(bundle, null, 2)], {
+    const blob = new Blob([serializeBundleJson(bundle)], {
       type: 'application/json',
     });
     return { blob, imageIntegrity, worldBookIntegrity };
@@ -1678,7 +1641,7 @@ export class BackupService {
       worldBooks: worldBooksExport,
     };
 
-    const blob = new Blob([JSON.stringify(bundle, null, 2)], {
+    const blob = new Blob([serializeBundleJson(bundle)], {
       type: 'application/json',
     });
     return { blob, imageIntegrity, worldBookIntegrity };
@@ -1754,7 +1717,7 @@ export class BackupService {
       builtinPromptOverrides: builtinOverridesExport,
     };
 
-    const blob = new Blob([JSON.stringify(bundle, null, 2)], {
+    const blob = new Blob([serializeBundleJson(bundle)], {
       type: 'application/json',
     });
     return { blob };

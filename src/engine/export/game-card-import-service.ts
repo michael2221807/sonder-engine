@@ -33,7 +33,7 @@ import type { WorldBookStorage } from '../prompt/world-book-storage';
 import type { ConfigStore } from '../core/config-system';
 import type { PromptStorage } from '../prompt/prompt-storage';
 import { getBootstrapGamePack } from '../bootstrap-pack';
-import { gzipDecompress, sha256String } from '../sync/chunked-bundle-packer';
+import { gzipDecompress, sha256String } from '../core/codec';
 import { compareVersions } from '../persistence/migration-registry';
 import { buildSchemaDefaultTree } from '../pipeline/state-defaults';
 import { deepMergeOverlay } from '../core/state-merge';
