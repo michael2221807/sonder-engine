@@ -72,34 +72,65 @@ function tokenizePrompt(prompt: string): Set<string> {
   );
 }
 
-export function buildTriggerInjection(
-  activeLorasWithTriggers: CivitaiLoraShelfItem[],
-  existingPrompt: string,
-): string[] {
-  const seen = tokenizePrompt(existingPrompt);
-  const additions: string[] = [];
+// Thresholds shared by the generation-time warnings and the preflight warnings
+// (the message wording stays with each caller).
+const MAX_ACTIVE_LORAS = 5;
+const STRONG_STRENGTH = 1.5;
 
-  for (const lora of activeLorasWithTriggers) {
-    if (!lora.autoInjectTriggers) continue;
-    if (!Array.isArray(lora.triggers)) continue;
+/**
+ * Walk the active LoRAs' auto-inject triggers against `seen` (mutated: every
+ * newly injected sub-token is added). Shared by the preview
+ * (`buildTriggerInjection`) and the generation path (`prepareCivitaiLora`).
+ * `perLora` has an entry for every LoRA, `syntaxHits` lists the `<lora:` triggers
+ * that were skipped, in encounter order.
+ */
+function collectTriggerInjections(
+  loras: CivitaiLoraShelfItem[],
+  seen: Set<string>,
+): {
+  perLora: Map<string, string[]>;
+  all: string[];
+  syntaxHits: Array<{ lora: CivitaiLoraShelfItem; text: string }>;
+} {
+  const perLora = new Map<string, string[]>();
+  const all: string[] = [];
+  const syntaxHits: Array<{ lora: CivitaiLoraShelfItem; text: string }> = [];
 
+  for (const lora of loras) {
+    const injected: string[] = [];
+    if (!lora.autoInjectTriggers || !Array.isArray(lora.triggers)) {
+      perLora.set(lora.id, []);
+      continue;
+    }
     for (const trigger of lora.triggers) {
       if (!trigger.enabled) continue;
       const text = trigger.text?.trim();
       if (!text) continue;
-      if (LORA_SYNTAX_RE.test(text)) continue;
+      if (LORA_SYNTAX_RE.test(text)) {
+        syntaxHits.push({ lora, text });
+        continue;
+      }
 
       // Split by comma to handle multi-phrase triggers like "open mouth, tongue out"
       const subTokens = text.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
       const allSeen = subTokens.every((st) => seen.has(st));
       if (!allSeen) {
         for (const st of subTokens) seen.add(st);
-        additions.push(text);
+        all.push(text);
+        injected.push(text);
       }
     }
+    perLora.set(lora.id, injected);
   }
 
-  return additions;
+  return { perLora, all, syntaxHits };
+}
+
+export function buildTriggerInjection(
+  activeLorasWithTriggers: CivitaiLoraShelfItem[],
+  existingPrompt: string,
+): string[] {
+  return collectTriggerInjections(activeLorasWithTriggers, tokenizePrompt(existingPrompt)).all;
 }
 
 // ── Additional networks merge ──
@@ -161,7 +192,7 @@ export function prepareCivitaiLora(params: {
   const activeLoRAs = collectActiveLorasForScope(shelf, scope);
 
   // Warnings
-  if (activeLoRAs.length > 5) {
+  if (activeLoRAs.length > MAX_ACTIVE_LORAS) {
     warnings.push({
       type: 'too_many_active',
       message: `当前 flow 有 ${activeLoRAs.length} 个 LoRA 生效，可能影响质量和消耗`,
@@ -169,7 +200,7 @@ export function prepareCivitaiLora(params: {
   }
 
   for (const lora of activeLoRAs) {
-    if (Math.abs(lora.strength) > 1.5) {
+    if (Math.abs(lora.strength) > STRONG_STRENGTH) {
       warnings.push({
         type: 'strong_effect',
         message: `${lora.name}: strength ${lora.strength} 可能产生过强效果`,
@@ -186,38 +217,14 @@ export function prepareCivitaiLora(params: {
   }
 
   // Trigger injection — track per-LoRA actual injections for accurate snapshot
-  const promptSeen = tokenizePrompt(positivePrompt);
-  const perLoraInjected = new Map<string, string[]>();
-  const allInjectedTokens: string[] = [];
-
-  for (const lora of activeLoRAs) {
-    const injected: string[] = [];
-    if (!lora.autoInjectTriggers || !Array.isArray(lora.triggers)) {
-      perLoraInjected.set(lora.id, []);
-      continue;
-    }
-    for (const trigger of lora.triggers) {
-      if (!trigger.enabled) continue;
-      const text = trigger.text?.trim();
-      if (!text) continue;
-      if (LORA_SYNTAX_RE.test(text)) {
-        warnings.push({
-          type: 'lora_trigger_syntax',
-          message: `${lora.name}: 触发词 "${text}" 包含 <lora:> 语法 — Civitai 使用 strength 滑块，触发词应为普通 prompt 关键词`,
-          loraId: lora.id,
-        });
-        continue;
-      }
-
-      const subTokens = text.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-      const allSeen = subTokens.every((st) => promptSeen.has(st));
-      if (!allSeen) {
-        for (const st of subTokens) promptSeen.add(st);
-        allInjectedTokens.push(text);
-        injected.push(text);
-      }
-    }
-    perLoraInjected.set(lora.id, injected);
+  const { perLora: perLoraInjected, all: allInjectedTokens, syntaxHits } =
+    collectTriggerInjections(activeLoRAs, tokenizePrompt(positivePrompt));
+  for (const { lora, text } of syntaxHits) {
+    warnings.push({
+      type: 'lora_trigger_syntax',
+      message: `${lora.name}: 触发词 "${text}" 包含 <lora:> 语法 — Civitai 使用 strength 滑块，触发词应为普通 prompt 关键词`,
+      loraId: lora.id,
+    });
   }
 
   const triggerFragment = allInjectedTokens.join(', ');
@@ -274,12 +281,12 @@ export function validateShelfForGeneration(
     }
   }
 
-  if (active.length > 5) {
+  if (active.length > MAX_ACTIVE_LORAS) {
     warnings.push(`当前 flow 有 ${active.length} 个 LoRA 生效，可能影响质量和消耗`);
   }
 
   for (const lora of active) {
-    if (Math.abs(lora.strength) > 1.5) {
+    if (Math.abs(lora.strength) > STRONG_STRENGTH) {
       warnings.push(`${lora.name}: strength ${lora.strength} 效果可能过强`);
     }
     if (lora.mature === true) {

@@ -12,6 +12,7 @@
  * All regex patterns are verbatim from the original codebase.
  */
 import type { AnchorStructuredFeatures, SecretPartType } from './types';
+import { splitByComma, dedupTokens } from './prompt-tokens';
 
 export type AnchorComposition = 'portrait' | 'half-body' | 'full-length' | 'scene' | 'secret_part' | 'custom';
 
@@ -29,30 +30,6 @@ export interface AnchorInjectionOptions {
 const CAMERA_WORDS_RE = /(headshot|portrait|upper body|waist-?up|full body|cowboy shot|close-?up|extreme close-?up|wide shot|mid shot|low angle|high angle|standing|sitting|kneeling|running|framing|character sheet|composition|depth of field|rule of thirds|feet included|floor contact|avatar)/i;
 
 // ── Helper utility functions ──
-
-/** Split prompt by commas */
-function splitByComma(text: string): string[] {
-  return (text || '')
-    .replace(/\r?\n+/g, ', ')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-/** Deduplicate prompt fragments */
-function dedupTokens(tokens: string[]): string[] {
-  const seen = new Set<string>();
-  const result: string[] = [];
-  for (const token of tokens) {
-    const normalized = token.replace(/^[-*•\s]+/, '').trim();
-    if (!normalized) continue;
-    const key = normalized.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    result.push(normalized);
-  }
-  return result;
-}
 
 /** Remove camera/composition words */
 function removeCameraWords(tokens: string[]): string[] {

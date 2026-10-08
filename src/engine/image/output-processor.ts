@@ -16,6 +16,7 @@
  * - processTransformerOutput — for multi-character/scene (core only; full
  *   multi-character serialization deferred to Phase 1.6)
  */
+import { splitByComma, dedupTokens, replaceUntilStable } from './prompt-tokens';
 
 // ═══════════════════════════════════════════════════════════
 // §1 — Shared types
@@ -300,27 +301,19 @@ export function parseStructuredOutput(rawText: string): StructuredOutput | null 
 function convertBracketWeightSyntax(rawText: string): string {
   let output = rawText || '';
   // Pass 1: (content:weight) → weight::content::
-  for (let i = 0; i < 8; i += 1) {
-    const next = output.replace(/\(([^()]+?)\s*:\s*(-?\d+(?:\.\d+)?)\)/g, (_match, content, weight) => {
-      const cleanedContent = cleanPromptOutput(String(content || ''));
-      const cleanedWeight = String(weight || '').trim();
-      if (!cleanedContent || !cleanedWeight) return '';
-      return `${cleanedWeight}::${cleanedContent}::`;
-    });
-    if (next === output) break;
-    output = next;
-  }
+  output = replaceUntilStable(output, /\(([^()]+?)\s*:\s*(-?\d+(?:\.\d+)?)\)/g, (_match, content, weight) => {
+    const cleanedContent = cleanPromptOutput(String(content || ''));
+    const cleanedWeight = String(weight || '').trim();
+    if (!cleanedContent || !cleanedWeight) return '';
+    return `${cleanedWeight}::${cleanedContent}::`;
+  }, 8);
   // Pass 2: strip parentheses wrapping existing weight syntax: ( weight::content:: ) → weight::content::
-  for (let i = 0; i < 8; i += 1) {
-    const next = output.replace(/\(\s*(-?\d+(?:\.\d+)?)::([\s\S]*?)::\s*\)/g, (_match, weight, content) => {
-      const cleanedContent = cleanPromptOutput(String(content || ''));
-      const cleanedWeight = String(weight || '').trim();
-      if (!cleanedContent || !cleanedWeight) return '';
-      return `${cleanedWeight}::${cleanedContent}::`;
-    });
-    if (next === output) break;
-    output = next;
-  }
+  output = replaceUntilStable(output, /\(\s*(-?\d+(?:\.\d+)?)::([\s\S]*?)::\s*\)/g, (_match, weight, content) => {
+    const cleanedContent = cleanPromptOutput(String(content || ''));
+    const cleanedWeight = String(weight || '').trim();
+    if (!cleanedContent || !cleanedWeight) return '';
+    return `${cleanedWeight}::${cleanedContent}::`;
+  }, 8);
   return normalizeArtistCase(output);
 }
 
@@ -475,30 +468,6 @@ function stripRolePlaceholders(text: string): string {
     .filter(Boolean)
     .filter((token) => !/^(?:主体|角色\s*\d+|character\s*\d+|role\s*\d+|subject)\s*[:：\-]?$/iu.test(token))
     .join(', ');
-}
-
-/** Split prompt by commas */
-function splitByComma(text: string): string[] {
-  return (text || '')
-    .replace(/\r?\n+/g, ', ')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-/** Deduplicate tokens by lowercase key, preserving order and original casing */
-function dedupTokens(tokens: string[]): string[] {
-  const seen = new Set<string>();
-  const result: string[] = [];
-  for (const token of tokens) {
-    const normalized = token.replace(/^[-*•\s]+/, '').trim();
-    if (!normalized) continue;
-    const key = normalized.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    result.push(normalized);
-  }
-  return result;
 }
 
 /** Merge and deduplicate prompt parts (simplified) */
