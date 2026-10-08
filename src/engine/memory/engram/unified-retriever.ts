@@ -22,6 +22,105 @@ import type {
 } from './engram-types';
 import { DEFAULT_ENGINE_PATHS } from '../../pipeline/types';
 
+// ─── Ranking helpers (extracted from retrieveV2; call order there is unchanged) ───
+
+type RrfContribution = { method: string; rank: number; contribution: number };
+
+/** Cosine ranking of one scope: ids above minScore, best first, capped at topK. */
+function rankByCosine<T>(
+  items: T[],
+  idOf: (item: T) => string,
+  vectors: Record<string, number[]>,
+  queryVec: number[],
+  minScore: number,
+  topK: number,
+  cosine: (a: number[], b: number[]) => number,
+): string[] {
+  return items
+    .map((item) => {
+      const id = idOf(item);
+      const vec = vectors[id];
+      if (!vec) return null;
+      return { id, score: cosine(queryVec, vec) };
+    })
+    .filter((x): x is { id: string; score: number } => x != null && x.score > minScore)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK)
+    .map((s) => s.id);
+}
+
+/** BM25 ranking of one scope: ids scoring above 0.05, best first, capped at topK. */
+function rankByBm25<T>(
+  items: T[],
+  idOf: (item: T) => string,
+  textOf: (item: T) => string,
+  query: string,
+  topK: number,
+): string[] {
+  return items
+    .map((item) => ({ id: idOf(item), score: bm25Score(query, textOf(item)) }))
+    .filter((s) => s.score > 0.05)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK)
+    .map((s) => s.id);
+}
+
+/**
+ * Two-hop BFS over the valid-edge graph from the seed entities. Returns the ids of edges reached
+ * that are not already in `excludeIds`, in discovery order (the order feeds the RRF merge).
+ */
+function bfsExpand(
+  validEdges: EngramEdge[],
+  seedEntities: Set<string>,
+  excludeIds: Set<string>,
+): Set<string> {
+  const bfsEdgeIdSet = new Set<string>();
+  const visited = new Set(seedEntities);
+  let frontier = Array.from(seedEntities);
+  const adjacency = new Map<string, EngramEdge[]>();
+  for (const e of validEdges) {
+    const addTo = (n: string) => {
+      const list = adjacency.get(n);
+      if (list) list.push(e); else adjacency.set(n, [e]);
+    };
+    addTo(e.sourceEntity);
+    addTo(e.targetEntity);
+  }
+
+  for (let depth = 0; depth < 2; depth++) {
+    const next: string[] = [];
+    for (const node of frontier) {
+      for (const edge of (adjacency.get(node) ?? [])) {
+        if (!bfsEdgeIdSet.has(edge.id) && !excludeIds.has(edge.id)) {
+          bfsEdgeIdSet.add(edge.id);
+        }
+        const neighbor = edge.sourceEntity === node ? edge.targetEntity : edge.sourceEntity;
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          next.push(neighbor);
+        }
+      }
+    }
+    frontier = next;
+  }
+  return bfsEdgeIdSet;
+}
+
+/** Append each list's per-rank RRF contribution (1 / (rank + 1), rank 1-based) to `contributions`. */
+function recordRrf(
+  contributions: Map<string, RrfContribution[]>,
+  lists: string[][],
+  methodNames: string[],
+): void {
+  for (const [li, list] of lists.entries()) {
+    for (let r = 0; r < list.length; r++) {
+      const c = contributions.get(list[r]) ?? [];
+      c.push({ method: methodNames[li], rank: r + 1, contribution: 1 / (r + 2) });
+      contributions.set(list[r], c);
+    }
+  }
+}
+
 // ─── 类型定义 ───
 
 /** 检索时的场景上下文 */
@@ -151,31 +250,18 @@ export class UnifiedRetriever {
 
     // Score tracing: RRF rank contributions per retrieval method
     const bfsHitIds = new Set<string>();
-    const rrfContributions = new Map<string, Array<{ method: string; rank: number; contribution: number }>>();
+    const rrfContributions = new Map<string, RrfContribution[]>();
+    const cosine = (a: number[], b: number[]) => this.vectorStore.cosineSimilarity(a, b);
 
     // ── Scope 1: Edge search (Cosine + BM25 + BFS) ──
     const edgeCosineIds: string[] = [];
     const edgeBm25Ids: string[] = [];
 
     if (queryVec && vectorData?.edgeVectors) {
-      const scored = validEdges
-        .map((e) => {
-          const vec = vectorData!.edgeVectors[e.id];
-          if (!vec) return null;
-          return { id: e.id, score: this.vectorStore.cosineSimilarity(queryVec!, vec) };
-        })
-        .filter((x): x is { id: string; score: number } => x != null && x.score > minScore)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, topK);
-      edgeCosineIds.push(...scored.map((s) => s.id));
+      edgeCosineIds.push(...rankByCosine(validEdges, (e) => e.id, vectorData.edgeVectors, queryVec, minScore, topK, cosine));
     }
 
-    const bm25Scored = validEdges
-      .map((e) => ({ id: e.id, score: bm25Score(query, e.fact) }))
-      .filter((s) => s.score > 0.05)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, topK);
-    edgeBm25Ids.push(...bm25Scored.map((s) => s.id));
+    edgeBm25Ids.push(...rankByBm25(validEdges, (e) => e.id, (e) => e.fact, query, topK));
 
     // BFS expansion from Cosine + BM25 seed entities
     const bfsSeedEntities = new Set<string>();
@@ -191,48 +277,13 @@ export class UnifiedRetriever {
     bfsSeedEntities.add(context.playerName);
     for (const npc of context.recentNpcNames) bfsSeedEntities.add(npc);
 
-    const bfsEdgeIdSet = new Set<string>();
     const cosineAndBm25Set = new Set([...edgeCosineIds, ...edgeBm25Ids]);
-    const visited = new Set(bfsSeedEntities);
-    let frontier = Array.from(bfsSeedEntities);
-    const adjacency = new Map<string, EngramEdge[]>();
-    for (const e of validEdges) {
-      const addTo = (n: string) => {
-        const list = adjacency.get(n);
-        if (list) list.push(e); else adjacency.set(n, [e]);
-      };
-      addTo(e.sourceEntity);
-      addTo(e.targetEntity);
-    }
-
-    for (let depth = 0; depth < 2; depth++) {
-      const next: string[] = [];
-      for (const node of frontier) {
-        for (const edge of (adjacency.get(node) ?? [])) {
-          if (!bfsEdgeIdSet.has(edge.id) && !cosineAndBm25Set.has(edge.id)) {
-            bfsEdgeIdSet.add(edge.id);
-          }
-          const neighbor = edge.sourceEntity === node ? edge.targetEntity : edge.sourceEntity;
-          if (!visited.has(neighbor)) {
-            visited.add(neighbor);
-            next.push(neighbor);
-          }
-        }
-      }
-      frontier = next;
-    }
+    const bfsEdgeIdSet = bfsExpand(validEdges, bfsSeedEntities, cosineAndBm25Set);
 
     const bfsEdgeIds = Array.from(bfsEdgeIdSet).slice(0, topK);
     for (const id of bfsEdgeIds) bfsHitIds.add(id);
     const edgeRrf = rrfMerge([edgeCosineIds, edgeBm25Ids, bfsEdgeIds]);
-    const edgeMethodNames = ['余弦', 'BM25', '图展开'];
-    for (const [li, list] of [edgeCosineIds, edgeBm25Ids, bfsEdgeIds].entries()) {
-      for (let r = 0; r < list.length; r++) {
-        const c = rrfContributions.get(list[r]) ?? [];
-        c.push({ method: edgeMethodNames[li], rank: r + 1, contribution: 1 / (r + 2) });
-        rrfContributions.set(list[r], c);
-      }
-    }
+    recordRrf(rrfContributions, [edgeCosineIds, edgeBm25Ids, bfsEdgeIds], ['余弦', 'BM25', '图展开']);
     const edgeBudget = Math.max(1, Math.floor(maxCandidates * 0.5));
     let topEdges = edgeRrf.slice(0, edgeBudget);
 
@@ -241,34 +292,13 @@ export class UnifiedRetriever {
     const entityBm25Ids: string[] = [];
 
     if (queryVec && vectorData?.entityVectors) {
-      const scored = entities
-        .map((e) => {
-          const vec = vectorData!.entityVectors[e.name];
-          if (!vec) return null;
-          return { id: e.name, score: this.vectorStore.cosineSimilarity(queryVec!, vec) };
-        })
-        .filter((x): x is { id: string; score: number } => x != null && x.score > minScore)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, topK);
-      entityCosineIds.push(...scored.map((s) => s.id));
+      entityCosineIds.push(...rankByCosine(entities, (e) => e.name, vectorData.entityVectors, queryVec, minScore, topK, cosine));
     }
 
-    const entityBm25 = entities
-      .map((e) => ({ id: e.name, score: bm25Score(query, `${e.name} ${e.summary}`) }))
-      .filter((s) => s.score > 0.05)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, topK);
-    entityBm25Ids.push(...entityBm25.map((s) => s.id));
+    entityBm25Ids.push(...rankByBm25(entities, (e) => e.name, (e) => `${e.name} ${e.summary}`, query, topK));
 
     const entityRrf = rrfMerge([entityCosineIds, entityBm25Ids]);
-    for (const [li, list] of [entityCosineIds, entityBm25Ids].entries()) {
-      const mn = li === 0 ? '余弦' : 'BM25';
-      for (let r = 0; r < list.length; r++) {
-        const c = rrfContributions.get(list[r]) ?? [];
-        c.push({ method: mn, rank: r + 1, contribution: 1 / (r + 2) });
-        rrfContributions.set(list[r], c);
-      }
-    }
+    recordRrf(rrfContributions, [entityCosineIds, entityBm25Ids], ['余弦', 'BM25']);
     const entityBudget = Math.max(1, Math.floor(maxCandidates * 0.25));
     let topEntities = entityRrf.slice(0, entityBudget);
 
@@ -280,34 +310,13 @@ export class UnifiedRetriever {
     const eventBm25Ids: string[] = [];
 
     if (queryVec && vectorData?.eventVectors) {
-      const scored = searchableEvents
-        .map((e) => {
-          const vec = vectorData!.eventVectors[e.id];
-          if (!vec) return null;
-          return { id: e.id, score: this.vectorStore.cosineSimilarity(queryVec!, vec) };
-        })
-        .filter((x): x is { id: string; score: number } => x != null && x.score > minScore)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, topK);
-      eventCosineIds.push(...scored.map((s) => s.id));
+      eventCosineIds.push(...rankByCosine(searchableEvents, (e) => e.id, vectorData.eventVectors, queryVec, minScore, topK, cosine));
     }
 
-    const eventBm25 = searchableEvents
-      .map((e) => ({ id: e.id, score: bm25Score(query, e.summary || e.text) }))
-      .filter((s) => s.score > 0.05)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, topK);
-    eventBm25Ids.push(...eventBm25.map((s) => s.id));
+    eventBm25Ids.push(...rankByBm25(searchableEvents, (e) => e.id, (e) => e.summary || e.text, query, topK));
 
     const eventRrf = rrfMerge([eventCosineIds, eventBm25Ids]);
-    for (const [li, list] of [eventCosineIds, eventBm25Ids].entries()) {
-      const mn = li === 0 ? '余弦' : 'BM25';
-      for (let r = 0; r < list.length; r++) {
-        const c = rrfContributions.get(list[r]) ?? [];
-        c.push({ method: mn, rank: r + 1, contribution: 1 / (r + 2) });
-        rrfContributions.set(list[r], c);
-      }
-    }
+    recordRrf(rrfContributions, [eventCosineIds, eventBm25Ids], ['余弦', 'BM25']);
     const eventBudget = Math.max(1, Math.floor(maxCandidates * 0.25));
     let topEvents = eventRrf.slice(0, eventBudget);
 

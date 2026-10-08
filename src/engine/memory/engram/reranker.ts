@@ -19,6 +19,7 @@
  */
 import type { AIService } from '../../ai/ai-service';
 import type { APIConfig } from '../../ai/types';
+import { buildRemoteEndpoint, postJsonWithTimeout } from './remote-endpoint';
 
 /** Rerank 默认端点路径（Cohere / SiliconFlow / Jina 都用这个） */
 const DEFAULT_RERANK_PATH = '/v1/rerank';
@@ -34,14 +35,7 @@ const RERANK_TIMEOUT_MS = 15_000;
  * - 自动处理 url 尾部斜杠和 path 首部斜杠，保证结果合法
  */
 function buildRerankEndpoint(config: APIConfig): string {
-  const base = config.url.replace(/\/+$/, '');
-  const useCustom =
-    config.useCustomRouting === true &&
-    typeof config.customRoutingPath === 'string' &&
-    config.customRoutingPath.trim().length > 0;
-  const rawPath = useCustom ? config.customRoutingPath!.trim() : DEFAULT_RERANK_PATH;
-  const path = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
-  return `${base}${path}`;
+  return buildRemoteEndpoint(config, DEFAULT_RERANK_PATH, true);
 }
 
 // ─── 类型定义 ───
@@ -153,34 +147,9 @@ export class Reranker {
       return_documents: false, // 我们本地已有 text，不需要 API 回传
     };
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (config.apiKey) {
-      headers['Authorization'] = `Bearer ${config.apiKey}`;
-    }
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), RERANK_TIMEOUT_MS);
-
-    let responseBody: unknown;
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        const errText = await response.text().catch(() => '');
-        throw new Error(`[Reranker] HTTP ${response.status}: ${errText.slice(0, 200)}`);
-      }
-
-      responseBody = await response.json();
-    } finally {
-      clearTimeout(timeoutId);
-    }
+    const responseBody = await postJsonWithTimeout(
+      endpoint, config.apiKey, body, RERANK_TIMEOUT_MS, '[Reranker]',
+    );
 
     return this.parseNativeRerankResponse(responseBody, candidates, topK);
   }

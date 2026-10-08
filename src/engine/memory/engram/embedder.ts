@@ -20,6 +20,7 @@
  */
 import type { AIService } from '../../ai/ai-service';
 import type { APIConfig } from '../../ai/types';
+import { buildRemoteEndpoint, postJsonWithTimeout } from './remote-endpoint';
 
 // ─── 常量 ───
 
@@ -63,25 +64,12 @@ function detectEmbeddingFormat(config: APIConfig): EmbeddingProviderFormat {
  * SiliconFlow / OpenAI / DeepSeek / Jina / Voyage / vLLM / Ollama 全部走 format 检测。
  */
 function buildEmbeddingEndpoint(config: APIConfig, format: EmbeddingProviderFormat): string {
-  const base = config.url.replace(/\/$/, '');
-
-  // 1. 高级覆盖：customRoutingPath
-  const useCustom =
-    config.useCustomRouting === true &&
-    typeof config.customRoutingPath === 'string' &&
-    config.customRoutingPath.trim().length > 0;
-  if (useCustom) {
-    const rawPath = config.customRoutingPath!.trim();
-    const path = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
-    return `${base}${path}`;
-  }
-
-  // 2. 按 provider format 使用默认路径
+  // 1. customRoutingPath override and 2. the per-format default path, both in the shared helper
   switch (format) {
-    case 'cohere': return `${base}/v1/embed`;
+    case 'cohere': return buildRemoteEndpoint(config, '/v1/embed', false);
     case 'ollama':
     case 'openai':
-    default:      return `${base}/v1/embeddings`;
+    default:      return buildRemoteEndpoint(config, '/v1/embeddings', false);
   }
 }
 
@@ -291,34 +279,9 @@ export class Embedder {
   ): Promise<number[][]> {
     const body = buildEmbeddingBody(texts, config.model, format);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), EMBEDDING_TIMEOUT_MS);
-
-    let responseBody: unknown;
-    try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (config.apiKey) {
-        headers['Authorization'] = `Bearer ${config.apiKey}`;
-      }
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        const errText = await response.text().catch(() => '');
-        throw new Error(`[Embedder] HTTP ${response.status}: ${errText.slice(0, 200)}`);
-      }
-
-      responseBody = await response.json();
-    } finally {
-      clearTimeout(timeoutId);
-    }
+    const responseBody = await postJsonWithTimeout(
+      endpoint, config.apiKey, body, EMBEDDING_TIMEOUT_MS, '[Embedder]',
+    );
 
     const vectors = extractVectorsFromResponse(responseBody, texts.length);
     return this.validateVectors(vectors, texts.length);
