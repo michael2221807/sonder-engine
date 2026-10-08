@@ -1,0 +1,33 @@
+{
+  "calls": [
+    [
+      "regenerateFromPrompts",
+      [
+        {
+          "subjectType": "character",
+          "targetCharacter": "林暖",
+          "composition": "portrait",
+          "part": "__undefined__",
+          "positivePrompt": "edited positive",
+          "negativePrompt": "edited negative",
+          "width": 832,
+          "height": 1216,
+          "backend": "novelai",
+          "artStyle": "__undefined__",
+          "references": "__undefined__"
+        }
+      ]
+    ]
+  ],
+  "emits": [
+    [
+      "ui:toast",
+      {
+        "type": "success",
+        "message": "同款任务已提交，可在队列/历史查看",
+        "duration": 2000
+      }
+    ]
+  ],
+  "writes": []
+}

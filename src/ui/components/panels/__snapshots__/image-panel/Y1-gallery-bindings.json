@@ -1,0 +1,78 @@
+{
+  "calls": [
+    [
+      "setNpcAvatar",
+      [
+        "林暖",
+        "img_3"
+      ]
+    ],
+    [
+      "setNpcBackground",
+      [
+        "林暖",
+        "img_3"
+      ]
+    ],
+    [
+      "state.setPersistentWallpaper",
+      [
+        "img_3"
+      ]
+    ],
+    [
+      "setNpcSecretPart",
+      [
+        "林暖",
+        "breast",
+        "img_3"
+      ]
+    ],
+    [
+      "clearNpcAvatar",
+      [
+        "林暖"
+      ]
+    ],
+    [
+      "deleteNpcImage",
+      [
+        "林暖",
+        "img_3"
+      ]
+    ],
+    [
+      "clearNpcHistory",
+      [
+        "林暖"
+      ]
+    ]
+  ],
+  "emits": [
+    [
+      "ui:toast",
+      {
+        "type": "success",
+        "message": "已设为常驻壁纸",
+        "duration": 1500
+      }
+    ],
+    [
+      "ui:toast",
+      {
+        "type": "success",
+        "message": "已设为私密图片（胸部）",
+        "duration": 1500
+      }
+    ],
+    [
+      "ui:toast",
+      {
+        "type": "info",
+        "message": "林暖 的图片记录已清空",
+        "duration": 1500
+      }
+    ]
+  ],
+  "writes": []
+}

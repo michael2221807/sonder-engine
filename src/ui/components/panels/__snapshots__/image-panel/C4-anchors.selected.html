@@ -1,0 +1,249 @@
+<div class="image-panel">
+  <header class="panel-header">
+    <h2 class="panel-title">图片工作台</h2>
+  </header>
+  <div class="aga-tab-bar" role="tablist"><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">手动生成
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">图库
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">场景壁纸
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">队列
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">历史
+      <!--v-if-->
+    </button><button class="aga-tab__btn aga-tab__btn--active" role="tab" aria-selected="true" tabindex="0">预设
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">规则
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">设置
+      <!--v-if-->
+    </button></div><!-- Stats bar -->
+  <div class="stats-bar">
+    <div class="stat-card"><span class="stat-value">3</span><span class="stat-label">影像总数</span></div>
+    <div class="stat-card stat-card--success"><span class="stat-value">2</span><span class="stat-label">成功</span></div>
+    <div class="stat-card stat-card--danger"><span class="stat-value">1</span><span class="stat-label">失败</span></div>
+    <div class="stat-card stat-card--info"><span class="stat-value">1</span><span class="stat-label">进行中</span></div>
+    <div class="stat-card stat-card--bar">
+      <div class="aga-progress" role="progressbar" aria-valuenow="2" aria-valuemin="0" aria-valuemax="3">
+        <div class="aga-progress__header"><span class="aga-progress__label">成功率</span><span class="aga-progress__value">2 / 3</span></div>
+        <div class="aga-progress__track">
+          <div class="aga-progress__fill" style="width: 66.66666666666666%; background-color: var(--color-success); color: var(--color-success);"></div>
+        </div>
+      </div>
+    </div>
+  </div><!-- ═══ Manual Generation Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ Gallery Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ Scene Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ Queue Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ History Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ Presets Tab ═══ -->
+  <div class="tab-content">
+    <!-- Auto preset bindings (4 dropdowns in 2x2) -->
+    <div class="preset-card"><span class="preset-card-badge">自动预设</span>
+      <h3 class="section-label">自动画师串预设</h3>
+      <p class="form-hint">自动生图时默认附加的画师串和 PNG 预设</p>
+      <div class="bindings-grid">
+        <div class="form-section"><label class="form-label">NPC 画师串</label>
+          <div class="aga-select"><button class="aga-select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">不使用</span><span class="aga-select__arrow">▾</span></button>
+            <teleport-stub to="body">
+              <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+                <!--v-if-->
+              </transition-stub>
+            </teleport-stub>
+          </div>
+        </div>
+        <div class="form-section"><label class="form-label">NPC PNG 预设</label>
+          <div class="aga-select"><button class="aga-select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">不使用</span><span class="aga-select__arrow">▾</span></button>
+            <teleport-stub to="body">
+              <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+                <!--v-if-->
+              </transition-stub>
+            </teleport-stub>
+          </div>
+        </div>
+        <div class="form-section"><label class="form-label">场景画师串</label>
+          <div class="aga-select"><button class="aga-select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">不使用</span><span class="aga-select__arrow">▾</span></button>
+            <teleport-stub to="body">
+              <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+                <!--v-if-->
+              </transition-stub>
+            </teleport-stub>
+          </div>
+        </div>
+        <div class="form-section"><label class="form-label">场景 PNG 预设</label>
+          <div class="aga-select"><button class="aga-select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">不使用</span><span class="aga-select__arrow">▾</span></button>
+            <teleport-stub to="body">
+              <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+                <!--v-if-->
+              </transition-stub>
+            </teleport-stub>
+          </div>
+        </div>
+      </div>
+    </div><!-- Section: Character Anchor Management -->
+    <div class="preset-card"><span class="preset-card-badge">角色锚点</span>
+      <h3 class="section-label">角色锚定管理</h3>
+      <p class="form-hint">角色锚点严格跟随 NPC，每个角色只保留一个锚点。后续生图会直接附加锚点，词组转化器只生成镜头、动作、构图与环境。</p>
+      <div class="anchor-layout">
+        <div class="anchor-list-col">
+          <h4 class="form-label">锚点列表</h4>
+          <div class="anchor-list"><button class="preset-item preset-item--active"><span class="preset-item-name">改名锚点</span><span class="form-hint">林暖</span><span class="anchor-badges"><span class="anchor-badge--off">停用</span>
+              <!--v-if--></span><span class="preset-item-preview">new positive</span>
+            </button></div>
+          <!--v-if-->
+        </div>
+        <div class="anchor-editor-col">
+          <div class="form-section"><label class="form-label">绑定 NPC</label>
+            <div class="aga-select"><button class="aga-select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">林暖 ★</span><span class="aga-select__arrow">▾</span></button>
+              <teleport-stub to="body">
+                <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+                  <!--v-if-->
+                </transition-stub>
+              </teleport-stub>
+            </div>
+          </div>
+          <div class="form-section"><label class="form-label">提取附加要求</label><input class="form-input" placeholder="例如：更重视脸部、发色、胸型和常驻衣着"></div>
+          <div class="anchor-actions-row"><button class="aga-btn aga-btn--secondary aga-btn--sm">
+              <!--v-if-->AI 提取锚点
+            </button><button class="aga-btn aga-btn--primary aga-btn--sm">
+              <!--v-if-->保存锚点
+            </button><button class="aga-btn aga-btn--danger aga-btn--sm">
+              <!--v-if-->删除锚点
+            </button></div><!-- Extract status message (3-state colored box) -->
+          <div class="anchor-extract-msg anchor-extract-msg--error">请先选择 NPC</div>
+          <div class="form-section"><label class="form-label">锚点名称</label><input class="form-input"></div>
+          <div class="anchor-toggles">
+            <div class="form-section form-section--inline"><label class="form-label">启用锚点</label><!-- Labeled: pill + clickable text (aria-hidden so the switch isn't announced twice). -->
+              <!-- Bare pill (unchanged) --><button class="aga-toggle" role="switch" aria-checked="false"><span class="aga-toggle__thumb"></span></button>
+            </div><span class="form-hint">关闭后不参与生图</span>
+            <div class="form-section form-section--inline"><label class="form-label">默认附加</label><!-- Labeled: pill + clickable text (aria-hidden so the switch isn't announced twice). -->
+              <!-- Bare pill (unchanged) --><button class="aga-toggle aga-toggle--on" role="switch" aria-checked="true"><span class="aga-toggle__thumb"></span></button>
+            </div><span class="form-hint">NPC 单图自动带入</span>
+            <div class="form-section form-section--inline"><label class="form-label">场景联动</label><!-- Labeled: pill + clickable text (aria-hidden so the switch isn't announced twice). -->
+              <!-- Bare pill (unchanged) --><button class="aga-toggle" role="switch" aria-checked="false"><span class="aga-toggle__thumb"></span></button>
+            </div><span class="form-hint">场景图自动注入</span>
+          </div>
+          <div class="form-section"><label class="form-label">正面提示词</label><textarea class="form-textarea" rows="4" placeholder="角色外貌、服饰、特征的正面描述标签…"></textarea></div>
+          <div class="form-section"><label class="form-label">负面提示词</label><textarea class="form-textarea" rows="2" placeholder="需要避免的特征…"></textarea></div>
+          <!--v-if-->
+          <!--v-if-->
+        </div>
+      </div>
+    </div><!-- Section: 图片风格素材 (renamed from PNG画风预设 — R6) -->
+    <div class="preset-card"><span class="preset-card-badge">图片风格素材</span>
+      <div class="preset-card-header">
+        <div>
+          <h3 class="section-label">PNG 元数据 · 图片提炼 · 画师串</h3>
+          <p class="form-hint">导入 PNG 解析元数据，或导入任意图片提炼画风。</p>
+        </div>
+        <div class="preset-card-actions"><button class="aga-btn aga-btn--ghost aga-btn--sm">
+            <!--v-if-->导出预设
+          </button><label class="png-import-btn">导入预设 <input type="file" accept="application/json,.json" style="display: none;"></label><label class="png-import-btn">导入 PNG <input type="file" accept="image/png" style="display: none;"></label><label class="png-import-btn">导入图片并提炼 <input type="file" accept="image/png,image/jpeg,image/webp" style="display: none;" data-testid="understanding-import-input"></label></div>
+      </div><!-- Understanding panel (A3-A5) -->
+      <!--v-if-->
+      <!-- Reference Library (P1-8) -->
+      <!--v-if-->
+      <!-- Sub-group labels (A6) -->
+      <div class="preset-subgroups"><span class="preset-subgroup-label">PNG 元数据</span><span class="preset-subgroup-sep">·</span><span class="preset-subgroup-label">图片提炼</span><span class="preset-subgroup-sep">·</span><span class="preset-subgroup-label">画师串</span></div>
+      <div class="presets-layout">
+        <!-- PNG preset list with thumbnails (220px) -->
+        <div class="png-preset-list-col">
+          <h4 class="form-label">预设列表</h4>
+          <div class="png-preset-list">
+            <!--v-if--><button class="preset-item preset-item--png">
+              <div class="png-preset-item-inner">
+                <div class="png-preset-thumb"><span class="form-hint">无封面</span></div>
+                <div class="png-preset-info"><span class="preset-item-name">PNG风</span><span class="preset-item-preview">masterpiece, best quality</span></div>
+              </div>
+            </button>
+          </div>
+        </div><!-- PNG preset editor -->
+        <div class="presets-editor">
+          <div class="tab-placeholder">
+            <p>尚未选择 PNG 画风预设。请导入 PNG 或从列表选择预设。</p>
+          </div>
+        </div>
+      </div><!-- PNG import inputs at bottom -->
+      <div class="png-import-footer">
+        <div class="png-import-status">
+          <!--v-if-->
+        </div>
+      </div>
+    </div><!-- Section: 画师串预设管理 -->
+    <div class="preset-card"><span class="preset-card-badge">画师串管理</span>
+      <div class="preset-card-header">
+        <h3 class="section-label">画师串预设管理</h3>
+        <div class="preset-card-actions"><button class="aga-btn aga-btn--secondary aga-btn--sm">
+            <!--v-if-->新增预设
+          </button><button class="aga-btn aga-btn--ghost aga-btn--sm">
+            <!--v-if-->导出预设
+          </button><label class="png-import-btn">导入预设 <input type="file" accept="application/json,.json" style="display: none;"></label></div>
+      </div>
+      <div class="artist-preset-controls">
+        <div class="form-section"><label class="form-label">适用范围</label>
+          <div class="presets-scope-toggle"><button class="aga-btn aga-btn--primary aga-btn--sm">
+              <!--v-if-->NPC
+            </button><button class="aga-btn aga-btn--secondary aga-btn--sm">
+              <!--v-if-->场景
+            </button></div>
+        </div>
+        <div class="form-section"><label class="form-label">当前编辑</label>
+          <div class="aga-select"><button class="aga-select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">未选择预设</span><span class="aga-select__arrow">▾</span></button>
+            <teleport-stub to="body">
+              <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+                <!--v-if-->
+              </transition-stub>
+            </teleport-stub>
+          </div>
+        </div>
+      </div>
+      <div class="tab-placeholder">
+        <p>请先选择或新增预设。</p>
+      </div>
+    </div><!-- Section C: 词组转化器预设 CRUD -->
+    <div class="preset-card"><span class="preset-card-badge">词组转化器</span>
+      <h3 class="section-label">词组转化器预设</h3>
+      <p class="form-hint">管理 tokenizer AI 的系统提示词，影响如何将中文描述转化为英文图像标签</p>
+      <div class="transformer-crud-layout">
+        <div class="transformer-sidebar">
+          <div class="transformer-scope-toggle"><button class="aga-btn aga-btn--primary aga-btn--sm">
+              <!--v-if-->NPC
+            </button><button class="aga-btn aga-btn--secondary aga-btn--sm">
+              <!--v-if-->场景
+            </button><button class="aga-btn aga-btn--secondary aga-btn--sm">
+              <!--v-if-->秘密
+            </button></div>
+          <div class="transformer-list"><button class="preset-item"><span class="preset-item-name">NPC转换</span><span class="preset-item-preview">convert the description</span></button>
+            <!--v-if-->
+          </div>
+          <div class="presets-actions"><input class="form-input" placeholder="新预设名称" style="font-size: 12px;"><button class="aga-btn aga-btn--secondary aga-btn--sm">
+              <!--v-if-->+ 新增
+            </button></div>
+        </div>
+        <div class="transformer-editor">
+          <div class="tab-placeholder" style="padding: var(--space-xl);">
+            <p>← 选择或新增一个转化器预设来编辑</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- ═══ Rules Tab — full CRUD ═══ -->
+  <!--v-if-->
+  <!-- ═══ Settings Tab (8th tab) ═══ -->
+  <!--v-if-->
+  <!-- ─── 前台提交确认 overlay ─── -->
+  <transition-stub name="fade" appear="false" persisted="false" css="true">
+    <!--v-if-->
+  </transition-stub><!-- Fullscreen viewer -->
+  <!--v-if-->
+  <!-- Delete confirmation -->
+  <!--v-if-->
+  <!-- Regenerate-Same modal (shared across queue / gallery / scene) -->
+  <!--v-if-->
+</div>

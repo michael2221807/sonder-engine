@@ -1,0 +1,56 @@
+{
+  "calls": [
+    [
+      "generateCharacterImage",
+      [
+        {
+          "characterName": "林暖",
+          "description": "酒肆老板娘",
+          "appearance": "眉目清亮，黑发及腰",
+          "bodyDescription": "纤细修长",
+          "outfitStyle": "素色长裙",
+          "backend": "volcengine",
+          "preset": {
+            "id": "npc_manual_size",
+            "name": "手动分辨率",
+            "positivePrefix": "",
+            "positiveSuffix": "",
+            "negative": "",
+            "source": "manual",
+            "width": 768,
+            "height": 1024
+          },
+          "composition": "custom",
+          "customComposition": "坐在窗边看雨",
+          "artStyle": "无要求",
+          "extraPrompt": "雨天，窗外有灯",
+          "anchorPositive": "1girl, black hair",
+          "anchorNegative": "bad hands",
+          "artistPrefix": "artist:foo, artist:bar, soft light, masterpiece, best quality",
+          "extraNegative": "blurry, lowres",
+          "npcDataJson": "{\n  \"姓名\": \"林暖\",\n  \"性别\": \"女\",\n  \"年龄\": 18,\n  \"简介\": \"酒肆老板娘\",\n  \"外貌描述\": \"眉目清亮，黑发及腰\",\n  \"身材描写\": \"纤细修长\",\n  \"衣着风格\": \"素色长裙\",\n  \"外貌\": \"眉目清亮，黑发及腰\",\n  \"身材\": \"纤细修长\",\n  \"衣着\": \"素色长裙\"\n}",
+          "useTransformer": true,
+          "references": [
+            {
+              "id": "ref_1791417600000_4fzyo8",
+              "role": "source",
+              "source": "data_url",
+              "dataUrl": "data:image/png;base64,AAAA",
+              "denoiseStrength": 0.7
+            },
+            {
+              "id": "ref_1791417600000_4fzyo8",
+              "role": "source",
+              "source": "asset",
+              "assetId": "img_1",
+              "denoiseStrength": 0.7
+            }
+          ],
+          "styleParamOverrides": "__undefined__"
+        }
+      ]
+    ]
+  ],
+  "emits": [],
+  "writes": []
+}

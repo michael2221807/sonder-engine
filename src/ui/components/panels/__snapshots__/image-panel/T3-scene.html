@@ -1,0 +1,274 @@
+<div class="image-panel">
+  <header class="panel-header">
+    <h2 class="panel-title">图片工作台</h2>
+  </header>
+  <div class="aga-tab-bar" role="tablist"><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">手动生成
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">图库
+      <!--v-if-->
+    </button><button class="aga-tab__btn aga-tab__btn--active" role="tab" aria-selected="true" tabindex="0">场景壁纸
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">队列
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">历史
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">预设
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">规则
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">设置
+      <!--v-if-->
+    </button></div><!-- Stats bar -->
+  <div class="stats-bar">
+    <div class="stat-card"><span class="stat-value">3</span><span class="stat-label">影像总数</span></div>
+    <div class="stat-card stat-card--success"><span class="stat-value">2</span><span class="stat-label">成功</span></div>
+    <div class="stat-card stat-card--danger"><span class="stat-value">1</span><span class="stat-label">失败</span></div>
+    <div class="stat-card stat-card--info"><span class="stat-value">1</span><span class="stat-label">进行中</span></div>
+    <div class="stat-card stat-card--bar">
+      <div class="aga-progress" role="progressbar" aria-valuenow="2" aria-valuemin="0" aria-valuemax="3">
+        <div class="aga-progress__header"><span class="aga-progress__label">成功率</span><span class="aga-progress__value">2 / 3</span></div>
+        <div class="aga-progress__track">
+          <div class="aga-progress__fill" style="width: 66.66666666666666%; background-color: var(--color-success); color: var(--color-success);"></div>
+        </div>
+      </div>
+    </div>
+  </div><!-- ═══ Manual Generation Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ Gallery Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ Scene Tab ═══ -->
+  <div class="tab-content">
+    <div class="backend-status-bar"><span class="status-dot status-dot--ok"></span><span class="backend-status-label">NovelAI</span><span class="backend-status-model">model-novelai</span>
+      <!--v-if-->
+    </div>
+    <!--v-if-->
+    <div class="scene-layout-v2">
+      <!-- Left column: wallpaper + stats + controls -->
+      <div class="scene-left-col">
+        <!-- Current wallpaper -->
+        <div class="scene-section">
+          <h3 class="section-label">当前场景壁纸</h3>
+          <div class="wallpaper-card" title="点击查看大图">
+            <image-display-stub data-props="{&quot;assetId&quot;:&quot;scn_1&quot;,&quot;fallbackLetter&quot;:&quot;S&quot;,&quot;size&quot;:&quot;lg&quot;,&quot;alt&quot;:&quot;__undefined__&quot;}"></image-display-stub><span class="wallpaper-badge">当前使用中</span>
+          </div>
+        </div><!-- Scene stats (6 stat cards) -->
+        <div class="scene-section">
+          <h3 class="section-label">场景生成统计</h3>
+          <div class="scene-stats-grid">
+            <div class="stat-card"><span class="stat-value">2</span><span class="stat-label">图片总数</span></div>
+            <div class="stat-card stat-card--success"><span class="stat-value">1</span><span class="stat-label">成功</span></div>
+            <div class="stat-card stat-card--danger"><span class="stat-value">1</span><span class="stat-label">失败</span></div>
+            <div class="stat-card stat-card--warning"><span class="stat-value">0</span><span class="stat-label">生成中</span></div>
+            <div class="stat-card stat-card--info"><span class="stat-value">2</span><span class="stat-label">队列总数</span></div>
+            <div class="stat-card stat-card--info"><span class="stat-value">1</span><span class="stat-label">运行中</span></div>
+          </div>
+        </div><!-- Scene history limit -->
+        <div class="scene-section">
+          <h3 class="section-label">场景历史数量限制</h3>
+          <p class="form-hint">当前 2 / 10，超限时自动删除最旧场景图。</p>
+          <div class="scene-limit-row"><input type="number" min="1" max="100" class="form-input scene-limit-input"><button class="aga-btn aga-btn--secondary aga-btn--sm">
+              <!--v-if-->应用上限
+            </button></div>
+        </div><!-- Scene composition requirement -->
+        <div class="scene-section"><label class="form-label">场景构图要求</label>
+          <div class="btn-grid btn-grid--2"><button type="button" class="grid-btn grid-btn--compact grid-btn--active">
+              <div class="grid-btn__label">故事快照</div>
+            </button><button type="button" class="grid-btn grid-btn--compact">
+              <div class="grid-btn__label">纯场景</div>
+            </button></div>
+          <p class="form-hint">选择场景画面是纯景观还是带人物互动的故事快照。</p>
+        </div><!-- Round/narrative selection -->
+        <div class="scene-section"><label class="form-label">正文来源</label>
+          <p class="form-hint">选择要传入场景转换器的回合正文，可多选。</p>
+          <div class="round-selector">
+            <div class="round-selector__item round-selector__item--selected"><span class="round-selector__check">☑</span><span class="round-selector__label">第 3 回合</span><span class="round-selector__preview">关宇从角落里站起身，向你举杯。</span></div>
+            <div class="round-selector__item"><span class="round-selector__check">☐</span><span class="round-selector__label">第 2 回合</span><span class="round-selector__preview">林暖端来一壶温好的酒，窗外下起了小雨。</span></div>
+            <div class="round-selector__item"><span class="round-selector__check">☐</span><span class="round-selector__label">第 1 回合</span><span class="round-selector__preview">你推开酒肆的木门，暖黄的灯光洒在地上。 林暖抬头对你笑了笑。</span></div>
+          </div>
+        </div><!-- NPC selection -->
+        <div class="scene-section">
+          <div class="npc-selector__header"><label class="form-label">参与角色</label><span class="npc-selector__actions"><button type="button" class="npc-selector__link">全选</button><button type="button" class="npc-selector__link">全不选</button></span></div>
+          <p class="form-hint">选择要包含在场景中的角色（外貌/衣着等信息会传入转换器）。</p>
+          <div class="npc-selector">
+            <div class="npc-selector__item npc-selector__item--selected"><span class="npc-selector__check">☑</span><span class="npc-selector__name">主角</span><span class="npc-selector__badge npc-selector__badge--player">主角</span></div>
+            <div class="npc-selector__item npc-selector__item--selected"><span class="npc-selector__check">☑</span><span class="npc-selector__name">林暖</span><span class="npc-selector__badge">在场</span></div>
+            <div class="npc-selector__item npc-selector__item--selected"><span class="npc-selector__check">☑</span><span class="npc-selector__name">关宇</span><span class="npc-selector__badge">在场</span></div>
+          </div>
+        </div><!-- Orientation -->
+        <div class="scene-section"><label class="form-label">画面方向</label>
+          <div class="btn-grid btn-grid--2"><button type="button" class="grid-btn grid-btn--compact grid-btn--active">
+              <div class="grid-btn__label">横屏</div>
+            </button><button type="button" class="grid-btn grid-btn--compact">
+              <div class="grid-btn__label">竖屏</div>
+            </button></div>
+        </div><!-- Resolution -->
+        <div class="scene-section"><label class="form-label">分辨率 / 比例</label>
+          <div class="aga-select"><button class="aga-select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">1024x576 (16:9, Landscape)</span><span class="aga-select__arrow">▾</span></button>
+            <teleport-stub to="body">
+              <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+                <!--v-if-->
+              </transition-stub>
+            </teleport-stub>
+          </div><input type="text" class="form-input" style="margin-top: var(--space-2xs);" placeholder="自定义分辨率，如 1280x720">
+          <p class="form-hint">当前分辨率：1024x576</p>
+        </div><!-- Extra requirements -->
+        <div class="scene-section"><label class="form-label">额外要求</label><textarea class="form-textarea" rows="3" placeholder="如：夜雨江湖、远景俯瞰、人物剪影..."></textarea></div><!-- Artist preset -->
+        <div class="scene-section"><label class="form-label">场景画师串预设</label>
+          <div class="aga-select"><button class="aga-select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">不使用</span><span class="aga-select__arrow">▾</span></button>
+            <teleport-stub to="body">
+              <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+                <!--v-if-->
+              </transition-stub>
+            </teleport-stub>
+          </div>
+        </div><!-- PNG preset -->
+        <div class="scene-section"><label class="form-label">场景PNG画风预设</label>
+          <div class="aga-select"><button class="aga-select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">不启用</span><span class="aga-select__arrow">▾</span></button>
+            <teleport-stub to="body">
+              <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+                <!--v-if-->
+              </transition-stub>
+            </teleport-stub>
+          </div>
+        </div><!-- Background mode toggle -->
+        <div class="scene-section form-section--inline"><label class="form-label">后台处理</label><!-- Labeled: pill + clickable text (aria-hidden so the switch isn't announced twice). -->
+          <!-- Bare pill (unchanged) --><button class="aga-toggle aga-toggle--on" role="switch" aria-checked="true"><span class="aga-toggle__thumb"></span></button>
+          <p class="form-hint">开启后，场景生成会直接进入后台队列。</p>
+        </div><!-- Scene reference redraw -->
+        <div class="scene-section">
+          <div class="form-section form-section--inline"><label class="form-label">参考构图</label><!-- Labeled: pill + clickable text (aria-hidden so the switch isn't announced twice). -->
+            <!-- Bare pill (unchanged) --><button class="aga-toggle" role="switch" aria-checked="false" data-testid="scene-ref-redraw-toggle"><span class="aga-toggle__thumb"></span></button>
+          </div>
+          <!--v-if-->
+        </div><!-- Status text -->
+        <!--v-if-->
+        <!-- Generate + clear buttons -->
+        <div class="scene-form-actions"><button class="aga-btn aga-btn--primary aga-btn--md">
+            <!--v-if-->按当前正文生成
+          </button><button class="aga-btn aga-btn--danger aga-btn--sm">
+            <!--v-if-->清空历史
+          </button></div>
+        <!--v-if-->
+      </div><!-- Right column: queue + history -->
+      <div class="scene-right-col">
+        <!-- Scene queue (max 30%) -->
+        <div class="scene-queue-section">
+          <div class="scene-queue-header">
+            <h3 class="section-label">场景队列</h3>
+            <div class="scene-queue-actions"><button class="aga-btn aga-btn--ghost aga-btn--sm">
+                <!--v-if-->清空已完成
+              </button><button class="aga-btn aga-btn--danger aga-btn--sm">
+                <!--v-if-->清空全部
+              </button></div>
+          </div>
+          <div class="scene-queue-list">
+            <div class="scene-queue-card">
+              <div class="scene-queue-card-top"><span class="scene-queue-summary">courtyard, rain</span><span class="task-badge task-badge--generating">生成图片中</span></div>
+              <div class="scene-queue-card-meta">2026-09-21T14:13:25.000Z</div>
+            </div>
+            <div class="scene-queue-card">
+              <div class="scene-queue-card-top"><span class="scene-queue-summary">courtyard at night</span><span class="task-badge task-badge--complete">已完成</span></div>
+              <div class="scene-queue-card-meta">2026-09-21T14:13:22.500Z</div>
+            </div>
+          </div>
+        </div><!-- Scene history -->
+        <div class="scene-history-section">
+          <div class="scene-history-header">
+            <h3 class="section-label">场景历史</h3><span class="scene-history-count">2 条记录</span>
+          </div>
+          <div class="scene-history-grid">
+            <div class="scene-history-card">
+              <div class="scene-history-card-image" title="点击查看大图" style="cursor: pointer;">
+                <image-display-stub data-props="{&quot;assetId&quot;:&quot;scn_1&quot;,&quot;fallbackLetter&quot;:&quot;S&quot;,&quot;size&quot;:&quot;lg&quot;,&quot;alt&quot;:&quot;__undefined__&quot;}"></image-display-stub>
+                <div class="gallery-overlay-badges"><span class="gallery-status-badge gallery-status-badge--complete">成功</span><span class="gallery-usage-badge">当前壁纸</span></div>
+              </div>
+              <div class="scene-history-card-body">
+                <div class="scene-history-card-top"><span class="scene-history-card-time">2026-09-21T14:13:25.000Z</span>
+                  <!--v-if-->
+                </div><!-- Expandable prompts -->
+                <details class="prompt-details">
+                  <summary>最终正向提示词</summary><pre class="prompt-text">courtyard at night</pre>
+                </details>
+                <details class="prompt-details">
+                  <summary>最终负面提示词</summary><pre class="prompt-text">lowres</pre>
+                </details><!-- Action buttons -->
+                <div class="scene-history-card-actions"><button class="aga-btn aga-btn--secondary aga-btn--sm">
+                    <!--v-if-->生成同款
+                  </button><button class="aga-btn aga-btn--secondary aga-btn--sm">
+                    <!--v-if-->参考重绘
+                  </button><button class="aga-btn aga-btn--ghost aga-btn--sm">
+                    <!--v-if-->提炼画风
+                  </button><button class="aga-btn aga-btn--ghost aga-btn--sm">
+                    <!--v-if-->保存为参考素材
+                  </button>
+                  <!--v-if--><button class="aga-btn aga-btn--ghost aga-btn--sm">
+                    <!--v-if-->取消设置壁纸
+                  </button><button class="aga-btn aga-btn--ghost aga-btn--sm">
+                    <!--v-if-->设为常驻壁纸
+                  </button>
+                  <!--v-if--><button class="aga-btn aga-btn--ghost aga-btn--sm">
+                    <!--v-if-->保存到本地
+                  </button><button class="aga-btn aga-btn--danger aga-btn--sm">
+                    <!--v-if-->删除图片
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="scene-history-card">
+              <div class="scene-history-card-image" title="点击查看大图" style="cursor: pointer;">
+                <image-display-stub data-props="{&quot;assetId&quot;:&quot;scn_2&quot;,&quot;fallbackLetter&quot;:&quot;S&quot;,&quot;size&quot;:&quot;lg&quot;,&quot;alt&quot;:&quot;__undefined__&quot;}"></image-display-stub>
+                <div class="gallery-overlay-badges"><span class="gallery-status-badge gallery-status-badge--failed">失败</span>
+                  <!--v-if-->
+                </div>
+              </div>
+              <div class="scene-history-card-body">
+                <div class="scene-history-card-top"><span class="scene-history-card-time">2026-09-21T14:13:21.000Z</span>
+                  <!--v-if-->
+                </div><!-- Expandable prompts -->
+                <!--v-if-->
+                <!--v-if-->
+                <!-- Action buttons -->
+                <div class="scene-history-card-actions">
+                  <!--v-if-->
+                  <!--v-if--><button class="aga-btn aga-btn--ghost aga-btn--sm">
+                    <!--v-if-->提炼画风
+                  </button><button class="aga-btn aga-btn--ghost aga-btn--sm">
+                    <!--v-if-->保存为参考素材
+                  </button><button class="aga-btn aga-btn--secondary aga-btn--sm">
+                    <!--v-if-->设为壁纸
+                  </button>
+                  <!--v-if--><button class="aga-btn aga-btn--ghost aga-btn--sm">
+                    <!--v-if-->设为常驻壁纸
+                  </button>
+                  <!--v-if--><button class="aga-btn aga-btn--ghost aga-btn--sm">
+                    <!--v-if-->保存到本地
+                  </button><button class="aga-btn aga-btn--danger aga-btn--sm">
+                    <!--v-if-->删除图片
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- ═══ Queue Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ History Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ Presets Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ Rules Tab — full CRUD ═══ -->
+  <!--v-if-->
+  <!-- ═══ Settings Tab (8th tab) ═══ -->
+  <!--v-if-->
+  <!-- ─── 前台提交确认 overlay ─── -->
+  <transition-stub name="fade" appear="false" persisted="false" css="true">
+    <!--v-if-->
+  </transition-stub><!-- Fullscreen viewer -->
+  <!--v-if-->
+  <!-- Delete confirmation -->
+  <!--v-if-->
+  <!-- Regenerate-Same modal (shared across queue / gallery / scene) -->
+  <!--v-if-->
+</div>

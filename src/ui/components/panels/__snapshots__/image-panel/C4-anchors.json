@@ -1,0 +1,64 @@
+{
+  "calls": [],
+  "emits": [
+    [
+      "ui:toast",
+      {
+        "type": "success",
+        "message": "锚点已保存",
+        "duration": 1500
+      }
+    ]
+  ],
+  "writes": [
+    [
+      "系统.扩展.image.characterAnchors",
+      [
+        {
+          "id": "anc1",
+          "name": "改名锚点",
+          "npcName": "林暖",
+          "enabled": true,
+          "defaultAppend": true,
+          "sceneLink": true,
+          "positive": "new positive",
+          "negative": "new negative"
+        }
+      ]
+    ],
+    [
+      "系统.扩展.image.characterAnchors",
+      [
+        {
+          "id": "anc1",
+          "name": "改名锚点",
+          "npcName": "林暖",
+          "enabled": false,
+          "defaultAppend": true,
+          "sceneLink": true,
+          "positive": "new positive",
+          "negative": "new negative"
+        }
+      ]
+    ],
+    [
+      "系统.扩展.image.characterAnchors",
+      [
+        {
+          "id": "anc1",
+          "name": "改名锚点",
+          "npcName": "林暖",
+          "enabled": false,
+          "defaultAppend": true,
+          "sceneLink": false,
+          "positive": "new positive",
+          "negative": "new negative"
+        }
+      ]
+    ],
+    [
+      "系统.扩展.image.characterAnchors",
+      []
+    ]
+  ]
+}

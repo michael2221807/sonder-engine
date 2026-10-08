@@ -1,0 +1,68 @@
+{
+  "calls": [
+    [
+      "collectSceneRoleAnchors",
+      []
+    ],
+    [
+      "generateSceneImage",
+      [
+        {
+          "sceneDescription": "林暖端来一壶温好的酒，窗外下起了小雨。\n\n---\n\n关宇从角落里站起身，向你举杯。",
+          "location": "酒肆",
+          "gameTime": {
+            "年": 1,
+            "月": 2,
+            "日": 3,
+            "小时": 9,
+            "分钟": 30
+          },
+          "weather": "晴",
+          "festival": "",
+          "environment": [],
+          "backend": "novelai",
+          "compositionMode": "story_snapshot",
+          "extraRequirements": "黄昏，窗边",
+          "artistPrefix": "artist:scenic, wide shot",
+          "extraNegative": "__undefined__",
+          "preset": {
+            "id": "scene_custom",
+            "name": "场景自定义",
+            "positivePrefix": "",
+            "positiveSuffix": "",
+            "negative": "",
+            "source": "manual",
+            "width": 1024,
+            "height": 576
+          },
+          "references": "__undefined__",
+          "styleParamOverrides": "__undefined__",
+          "presentNpcs": [
+            "林暖"
+          ],
+          "npcDetails": [
+            {
+              "name": "主角"
+            },
+            {
+              "name": "林暖",
+              "appearance": "眉目清亮，黑发及腰",
+              "bodyDescription": "纤细修长",
+              "outfitStyle": "素色长裙",
+              "description": "酒肆老板娘"
+            }
+          ],
+          "roleAnchors": [
+            {
+              "name": "林暖",
+              "positive": "1girl, black hair",
+              "negative": "bad hands"
+            }
+          ]
+        }
+      ]
+    ]
+  ],
+  "emits": [],
+  "writes": []
+}

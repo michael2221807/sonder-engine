@@ -1,0 +1,62 @@
+{
+  "calls": [
+    [
+      "deleteNpcImage",
+      [
+        "林暖",
+        "img_3"
+      ]
+    ],
+    [
+      "clearNpcHistory",
+      [
+        "林暖"
+      ]
+    ],
+    [
+      "clearNpcHistory",
+      [
+        "关宇"
+      ]
+    ],
+    [
+      "queue.remove",
+      [
+        "task_scene_run"
+      ]
+    ],
+    [
+      "queue.remove",
+      [
+        "task_scene_done"
+      ]
+    ]
+  ],
+  "emits": [
+    [
+      "ui:toast",
+      {
+        "type": "info",
+        "message": "已清空全部 NPC 历史",
+        "duration": 1500
+      }
+    ],
+    [
+      "ui:toast",
+      {
+        "type": "info",
+        "message": "场景历史已清空",
+        "duration": 1500
+      }
+    ]
+  ],
+  "writes": [
+    [
+      "系统.扩展.image.sceneArchive",
+      {
+        "生图历史": [],
+        "当前壁纸图片ID": ""
+      }
+    ]
+  ]
+}

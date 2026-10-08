@@ -1,0 +1,178 @@
+{
+  "calls": [],
+  "emits": [],
+  "writes": [
+    [
+      "系统.扩展.image.artistPresets",
+      [
+        {
+          "id": "ap1",
+          "name": "画师甲",
+          "scope": "npc",
+          "artistString": "artist:foo, artist:bar",
+          "positive": "soft light",
+          "negative": "blurry"
+        },
+        {
+          "id": "ap2",
+          "name": "场景画师",
+          "scope": "scene",
+          "artistString": "artist:scenic",
+          "positive": "wide shot",
+          "negative": ""
+        },
+        {
+          "id": "png_1",
+          "name": "PNG风",
+          "scope": "npc",
+          "artistString": "",
+          "positive": "masterpiece, best quality",
+          "negative": "lowres",
+          "pngMeta": {
+            "source": "a1111",
+            "originalPrompt": "masterpiece",
+            "rawText": "raw text",
+            "replicateParams": false,
+            "parsedParams": {
+              "steps": 28,
+              "sampler": "k_euler"
+            }
+          }
+        },
+        {
+          "id": "preset_1791417600000",
+          "name": "预设 1791417600000",
+          "scope": "npc",
+          "artistString": "",
+          "positive": "",
+          "negative": ""
+        }
+      ]
+    ],
+    [
+      "系统.扩展.image.artistPresets",
+      [
+        {
+          "id": "ap1",
+          "name": "画师甲",
+          "scope": "npc",
+          "artistString": "artist:foo, artist:bar",
+          "positive": "soft light",
+          "negative": "blurry"
+        },
+        {
+          "id": "ap2",
+          "name": "场景画师",
+          "scope": "scene",
+          "artistString": "artist:scenic",
+          "positive": "wide shot",
+          "negative": ""
+        },
+        {
+          "id": "png_1",
+          "name": "PNG风",
+          "scope": "npc",
+          "artistString": "",
+          "positive": "masterpiece, best quality",
+          "negative": "lowres",
+          "pngMeta": {
+            "source": "a1111",
+            "originalPrompt": "masterpiece",
+            "rawText": "raw text",
+            "replicateParams": false,
+            "parsedParams": {
+              "steps": 28,
+              "sampler": "k_euler"
+            }
+          }
+        },
+        {
+          "id": "preset_1791417600000",
+          "name": "新画师串",
+          "scope": "npc",
+          "artistString": "artist:new",
+          "positive": "pos",
+          "negative": "neg"
+        }
+      ]
+    ],
+    [
+      "系统.扩展.image.artistPresets",
+      [
+        {
+          "id": "ap1",
+          "name": "画师甲",
+          "scope": "npc",
+          "artistString": "artist:foo, artist:bar",
+          "positive": "soft light",
+          "negative": "blurry"
+        },
+        {
+          "id": "ap2",
+          "name": "场景画师",
+          "scope": "scene",
+          "artistString": "artist:scenic",
+          "positive": "wide shot",
+          "negative": ""
+        },
+        {
+          "id": "png_1",
+          "name": "PNG风",
+          "scope": "npc",
+          "artistString": "",
+          "positive": "masterpiece, best quality",
+          "negative": "lowres",
+          "pngMeta": {
+            "source": "a1111",
+            "originalPrompt": "masterpiece",
+            "rawText": "raw text",
+            "replicateParams": false,
+            "parsedParams": {
+              "steps": 28,
+              "sampler": "k_euler"
+            }
+          }
+        }
+      ]
+    ],
+    [
+      "系统.扩展.image.artistPresets",
+      [
+        {
+          "id": "ap1",
+          "name": "画师甲",
+          "scope": "npc",
+          "artistString": "artist:foo, artist:bar",
+          "positive": "soft light",
+          "negative": "blurry"
+        },
+        {
+          "id": "ap2",
+          "name": "场景画师",
+          "scope": "scene",
+          "artistString": "artist:scenic",
+          "positive": "wide shot",
+          "negative": ""
+        },
+        {
+          "id": "png_1",
+          "name": "PNG风",
+          "scope": "npc",
+          "artistString": "",
+          "positive": "masterpiece, best quality",
+          "negative": "lowres",
+          "pngMeta": {
+            "source": "a1111",
+            "originalPrompt": "masterpiece",
+            "rawText": "raw text",
+            "replicateParams": true,
+            "parsedParams": {
+              "steps": 28,
+              "sampler": "k_euler"
+            }
+          }
+        }
+      ]
+    ]
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "calls": [
+    [
+      "generateCharacterImage",
+      [
+        {
+          "characterName": "林暖",
+          "description": "酒肆老板娘",
+          "appearance": "眉目清亮，黑发及腰",
+          "bodyDescription": "纤细修长",
+          "outfitStyle": "素色长裙",
+          "backend": "novelai",
+          "preset": "__undefined__",
+          "composition": "portrait",
+          "customComposition": "__undefined__",
+          "artStyle": "无要求",
+          "extraPrompt": "__undefined__",
+          "anchorPositive": "1girl, black hair",
+          "anchorNegative": "bad hands",
+          "artistPrefix": "__undefined__",
+          "extraNegative": "__undefined__",
+          "npcDataJson": "{\n  \"姓名\": \"林暖\",\n  \"性别\": \"女\",\n  \"年龄\": 18,\n  \"简介\": \"酒肆老板娘\",\n  \"外貌描述\": \"眉目清亮，黑发及腰\",\n  \"身材描写\": \"纤细修长\",\n  \"衣着风格\": \"素色长裙\",\n  \"外貌\": \"眉目清亮，黑发及腰\",\n  \"身材\": \"纤细修长\",\n  \"衣着\": \"素色长裙\"\n}",
+          "useTransformer": true,
+          "references": "__undefined__",
+          "styleParamOverrides": "__undefined__"
+        }
+      ]
+    ]
+  ],
+  "emits": [
+    [
+      "ui:toast",
+      {
+        "type": "warning",
+        "message": "参考重绘已开启但未选择有效参考图，将以普通文生图模式生成",
+        "duration": 3000
+      }
+    ]
+  ],
+  "writes": []
+}

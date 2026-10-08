@@ -1,0 +1,41 @@
+{
+  "calls": [
+    [
+      "regenerateFromPrompts",
+      [
+        {
+          "subjectType": "character",
+          "targetCharacter": "林暖",
+          "composition": "full-length",
+          "part": "__undefined__",
+          "positivePrompt": "edited positive",
+          "negativePrompt": "edited negative",
+          "width": 832,
+          "height": 1216,
+          "backend": "novelai",
+          "artStyle": "__undefined__",
+          "references": [
+            {
+              "id": "ref_a",
+              "role": "source",
+              "source": "asset",
+              "assetId": "img_1",
+              "denoiseStrength": 0.6
+            }
+          ]
+        }
+      ]
+    ]
+  ],
+  "emits": [
+    [
+      "ui:toast",
+      {
+        "type": "success",
+        "message": "同款任务已提交，可在队列/历史查看",
+        "duration": 2000
+      }
+    ]
+  ],
+  "writes": []
+}

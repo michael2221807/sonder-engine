@@ -1,0 +1,140 @@
+<div class="image-panel">
+  <header class="panel-header">
+    <h2 class="panel-title">图片工作台</h2>
+  </header>
+  <div class="aga-tab-bar" role="tablist"><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">手动生成
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">图库
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">场景壁纸
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">队列
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">历史
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">预设
+      <!--v-if-->
+    </button><button class="aga-tab__btn aga-tab__btn--active" role="tab" aria-selected="true" tabindex="0">规则
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">设置
+      <!--v-if-->
+    </button></div><!-- Stats bar -->
+  <div class="stats-bar">
+    <div class="stat-card"><span class="stat-value">3</span><span class="stat-label">影像总数</span></div>
+    <div class="stat-card stat-card--success"><span class="stat-value">2</span><span class="stat-label">成功</span></div>
+    <div class="stat-card stat-card--danger"><span class="stat-value">1</span><span class="stat-label">失败</span></div>
+    <div class="stat-card stat-card--info"><span class="stat-value">1</span><span class="stat-label">进行中</span></div>
+    <div class="stat-card stat-card--bar">
+      <div class="aga-progress" role="progressbar" aria-valuenow="2" aria-valuemin="0" aria-valuemax="3">
+        <div class="aga-progress__header"><span class="aga-progress__label">成功率</span><span class="aga-progress__value">2 / 3</span></div>
+        <div class="aga-progress__track">
+          <div class="aga-progress__fill" style="width: 66.66666666666666%; background-color: var(--color-success); color: var(--color-success);"></div>
+        </div>
+      </div>
+    </div>
+  </div><!-- ═══ Manual Generation Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ Gallery Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ Scene Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ Queue Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ History Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ Presets Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ Rules Tab — full CRUD ═══ -->
+  <div class="tab-content">
+    <div class="rules-layout">
+      <div class="rules-header">
+        <div>
+          <h3 class="section-label">提示词规则中心</h3>
+        </div>
+        <div class="rules-header-actions"><button class="aga-btn aga-btn--ghost aga-btn--sm">
+            <!--v-if-->导出全部
+          </button><label class="png-import-btn">导入全部 <input type="file" accept="application/json,.json" style="display: none;"></label><button class="aga-btn aga-btn--primary aga-btn--sm">
+            <!--v-if-->保存生效配置
+          </button></div>
+      </div><!-- Sub-section 1: Model Rulesets (collapsible) -->
+      <div class="model-ruleset-section"><button class="model-ruleset-toggle"><span class="section-label">模型规则集</span><span class="form-hint" style="flex-grow: 1; flex-shrink: 1; flex-basis: 0%;">选择当前启用的模型规则，并编辑基础模式与锚定模式规则。</span><span class="model-ruleset-active-name">NAI</span><span class="model-ruleset-expand-text">展开</span></button>
+        <!--v-if-->
+      </div><!-- Sub-section 2: Rule Templates -->
+      <div class="rules-template-section">
+        <div class="rules-template-header">
+          <div>
+            <h4 class="section-label">规则模板</h4>
+            <p class="form-hint">按模块切换编辑 NPC、场景和场景判定规则。</p>
+          </div>
+          <div class="rules-scope-tabs"><button class="aga-btn aga-btn--ghost aga-btn--sm">
+              <!--v-if-->NPC 转化规则
+            </button><button class="aga-btn aga-btn--primary aga-btn--sm">
+              <!--v-if-->场景转化规则
+            </button><button class="aga-btn aga-btn--ghost aga-btn--sm">
+              <!--v-if-->场景判定规则
+            </button></div>
+        </div><!-- Scope description (per-tab hint) -->
+        <p class="form-hint" style="margin-bottom: var(--space-sm);">场景图使用空间与构图规则；角色锚定存在时改用场景锚定规则。</p><!-- Enable toggle -->
+        <div class="form-section form-section--inline"><label class="form-label">启用场景转化规则</label><!-- Labeled: pill + clickable text (aria-hidden so the switch isn't announced twice). -->
+          <!-- Bare pill (unchanged) --><button class="aga-toggle aga-toggle--on" role="switch" aria-checked="true"><span class="aga-toggle__thumb"></span></button>
+        </div><!-- Two-column: 当前生效/当前编辑 (left) + editor (right) -->
+        <div class="rules-two-col">
+          <div class="rules-left-col">
+            <div class="form-section"><label class="form-label">当前生效</label><span class="form-hint" style="color: var(--color-warning);">已被模型规则集「NAI」覆盖</span>
+              <div class="aga-select aga-select--disabled"><button class="aga-select__trigger" disabled="" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">不使用</span><span class="aga-select__arrow">▾</span></button>
+                <teleport-stub to="body">
+                  <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+                    <!--v-if-->
+                  </transition-stub>
+                </teleport-stub>
+              </div>
+            </div>
+            <div class="form-section"><label class="form-label">当前编辑</label>
+              <div class="aga-select"><button class="aga-select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">NAI · 场景生成</span><span class="aga-select__arrow">▾</span></button>
+                <teleport-stub to="body">
+                  <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+                    <!--v-if-->
+                  </transition-stub>
+                </teleport-stub>
+              </div>
+            </div>
+            <div class="rules-crud-buttons"><button class="aga-btn aga-btn--secondary aga-btn--sm">
+                <!--v-if-->新增规则
+              </button><button class="aga-btn aga-btn--danger aga-btn--sm">
+                <!--v-if-->删除当前
+              </button></div>
+          </div>
+          <div class="rules-right-col">
+            <div class="form-section"><label class="form-label">规则名称</label><input class="form-input" placeholder="规则模板名称"></div>
+            <div class="form-section"><label class="form-label">关联转化器预设</label>
+              <div class="aga-select"><button class="aga-select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">不使用</span><span class="aga-select__arrow">▾</span></button>
+                <teleport-stub to="body">
+                  <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+                    <!--v-if-->
+                  </transition-stub>
+                </teleport-stub>
+              </div>
+            </div><!-- NPC/Scene: 4 textareas -->
+            <div class="form-section"><label class="form-label">基础转化规则</label><span class="form-hint">定义如何将场景描述转化为图像 prompt</span><textarea class="form-textarea" rows="8" placeholder="场景基础转化规则模板…"></textarea></div>
+            <div class="form-section"><label class="form-label">场景锚定专属规则</label><span class="form-hint">当场景锚点已启用时使用此规则</span><textarea class="form-textarea" rows="6" placeholder="锚定模式转化规则…"></textarea></div>
+            <div class="form-section"><label class="form-label">无锚点回退规则</label><span class="form-hint">当无锚点时的转化规则</span><textarea class="form-textarea" rows="4" placeholder="无锚点回退规则…"></textarea></div>
+            <div class="form-section"><label class="form-label">输出格式规则</label><span class="form-hint">约束 AI 的输出格式（标签格式、分隔符等）</span><textarea class="form-textarea" rows="4" placeholder="输出格式规则…"></textarea></div>
+            <div class="presets-editor-actions"><button class="aga-btn aga-btn--primary aga-btn--sm">
+                <!--v-if-->保存规则
+              </button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- ═══ Settings Tab (8th tab) ═══ -->
+  <!--v-if-->
+  <!-- ─── 前台提交确认 overlay ─── -->
+  <transition-stub name="fade" appear="false" persisted="false" css="true">
+    <!--v-if-->
+  </transition-stub><!-- Fullscreen viewer -->
+  <!--v-if-->
+  <!-- Delete confirmation -->
+  <!--v-if-->
+  <!-- Regenerate-Same modal (shared across queue / gallery / scene) -->
+  <!--v-if-->
+</div>

@@ -1,0 +1,49 @@
+{
+  "calls": [],
+  "emits": [
+    [
+      "ui:toast",
+      {
+        "type": "success",
+        "message": "转化器预设已保存",
+        "duration": 1500
+      }
+    ]
+  ],
+  "writes": [
+    [
+      "系统.扩展.image.transformerPresets",
+      [
+        {
+          "id": "tf1",
+          "name": "NPC转换",
+          "scope": "npc",
+          "prompt": "convert the description"
+        },
+        {
+          "id": "tf_1791417600000",
+          "name": "我的转换器",
+          "scope": "npc",
+          "prompt": ""
+        }
+      ]
+    ],
+    [
+      "系统.扩展.image.transformerPresets",
+      [
+        {
+          "id": "tf1",
+          "name": "NPC转换",
+          "scope": "npc",
+          "prompt": "convert the description"
+        },
+        {
+          "id": "tf_1791417600000",
+          "name": "我的转换器",
+          "scope": "npc",
+          "prompt": "transform prompt"
+        }
+      ]
+    ]
+  ]
+}

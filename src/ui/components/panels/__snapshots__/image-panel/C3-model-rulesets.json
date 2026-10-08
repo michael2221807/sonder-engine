@@ -1,0 +1,448 @@
+{
+  "calls": [],
+  "emits": [
+    [
+      "ui:toast",
+      {
+        "type": "success",
+        "message": "模型规则集已保存",
+        "duration": 1500
+      }
+    ]
+  ],
+  "writes": [
+    [
+      "系统.扩展.image.modelRulesets",
+      [
+        {
+          "id": "transformer_model_bundle_nai",
+          "name": "NAI",
+          "enabled": true,
+          "compatMode": false,
+          "baseModelRule": "<str len=332 sha1=aa089894763a head=目标模型为 NovelAI V4/V4.5。\n输出采用 NovelAI 常用的英>",
+          "anchorModeModelRule": "目标模型为 NovelAI V4/V4.5。\n请沿用锚点中的稳定外观，把输出重点放在镜头、动作、姿态、构图、光影、环境和临时状态补充。\n不要把锚点已经固定的稳定外观重复展开成冗长角色段。",
+          "serializationStrategy": "nai_character_segments",
+          "npcTemplateId": "transformer_nai_npc",
+          "sceneTemplateId": "transformer_nai_scene",
+          "judgeTemplateId": "transformer_nai_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_gemini",
+          "name": "Gemini",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "目标模型为 Gemini Banana。\n输出更适合清晰、具体、可执行的英文描述式提示词，而不是纯 Danbooru 标签堆叠。\n请优先使用短英文短语或短句，不要使用 NovelAI 权重语法，不要堆砌过碎标签。\n若输入没有明确要求，不要擅自锁定二次元、写实、国风或摄影风格；只整理已有风格线索。\n描述要明确主体、服装、动作、镜头和环境，保持具体、可执行。\n基础段负责整体场景和镜头，角色段负责每个角色的完整可执行短语，并保持单镜头、单主动作、单主光源。\n若 NPC 资料较少，可以根据身份、等级、年龄、性别做保守补全，但补全内容必须长期稳定、低冲突、易复用。",
+          "anchorModeModelRule": "目标模型为 Gemini Banana。\n请沿用锚点中的稳定外观，把输出重点放在镜头、动作、姿态、表情、场景、气氛和临时变化补充。\n不要把锚点已确定的外观再次膨胀成大段重复描述。",
+          "serializationStrategy": "gemini_structured",
+          "npcTemplateId": "transformer_gemini_npc",
+          "sceneTemplateId": "transformer_gemini_scene",
+          "judgeTemplateId": "transformer_gemini_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_grok",
+          "name": "Grok",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=315 sha1=dd280d1645bf head=目标模型为 Grok 的 2D cinematic 风格图像模型。\n允许更强的电>",
+          "anchorModeModelRule": "目标模型为 Grok 的 2D cinematic 风格图像模型。\n请沿用锚点中的稳定外观，把输出重点放在电影镜头、动作调度、姿态、光影和环境叙事。\n不要重复扩写锚点已经固定的核心外观。",
+          "serializationStrategy": "grok_structured",
+          "npcTemplateId": "transformer_grok_npc",
+          "sceneTemplateId": "transformer_grok_scene",
+          "judgeTemplateId": "transformer_grok_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_illustrious",
+          "name": "Illustrious",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=543 sha1=c0b57d0892d2 head=目标模型为 Illustrious XL（基于 Danbooru 数据训练的动漫>",
+          "anchorModeModelRule": "目标模型为 Illustrious XL。\n在内容标签末尾附加质量标签：masterpiece, best_quality, very_aesthetic, absurdres, newest。\n请沿用锚点中的稳定外观标签，把输出重点放在动作、姿态、表情、镜头、光影、环境和临时状态补充标签。\n不要把锚点已固定的稳定外观标签重复展开。",
+          "serializationStrategy": "sd_danbooru",
+          "npcTemplateId": "transformer_illustrious_npc",
+          "sceneTemplateId": "transformer_illustrious_scene",
+          "judgeTemplateId": "transformer_illustrious_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_pony",
+          "name": "Pony",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=604 sha1=1cbafdd0ae8d head=目标模型为 Pony Diffusion V6 XL（多风格 SDXL 动漫模型>",
+          "anchorModeModelRule": "目标模型为 Pony Diffusion V6 XL。\n请在标签最开头放置评分标签：score_9, score_8_up, score_7_up, score_6_up。\n之后紧跟 source_anime 和 rating_safe（或根据内容选择其他评级标签）。\n请沿用锚点中的稳定外观标签，把输出重点放在动作、姿态、表情、镜头、光影、环境和临时状态补充标签。\n不要把锚点已固定的稳定外观标签重复展开。",
+          "serializationStrategy": "sd_danbooru",
+          "npcTemplateId": "transformer_pony_npc",
+          "sceneTemplateId": "transformer_pony_scene",
+          "judgeTemplateId": "transformer_pony_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_doubao",
+          "name": "Doubao Seedream",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=488 sha1=84d20e0b0740 head=目标模型为豆包 Seedream（doubao-seedream 系列）。\n输出>",
+          "anchorModeModelRule": "目标模型为豆包 Seedream（doubao-seedream 系列）。\n请沿用锚点中的稳定外观，把输出重点放在镜头、动作、姿态、构图、光影、环境和临时状态补充，仍然使用中文自然语言完整句子。\n不要把锚点已经固定的稳定外观重复展开成冗长描述；锚点若是英文标签，把含义融入中文描述即可。",
+          "serializationStrategy": "seedream_narrative",
+          "npcTemplateId": "transformer_doubao_npc",
+          "sceneTemplateId": "transformer_doubao_scene",
+          "judgeTemplateId": "transformer_doubao_scene_judge"
+        },
+        {
+          "id": "mrs_1791417600000",
+          "name": "规则集 7",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "",
+          "anchorModeModelRule": "",
+          "serializationStrategy": "nai_character_segments",
+          "npcTemplateId": "",
+          "sceneTemplateId": "",
+          "judgeTemplateId": ""
+        }
+      ]
+    ],
+    [
+      "系统.扩展.image.modelRulesets",
+      [
+        {
+          "id": "transformer_model_bundle_nai",
+          "name": "NAI",
+          "enabled": true,
+          "compatMode": false,
+          "baseModelRule": "<str len=332 sha1=aa089894763a head=目标模型为 NovelAI V4/V4.5。\n输出采用 NovelAI 常用的英>",
+          "anchorModeModelRule": "目标模型为 NovelAI V4/V4.5。\n请沿用锚点中的稳定外观，把输出重点放在镜头、动作、姿态、构图、光影、环境和临时状态补充。\n不要把锚点已经固定的稳定外观重复展开成冗长角色段。",
+          "serializationStrategy": "nai_character_segments",
+          "npcTemplateId": "transformer_nai_npc",
+          "sceneTemplateId": "transformer_nai_scene",
+          "judgeTemplateId": "transformer_nai_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_gemini",
+          "name": "Gemini",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "目标模型为 Gemini Banana。\n输出更适合清晰、具体、可执行的英文描述式提示词，而不是纯 Danbooru 标签堆叠。\n请优先使用短英文短语或短句，不要使用 NovelAI 权重语法，不要堆砌过碎标签。\n若输入没有明确要求，不要擅自锁定二次元、写实、国风或摄影风格；只整理已有风格线索。\n描述要明确主体、服装、动作、镜头和环境，保持具体、可执行。\n基础段负责整体场景和镜头，角色段负责每个角色的完整可执行短语，并保持单镜头、单主动作、单主光源。\n若 NPC 资料较少，可以根据身份、等级、年龄、性别做保守补全，但补全内容必须长期稳定、低冲突、易复用。",
+          "anchorModeModelRule": "目标模型为 Gemini Banana。\n请沿用锚点中的稳定外观，把输出重点放在镜头、动作、姿态、表情、场景、气氛和临时变化补充。\n不要把锚点已确定的外观再次膨胀成大段重复描述。",
+          "serializationStrategy": "gemini_structured",
+          "npcTemplateId": "transformer_gemini_npc",
+          "sceneTemplateId": "transformer_gemini_scene",
+          "judgeTemplateId": "transformer_gemini_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_grok",
+          "name": "Grok",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=315 sha1=dd280d1645bf head=目标模型为 Grok 的 2D cinematic 风格图像模型。\n允许更强的电>",
+          "anchorModeModelRule": "目标模型为 Grok 的 2D cinematic 风格图像模型。\n请沿用锚点中的稳定外观，把输出重点放在电影镜头、动作调度、姿态、光影和环境叙事。\n不要重复扩写锚点已经固定的核心外观。",
+          "serializationStrategy": "grok_structured",
+          "npcTemplateId": "transformer_grok_npc",
+          "sceneTemplateId": "transformer_grok_scene",
+          "judgeTemplateId": "transformer_grok_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_illustrious",
+          "name": "Illustrious",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=543 sha1=c0b57d0892d2 head=目标模型为 Illustrious XL（基于 Danbooru 数据训练的动漫>",
+          "anchorModeModelRule": "目标模型为 Illustrious XL。\n在内容标签末尾附加质量标签：masterpiece, best_quality, very_aesthetic, absurdres, newest。\n请沿用锚点中的稳定外观标签，把输出重点放在动作、姿态、表情、镜头、光影、环境和临时状态补充标签。\n不要把锚点已固定的稳定外观标签重复展开。",
+          "serializationStrategy": "sd_danbooru",
+          "npcTemplateId": "transformer_illustrious_npc",
+          "sceneTemplateId": "transformer_illustrious_scene",
+          "judgeTemplateId": "transformer_illustrious_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_pony",
+          "name": "Pony",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=604 sha1=1cbafdd0ae8d head=目标模型为 Pony Diffusion V6 XL（多风格 SDXL 动漫模型>",
+          "anchorModeModelRule": "目标模型为 Pony Diffusion V6 XL。\n请在标签最开头放置评分标签：score_9, score_8_up, score_7_up, score_6_up。\n之后紧跟 source_anime 和 rating_safe（或根据内容选择其他评级标签）。\n请沿用锚点中的稳定外观标签，把输出重点放在动作、姿态、表情、镜头、光影、环境和临时状态补充标签。\n不要把锚点已固定的稳定外观标签重复展开。",
+          "serializationStrategy": "sd_danbooru",
+          "npcTemplateId": "transformer_pony_npc",
+          "sceneTemplateId": "transformer_pony_scene",
+          "judgeTemplateId": "transformer_pony_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_doubao",
+          "name": "Doubao Seedream",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=488 sha1=84d20e0b0740 head=目标模型为豆包 Seedream（doubao-seedream 系列）。\n输出>",
+          "anchorModeModelRule": "目标模型为豆包 Seedream（doubao-seedream 系列）。\n请沿用锚点中的稳定外观，把输出重点放在镜头、动作、姿态、构图、光影、环境和临时状态补充，仍然使用中文自然语言完整句子。\n不要把锚点已经固定的稳定外观重复展开成冗长描述；锚点若是英文标签，把含义融入中文描述即可。",
+          "serializationStrategy": "seedream_narrative",
+          "npcTemplateId": "transformer_doubao_npc",
+          "sceneTemplateId": "transformer_doubao_scene",
+          "judgeTemplateId": "transformer_doubao_scene_judge"
+        },
+        {
+          "id": "mrs_1791417600000",
+          "name": "我的规则集",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "base model rule",
+          "anchorModeModelRule": "anchor model rule",
+          "serializationStrategy": "nai_character_segments",
+          "npcTemplateId": "",
+          "sceneTemplateId": "",
+          "judgeTemplateId": ""
+        }
+      ]
+    ],
+    [
+      "系统.扩展.image.modelRulesets",
+      [
+        {
+          "id": "transformer_model_bundle_nai",
+          "name": "NAI",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=332 sha1=aa089894763a head=目标模型为 NovelAI V4/V4.5。\n输出采用 NovelAI 常用的英>",
+          "anchorModeModelRule": "目标模型为 NovelAI V4/V4.5。\n请沿用锚点中的稳定外观，把输出重点放在镜头、动作、姿态、构图、光影、环境和临时状态补充。\n不要把锚点已经固定的稳定外观重复展开成冗长角色段。",
+          "serializationStrategy": "nai_character_segments",
+          "npcTemplateId": "transformer_nai_npc",
+          "sceneTemplateId": "transformer_nai_scene",
+          "judgeTemplateId": "transformer_nai_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_gemini",
+          "name": "Gemini",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "目标模型为 Gemini Banana。\n输出更适合清晰、具体、可执行的英文描述式提示词，而不是纯 Danbooru 标签堆叠。\n请优先使用短英文短语或短句，不要使用 NovelAI 权重语法，不要堆砌过碎标签。\n若输入没有明确要求，不要擅自锁定二次元、写实、国风或摄影风格；只整理已有风格线索。\n描述要明确主体、服装、动作、镜头和环境，保持具体、可执行。\n基础段负责整体场景和镜头，角色段负责每个角色的完整可执行短语，并保持单镜头、单主动作、单主光源。\n若 NPC 资料较少，可以根据身份、等级、年龄、性别做保守补全，但补全内容必须长期稳定、低冲突、易复用。",
+          "anchorModeModelRule": "目标模型为 Gemini Banana。\n请沿用锚点中的稳定外观，把输出重点放在镜头、动作、姿态、表情、场景、气氛和临时变化补充。\n不要把锚点已确定的外观再次膨胀成大段重复描述。",
+          "serializationStrategy": "gemini_structured",
+          "npcTemplateId": "transformer_gemini_npc",
+          "sceneTemplateId": "transformer_gemini_scene",
+          "judgeTemplateId": "transformer_gemini_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_grok",
+          "name": "Grok",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=315 sha1=dd280d1645bf head=目标模型为 Grok 的 2D cinematic 风格图像模型。\n允许更强的电>",
+          "anchorModeModelRule": "目标模型为 Grok 的 2D cinematic 风格图像模型。\n请沿用锚点中的稳定外观，把输出重点放在电影镜头、动作调度、姿态、光影和环境叙事。\n不要重复扩写锚点已经固定的核心外观。",
+          "serializationStrategy": "grok_structured",
+          "npcTemplateId": "transformer_grok_npc",
+          "sceneTemplateId": "transformer_grok_scene",
+          "judgeTemplateId": "transformer_grok_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_illustrious",
+          "name": "Illustrious",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=543 sha1=c0b57d0892d2 head=目标模型为 Illustrious XL（基于 Danbooru 数据训练的动漫>",
+          "anchorModeModelRule": "目标模型为 Illustrious XL。\n在内容标签末尾附加质量标签：masterpiece, best_quality, very_aesthetic, absurdres, newest。\n请沿用锚点中的稳定外观标签，把输出重点放在动作、姿态、表情、镜头、光影、环境和临时状态补充标签。\n不要把锚点已固定的稳定外观标签重复展开。",
+          "serializationStrategy": "sd_danbooru",
+          "npcTemplateId": "transformer_illustrious_npc",
+          "sceneTemplateId": "transformer_illustrious_scene",
+          "judgeTemplateId": "transformer_illustrious_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_pony",
+          "name": "Pony",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=604 sha1=1cbafdd0ae8d head=目标模型为 Pony Diffusion V6 XL（多风格 SDXL 动漫模型>",
+          "anchorModeModelRule": "目标模型为 Pony Diffusion V6 XL。\n请在标签最开头放置评分标签：score_9, score_8_up, score_7_up, score_6_up。\n之后紧跟 source_anime 和 rating_safe（或根据内容选择其他评级标签）。\n请沿用锚点中的稳定外观标签，把输出重点放在动作、姿态、表情、镜头、光影、环境和临时状态补充标签。\n不要把锚点已固定的稳定外观标签重复展开。",
+          "serializationStrategy": "sd_danbooru",
+          "npcTemplateId": "transformer_pony_npc",
+          "sceneTemplateId": "transformer_pony_scene",
+          "judgeTemplateId": "transformer_pony_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_doubao",
+          "name": "Doubao Seedream",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=488 sha1=84d20e0b0740 head=目标模型为豆包 Seedream（doubao-seedream 系列）。\n输出>",
+          "anchorModeModelRule": "目标模型为豆包 Seedream（doubao-seedream 系列）。\n请沿用锚点中的稳定外观，把输出重点放在镜头、动作、姿态、构图、光影、环境和临时状态补充，仍然使用中文自然语言完整句子。\n不要把锚点已经固定的稳定外观重复展开成冗长描述；锚点若是英文标签，把含义融入中文描述即可。",
+          "serializationStrategy": "seedream_narrative",
+          "npcTemplateId": "transformer_doubao_npc",
+          "sceneTemplateId": "transformer_doubao_scene",
+          "judgeTemplateId": "transformer_doubao_scene_judge"
+        },
+        {
+          "id": "mrs_1791417600000",
+          "name": "我的规则集",
+          "enabled": true,
+          "compatMode": false,
+          "baseModelRule": "base model rule",
+          "anchorModeModelRule": "anchor model rule",
+          "serializationStrategy": "nai_character_segments",
+          "npcTemplateId": "",
+          "sceneTemplateId": "",
+          "judgeTemplateId": ""
+        }
+      ]
+    ],
+    [
+      "系统.扩展.image.modelRulesets",
+      [
+        {
+          "id": "transformer_model_bundle_nai",
+          "name": "NAI",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=332 sha1=aa089894763a head=目标模型为 NovelAI V4/V4.5。\n输出采用 NovelAI 常用的英>",
+          "anchorModeModelRule": "目标模型为 NovelAI V4/V4.5。\n请沿用锚点中的稳定外观，把输出重点放在镜头、动作、姿态、构图、光影、环境和临时状态补充。\n不要把锚点已经固定的稳定外观重复展开成冗长角色段。",
+          "serializationStrategy": "nai_character_segments",
+          "npcTemplateId": "transformer_nai_npc",
+          "sceneTemplateId": "transformer_nai_scene",
+          "judgeTemplateId": "transformer_nai_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_gemini",
+          "name": "Gemini",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "目标模型为 Gemini Banana。\n输出更适合清晰、具体、可执行的英文描述式提示词，而不是纯 Danbooru 标签堆叠。\n请优先使用短英文短语或短句，不要使用 NovelAI 权重语法，不要堆砌过碎标签。\n若输入没有明确要求，不要擅自锁定二次元、写实、国风或摄影风格；只整理已有风格线索。\n描述要明确主体、服装、动作、镜头和环境，保持具体、可执行。\n基础段负责整体场景和镜头，角色段负责每个角色的完整可执行短语，并保持单镜头、单主动作、单主光源。\n若 NPC 资料较少，可以根据身份、等级、年龄、性别做保守补全，但补全内容必须长期稳定、低冲突、易复用。",
+          "anchorModeModelRule": "目标模型为 Gemini Banana。\n请沿用锚点中的稳定外观，把输出重点放在镜头、动作、姿态、表情、场景、气氛和临时变化补充。\n不要把锚点已确定的外观再次膨胀成大段重复描述。",
+          "serializationStrategy": "gemini_structured",
+          "npcTemplateId": "transformer_gemini_npc",
+          "sceneTemplateId": "transformer_gemini_scene",
+          "judgeTemplateId": "transformer_gemini_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_grok",
+          "name": "Grok",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=315 sha1=dd280d1645bf head=目标模型为 Grok 的 2D cinematic 风格图像模型。\n允许更强的电>",
+          "anchorModeModelRule": "目标模型为 Grok 的 2D cinematic 风格图像模型。\n请沿用锚点中的稳定外观，把输出重点放在电影镜头、动作调度、姿态、光影和环境叙事。\n不要重复扩写锚点已经固定的核心外观。",
+          "serializationStrategy": "grok_structured",
+          "npcTemplateId": "transformer_grok_npc",
+          "sceneTemplateId": "transformer_grok_scene",
+          "judgeTemplateId": "transformer_grok_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_illustrious",
+          "name": "Illustrious",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=543 sha1=c0b57d0892d2 head=目标模型为 Illustrious XL（基于 Danbooru 数据训练的动漫>",
+          "anchorModeModelRule": "目标模型为 Illustrious XL。\n在内容标签末尾附加质量标签：masterpiece, best_quality, very_aesthetic, absurdres, newest。\n请沿用锚点中的稳定外观标签，把输出重点放在动作、姿态、表情、镜头、光影、环境和临时状态补充标签。\n不要把锚点已固定的稳定外观标签重复展开。",
+          "serializationStrategy": "sd_danbooru",
+          "npcTemplateId": "transformer_illustrious_npc",
+          "sceneTemplateId": "transformer_illustrious_scene",
+          "judgeTemplateId": "transformer_illustrious_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_pony",
+          "name": "Pony",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=604 sha1=1cbafdd0ae8d head=目标模型为 Pony Diffusion V6 XL（多风格 SDXL 动漫模型>",
+          "anchorModeModelRule": "目标模型为 Pony Diffusion V6 XL。\n请在标签最开头放置评分标签：score_9, score_8_up, score_7_up, score_6_up。\n之后紧跟 source_anime 和 rating_safe（或根据内容选择其他评级标签）。\n请沿用锚点中的稳定外观标签，把输出重点放在动作、姿态、表情、镜头、光影、环境和临时状态补充标签。\n不要把锚点已固定的稳定外观标签重复展开。",
+          "serializationStrategy": "sd_danbooru",
+          "npcTemplateId": "transformer_pony_npc",
+          "sceneTemplateId": "transformer_pony_scene",
+          "judgeTemplateId": "transformer_pony_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_doubao",
+          "name": "Doubao Seedream",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=488 sha1=84d20e0b0740 head=目标模型为豆包 Seedream（doubao-seedream 系列）。\n输出>",
+          "anchorModeModelRule": "目标模型为豆包 Seedream（doubao-seedream 系列）。\n请沿用锚点中的稳定外观，把输出重点放在镜头、动作、姿态、构图、光影、环境和临时状态补充，仍然使用中文自然语言完整句子。\n不要把锚点已经固定的稳定外观重复展开成冗长描述；锚点若是英文标签，把含义融入中文描述即可。",
+          "serializationStrategy": "seedream_narrative",
+          "npcTemplateId": "transformer_doubao_npc",
+          "sceneTemplateId": "transformer_doubao_scene",
+          "judgeTemplateId": "transformer_doubao_scene_judge"
+        },
+        {
+          "id": "mrs_1791417600000",
+          "name": "我的规则集",
+          "enabled": true,
+          "compatMode": true,
+          "baseModelRule": "base model rule",
+          "anchorModeModelRule": "anchor model rule",
+          "serializationStrategy": "nai_character_segments",
+          "npcTemplateId": "",
+          "sceneTemplateId": "",
+          "judgeTemplateId": ""
+        }
+      ]
+    ],
+    [
+      "系统.扩展.image.modelRulesets",
+      [
+        {
+          "id": "transformer_model_bundle_nai",
+          "name": "NAI",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=332 sha1=aa089894763a head=目标模型为 NovelAI V4/V4.5。\n输出采用 NovelAI 常用的英>",
+          "anchorModeModelRule": "目标模型为 NovelAI V4/V4.5。\n请沿用锚点中的稳定外观，把输出重点放在镜头、动作、姿态、构图、光影、环境和临时状态补充。\n不要把锚点已经固定的稳定外观重复展开成冗长角色段。",
+          "serializationStrategy": "nai_character_segments",
+          "npcTemplateId": "transformer_nai_npc",
+          "sceneTemplateId": "transformer_nai_scene",
+          "judgeTemplateId": "transformer_nai_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_gemini",
+          "name": "Gemini",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "目标模型为 Gemini Banana。\n输出更适合清晰、具体、可执行的英文描述式提示词，而不是纯 Danbooru 标签堆叠。\n请优先使用短英文短语或短句，不要使用 NovelAI 权重语法，不要堆砌过碎标签。\n若输入没有明确要求，不要擅自锁定二次元、写实、国风或摄影风格；只整理已有风格线索。\n描述要明确主体、服装、动作、镜头和环境，保持具体、可执行。\n基础段负责整体场景和镜头，角色段负责每个角色的完整可执行短语，并保持单镜头、单主动作、单主光源。\n若 NPC 资料较少，可以根据身份、等级、年龄、性别做保守补全，但补全内容必须长期稳定、低冲突、易复用。",
+          "anchorModeModelRule": "目标模型为 Gemini Banana。\n请沿用锚点中的稳定外观，把输出重点放在镜头、动作、姿态、表情、场景、气氛和临时变化补充。\n不要把锚点已确定的外观再次膨胀成大段重复描述。",
+          "serializationStrategy": "gemini_structured",
+          "npcTemplateId": "transformer_gemini_npc",
+          "sceneTemplateId": "transformer_gemini_scene",
+          "judgeTemplateId": "transformer_gemini_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_grok",
+          "name": "Grok",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=315 sha1=dd280d1645bf head=目标模型为 Grok 的 2D cinematic 风格图像模型。\n允许更强的电>",
+          "anchorModeModelRule": "目标模型为 Grok 的 2D cinematic 风格图像模型。\n请沿用锚点中的稳定外观，把输出重点放在电影镜头、动作调度、姿态、光影和环境叙事。\n不要重复扩写锚点已经固定的核心外观。",
+          "serializationStrategy": "grok_structured",
+          "npcTemplateId": "transformer_grok_npc",
+          "sceneTemplateId": "transformer_grok_scene",
+          "judgeTemplateId": "transformer_grok_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_illustrious",
+          "name": "Illustrious",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=543 sha1=c0b57d0892d2 head=目标模型为 Illustrious XL（基于 Danbooru 数据训练的动漫>",
+          "anchorModeModelRule": "目标模型为 Illustrious XL。\n在内容标签末尾附加质量标签：masterpiece, best_quality, very_aesthetic, absurdres, newest。\n请沿用锚点中的稳定外观标签，把输出重点放在动作、姿态、表情、镜头、光影、环境和临时状态补充标签。\n不要把锚点已固定的稳定外观标签重复展开。",
+          "serializationStrategy": "sd_danbooru",
+          "npcTemplateId": "transformer_illustrious_npc",
+          "sceneTemplateId": "transformer_illustrious_scene",
+          "judgeTemplateId": "transformer_illustrious_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_pony",
+          "name": "Pony",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=604 sha1=1cbafdd0ae8d head=目标模型为 Pony Diffusion V6 XL（多风格 SDXL 动漫模型>",
+          "anchorModeModelRule": "目标模型为 Pony Diffusion V6 XL。\n请在标签最开头放置评分标签：score_9, score_8_up, score_7_up, score_6_up。\n之后紧跟 source_anime 和 rating_safe（或根据内容选择其他评级标签）。\n请沿用锚点中的稳定外观标签，把输出重点放在动作、姿态、表情、镜头、光影、环境和临时状态补充标签。\n不要把锚点已固定的稳定外观标签重复展开。",
+          "serializationStrategy": "sd_danbooru",
+          "npcTemplateId": "transformer_pony_npc",
+          "sceneTemplateId": "transformer_pony_scene",
+          "judgeTemplateId": "transformer_pony_scene_judge"
+        },
+        {
+          "id": "transformer_model_bundle_doubao",
+          "name": "Doubao Seedream",
+          "enabled": false,
+          "compatMode": false,
+          "baseModelRule": "<str len=488 sha1=84d20e0b0740 head=目标模型为豆包 Seedream（doubao-seedream 系列）。\n输出>",
+          "anchorModeModelRule": "目标模型为豆包 Seedream（doubao-seedream 系列）。\n请沿用锚点中的稳定外观，把输出重点放在镜头、动作、姿态、构图、光影、环境和临时状态补充，仍然使用中文自然语言完整句子。\n不要把锚点已经固定的稳定外观重复展开成冗长描述；锚点若是英文标签，把含义融入中文描述即可。",
+          "serializationStrategy": "seedream_narrative",
+          "npcTemplateId": "transformer_doubao_npc",
+          "sceneTemplateId": "transformer_doubao_scene",
+          "judgeTemplateId": "transformer_doubao_scene_judge"
+        }
+      ]
+    ]
+  ]
+}

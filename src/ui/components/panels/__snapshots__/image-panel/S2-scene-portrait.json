@@ -1,0 +1,106 @@
+{
+  "calls": [
+    [
+      "queue.remove",
+      [
+        "task_scene_done"
+      ]
+    ],
+    [
+      "collectSceneRoleAnchors",
+      []
+    ],
+    [
+      "generateSceneImage",
+      [
+        {
+          "sceneDescription": "关宇从角落里站起身，向你举杯。",
+          "location": "酒肆",
+          "gameTime": {
+            "年": 1,
+            "月": 2,
+            "日": 3,
+            "小时": 9,
+            "分钟": 30
+          },
+          "weather": "晴",
+          "festival": "",
+          "environment": [],
+          "backend": "novelai",
+          "compositionMode": "pure_landscape",
+          "extraRequirements": "__undefined__",
+          "artistPrefix": "__undefined__",
+          "extraNegative": "__undefined__",
+          "preset": {
+            "id": "scene_custom",
+            "name": "场景自定义",
+            "positivePrefix": "",
+            "positiveSuffix": "",
+            "negative": "",
+            "source": "manual",
+            "width": 576,
+            "height": 1024
+          },
+          "references": "__undefined__",
+          "styleParamOverrides": "__undefined__",
+          "presentNpcs": [
+            "林暖",
+            "关宇"
+          ],
+          "npcDetails": [
+            {
+              "name": "主角"
+            },
+            {
+              "name": "林暖",
+              "appearance": "眉目清亮，黑发及腰",
+              "bodyDescription": "纤细修长",
+              "outfitStyle": "素色长裙",
+              "description": "酒肆老板娘"
+            },
+            {
+              "name": "关宇",
+              "appearance": "剑眉星目",
+              "description": "游侠"
+            }
+          ],
+          "roleAnchors": [
+            {
+              "name": "林暖",
+              "positive": "1girl, black hair",
+              "negative": "bad hands"
+            },
+            {
+              "name": "关宇",
+              "positive": "1boy"
+            }
+          ]
+        }
+      ]
+    ]
+  ],
+  "emits": [
+    [
+      "ui:toast",
+      {
+        "type": "success",
+        "message": "场景历史上限已设为 20",
+        "duration": 1500
+      }
+    ],
+    [
+      "ui:toast",
+      {
+        "type": "info",
+        "message": "已清空已完成场景任务",
+        "duration": 1500
+      }
+    ]
+  ],
+  "writes": [
+    [
+      "系统.扩展.image.config.sceneHistoryLimit",
+      20
+    ]
+  ]
+}

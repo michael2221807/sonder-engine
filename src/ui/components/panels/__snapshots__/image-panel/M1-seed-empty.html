@@ -1,0 +1,259 @@
+<div class="image-panel">
+  <header class="panel-header">
+    <h2 class="panel-title">图片工作台</h2>
+  </header>
+  <div class="aga-tab-bar" role="tablist"><button class="aga-tab__btn aga-tab__btn--active" role="tab" aria-selected="true" tabindex="0">手动生成
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">图库
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">场景壁纸
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">队列
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">历史
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">预设
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">规则
+      <!--v-if-->
+    </button><button class="aga-tab__btn" role="tab" aria-selected="false" tabindex="-1">设置
+      <!--v-if-->
+    </button></div><!-- Stats bar -->
+  <div class="stats-bar">
+    <div class="stat-card"><span class="stat-value">3</span><span class="stat-label">影像总数</span></div>
+    <div class="stat-card stat-card--success"><span class="stat-value">2</span><span class="stat-label">成功</span></div>
+    <div class="stat-card stat-card--danger"><span class="stat-value">1</span><span class="stat-label">失败</span></div>
+    <div class="stat-card stat-card--info"><span class="stat-value">1</span><span class="stat-label">进行中</span></div>
+    <div class="stat-card stat-card--bar">
+      <div class="aga-progress" role="progressbar" aria-valuenow="2" aria-valuemin="0" aria-valuemax="3">
+        <div class="aga-progress__header"><span class="aga-progress__label">成功率</span><span class="aga-progress__value">2 / 3</span></div>
+        <div class="aga-progress__track">
+          <div class="aga-progress__fill" style="width: 66.66666666666666%; background-color: var(--color-success); color: var(--color-success);"></div>
+        </div>
+      </div>
+    </div>
+  </div><!-- ═══ Manual Generation Tab ═══ -->
+  <div class="tab-content">
+    <div class="backend-status-bar"><span class="status-dot status-dot--ok"></span><span class="backend-status-label">NovelAI</span><span class="backend-status-model">model-novelai</span>
+      <!--v-if-->
+    </div>
+    <!--v-if-->
+    <div class="gen-layout">
+      <!-- Left: NPC info + form -->
+      <div class="gen-form-col">
+        <div class="form-section"><label class="form-label">选择角色</label>
+          <div class="aga-select"><button class="aga-select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">林暖 ★</span><span class="aga-select__arrow">▾</span></button>
+            <teleport-stub to="body">
+              <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+                <!--v-if-->
+              </transition-stub>
+            </teleport-stub>
+          </div>
+        </div><!-- NPC summary card -->
+        <div class="npc-summary-card">
+          <div class="npc-summary-name">林暖</div>
+          <div class="npc-summary-meta"><span>女</span><span>18岁</span><span class="badge-major">主要角色</span></div>
+          <p class="npc-summary-desc">酒肆老板娘</p>
+        </div><!-- Anchor status banner -->
+        <div class="anchor-banner anchor-banner--active">该角色锚点已启用，手动生图会自动附加：林暖锚点</div>
+        <div class="form-section"><label class="form-label">构图预设</label>
+          <div class="btn-grid btn-grid--4"><button type="button" class="grid-btn grid-btn--active">
+              <div class="grid-btn__label">头像</div>
+              <div class="grid-btn__sub">1:1 特写</div>
+            </button><button type="button" class="grid-btn">
+              <div class="grid-btn__label">半身像</div>
+              <div class="grid-btn__sub">3:4 半身</div>
+            </button><button type="button" class="grid-btn">
+              <div class="grid-btn__label">立绘</div>
+              <div class="grid-btn__sub">全身立绘</div>
+            </button><button type="button" class="grid-btn">
+              <div class="grid-btn__label">自定义</div>
+              <div class="grid-btn__sub">构图描述</div>
+            </button></div>
+          <!--v-if-->
+        </div>
+        <div class="form-section"><label class="form-label">画风选择</label>
+          <div class="btn-grid btn-grid--5"><button type="button" class="grid-btn grid-btn--compact grid-btn--active">
+              <div class="grid-btn__label">无要求</div>
+            </button><button type="button" class="grid-btn grid-btn--compact">
+              <div class="grid-btn__label">通用</div>
+            </button><button type="button" class="grid-btn grid-btn--compact">
+              <div class="grid-btn__label">二次元</div>
+            </button><button type="button" class="grid-btn grid-btn--compact">
+              <div class="grid-btn__label">写实</div>
+            </button><button type="button" class="grid-btn grid-btn--compact">
+              <div class="grid-btn__label">国风</div>
+            </button></div>
+        </div>
+        <div class="form-section"><label class="form-label">分辨率 / 比例</label>
+          <div class="btn-grid btn-grid--6"><button type="button" class="grid-btn grid-btn--compact grid-btn--active grid-btn--disabled" disabled="">
+              <div class="grid-btn__label">无要求</div>
+            </button><button type="button" class="grid-btn grid-btn--compact grid-btn--disabled" disabled="">
+              <div class="grid-btn__label">1:1</div>
+            </button><button type="button" class="grid-btn grid-btn--compact grid-btn--disabled" disabled="">
+              <div class="grid-btn__label">3:4</div>
+            </button><button type="button" class="grid-btn grid-btn--compact grid-btn--disabled" disabled="">
+              <div class="grid-btn__label">9:16</div>
+            </button><button type="button" class="grid-btn grid-btn--compact grid-btn--disabled" disabled="">
+              <div class="grid-btn__label">16:9</div>
+            </button><button type="button" class="grid-btn grid-btn--compact grid-btn--disabled" disabled="">
+              <div class="grid-btn__label">自定义</div>
+            </button></div><!-- 1x/2x 倍率 toggle (only for preset ratios, not 'none' or 'custom') -->
+          <!--v-if-->
+          <!-- Width / Height inputs -->
+          <div class="size-inputs">
+            <div class="size-input-group">
+              <div class="form-hint">宽 (px)</div><input type="text" class="form-input" disabled="" placeholder="1024">
+            </div>
+            <div class="size-input-group">
+              <div class="form-hint">高 (px)</div><input type="text" class="form-input" disabled="" placeholder="1024">
+            </div>
+          </div>
+          <div class="form-hint">当前尺寸：无要求</div>
+          <div class="form-hint">内置构图已包含推荐尺寸，选择自定义构图后可启用。</div>
+        </div>
+        <div class="form-section"><label class="form-label">画师串预设</label>
+          <div class="aga-select"><button class="aga-select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">未配置预设</span><span class="aga-select__arrow">▾</span></button>
+            <teleport-stub to="body">
+              <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+                <!--v-if-->
+              </transition-stub>
+            </teleport-stub>
+          </div>
+          <!--v-if-->
+        </div>
+        <div class="form-section"><label class="form-label">PNG 画风预设</label>
+          <div class="aga-select"><button class="aga-select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">不启用</span><span class="aga-select__arrow">▾</span></button>
+            <teleport-stub to="body">
+              <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+                <!--v-if-->
+              </transition-stub>
+            </teleport-stub>
+          </div>
+          <!--v-if-->
+        </div>
+        <div class="form-section"><label class="form-label">额外要求</label><textarea class="form-textarea" rows="2" placeholder="如：白衣飘飘、御剑横空、月下独立…"></textarea></div>
+        <div class="form-section form-section--inline"><label class="form-label">后台处理</label><!-- Labeled: pill + clickable text (aria-hidden so the switch isn't announced twice). -->
+          <!-- Bare pill (unchanged) --><button class="aga-toggle aga-toggle--on" role="switch" aria-checked="true"><span class="aga-toggle__thumb"></span></button>
+        </div><!-- Reference redraw (R9: single toggle) -->
+        <div class="form-section">
+          <div class="form-section form-section--inline"><label class="form-label">参考重绘</label><!-- Labeled: pill + clickable text (aria-hidden so the switch isn't announced twice). -->
+            <!-- Bare pill (unchanged) --><button class="aga-toggle" role="switch" aria-checked="false" data-testid="ref-redraw-toggle"><span class="aga-toggle__thumb"></span></button>
+          </div>
+          <!--v-if-->
+        </div>
+        <div class="form-actions"><button class="aga-btn aga-btn--primary aga-btn--lg">
+            <!--v-if-->加入队列
+          </button>
+          <!--v-if-->
+        </div><!-- Per-NPC task status (最近状態 + active task display) -->
+        <div class="npc-task-status npc-task-status--failed">
+          <div class="task-status-header"><span class="task-status-badge task-status-badge--danger">失败</span><span class="task-status-time">2026-09-21T14:13:24.100Z</span></div>
+          <div class="task-status-error">upstream 500</div>
+        </div>
+        <div class="gen-nav-buttons"><button class="aga-btn aga-btn--ghost aga-btn--sm">
+            <!--v-if-->查看队列
+          </button><button class="aga-btn aga-btn--ghost aga-btn--sm">
+            <!--v-if-->查看图库
+          </button></div>
+        <!--v-if-->
+        <!-- Secret part generation (NSFW gated, non-male NPC) -->
+        <!--v-if-->
+      </div><!-- Legacy preview column removed — preview lives in NPC 预览面板 below -->
+    </div><!-- NPC 预览面板（全宽，图片+角色资料） -->
+    <div class="npc-preview-panel">
+      <div class="npc-preview-image-col">
+        <div class="npc-preview-header"><span class="npc-preview-title">图片预览</span>
+          <!--v-if-->
+        </div>
+        <div class="npc-preview-image-area">
+          <div class="npc-preview-empty">
+            <div class="npc-preview-empty-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="4" y="8" width="40" height="32" rx="4" stroke="currentColor" stroke-width="1.5" opacity="0.5"></rect>
+                <circle cx="16" cy="20" r="3" stroke="currentColor" stroke-width="1.5" opacity="0.5"></circle>
+                <path d="M4 32 l12-10 6 5 8-8 14 13" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" opacity="0.4"></path>
+              </svg></div>
+            <div>暂无可预览图片</div>
+          </div>
+        </div>
+      </div>
+      <div class="npc-preview-data-col">
+        <div class="npc-preview-header"><span class="npc-preview-title">角色资料</span></div>
+        <div class="npc-preview-data">
+          <!--
+                角色资料 grid — 增量接口说明：
+                后续此区域应扩展显示：
+                - 境界/身份（如 pack schema 支持）
+                - 外貌特征 grid（外貌/身材/衣着/生日/称呼）
+                - 共同记忆时间线
+                - 关系驱动面板（核心性格、突破条件、女性关系网）
+                当前保持基础信息 + 全文描述，预留结构。
+              -->
+          <div class="npc-preview-grid">
+            <div>
+              <div class="npc-meta-label">姓名</div>
+              <div class="npc-meta-value">林暖</div>
+            </div>
+            <div>
+              <div class="npc-meta-label">性别</div>
+              <div class="npc-meta-value">女</div>
+            </div>
+            <div>
+              <div class="npc-meta-label">年龄</div>
+              <div class="npc-meta-value">18岁</div>
+            </div>
+            <!--v-if-->
+            <!--v-if-->
+            <div>
+              <div class="npc-meta-label">角色类型</div>
+              <div class="npc-meta-value">重要</div>
+            </div>
+          </div>
+          <div class="npc-preview-desc-section">
+            <div class="npc-meta-label">角色设定</div>
+            <div class="npc-preview-desc">酒肆老板娘</div>
+          </div>
+          <div class="npc-preview-desc-section">
+            <div class="npc-meta-label">外貌描述</div>
+            <div class="npc-preview-desc">眉目清亮，黑发及腰</div>
+          </div>
+          <div class="npc-preview-desc-section">
+            <div class="npc-meta-label">身材描写</div>
+            <div class="npc-preview-desc">纤细修长</div>
+          </div>
+          <div class="npc-preview-desc-section">
+            <div class="npc-meta-label">衣着风格</div>
+            <div class="npc-preview-desc">素色长裙</div>
+          </div>
+          <div class="npc-preview-desc-section">
+            <div class="npc-meta-label">性格特征</div>
+            <div class="npc-preview-traits"><span class="npc-preview-trait">温柔</span><span class="npc-preview-trait">机灵</span></div>
+          </div>
+          <!--v-if-->
+        </div>
+      </div>
+    </div>
+  </div><!-- ═══ Gallery Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ Scene Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ Queue Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ History Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ Presets Tab ═══ -->
+  <!--v-if-->
+  <!-- ═══ Rules Tab — full CRUD ═══ -->
+  <!--v-if-->
+  <!-- ═══ Settings Tab (8th tab) ═══ -->
+  <!--v-if-->
+  <!-- ─── 前台提交确认 overlay ─── -->
+  <transition-stub name="fade" appear="false" persisted="false" css="true">
+    <!--v-if-->
+  </transition-stub><!-- Fullscreen viewer -->
+  <!--v-if-->
+  <!-- Delete confirmation -->
+  <!--v-if-->
+  <!-- Regenerate-Same modal (shared across queue / gallery / scene) -->
+  <!--v-if-->
+</div>
