@@ -120,14 +120,14 @@ const RETRIEVED_TEXT = '### 检索到的记忆\n1. 叶尘在茶馆结识了林�
 
 interface RetrieveCall { query: string; playerName: string; locationDesc: string; recentNpcNames: string[] }
 
-function makeFakeUnifiedRetriever(failing: boolean): { retriever: IUnifiedRetriever; calls: RetrieveCall[] } {
+function makeFakeUnifiedRetriever(failing: boolean, snapshot: EngramReadSnapshot = READ_SNAPSHOT): { retriever: IUnifiedRetriever; calls: RetrieveCall[] } {
   const calls: RetrieveCall[] = [];
   const retriever: { lastReadSnapshot: EngramReadSnapshot | null; retrieve: IUnifiedRetriever['retrieve'] } = {
     lastReadSnapshot: null,
     retrieve: async (query, context) => {
       calls.push({ query, playerName: context.playerName, locationDesc: context.locationDesc, recentNpcNames: [...(context.recentNpcNames ?? [])] });
       if (failing) throw new Error('embedding backend unavailable');
-      retriever.lastReadSnapshot = READ_SNAPSHOT;
+      retriever.lastReadSnapshot = snapshot;
       return RETRIEVED_TEXT;
     },
   };
@@ -164,6 +164,14 @@ interface Case {
   /** Plot momentum on: the round's prompt transform comes from the pack's plot-vector prompt policy. */
   plotMomentum?: boolean;
   engram?: EngramKind;
+  /** NPC relevance filter: the NPC count from which it applies (`minNpcCountForFilter`); default is the matrix's 2. */
+  npcFilterMinCount?: number;
+  /** NPC relevance filter: how many recent rounds of player-NPC edges count as a signal; default is the matrix's 5; a negative value moves the cut-off past every edge. */
+  npcRecentWindow?: number;
+  /** NPC relevance filter: graph hops from the read's NPCs; default is the matrix's 1. */
+  npcBfsHops?: number;
+  /** What the stand-in retriever read; default is READ_SNAPSHOT, which names the NPC who is in the scene. */
+  readSnapshot?: EngramReadSnapshot;
   /** The prompt page: edits and switches on the registry. */
   promptPage?: (registry: PromptRegistry) => void;
   /** Enhanced opening: the author's opening-style hint. */
@@ -268,10 +276,10 @@ async function runCase(c: Case, packOverride?: GamePack): Promise<RunResult> {
       enabled: true,
       retrievalMode: 'hybrid',
       knowledgeEdgeMode: engramKind === 'hybrid-edges' ? 'active' : 'off',
-      npcRelevanceFilter: { enabled: true, recentRoundWindow: 5, bfsHops: 1, minNpcCountForFilter: 2 },
+      npcRelevanceFilter: { enabled: true, recentRoundWindow: c.npcRecentWindow ?? 5, bfsHops: c.npcBfsHops ?? 1, minNpcCountForFilter: c.npcFilterMinCount ?? 2 },
     };
     engramManager = makeFakeEngramManager(config);
-    unified = makeFakeUnifiedRetriever(engramKind === 'hybrid-throws');
+    unified = makeFakeUnifiedRetriever(engramKind === 'hybrid-throws', c.readSnapshot);
   }
 
   // Plot momentum: aga-adapter.ts promptTransform, minus the host plumbing (control, owner, guard).
@@ -471,6 +479,22 @@ const CASES: Case[] = [
     },
   },
   { id: 'P7', request: 'split', tree: 'F', userInput: INPUT_FIRST },
+  // NPC relevance with too few NPCs for the filter (the app default threshold is 10): falls back to the plain split.
+  {
+    id: 'P8', request: 'split', tree: 'R', userInput: INPUT_PLAIN, engram: 'hybrid-edges', npcFilterMinCount: 10,
+    settings: { '系统.设置.social.presenceEnabled': true },
+  },
+  // An NPC who is in the scene but whom the read does not name (the read names only the absent NPC).
+  {
+    id: 'P9', request: 'split', tree: 'R', userInput: INPUT_PLAIN, engram: 'hybrid-edges', npcRecentWindow: -100000, npcBfsHops: 0,
+    settings: { '系统.设置.social.presenceEnabled': true },
+    readSnapshot: {
+      ...READ_SNAPSHOT,
+      candidates: [
+        { text: '苏小棠：后山药圃学徒。', finalScore: 0.8, source: 'entity', components: [], outcome: 'injected', entityName: '苏小棠' },
+      ],
+    },
+  },
 
   // ── enhanced opening (legacy flow assembler, flow overrides) ──
   { id: 'O1', request: 'opening', tree: 'F', userInput: '' },
@@ -500,6 +524,18 @@ describe('request matrix · what ContextAssembly + AICall send', () => {
     const result = await runCase(c, { ...pack, promptFlows: flows });
     expect(result.error).toBe(
       "[ContextAssembly] Required flow override 'openingEnhancedStep1' not found — Enhanced Opening cannot proceed",
+    );
+    expect(result.generateCalls).toHaveLength(0);
+    await lock(c, result);
+  });
+
+  it('X2: enhanced opening with a missing Step 2 flow override stops with a named error', async () => {
+    const c: Case = { id: 'X2', request: 'opening', tree: 'F', userInput: '' };
+    const flows = { ...pack.promptFlows };
+    delete flows['openingEnhancedStep2'];
+    const result = await runCase(c, { ...pack, promptFlows: flows });
+    expect(result.error).toBe(
+      "[ContextAssembly] Required flow override 'openingEnhancedStep2' not found — Enhanced Opening cannot proceed",
     );
     expect(result.generateCalls).toHaveLength(0);
     await lock(c, result);

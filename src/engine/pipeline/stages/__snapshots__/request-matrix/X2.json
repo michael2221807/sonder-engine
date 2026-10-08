@@ -1,0 +1,10 @@
+{
+  "case": {
+    "id": "X2",
+    "request": "opening",
+    "tree": "F",
+    "userInput": ""
+  },
+  "error": "[ContextAssembly] Required flow override 'openingEnhancedStep2' not found — Enhanced Opening cannot proceed",
+  "assemblyEvents": []
+}
