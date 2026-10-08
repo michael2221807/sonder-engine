@@ -242,6 +242,7 @@ describe('block parsing', () => {
   it('parses an ordered list', () => {
     const blocks = parseNarrative('1. 一\n2. 二\n3. 三');
     const list = blocks.find((b) => b.type === 'list');
+    expect(list?.type).toBe('list');
     if (list?.type === 'list') {
       expect(list.ordered).toBe(true);
       expect(list.items).toHaveLength(3);
@@ -258,6 +259,7 @@ describe('block parsing', () => {
   it('captures a nested list as childText', () => {
     const blocks = parseNarrative('- 顶层\n  - 子项一\n  - 子项二');
     const list = blocks.find((b) => b.type === 'list');
+    expect(list?.type).toBe('list');
     if (list?.type === 'list') {
       expect(list.items).toHaveLength(1);
       expect(list.items[0].childText).toContain('子项一');
@@ -303,6 +305,7 @@ describe('table parsing', () => {
   it('reads per-column alignment from the delimiter row', () => {
     const blocks = parseNarrative(md);
     const table = blocks.find((b) => b.type === 'table');
+    expect(table?.type).toBe('table');
     if (table?.type === 'table') {
       expect(table.align).toEqual(['left', 'center', 'right']);
     }
@@ -312,6 +315,7 @@ describe('table parsing', () => {
     const t = '| a | b | c |\n|---|---|---|\n| 1 |\n| 1 | 2 | 3 | 4 |';
     const blocks = parseNarrative(t);
     const table = blocks.find((b) => b.type === 'table');
+    expect(table?.type).toBe('table');
     if (table?.type === 'table') {
       expect(table.rows[0]).toHaveLength(3); // padded
       expect(table.rows[1]).toHaveLength(3); // truncated
@@ -323,6 +327,7 @@ describe('table parsing', () => {
     const t = '| 名称 | 说明 |\n|---|---|\n| **粗** | 见 [文档](https://x.com) |';
     const blocks = parseNarrative(t);
     const table = blocks.find((b) => b.type === 'table');
+    expect(table?.type).toBe('table');
     if (table?.type === 'table') {
       expect(table.rows[0][0].find((p) => p.bold)?.text).toBe('粗');
       expect(table.rows[0][1].find((p) => p.kind === 'link')?.href).toBe('https://x.com');

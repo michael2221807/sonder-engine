@@ -153,7 +153,7 @@ describe('TtsService stream mode (分句流式, default)', () => {
     expect(provider.streamUrlCalls.length).toBe(1);
   });
 
-  it('preloads the NEXT segment while the current one plays', async () => {
+  it('asks the player to preload the next segment while the current one plays (fake player records calls only)', async () => {
     const provider = makeFakeProvider();
     const player = makeFakePlayer();
     const svc = makeService(provider, { transmissionMode: 'stream', segmentMaxSentences: 1 }, { player });
@@ -375,7 +375,7 @@ describe('TtsService round-audio cache (下载)', () => {
     expect(dl?.filename).toContain('round-3');
   });
 
-  it('download re-synthesizes on demand when captured blobs are empty/corrupt', async () => {
+  it('download builds a non-null audio file after a full-mode speak (the empty/corrupt-blob re-synthesis path is not exercised here)', async () => {
     // synth returns a tiny (header-only) blob → capture skips it; download must
     // fall back to on-demand full-text synth. Here the fake always returns text-bytes,
     // which for the whole-round text is > MIN → a valid download.
@@ -433,7 +433,7 @@ describe('TtsService abort / re-entrancy', () => {
     expect(rejections).toEqual([]);
   });
 
-  it('a second speak() supersedes the first without leaving stale state', async () => {
+  it('after a second speak() has been issued the service ends idle (does not check that the first was aborted)', async () => {
     const provider = makeFakeProvider();
     const svc = makeService(provider, { transmissionMode: 'full' });
     const p1 = svc.speak('第一次朗读的正文内容。', 'r1');

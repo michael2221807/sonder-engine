@@ -43,8 +43,8 @@ const PER_BACKEND_USAGE_TYPES: UsageType[] = [
   ...providerCatalog.byCategory('stt').map((d) => perBackendUsageType('stt', d.id)),
 ];
 
-/** 所有支持的 UsageType — static part must match the union in ai/types.ts */
-const ALL_USAGE_TYPES: UsageType[] = [
+/** The fixed (non per-backend) UsageTypes. Every one must be listed: see the type check on ALL_USAGE_TYPES. */
+const STATIC_USAGE_TYPES = [
   'main', 'memory_summary', 'text_optimization', 'cot',
   'instruction_generation', 'world_generation',
   'world_heartbeat', 'location_npc_generation', 'privacy_repair',
@@ -54,6 +54,20 @@ const ALL_USAGE_TYPES: UsageType[] = [
   'imageCharacterTokenizer', 'imageSceneTokenizer', 'imageSecretTokenizer',
   'bodyPolish', 'plot_decompose',
   'world_builder', 'engram_batch_solidify', 'card_edge_classify',
+] as const satisfies readonly UsageType[];
+
+/** Per-backend keys (imageGen_* / ttsGen_* / sttGen_*) come from the provider catalog, not from STATIC_USAGE_TYPES. */
+type PerBackendUsageKey = `imageGen_${string}` | `ttsGen_${string}` | `sttGen_${string}`;
+/** UsageTypes that are neither in STATIC_USAGE_TYPES nor a per-backend key; must be never. */
+type UnlistedUsageType = Exclude<UsageType, (typeof STATIC_USAGE_TYPES)[number] | PerBackendUsageKey>;
+
+/**
+ * 所有支持的 UsageType. If a UsageType is added to the union in ai/types.ts without being listed in
+ * STATIC_USAGE_TYPES, this declaration stops compiling (its type becomes `never`) instead of silently
+ * becoming an assignment that is never saved.
+ */
+const ALL_USAGE_TYPES: [UnlistedUsageType] extends [never] ? UsageType[] : never = [
+  ...STATIC_USAGE_TYPES,
   ...PER_BACKEND_USAGE_TYPES,
 ];
 

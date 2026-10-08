@@ -23,3 +23,11 @@ const PREFIX: Record<PerBackendUsageKind, string> = {
 export function perBackendUsageType(kind: PerBackendUsageKind, backendId: string): UsageType {
   return `${PREFIX[kind]}${backendId}` as UsageType;
 }
+
+/** Split a per-backend usage key into its kind + backend id (null for static usages). */
+export function parsePerBackendUsage(key: string): { kind: 'image' | 'tts' | 'stt'; backend: string } | null {
+  if (key.startsWith('imageGen_')) return { kind: 'image', backend: key.slice('imageGen_'.length) };
+  if (key.startsWith('ttsGen_')) return { kind: 'tts', backend: key.slice('ttsGen_'.length) };
+  if (key.startsWith('sttGen_')) return { kind: 'stt', backend: key.slice('sttGen_'.length) };
+  return null;
+}

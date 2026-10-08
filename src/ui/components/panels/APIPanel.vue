@@ -24,6 +24,7 @@ import { API_PROVIDER_PRESETS, requestTimeoutMinutesToMs, REQUEST_TIMEOUT_MIN_MI
 import { AI_SETTINGS_STORAGE_KEY } from '@/engine/ai/ai-service';
 import type { APIConfig, APIProviderType, UsageType, APICategory } from '@/engine/ai/types';
 import { providerCatalog } from '@/engine/providers';
+import { parsePerBackendUsage, perBackendUsageType } from '@/engine/providers/usage-keys';
 
 const { t } = useI18n();
 const apiStore = useAPIManagementStore();
@@ -81,19 +82,11 @@ const STATIC_USAGE_CATEGORIES: Record<Exclude<UsageType, PerBackendUsage>, Assig
 const USAGE_TYPE_CATEGORIES: Record<UsageType, AssignCategory> = {
   ...STATIC_USAGE_CATEGORIES,
   ...Object.fromEntries([
-    ...providerCatalog.byCategory('image').map((d) => [`imageGen_${d.id}`, 'image'] as const),
-    ...providerCatalog.byCategory('tts').map((d) => [`ttsGen_${d.id}`, 'audio'] as const),
-    ...providerCatalog.byCategory('stt').map((d) => [`sttGen_${d.id}`, 'audio'] as const),
+    ...providerCatalog.byCategory('image').map((d) => [perBackendUsageType('image', d.id), 'image'] as const),
+    ...providerCatalog.byCategory('tts').map((d) => [perBackendUsageType('tts', d.id), 'audio'] as const),
+    ...providerCatalog.byCategory('stt').map((d) => [perBackendUsageType('stt', d.id), 'audio'] as const),
   ]),
 } as Record<UsageType, AssignCategory>;
-
-/** Split a per-backend usage key into its kind + backend id (null for static usages). */
-function parsePerBackendUsage(key: string): { kind: 'image' | 'tts' | 'stt'; backend: string } | null {
-  if (key.startsWith('imageGen_')) return { kind: 'image', backend: key.slice('imageGen_'.length) };
-  if (key.startsWith('ttsGen_')) return { kind: 'tts', backend: key.slice('ttsGen_'.length) };
-  if (key.startsWith('sttGen_')) return { kind: 'stt', backend: key.slice('sttGen_'.length) };
-  return null;
-}
 
 function getUsageTypeMeta(key: UsageType): UsageTypeMeta {
   const perBackend = parsePerBackendUsage(key);

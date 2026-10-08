@@ -110,7 +110,7 @@ describe('Canon Capture eval — gated fixtures', () => {
   });
 });
 
-describe('Canon Capture eval — probabilistic fixtures (recorded, not gated)', () => {
+describe('Canon Capture eval — probabilistic fixtures (smoke only: the stage must not crash, no verdict is asserted)', () => {
   it.each(PROBABILISTIC_FIXTURES.map((f) => [f.id, f] as const))('%s', async (_id, f) => {
     // Only assert that the engine did not CRASH and produced a defensible shape; the
     // semantic verdict is beyond what any rule can decide.
@@ -123,7 +123,7 @@ describe('Canon Capture eval — probabilistic fixtures (recorded, not gated)', 
 // ─── Aggregate metrics (design §12) ─────────────────────────
 
 describe('Canon Capture eval — aggregate metrics', () => {
-  it('the fixture set is large enough to mean something', () => {
+  it('the fixture set has at least 55 cases (design §11.5 asks for 100; not yet topped up)', () => {
     // Design §11.5 asks for at least 100 cases across the listed categories. Fewer than
     // that and a "95% recall" number is noise.
     expect(CAPTURE_FIXTURES.length).toBeGreaterThanOrEqual(55);
@@ -207,7 +207,7 @@ describe('Canon Capture eval — aggregate metrics', () => {
     }
   });
 
-  it('reports the contradiction baseline instead of pretending it is solved', async () => {
+  it('the contradiction fixtures exist and run (the accepted count is neither printed nor gated)', async () => {
     // These pass every deterministic gate and are still semantically wrong. Recording
     // the count keeps the residual risk visible rather than buried in a design doc.
     let accepted = 0;
