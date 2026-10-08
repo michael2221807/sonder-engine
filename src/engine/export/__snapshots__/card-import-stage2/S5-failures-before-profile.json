@@ -1,0 +1,572 @@
+{
+  "activateFails": {
+    "result": {
+      "ok": false,
+      "code": "write-failed",
+      "detail": "activateSave boom"
+    },
+    "log": [
+      {
+        "call": "customPresetStore.appendPreservingIds",
+        "args": [
+          "tianming",
+          {
+            "出身": [
+              {
+                "id": "p1",
+                "name": "预设一"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "call": "worldBookStorage.importWorldBooks",
+        "args": [
+          "profile_1791417600000",
+          {
+            "version": 1,
+            "exportedAt": "x",
+            "books": [
+              {
+                "id": "wb1",
+                "name": "设定书",
+                "ownership": "profile",
+                "origin": "user-authored",
+                "builtin": false,
+                "entries": [
+                  {
+                    "id": "e1",
+                    "keys": [
+                      "k"
+                    ],
+                    "content": "c",
+                    "matchSource": "broad"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "call": "imageAssetCache.importEntries",
+        "args": [
+          [
+            {
+              "id": "card_lock::img_a",
+              "metadata": {
+                "id": "card_lock::img_a",
+                "taskId": "t",
+                "storageKey": "k",
+                "mimeType": "image/png",
+                "width": 1,
+                "height": 1,
+                "sizeBytes": 3,
+                "backend": "comfyui",
+                "createdAt": 1
+              },
+              "base64": "AAAA",
+              "mimeType": "image/png"
+            },
+            {
+              "id": "card_lock::img_b",
+              "metadata": {
+                "id": "card_lock::img_b",
+                "taskId": "t",
+                "storageKey": "k",
+                "mimeType": "image/png",
+                "width": 1,
+                "height": 1,
+                "sizeBytes": 3,
+                "backend": "comfyui",
+                "createdAt": 2
+              },
+              "base64": "BBBB",
+              "mimeType": "image/png"
+            }
+          ]
+        ]
+      },
+      {
+        "call": "configStore.exportAll",
+        "args": []
+      },
+      {
+        "call": "promptStorage.exportAll",
+        "args": []
+      },
+      {
+        "call": "configStore.importAll",
+        "args": [
+          [
+            {
+              "domainId": "d",
+              "packId": "tianming",
+              "patches": {
+                "a": 1
+              },
+              "version": 1,
+              "updatedAt": 5
+            }
+          ]
+        ]
+      },
+      {
+        "call": "promptStorage.importAll",
+        "args": [
+          [
+            {
+              "key": "k1",
+              "value": {
+                "v": 1
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "call": "activateSave",
+        "args": [
+          {
+            "角色": {
+              "基础信息": {
+                "姓名": "卡角色",
+                "头像": "card_lock::img_a"
+              },
+              "属性": {
+                "体质": 7,
+                "法力": 5
+              }
+            },
+            "系统": {
+              "nsfwMode": false,
+              "扩展": {
+                "engramMemory": {
+                  "events": [],
+                  "entities": [
+                    {
+                      "name": "卡角色",
+                      "type": "player",
+                      "summary": "主角",
+                      "attributes": {},
+                      "firstSeen": 0,
+                      "lastSeen": 0,
+                      "mentionCount": 1,
+                      "is_embedded": false,
+                      "source": "card-import"
+                    }
+                  ],
+                  "relations": [],
+                  "v2Edges": [
+                    {
+                      "id": "a|b|f",
+                      "sourceEntity": "卡角色",
+                      "targetEntity": "林月",
+                      "fact": "卡角色与林月是兄妹关系",
+                      "episodes": [],
+                      "is_embedded": false,
+                      "createdAtRound": 0,
+                      "lastSeenRound": 0,
+                      "core": true,
+                      "source": "card-import"
+                    }
+                  ],
+                  "meta": {
+                    "lastUpdated": 0,
+                    "eventCount": 0,
+                    "embeddedEventCount": 0,
+                    "embeddedEntityCount": 0,
+                    "schemaVersion": 5,
+                    "v2PendingReview": null
+                  }
+                }
+              }
+            }
+          },
+          "tianming",
+          "profile_1791417600000",
+          "auto"
+        ],
+        "ls": {
+          "aga_cot_settings": "{\"enabled\":true}",
+          "aga_heartbeat_settings": "{\"enabled\":false}",
+          "aga_nsfw_settings": "{\"nsfwMode\":true}",
+          "aga_prompt_tianming_storyCore": "卡作者的改动",
+          "aga_user_settings": "{\"theme\":\"dark\"}"
+        }
+      },
+      {
+        "call": "configStore.replaceAll",
+        "args": [
+          [
+            {
+              "domainId": "old",
+              "packId": "tianming",
+              "patches": {},
+              "version": 1,
+              "updatedAt": 1
+            }
+          ]
+        ]
+      },
+      {
+        "call": "promptStorage.replaceAll",
+        "args": [
+          [
+            {
+              "key": "old",
+              "value": 1
+            }
+          ]
+        ]
+      }
+    ],
+    "lsDiff": {
+      "added": {},
+      "removed": [],
+      "changed": {}
+    }
+  },
+  "worldBooksFail": {
+    "result": {
+      "ok": false,
+      "code": "write-failed",
+      "detail": "importWorldBooks boom"
+    },
+    "log": [
+      {
+        "call": "worldBookStorage.importWorldBooks",
+        "args": [
+          "profile_1791417600000",
+          {
+            "version": 1,
+            "exportedAt": "x",
+            "books": [
+              {
+                "id": "wb1",
+                "name": "设定书",
+                "ownership": "profile",
+                "origin": "user-authored",
+                "builtin": false,
+                "entries": [
+                  {
+                    "id": "e1",
+                    "keys": [
+                      "k"
+                    ],
+                    "content": "c",
+                    "matchSource": "broad"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "createProfileFails": {
+    "result": {
+      "ok": false,
+      "code": "write-failed",
+      "detail": "createProfile boom"
+    },
+    "log": [
+      {
+        "call": "configStore.exportAll",
+        "args": []
+      },
+      {
+        "call": "promptStorage.exportAll",
+        "args": []
+      },
+      {
+        "call": "activateSave",
+        "args": [
+          {
+            "角色": {
+              "基础信息": {
+                "姓名": "卡角色",
+                "头像": "img_a"
+              },
+              "属性": {
+                "体质": 7,
+                "法力": 5
+              }
+            },
+            "系统": {
+              "nsfwMode": false,
+              "扩展": {
+                "engramMemory": {
+                  "events": [],
+                  "entities": [],
+                  "relations": [],
+                  "v2Edges": [],
+                  "meta": {
+                    "lastUpdated": 0,
+                    "eventCount": 0,
+                    "embeddedEventCount": 0,
+                    "embeddedEntityCount": 0,
+                    "schemaVersion": 5,
+                    "v2PendingReview": null
+                  }
+                }
+              }
+            }
+          },
+          "tianming",
+          "profile_1791417600000",
+          "auto"
+        ],
+        "ls": {
+          "aga_user_settings": "{\"theme\":\"light\"}"
+        }
+      },
+      {
+        "call": "hasEmbedder",
+        "args": []
+      },
+      {
+        "call": "engramManager.vectorizePending",
+        "args": [
+          {
+            "get": "<fn>",
+            "set": "<fn>",
+            "loadTree": "<fn>",
+            "toSnapshot": "<fn>"
+          }
+        ]
+      },
+      {
+        "call": "runOpening",
+        "args": [
+          {
+            "nsfwMode": false,
+            "onProgress": "__undefined__",
+            "abortSignal": "__undefined__",
+            "firstRoundSetup": "__undefined__"
+          }
+        ]
+      },
+      {
+        "call": "profileManager.createProfile",
+        "args": [
+          {
+            "profileId": "profile_1791417600000",
+            "createdAt": "2026-10-08T00:00:00.000Z",
+            "packId": "tianming",
+            "characterName": "卡角色",
+            "slots": {},
+            "activeSlotId": "auto"
+          }
+        ]
+      },
+      {
+        "call": "configStore.replaceAll",
+        "args": [
+          [
+            {
+              "domainId": "old",
+              "packId": "tianming",
+              "patches": {},
+              "version": 1,
+              "updatedAt": 1
+            }
+          ]
+        ]
+      },
+      {
+        "call": "promptStorage.replaceAll",
+        "args": [
+          [
+            {
+              "key": "old",
+              "value": 1
+            }
+          ]
+        ]
+      }
+    ]
+  },
+  "globalRestoreFails": {
+    "result": {
+      "ok": false,
+      "code": "write-failed",
+      "detail": "saveGame boom"
+    },
+    "log": [
+      {
+        "call": "configStore.exportAll",
+        "args": []
+      },
+      {
+        "call": "configStore.importAll",
+        "args": [
+          [
+            {
+              "domainId": "d",
+              "packId": "tianming",
+              "patches": {
+                "a": 1
+              },
+              "version": 1,
+              "updatedAt": 5
+            }
+          ]
+        ]
+      },
+      {
+        "call": "activateSave",
+        "args": [
+          {
+            "角色": {
+              "基础信息": {
+                "姓名": "卡角色",
+                "头像": "img_a"
+              },
+              "属性": {
+                "体质": 7,
+                "法力": 5
+              }
+            },
+            "系统": {
+              "nsfwMode": false,
+              "扩展": {
+                "engramMemory": {
+                  "events": [],
+                  "entities": [],
+                  "relations": [],
+                  "v2Edges": [],
+                  "meta": {
+                    "lastUpdated": 0,
+                    "eventCount": 0,
+                    "embeddedEventCount": 0,
+                    "embeddedEntityCount": 0,
+                    "schemaVersion": 5,
+                    "v2PendingReview": null
+                  }
+                }
+              }
+            }
+          },
+          "tianming",
+          "profile_1791417600000",
+          "auto"
+        ],
+        "ls": {
+          "aga_user_settings": "{\"theme\":\"light\"}"
+        }
+      },
+      {
+        "call": "hasEmbedder",
+        "args": []
+      },
+      {
+        "call": "engramManager.vectorizePending",
+        "args": [
+          {
+            "get": "<fn>",
+            "set": "<fn>",
+            "loadTree": "<fn>",
+            "toSnapshot": "<fn>"
+          }
+        ]
+      },
+      {
+        "call": "runOpening",
+        "args": [
+          {
+            "nsfwMode": false,
+            "onProgress": "__undefined__",
+            "abortSignal": "__undefined__",
+            "firstRoundSetup": "__undefined__"
+          }
+        ]
+      },
+      {
+        "call": "profileManager.createProfile",
+        "args": [
+          {
+            "profileId": "profile_1791417600000",
+            "createdAt": "2026-10-08T00:00:00.000Z",
+            "packId": "tianming",
+            "characterName": "卡角色",
+            "slots": {},
+            "activeSlotId": "auto"
+          }
+        ]
+      },
+      {
+        "call": "saveManager.saveGame",
+        "args": [
+          "profile_1791417600000",
+          "auto",
+          {
+            "角色": {
+              "基础信息": {
+                "姓名": "卡角色",
+                "头像": "img_a"
+              },
+              "属性": {
+                "体质": 7,
+                "法力": 5
+              }
+            },
+            "系统": {
+              "nsfwMode": false,
+              "扩展": {
+                "engramMemory": {
+                  "events": [],
+                  "entities": [],
+                  "relations": [],
+                  "v2Edges": [],
+                  "meta": {
+                    "lastUpdated": 0,
+                    "eventCount": 0,
+                    "embeddedEventCount": 0,
+                    "embeddedEntityCount": 0,
+                    "schemaVersion": 5,
+                    "v2PendingReview": null
+                  }
+                }
+              }
+            }
+          },
+          {
+            "characterName": "卡角色",
+            "packId": "tianming",
+            "packVersion": "1.0.0"
+          }
+        ]
+      },
+      {
+        "call": "saveManager.deleteGame",
+        "args": [
+          "profile_1791417600000",
+          "auto"
+        ]
+      },
+      {
+        "call": "profileManager.deleteProfile",
+        "args": [
+          "profile_1791417600000"
+        ]
+      },
+      {
+        "call": "configStore.replaceAll",
+        "args": [
+          [
+            {
+              "domainId": "old",
+              "packId": "tianming",
+              "patches": {},
+              "version": 1,
+              "updatedAt": 1
+            }
+          ]
+        ]
+      }
+    ]
+  }
+}

@@ -10,3 +10,5 @@ src/engine/sync/__snapshots__/**/*.json text eol=lf
 src/engine/memory/__snapshots__/**/*.json text eol=lf
 src/engine/core/__snapshots__/**/*.json text eol=lf
 src/bootstrap/__snapshots__/**/*.json text eol=lf
+# R6 step 10: card import Stage 2 lock.
+src/engine/export/__snapshots__/**/*.json text eol=lf
