@@ -1,0 +1,206 @@
+<div class="character-panel">
+  <!-- ─── Hero Header ─── -->
+  <div class="hero-header">
+    <tooltip-stub data-props="{&quot;text&quot;:&quot;查看主角图库&quot;,&quot;position&quot;:&quot;top&quot;,&quot;delay&quot;:800,&quot;interactive&quot;:true,&quot;fixed&quot;:false,&quot;disabled&quot;:false}"><button class="hero-avatar">
+        <image-display-stub class="hero-avatar-img" data-props="{&quot;assetId&quot;:&quot;pimg_1&quot;,&quot;fallbackLetter&quot;:&quot;沈&quot;,&quot;size&quot;:&quot;fill&quot;,&quot;alt&quot;:&quot;__undefined__&quot;}"></image-display-stub>
+      </button></tooltip-stub>
+    <div class="hero-info">
+      <div class="hero-name-row">
+        <h2 class="hero-name">沈青</h2><span class="occupation-badge">账房先生</span>
+      </div>
+      <div class="hero-sub"><span class="hero-meta-item">女</span><span class="hero-meta-item">22 岁</span><span class="hero-meta-item location-item">📍 酒肆</span></div>
+      <!--
+            2026-04-11 fix：特质是 string（单个），不是 string[]。
+            用一个 chip 显示；附带天赋档次作为第二个 chip（若存在）。
+          -->
+      <div class="trait-strip"><span class="trait-chip">坚韧</span><span class="trait-chip trait-chip--tier">上品</span></div>
+    </div>
+    <tooltip-stub data-props="{&quot;text&quot;:&quot;编辑基础信息&quot;,&quot;position&quot;:&quot;top&quot;,&quot;delay&quot;:800,&quot;interactive&quot;:true,&quot;fixed&quot;:false,&quot;disabled&quot;:false}"><button class="btn-edit-all"><svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"></path>
+        </svg></button></tooltip-stub>
+  </div><!-- ─── Tab bar ─── -->
+  <div class="tab-bar" role="tablist"><button role="tab" class="tab-btn" aria-selected="false">基础
+      <!--v-if-->
+    </button><button role="tab" class="tab-btn tab-btn--active" aria-selected="true">属性
+      <!--v-if-->
+    </button><button role="tab" class="tab-btn" aria-selected="false">关系 <span class="tab-count">2</span></button><button role="tab" class="tab-btn" aria-selected="false">主角生图
+      <!--v-if-->
+    </button></div><!-- ─── Tab: 基础 ─── -->
+  <!-- ─── Tab: 属性 ─── -->
+  <!--
+          2026-04-11 fix：新增先天六维展示（创角基线，1-10 范围，只读）。
+          与下方后天六维（运行时值，1-20 范围）对应同一套字段名，但来自不同状态树路径。
+          先天六维 = 玩家分配的基线；后天六维 = 基线 + 出身修正 + 天赋修正。
+        -->
+  <section class="info-card" aria-label="先天六维">
+    <h3 class="card-title">先天六维 <span class="card-subtitle">基线 · 1-10</span></h3>
+    <div class="attribute-list attribute-list--compact">
+      <div class="attribute-item attribute-item--stepper">
+        <div class="attribute-header"><span class="attribute-name">体质</span>
+          <div class="stepper-group"><button class="stepper-btn">−</button><span class="attribute-numbers">4</span><button class="stepper-btn">+</button></div>
+        </div>
+        <div class="attribute-bar">
+          <div class="attribute-bar__fill" style="width: 40%; background: var(--color-text-secondary, #8888a0);"></div>
+        </div>
+      </div>
+      <div class="attribute-item attribute-item--stepper">
+        <div class="attribute-header"><span class="attribute-name">悟性</span>
+          <div class="stepper-group"><button class="stepper-btn">−</button><span class="attribute-numbers">6</span><button class="stepper-btn">+</button></div>
+        </div>
+        <div class="attribute-bar">
+          <div class="attribute-bar__fill" style="width: 60%; background: var(--color-text-secondary, #8888a0);"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="info-card" aria-label="后天六维">
+    <h3 class="card-title">后天六维 <span class="card-subtitle">当前 · 1-20</span>
+      <tooltip-stub data-props="{&quot;text&quot;:&quot;编辑属性&quot;,&quot;position&quot;:&quot;top&quot;,&quot;delay&quot;:800,&quot;interactive&quot;:true,&quot;fixed&quot;:false,&quot;disabled&quot;:false}"><button class="btn-icon"><svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"></path>
+          </svg></button></tooltip-stub>
+    </h3>
+    <div class="attribute-list">
+      <div class="attribute-item attribute-item--stepper">
+        <div class="attribute-header"><span class="attribute-name">体质</span>
+          <div class="stepper-group"><button class="stepper-btn">−</button><span class="attribute-numbers">5<!--v-if--></span><button class="stepper-btn">+</button></div>
+        </div>
+        <div class="attribute-bar">
+          <div class="attribute-bar__fill" style="width: 100%; background: var(--color-success);"></div>
+        </div>
+      </div>
+      <div class="attribute-item attribute-item--stepper">
+        <div class="attribute-header"><span class="attribute-name">悟性</span>
+          <div class="stepper-group"><button class="stepper-btn">−</button><span class="attribute-numbers">7<!--v-if--></span><button class="stepper-btn">+</button></div>
+        </div>
+        <div class="attribute-bar">
+          <div class="attribute-bar__fill" style="width: 100%; background: var(--color-success);"></div>
+        </div>
+      </div>
+    </div>
+  </section><!-- Story 2: Vitals section -->
+  <section class="info-card" aria-label="可变属性">
+    <h3 class="card-title">可变属性 <tooltip-stub data-props="{&quot;text&quot;:&quot;高级编辑&quot;,&quot;position&quot;:&quot;top&quot;,&quot;delay&quot;:800,&quot;interactive&quot;:true,&quot;fixed&quot;:false,&quot;disabled&quot;:false}"><button class="btn-icon"><svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"></path>
+          </svg></button></tooltip-stub>
+    </h3>
+    <div class="vitals-grid">
+      <div class="vital-item"><span class="vital-label">体力</span><span class="vital-value">80 / 100</span></div>
+      <div class="vital-item"><span class="vital-label">精力</span><span class="vital-value">60 / 100</span></div>
+      <div class="vital-item"><span class="vital-label">声望</span><span class="vital-value">12</span></div>
+    </div>
+  </section><!-- Player Regenerate-Same modal -->
+  <!--v-if-->
+  <!-- ─── SchemaForm Modal ─── -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub><!-- Story 2: Remove talent confirmation -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub><!-- Story 2: Body edit modal -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub><!-- Story 2: Origin edit modal -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub><!-- Story 2: Trait edit modal -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub><!-- Story 2: Talent edit/add modal -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub><!-- Story 2: Vitals edit modal -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub>
+</div>

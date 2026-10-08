@@ -1,0 +1,81 @@
+{
+  "calls": [],
+  "emits": [
+    [
+      "ui:toast",
+      {
+        "type": "success",
+        "i18nKey": "character.toast.fieldUpdated",
+        "message": "character.toast.fieldUpdated",
+        "i18nParams": "__undefined__",
+        "duration": 2000
+      }
+    ],
+    [
+      "ui:toast",
+      {
+        "type": "success",
+        "i18nKey": "character.toast.fieldUpdated",
+        "message": "character.toast.fieldUpdated",
+        "i18nParams": "__undefined__",
+        "duration": 2000
+      }
+    ],
+    [
+      "ui:toast",
+      {
+        "type": "success",
+        "i18nKey": "character.toast.fieldUpdated",
+        "message": "character.toast.fieldUpdated",
+        "i18nParams": "__undefined__",
+        "duration": 2000
+      }
+    ]
+  ],
+  "writes": [
+    [
+      "角色.基础信息.性别",
+      "其他"
+    ],
+    [
+      "角色.可变属性.地位.名称",
+      "掌柜"
+    ],
+    [
+      "角色.身体",
+      {
+        "身高": 165,
+        "体重": 50,
+        "三围": {
+          "胸围": 86,
+          "腰围": 60,
+          "臀围": 88
+        },
+        "胸部描述": "饱满",
+        "私处描述": "粉嫩",
+        "生殖器描述": "",
+        "身体部位": [
+          {
+            "部位名称": "嘴",
+            "敏感度": 40,
+            "开发度": 10,
+            "特征描述": "柔软",
+            "特殊印记": ""
+          }
+        ],
+        "子宫": {
+          "状态": "正常",
+          "宫口状态": "闭合",
+          "内射记录": []
+        },
+        "敏感点": [
+          "耳后"
+        ],
+        "开发度": {
+          "嘴": 10
+        },
+        "纹身与印记": []
+      }
+    ]
+  ]
+}

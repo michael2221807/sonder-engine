@@ -1,0 +1,95 @@
+{
+  "calls": [
+    [
+      "ai.generate",
+      [
+        {
+          "messages": [
+            {
+              "role": "system",
+              "content": "<str len=750 sha1=13054410af0a head=你是角色视觉锚点提取器。\n你的任务是从角色资料中提取可长期复用的稳定外观锚点，用>"
+            },
+            {
+              "role": "assistant",
+              "content": "【本次任务】\n请根据以下角色资料提取角色视觉锚点。\n{\n  \"姓名\": \"沈青\",\n  \"性别\": \"女\",\n  \"年龄\": 22,\n  \"身份\": \"账房先生\",\n  \"描述\": \"掌管账目\",\n  \"特质\": \"坚韧\"\n}"
+            },
+            {
+              "role": "user",
+              "content": "开始任务"
+            }
+          ],
+          "stream": false,
+          "usageType": "imageCharacterTokenizer"
+        }
+      ]
+    ]
+  ],
+  "emits": [
+    [
+      "engine:request-save",
+      "__undefined__"
+    ],
+    [
+      "ui:toast",
+      {
+        "type": "success",
+        "message": "锚点提取完成",
+        "duration": 2000
+      }
+    ],
+    [
+      "engine:request-save",
+      "__undefined__"
+    ],
+    [
+      "engine:request-save",
+      "__undefined__"
+    ]
+  ],
+  "writes": [
+    [
+      "系统.扩展.image.characterAnchors",
+      [
+        {
+          "id": "anchor_player_1791417600000",
+          "subjectId": "__player__",
+          "npcName": "__player__",
+          "name": "沈青 锚点",
+          "enabled": true,
+          "appendByDefault": true,
+          "autoInjectToScene": false,
+          "positivePrompt": "1girl, long hair",
+          "negativePrompt": "bad hands",
+          "structuredFeatures": "__undefined__",
+          "source": "ai_extract",
+          "createdAt": 1791417600000,
+          "updatedAt": 1791417600000
+        }
+      ]
+    ],
+    [
+      "系统.扩展.image.characterAnchors",
+      [
+        {
+          "id": "anchor_player_1791417600000",
+          "subjectId": "__player__",
+          "npcName": "__player__",
+          "name": "沈青 锚点",
+          "enabled": false,
+          "appendByDefault": true,
+          "autoInjectToScene": true,
+          "positivePrompt": "1girl, short hair",
+          "negativePrompt": "bad hands",
+          "structuredFeatures": "__undefined__",
+          "source": "ai_extract",
+          "createdAt": 1791417600000,
+          "updatedAt": 1791417600000
+        }
+      ]
+    ],
+    [
+      "系统.扩展.image.characterAnchors",
+      []
+    ]
+  ]
+}

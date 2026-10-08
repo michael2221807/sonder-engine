@@ -1,0 +1,301 @@
+{
+  "calls": [
+    [
+      "setNpcSecretPart",
+      [
+        "__player__",
+        "vagina",
+        "pimg_1"
+      ]
+    ],
+    [
+      "clearNpcSecretPart",
+      [
+        "__player__",
+        "breast"
+      ]
+    ],
+    [
+      "cache.retrieve",
+      [
+        "pimg_1"
+      ]
+    ],
+    [
+      "cache.retrieve",
+      [
+        "pimg_1"
+      ]
+    ],
+    [
+      "cache.store",
+      [
+        {
+          "id": "ref_copy_1791417600000_4fzyo8",
+          "taskId": "",
+          "storageKey": "ref_copy_1791417600000_4fzyo8",
+          "mimeType": "image/png",
+          "width": 832,
+          "height": 1216,
+          "sizeBytes": 12,
+          "backend": "novelai",
+          "createdAt": 1791417600000,
+          "origin": "reference"
+        },
+        {
+          "__blob": 10,
+          "type": "image/png"
+        }
+      ]
+    ],
+    [
+      "state.addReferenceEntry",
+      [
+        {
+          "id": "ref_1791417600000_4fzyo8",
+          "assetId": "ref_copy_1791417600000_4fzyo8",
+          "name": "主角_pimg_1",
+          "mimeType": "image/png",
+          "width": 832,
+          "height": 1216,
+          "sizeBytes": 12,
+          "source": "player",
+          "createdAt": 1791417600000
+        }
+      ]
+    ],
+    [
+      "cache.retrieve",
+      [
+        "pimg_2"
+      ]
+    ],
+    [
+      "cache.store",
+      [
+        {
+          "id": "ref_copy_1791417600000_4fzyo8",
+          "taskId": "",
+          "storageKey": "ref_copy_1791417600000_4fzyo8",
+          "mimeType": "image/png",
+          "width": 832,
+          "height": 1216,
+          "sizeBytes": 12,
+          "backend": "novelai",
+          "createdAt": 1791417600000,
+          "origin": "reference"
+        },
+        {
+          "__blob": 10,
+          "type": "image/png"
+        }
+      ]
+    ],
+    [
+      "state.addReferenceEntry",
+      [
+        {
+          "id": "ref_1791417600000_4fzyo8",
+          "assetId": "ref_copy_1791417600000_4fzyo8",
+          "name": "主角_pimg_2",
+          "mimeType": "image/png",
+          "width": 832,
+          "height": 1216,
+          "sizeBytes": 12,
+          "source": "player",
+          "createdAt": 1791417600000
+        }
+      ]
+    ],
+    [
+      "deleteNpcImage",
+      [
+        "__player__",
+        "pimg_1"
+      ]
+    ]
+  ],
+  "emits": [
+    [
+      "engine:request-save",
+      "__undefined__"
+    ],
+    [
+      "engine:request-save",
+      "__undefined__"
+    ],
+    [
+      "engine:request-save",
+      "__undefined__"
+    ],
+    [
+      "ui:toast",
+      {
+        "type": "success",
+        "message": "已设为私密图片（小穴）",
+        "duration": 1500
+      }
+    ],
+    [
+      "ui:toast",
+      {
+        "type": "info",
+        "message": "请前往图像工作台使用图片提炼功能",
+        "duration": 3000
+      }
+    ],
+    [
+      "ui:toast",
+      {
+        "type": "success",
+        "message": "已保存为参考素材（独立副本）",
+        "duration": 2000
+      }
+    ],
+    [
+      "ui:toast",
+      {
+        "type": "success",
+        "message": "已保存为参考素材（独立副本）",
+        "duration": 2000
+      }
+    ]
+  ],
+  "writes": [
+    [
+      "角色.图片档案",
+      {
+        "生图历史": [
+          {
+            "id": "pimg_1",
+            "status": "complete",
+            "createdAt": 1790000002000,
+            "composition": "portrait",
+            "positivePrompt": "player portrait",
+            "negativePrompt": "lowres",
+            "width": 832,
+            "height": 1216,
+            "backend": "novelai",
+            "model": "nai-v4"
+          },
+          {
+            "id": "pimg_2",
+            "status": "failed",
+            "createdAt": 1790000003000,
+            "composition": "half-body",
+            "width": 832,
+            "height": 1216,
+            "backend": "novelai"
+          },
+          {
+            "id": "sec_breast",
+            "status": "complete",
+            "createdAt": 1790000004000,
+            "composition": "secret_part",
+            "positivePrompt": "close-up",
+            "width": 1024,
+            "height": 1024,
+            "backend": "novelai"
+          }
+        ],
+        "已选头像图片ID": "",
+        "已选立绘图片ID": "",
+        "香闺秘档": {
+          "胸部": {
+            "id": "sec_breast"
+          }
+        }
+      }
+    ],
+    [
+      "角色.图片档案",
+      {
+        "生图历史": [
+          {
+            "id": "pimg_1",
+            "status": "complete",
+            "createdAt": 1790000002000,
+            "composition": "portrait",
+            "positivePrompt": "player portrait",
+            "negativePrompt": "lowres",
+            "width": 832,
+            "height": 1216,
+            "backend": "novelai",
+            "model": "nai-v4"
+          },
+          {
+            "id": "pimg_2",
+            "status": "failed",
+            "createdAt": 1790000003000,
+            "composition": "half-body",
+            "width": 832,
+            "height": 1216,
+            "backend": "novelai"
+          },
+          {
+            "id": "sec_breast",
+            "status": "complete",
+            "createdAt": 1790000004000,
+            "composition": "secret_part",
+            "positivePrompt": "close-up",
+            "width": 1024,
+            "height": 1024,
+            "backend": "novelai"
+          }
+        ],
+        "已选头像图片ID": "pimg_1",
+        "已选立绘图片ID": "",
+        "香闺秘档": {
+          "胸部": {
+            "id": "sec_breast"
+          }
+        }
+      }
+    ],
+    [
+      "角色.图片档案",
+      {
+        "生图历史": [
+          {
+            "id": "pimg_1",
+            "status": "complete",
+            "createdAt": 1790000002000,
+            "composition": "portrait",
+            "positivePrompt": "player portrait",
+            "negativePrompt": "lowres",
+            "width": 832,
+            "height": 1216,
+            "backend": "novelai",
+            "model": "nai-v4"
+          },
+          {
+            "id": "pimg_2",
+            "status": "failed",
+            "createdAt": 1790000003000,
+            "composition": "half-body",
+            "width": 832,
+            "height": 1216,
+            "backend": "novelai"
+          },
+          {
+            "id": "sec_breast",
+            "status": "complete",
+            "createdAt": 1790000004000,
+            "composition": "secret_part",
+            "positivePrompt": "close-up",
+            "width": 1024,
+            "height": 1024,
+            "backend": "novelai"
+          }
+        ],
+        "已选头像图片ID": "pimg_1",
+        "已选立绘图片ID": "pimg_1",
+        "香闺秘档": {
+          "胸部": {
+            "id": "sec_breast"
+          }
+        }
+      }
+    ]
+  ]
+}

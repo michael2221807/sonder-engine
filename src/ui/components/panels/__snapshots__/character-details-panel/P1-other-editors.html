@@ -1,0 +1,217 @@
+<div class="character-panel">
+  <!-- ─── Hero Header ─── -->
+  <div class="hero-header">
+    <tooltip-stub data-props="{&quot;text&quot;:&quot;查看主角图库&quot;,&quot;position&quot;:&quot;top&quot;,&quot;delay&quot;:800,&quot;interactive&quot;:true,&quot;fixed&quot;:false,&quot;disabled&quot;:false}"><button class="hero-avatar">
+        <image-display-stub class="hero-avatar-img" data-props="{&quot;assetId&quot;:&quot;pimg_1&quot;,&quot;fallbackLetter&quot;:&quot;沈&quot;,&quot;size&quot;:&quot;fill&quot;,&quot;alt&quot;:&quot;__undefined__&quot;}"></image-display-stub>
+      </button></tooltip-stub>
+    <div class="hero-info">
+      <div class="hero-name-row">
+        <h2 class="hero-name">沈青</h2><span class="occupation-badge">掌柜</span>
+      </div>
+      <div class="hero-sub"><span class="hero-meta-item">其他</span><span class="hero-meta-item">22 岁</span><span class="hero-meta-item location-item">📍 酒肆</span></div>
+      <!--
+            2026-04-11 fix：特质是 string（单个），不是 string[]。
+            用一个 chip 显示；附带天赋档次作为第二个 chip（若存在）。
+          -->
+      <div class="trait-strip"><span class="trait-chip">坚韧</span><span class="trait-chip trait-chip--tier">上品</span></div>
+    </div>
+    <tooltip-stub data-props="{&quot;text&quot;:&quot;编辑基础信息&quot;,&quot;position&quot;:&quot;top&quot;,&quot;delay&quot;:800,&quot;interactive&quot;:true,&quot;fixed&quot;:false,&quot;disabled&quot;:false}"><button class="btn-edit-all"><svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"></path>
+        </svg></button></tooltip-stub>
+  </div><!-- ─── Tab bar ─── -->
+  <div class="tab-bar" role="tablist"><button role="tab" class="tab-btn tab-btn--active" aria-selected="true">基础
+      <!--v-if-->
+    </button><button role="tab" class="tab-btn" aria-selected="false">属性
+      <!--v-if-->
+    </button><button role="tab" class="tab-btn" aria-selected="false">关系 <span class="tab-count">2</span></button><button role="tab" class="tab-btn" aria-selected="false">身体
+      <!--v-if-->
+    </button><button role="tab" class="tab-btn" aria-selected="false">主角生图
+      <!--v-if-->
+    </button></div><!-- ─── Tab: 基础 ─── -->
+  <section class="info-card" aria-label="基础信息">
+    <div class="info-grid">
+      <!-- Name -->
+      <div class="info-row"><span class="info-label">姓名</span><span class="info-value">沈青</span></div><!-- Age -->
+      <div class="info-row"><span class="info-label">年龄</span><span class="info-value info-value--mono">22</span></div><!-- Gender (Story 2: click → select dropdown) -->
+      <div class="info-row"><span class="info-label">性别</span><span class="info-value info-value--editable">其他 <span class="edit-icon">✏</span></span></div><!-- Occupation (Story 2: click → inline text input) -->
+      <div class="info-row"><span class="info-label">职业/地位</span><span class="info-value info-value--editable">掌柜 <span class="edit-icon">✏</span></span></div><!-- Location (Story 2: click-to-edit combo box with location suggestions) -->
+      <div class="info-row"><span class="info-label">当前位置</span><span class="info-value info-value--editable">酒肆 <span class="edit-icon">✏</span></span></div>
+    </div>
+  </section>
+  <!--
+          2026-04-11 fix：新增「身份」section，展示创角选定的只读身份元数据。
+          之前这些字段（出身 / 天赋档次 / 天赋列表 / 特质）没有在角色页面展示，
+          玩家只能在 GameVariablePanel 里看到原始 JSON。
+        -->
+  <section class="identity-tier">
+    <!-- Origin -->
+    <div class="id-tier-section"><button class="id-tier-header">
+        <div class="id-tier-title-group"><span class="id-tier-indicator id-tier-indicator--origin"></span><span class="id-tier-label">出身</span></div><svg class="id-tier-chevron id-tier-chevron--open" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+        </svg>
+      </button>
+      <transition-stub name="id-tier-expand" appear="false" persisted="false" css="true">
+        <div class="id-tier-body">
+          <div class="id-entry">
+            <div class="id-entry__title">商贾之家 <span class="edit-icon">✏</span></div>
+            <div class="id-entry__text">家境殷实</div>
+          </div>
+        </div>
+      </transition-stub>
+    </div><!-- Trait -->
+    <div class="id-tier-section"><button class="id-tier-header">
+        <div class="id-tier-title-group"><span class="id-tier-indicator id-tier-indicator--trait"></span><span class="id-tier-label">特质</span></div><svg class="id-tier-chevron id-tier-chevron--open" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+        </svg>
+      </button>
+      <transition-stub name="id-tier-expand" appear="false" persisted="false" css="true">
+        <div class="id-tier-body">
+          <div class="id-entry">
+            <div class="id-entry__title">坚韧 <span class="edit-icon">✏</span></div>
+            <div class="id-entry__text">不轻易放弃</div>
+          </div>
+        </div>
+      </transition-stub>
+    </div><!-- Talents (Story 2: editable with add/remove) -->
+    <div class="id-tier-section"><button class="id-tier-header">
+        <div class="id-tier-title-group"><span class="id-tier-indicator id-tier-indicator--talent"></span><span class="id-tier-label">天赋</span><span class="id-tier-count">2</span></div><svg class="id-tier-chevron id-tier-chevron--open" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+        </svg>
+      </button>
+      <transition-stub name="id-tier-expand" appear="false" persisted="false" css="true">
+        <div class="id-tier-body">
+          <div class="talent-entry">
+            <div class="id-entry">
+              <div class="id-entry__title talent-title-row"><span class="talent-name-group">过目不忘 <span class="edit-icon">✏</span></span><span class="edit-icon edit-icon--danger talent-delete">✕</span></div>
+              <div class="id-entry__text">读书极快</div>
+            </div>
+          </div>
+          <div class="talent-entry">
+            <div class="id-entry">
+              <div class="id-entry__title talent-title-row"><span class="talent-name-group">耳聪目明 <span class="edit-icon">✏</span></span><span class="edit-icon edit-icon--danger talent-delete">✕</span></div>
+              <!--v-if-->
+            </div>
+          </div><button class="btn-add-talent">+ 添加天赋</button>
+        </div>
+      </transition-stub>
+    </div>
+  </section>
+  <section class="info-card" aria-label="地位描述">
+    <h3 class="card-title">地位描述</h3>
+    <p class="description-text description-text--editable">掌管账目 <span class="edit-icon">✏</span></p>
+  </section><!-- Player Regenerate-Same modal -->
+  <!--v-if-->
+  <!-- ─── SchemaForm Modal ─── -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub><!-- Story 2: Remove talent confirmation -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub><!-- Story 2: Body edit modal -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub><!-- Story 2: Origin edit modal -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub><!-- Story 2: Trait edit modal -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub><!-- Story 2: Talent edit/add modal -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub><!-- Story 2: Vitals edit modal -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub>
+</div>

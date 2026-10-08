@@ -1,0 +1,32 @@
+{
+  "calls": [
+    [
+      "regenerateFromPrompts",
+      [
+        {
+          "subjectType": "character",
+          "targetCharacter": "__player__",
+          "composition": "portrait",
+          "positivePrompt": "player portrait, edited",
+          "negativePrompt": "lowres",
+          "width": 832,
+          "height": 1216,
+          "backend": "novelai",
+          "artStyle": "__undefined__",
+          "references": "__undefined__"
+        }
+      ]
+    ]
+  ],
+  "emits": [
+    [
+      "ui:toast",
+      {
+        "type": "error",
+        "message": "同款生成失败：quota exceeded",
+        "duration": 2500
+      }
+    ]
+  ],
+  "writes": []
+}

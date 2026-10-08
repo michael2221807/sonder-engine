@@ -1,0 +1,14 @@
+{
+  "calls": [],
+  "emits": [
+    [
+      "ui:toast",
+      {
+        "type": "error",
+        "message": "AI 服务未就绪",
+        "duration": 2500
+      }
+    ]
+  ],
+  "writes": []
+}

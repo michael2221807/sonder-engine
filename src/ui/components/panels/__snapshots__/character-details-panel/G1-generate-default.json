@@ -1,0 +1,37 @@
+{
+  "calls": [
+    [
+      "generateCharacterImage",
+      [
+        {
+          "characterName": "__player__",
+          "description": "掌管账目",
+          "backend": "novelai",
+          "composition": "portrait",
+          "customComposition": "__undefined__",
+          "artStyle": "二次元",
+          "extraPrompt": "雨天，窗外有灯",
+          "anchorPositive": "__undefined__",
+          "anchorNegative": "__undefined__",
+          "artistPrefix": "artist:foo, artist:bar, soft light, masterpiece",
+          "extraNegative": "blurry, lowres",
+          "npcDataJson": "{\n  \"姓名\": \"沈青\",\n  \"性别\": \"女\",\n  \"年龄\": 22,\n  \"身份\": \"账房先生\",\n  \"简介\": \"掌管账目\"\n}",
+          "preset": {
+            "id": "custom",
+            "name": "自定义",
+            "positivePrefix": "",
+            "positiveSuffix": "",
+            "negative": "",
+            "width": 768,
+            "height": 1024,
+            "source": "manual"
+          },
+          "references": "__undefined__",
+          "styleParamOverrides": "__undefined__"
+        }
+      ]
+    ]
+  ],
+  "emits": [],
+  "writes": []
+}

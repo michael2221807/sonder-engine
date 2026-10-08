@@ -1,0 +1,328 @@
+<div class="character-panel">
+  <!-- ─── Hero Header ─── -->
+  <div class="hero-header">
+    <tooltip-stub data-props="{&quot;text&quot;:&quot;查看主角图库&quot;,&quot;position&quot;:&quot;top&quot;,&quot;delay&quot;:800,&quot;interactive&quot;:true,&quot;fixed&quot;:false,&quot;disabled&quot;:false}"><button class="hero-avatar">
+        <image-display-stub class="hero-avatar-img" data-props="{&quot;assetId&quot;:&quot;pimg_1&quot;,&quot;fallbackLetter&quot;:&quot;沈&quot;,&quot;size&quot;:&quot;fill&quot;,&quot;alt&quot;:&quot;__undefined__&quot;}"></image-display-stub>
+      </button></tooltip-stub>
+    <div class="hero-info">
+      <div class="hero-name-row">
+        <h2 class="hero-name">沈青</h2><span class="occupation-badge">账房先生</span>
+      </div>
+      <div class="hero-sub"><span class="hero-meta-item">女</span><span class="hero-meta-item">22 岁</span><span class="hero-meta-item location-item">📍 酒肆</span></div>
+      <!--
+            2026-04-11 fix：特质是 string（单个），不是 string[]。
+            用一个 chip 显示；附带天赋档次作为第二个 chip（若存在）。
+          -->
+      <div class="trait-strip"><span class="trait-chip">坚韧</span><span class="trait-chip trait-chip--tier">上品</span></div>
+    </div>
+    <tooltip-stub data-props="{&quot;text&quot;:&quot;编辑基础信息&quot;,&quot;position&quot;:&quot;top&quot;,&quot;delay&quot;:800,&quot;interactive&quot;:true,&quot;fixed&quot;:false,&quot;disabled&quot;:false}"><button class="btn-edit-all"><svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"></path>
+        </svg></button></tooltip-stub>
+  </div><!-- ─── Tab bar ─── -->
+  <div class="tab-bar" role="tablist"><button role="tab" class="tab-btn" aria-selected="false">基础
+      <!--v-if-->
+    </button><button role="tab" class="tab-btn" aria-selected="false">属性
+      <!--v-if-->
+    </button><button role="tab" class="tab-btn" aria-selected="false">关系 <span class="tab-count">2</span></button><button role="tab" class="tab-btn tab-btn--active" aria-selected="true">主角生图
+      <!--v-if-->
+    </button></div><!-- ─── Tab: 基础 ─── -->
+  <!-- ─── Tab: 主角生图 ─── -->
+  <!-- Stats card -->
+  <div class="player-stats-bar">
+    <div class="player-stat-card"><span class="player-stat-val">3 张</span><span class="player-stat-lbl">影像总数</span></div>
+    <div class="player-stat-card"><span class="player-stat-val" style="color: var(--color-success, #22c55e);">已设置</span><span class="player-stat-lbl">头像绑定</span></div>
+    <div class="player-stat-card"><span class="player-stat-val" style="color: var(--color-text-muted, #888);">未设置</span><span class="player-stat-lbl">立绘绑定</span></div>
+    <div class="player-stat-card"><span class="player-stat-val">未建立</span><span class="player-stat-lbl">角色锚点</span></div>
+  </div>
+  <section class="player-image-section">
+    <div class="player-image-form">
+      <h3 class="section-label">生成主角肖像</h3>
+      <p class="section-desc">为你的角色生成图片，可在下方设为头像或立绘</p>
+      <div class="pi-backend-status"><span class="pi-status-dot pi-status-dot--ok"></span><span class="pi-status-label">volcengine</span><span class="pi-status-model">model-volcengine</span>
+        <!--v-if-->
+      </div>
+      <!--v-if-->
+      <div class="pi-form-row"><label class="pi-label">构图</label>
+        <div class="aga-select"><button class="aga-select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">头像 (1:1)</span><span class="aga-select__arrow">▾</span></button>
+          <teleport-stub to="body">
+            <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+              <!--v-if-->
+            </transition-stub>
+          </teleport-stub>
+        </div>
+      </div>
+      <!--v-if-->
+      <div class="pi-form-row"><label class="pi-label">画风</label>
+        <div class="aga-select"><button class="aga-select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">通用</span><span class="aga-select__arrow">▾</span></button>
+          <teleport-stub to="body">
+            <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+              <!--v-if-->
+            </transition-stub>
+          </teleport-stub>
+        </div>
+      </div>
+      <div class="pi-form-row"><label class="pi-label">画师串预设</label>
+        <div class="aga-select"><button class="aga-select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">不使用</span><span class="aga-select__arrow">▾</span></button>
+          <teleport-stub to="body">
+            <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+              <!--v-if-->
+            </transition-stub>
+          </teleport-stub>
+        </div>
+      </div>
+      <div class="pi-form-row"><label class="pi-label">PNG 画风预设</label>
+        <div class="aga-select"><button class="aga-select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"><span class="aga-select__label">不启用</span><span class="aga-select__arrow">▾</span></button>
+          <teleport-stub to="body">
+            <transition-stub name="aga-dropdown" appear="false" persisted="false" css="true">
+              <!--v-if-->
+            </transition-stub>
+          </teleport-stub>
+        </div>
+      </div>
+      <div class="pi-form-row"><label class="pi-label">额外要求</label><textarea class="pi-textarea" rows="2" placeholder="如：月下持剑、白衣飘飘…"></textarea></div>
+      <div class="pi-form-row"><label class="pi-label">尺寸</label><input class="pi-select" placeholder="如 832x1216（留空使用默认）" style="max-width: 200px;"></div><!-- Reference redraw (C1) -->
+      <div class="pi-form-row" style="flex-direction: column; align-items: stretch;">
+        <div style="display: flex; align-items: center; gap: 8px;"><label class="pi-label" style="margin: 0px;">参考重绘</label><!-- Labeled: pill + clickable text (aria-hidden so the switch isn't announced twice). -->
+          <!-- Bare pill (unchanged) --><button class="aga-toggle aga-toggle--on" role="switch" aria-checked="true"><span class="aga-toggle__thumb"></span></button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; padding-left: 12px; margin-top: 6px; border-left-width: 2px; border-left-style: solid; border-left-color: rgba(163, 190, 140, 0.3);">
+          <!-- 多图后端（豆包）走多图选择器；其余后端保持单张控件（无死控件） -->
+          <multi-reference-picker-stub data-props="{&quot;modelValue&quot;:[{&quot;id&quot;:&quot;pmr1&quot;,&quot;dataUrl&quot;:&quot;data:image/png;base64,AAAA&quot;,&quot;label&quot;:&quot;图1&quot;},{&quot;id&quot;:&quot;pmr2&quot;,&quot;dataUrl&quot;:&quot;data:image/png;base64,BBBB&quot;,&quot;assetId&quot;:&quot;pimg_1&quot;,&quot;label&quot;:&quot;头像&quot;}],&quot;max&quot;:14,&quot;quickSources&quot;:[{&quot;key&quot;:&quot;avatar&quot;,&quot;label&quot;:&quot;当前头像&quot;}],&quot;testid&quot;:&quot;player-multi-ref&quot;}"></multi-reference-picker-stub>
+          <p style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 4px;" data-testid="player-ref-strength-unsupported">该服务商没有「重绘幅度」参数 —— 请在「额外要求」里描述改动幅度，例如「仅调整姿态与光线，其余保持不变」。</p>
+          <p style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px;">参考重绘会把源图发送给当前生成后端。</p>
+        </div>
+      </div><button class="aga-btn aga-btn--primary aga-btn--md pi-gen-btn pi-gen-btn">
+        <!--v-if-->生成头像
+      </button>
+      <!--v-if-->
+      <!-- Player anchor management (UI-IMPLEMENTATION-DESIGN §3.1) -->
+      <div class="anchor-section">
+        <h3 class="section-label">主角角色锚点</h3>
+        <p class="section-desc">锚点保存角色的稳定视觉特征，让多次生图保持一致</p>
+        <div class="anchor-empty">
+          <p>还没有主角锚点。点击下方按钮由 AI 提取。</p><button class="aga-btn aga-btn--primary aga-btn--sm">
+            <!--v-if-->AI 提取锚点
+          </button>
+        </div>
+      </div>
+    </div><!-- Player secret part close-up (NSFW gated, non-male) -->
+    <!--v-if-->
+    <!-- Image viewer for secret part close-ups -->
+    <teleport-stub to="body">
+      <!--v-if-->
+    </teleport-stub><!-- Player image archive -->
+    <div class="player-archive">
+      <h3 class="section-label">主角影像档案</h3>
+      <div class="player-grid">
+        <div class="player-img-card">
+          <div class="player-img-preview">
+            <image-display-stub data-props="{&quot;assetId&quot;:&quot;pimg_1&quot;,&quot;fallbackLetter&quot;:&quot;沈&quot;,&quot;size&quot;:&quot;lg&quot;,&quot;alt&quot;:&quot;__undefined__&quot;}"></image-display-stub>
+            <div class="player-img-badges"><span class="player-img-badge player-img-badge--status">成功</span><span class="player-img-badge">头像</span><span class="player-img-badge player-img-badge--selected">已设头像</span>
+              <!--v-if-->
+              <!--v-if-->
+              <!--v-if-->
+              <!--v-if-->
+            </div>
+          </div>
+          <div class="player-img-prompts">
+            <details class="prompt-details">
+              <summary>最终正向提示词</summary><pre class="prompt-text">player portrait</pre>
+            </details>
+            <details class="prompt-details">
+              <summary>最终负面提示词</summary><pre class="prompt-text">lowres</pre>
+            </details>
+          </div>
+          <div class="player-img-actions"><button class="aga-btn aga-btn--primary aga-btn--sm">
+              <!--v-if-->生成同款
+            </button><button class="aga-btn aga-btn--primary aga-btn--sm">
+              <!--v-if-->参考重绘
+            </button><button class="aga-btn aga-btn--ghost aga-btn--sm">
+              <!--v-if-->提炼画风
+            </button><button class="aga-btn aga-btn--ghost aga-btn--sm">
+              <!--v-if-->保存为参考素材
+            </button><button class="aga-btn aga-btn--secondary aga-btn--sm">
+              <!--v-if-->取消头像
+            </button><button class="aga-btn aga-btn--secondary aga-btn--sm">
+              <!--v-if-->设为立绘
+            </button>
+            <!--v-if--><button class="aga-btn aga-btn--danger aga-btn--sm">
+              <!--v-if-->删除
+            </button>
+          </div>
+        </div>
+        <div class="player-img-card">
+          <div class="player-img-preview">
+            <image-display-stub data-props="{&quot;assetId&quot;:&quot;pimg_2&quot;,&quot;fallbackLetter&quot;:&quot;沈&quot;,&quot;size&quot;:&quot;lg&quot;,&quot;alt&quot;:&quot;__undefined__&quot;}"></image-display-stub>
+            <div class="player-img-badges"><span class="player-img-badge player-img-badge--status">失败</span><span class="player-img-badge">半身</span>
+              <!--v-if-->
+              <!--v-if-->
+              <!--v-if-->
+              <!--v-if-->
+              <!--v-if-->
+            </div>
+          </div>
+          <!--v-if-->
+          <div class="player-img-actions">
+            <!--v-if-->
+            <!--v-if--><button class="aga-btn aga-btn--ghost aga-btn--sm">
+              <!--v-if-->提炼画风
+            </button><button class="aga-btn aga-btn--ghost aga-btn--sm">
+              <!--v-if-->保存为参考素材
+            </button>
+            <!--v-if-->
+            <!--v-if-->
+            <!--v-if--><button class="aga-btn aga-btn--danger aga-btn--sm">
+              <!--v-if-->删除
+            </button>
+          </div>
+        </div>
+        <div class="player-img-card">
+          <div class="player-img-preview">
+            <image-display-stub data-props="{&quot;assetId&quot;:&quot;sec_breast&quot;,&quot;fallbackLetter&quot;:&quot;沈&quot;,&quot;size&quot;:&quot;lg&quot;,&quot;alt&quot;:&quot;__undefined__&quot;}"></image-display-stub>
+            <div class="player-img-badges"><span class="player-img-badge player-img-badge--status">成功</span><span class="player-img-badge">立绘</span>
+              <!--v-if-->
+              <!--v-if--><span class="player-img-badge player-img-badge--secret">私密·胸部</span>
+              <!--v-if-->
+              <!--v-if-->
+            </div>
+          </div>
+          <div class="player-img-prompts">
+            <details class="prompt-details">
+              <summary>最终正向提示词</summary><pre class="prompt-text">close-up</pre>
+            </details>
+            <!--v-if-->
+          </div>
+          <div class="player-img-actions"><button class="aga-btn aga-btn--primary aga-btn--sm">
+              <!--v-if-->生成同款
+            </button><button class="aga-btn aga-btn--primary aga-btn--sm">
+              <!--v-if-->参考重绘
+            </button><button class="aga-btn aga-btn--ghost aga-btn--sm">
+              <!--v-if-->提炼画风
+            </button><button class="aga-btn aga-btn--ghost aga-btn--sm">
+              <!--v-if-->保存为参考素材
+            </button>
+            <!--v-if-->
+            <!--v-if-->
+            <!--v-if--><button class="aga-btn aga-btn--danger aga-btn--sm">
+              <!--v-if-->删除
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section><!-- Player Regenerate-Same modal -->
+  <!--v-if-->
+  <!-- ─── SchemaForm Modal ─── -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub><!-- Story 2: Remove talent confirmation -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub><!-- Story 2: Body edit modal -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub><!-- Story 2: Origin edit modal -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub><!-- Story 2: Trait edit modal -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub><!-- Story 2: Talent edit/add modal -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub><!-- Story 2: Vitals edit modal -->
+  <!--
+    Reusable modal dialog with focus trap, Escape key support, and a
+    fade + scale entrance animation. Backdrop press-to-close is OFF by
+    default (2026-08-25: misclicks/drag-releases on the backdrop were
+    destroying user input) — opt back in per-consumer via `backdropClose`
+    for read-only surfaces; even then, both pointerdown AND pointerup
+    must land on the backdrop (see useBackdropClose).
+
+    Polanyi principle: the modal draws focal awareness to its content
+    while the backdrop dims everything else to subsidiary awareness.
+  -->
+  <teleport-stub to="body">
+    <transition-stub name="modal-fade" appear="false" persisted="false" css="true">
+      <!--v-if-->
+    </transition-stub>
+  </teleport-stub>
+</div>
