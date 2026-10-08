@@ -12,6 +12,7 @@ import { useRoute } from 'vue-router';
 import type { ImageService } from '@/engine/image/image-service';
 import type { ImageBackendType, ImageTask, ArtistPreset, ImageAsset, SecretPartType, StylePreset } from '@/engine/image/types';
 import { generateReferenceId } from '@/engine/image/utils';
+import { listConfiguredImageBackends, extractLoraSnapshot, copyAssetToReferenceLibrary } from '@/ui/composables/image/image-backends';
 import type { GameTime, SceneNpcDetail } from '@/engine/image/scene-context';
 import ImageDisplay from '@/ui/components/image/ImageDisplay.vue';
 import ImageViewer from '@/ui/components/image/ImageViewer.vue';
@@ -436,30 +437,9 @@ const ALL_IMAGE_BACKENDS = computed<SelectOption[]>(() =>
 
 const IMAGE_BACKEND_KEYS = providerCatalog.byCategory('image').map((d) => d.id) as ImageBackendType[];
 
-function getImageApiForBackend(bk: string): import('@/engine/ai/types').APIConfig | null {
-  const assignment = apiStore.apiAssignments.find((a) => a.type === `imageGen_${bk}`);
-  if (!assignment || assignment.apiId === 'default') return null;
-  const cfg = apiStore.apiConfigs.find((c) => c.id === assignment.apiId && c.enabled && (c.apiCategory ?? 'llm') === 'image');
-  return cfg ?? null;
-}
-
 const configuredBackends = computed<Set<string>>(() => {
   apiStore.apiConfigs; apiStore.apiAssignments;
-  const set = new Set<string>();
-  for (const bk of IMAGE_BACKEND_KEYS) {
-    if (getImageApiForBackend(bk)) set.add(bk);
-  }
-  if (set.size === 0) {
-    const legacyAssign = apiStore.apiAssignments.find((a) => a.type === 'imageGeneration');
-    if (legacyAssign && legacyAssign.apiId !== 'default') {
-      const cfg = apiStore.apiConfigs.find((c) => c.id === legacyAssign.apiId && c.enabled && (c.apiCategory ?? 'llm') === 'image');
-      // Epic P0: the persisted backend field replaces URL sniffing (backfilled
-      // by the store's load-time migration; 'custom' has no per-backend route).
-      const b = cfg?.backend;
-      if (b && IMAGE_BACKEND_KEYS.includes(b as ImageBackendType)) set.add(b);
-    }
-  }
-  return set;
+  return listConfiguredImageBackends(apiStore.apiConfigs, apiStore.apiAssignments, IMAGE_BACKEND_KEYS);
 });
 
 const backendOptions = computed<SelectOption[]>(() => {
@@ -1181,14 +1161,6 @@ function openRegenerateFromHistoryEntry(entry: { type: 'scene' | 'character'; na
   });
 }
 
-function extractLoraSnapshot(obj: Record<string, unknown>): CivitaiLoraSnapshot | undefined {
-  const meta = obj.providerMeta;
-  if (!meta || typeof meta !== 'object') return undefined;
-  const snap = (meta as Record<string, unknown>).civitai;
-  if (!snap || typeof snap !== 'object' || !Array.isArray((snap as CivitaiLoraSnapshot).loras)) return undefined;
-  return snap as CivitaiLoraSnapshot;
-}
-
 function extractProviderMeta(obj: Record<string, unknown>): CombinedHistoryEntry['providerMeta'] {
   const meta = obj.providerMeta;
   if (!meta || typeof meta !== 'object') return undefined;
@@ -1231,26 +1203,8 @@ async function analyzeImageFromCard(assetId: string) {
 async function saveAsReferenceMaterial(assetId: string, source: 'gallery' | 'scene' | 'player', name?: string) {
   if (!imageService) return;
   try {
-    const entry = await imageService.getAssetCache().retrieve(assetId);
-    if (!entry) { eventBus.emit('ui:toast', { type: 'error', message: t('image.toast.cacheMissingSaveRef'), duration: 2000 }); return; }
-    const refAssetId = `ref_copy_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const refAsset: ImageAsset = {
-      id: refAssetId, taskId: '', storageKey: refAssetId,
-      mimeType: entry.metadata.mimeType, width: entry.metadata.width, height: entry.metadata.height,
-      sizeBytes: entry.metadata.sizeBytes, backend: entry.metadata.backend, createdAt: Date.now(), origin: 'reference',
-    };
-    await imageService.getAssetCache().store(refAsset, entry.blob);
-    imageService.state.addReferenceEntry({
-      id: generateReferenceId(),
-      assetId: refAssetId,
-      name: name ?? `ref_${assetId.slice(0, 12)}`,
-      mimeType: entry.metadata.mimeType,
-      width: entry.metadata.width,
-      height: entry.metadata.height,
-      sizeBytes: entry.metadata.sizeBytes,
-      source,
-      createdAt: Date.now(),
-    });
+    const result = await copyAssetToReferenceLibrary(imageService, assetId, { name: name ?? `ref_${assetId.slice(0, 12)}`, source });
+    if (result === 'missing') { eventBus.emit('ui:toast', { type: 'error', message: t('image.toast.cacheMissingSaveRef'), duration: 2000 }); return; }
     eventBus.emit('ui:toast', { type: 'success', message: t('image.toast.savedAsReference'), duration: 2000 });
   } catch (err) {
     eventBus.emit('ui:toast', { type: 'error', message: t('image.toast.saveReferenceFailed', { error: (err as Error).message }), duration: 2500 });

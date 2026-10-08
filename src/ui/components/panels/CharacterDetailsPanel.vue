@@ -44,6 +44,7 @@ import MultiReferencePicker, { type MultiReferenceItem } from '@/ui/components/s
 import { appendReferenceFiles, readFileAsDataUrl } from '@/ui/components/shared/multi-reference-files';
 import type { ArtistPreset } from '@/engine/image/types';
 import { generateReferenceId } from '@/engine/image/utils';
+import { listConfiguredImageBackends, extractLoraSnapshot, copyAssetToReferenceLibrary } from '@/ui/composables/image/image-backends';
 
 import { useCharacterEditor } from '@/ui/composables/editors';
 import { useRouter } from 'vue-router';
@@ -62,24 +63,7 @@ const apiStore = useAPIManagementStore();
 const IMAGE_BACKEND_KEYS = providerCatalog.byCategory('image').map((d) => d.id) as ImageBackendType[];
 const configuredImageBackends = computed(() => {
   apiStore.apiConfigs; apiStore.apiAssignments;
-  const set = new Set<string>();
-  for (const bk of IMAGE_BACKEND_KEYS) {
-    const assignment = apiStore.apiAssignments.find((a) => a.type === `imageGen_${bk}`);
-    if (assignment && assignment.apiId !== 'default') {
-      const cfg = apiStore.apiConfigs.find((c) => c.id === assignment.apiId && c.enabled && (c.apiCategory ?? 'llm') === 'image');
-      if (cfg) set.add(bk);
-    }
-  }
-  if (set.size === 0) {
-    const legacyAssign = apiStore.apiAssignments.find((a) => a.type === 'imageGeneration');
-    if (legacyAssign && legacyAssign.apiId !== 'default') {
-      const cfg = apiStore.apiConfigs.find((c) => c.id === legacyAssign.apiId && c.enabled && (c.apiCategory ?? 'llm') === 'image');
-      // Epic P0: persisted backend field replaces URL sniffing.
-      const b = cfg?.backend;
-      if (b && IMAGE_BACKEND_KEYS.includes(b as ImageBackendType)) set.add(b);
-    }
-  }
-  return set;
+  return listConfiguredImageBackends(apiStore.apiConfigs, apiStore.apiAssignments, IMAGE_BACKEND_KEYS);
 });
 
 const availableBackendOptions = computed(() => {
@@ -120,37 +104,12 @@ async function analyzePlayerImageFromCard(assetId: string) {
 async function savePlayerAsReferenceMaterial(assetId: string) {
   if (!imageService) return;
   try {
-    const entry = await imageService.getAssetCache().retrieve(assetId);
-    if (!entry) { eventBus.emit('ui:toast', { type: 'error', message: t('character.toast.cacheMissing'), duration: 2000 }); return; }
-    const refAssetId = `ref_copy_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    await imageService.getAssetCache().store({
-      id: refAssetId, taskId: '', storageKey: refAssetId,
-      mimeType: entry.metadata.mimeType, width: entry.metadata.width, height: entry.metadata.height,
-      sizeBytes: entry.metadata.sizeBytes, backend: entry.metadata.backend, createdAt: Date.now(), origin: 'reference',
-    }, entry.blob);
-    imageService.state.addReferenceEntry({
-      id: generateReferenceId(),
-      assetId: refAssetId,
-      name: `主角_${assetId.slice(0, 12)}`,
-      mimeType: entry.metadata.mimeType,
-      width: entry.metadata.width,
-      height: entry.metadata.height,
-      sizeBytes: entry.metadata.sizeBytes,
-      source: 'player',
-      createdAt: Date.now(),
-    });
+    const result = await copyAssetToReferenceLibrary(imageService, assetId, { name: `主角_${assetId.slice(0, 12)}`, source: 'player' });
+    if (result === 'missing') { eventBus.emit('ui:toast', { type: 'error', message: t('character.toast.cacheMissing'), duration: 2000 }); return; }
     eventBus.emit('ui:toast', { type: 'success', message: t('character.toast.savedAsReference'), duration: 2000 });
   } catch (err) {
     eventBus.emit('ui:toast', { type: 'error', message: t('character.toast.saveFailed', { error: (err as Error).message }), duration: 2000 });
   }
-}
-
-function extractLoraSnapshot(record: Record<string, unknown>): CivitaiLoraSnapshot | undefined {
-  const meta = record.providerMeta;
-  if (!meta || typeof meta !== 'object') return undefined;
-  const snap = (meta as Record<string, unknown>).civitai;
-  if (!snap || typeof snap !== 'object' || !Array.isArray((snap as CivitaiLoraSnapshot).loras)) return undefined;
-  return snap as CivitaiLoraSnapshot;
 }
 
 const ALL_BACKEND_LABELS: Record<string, string> = { novelai: 'NovelAI', openai: 'OpenAI DALL-E', sd_webui: 'SD-WebUI', comfyui: 'ComfyUI', civitai: 'Civitai' };
