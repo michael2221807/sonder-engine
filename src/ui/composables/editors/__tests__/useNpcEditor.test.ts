@@ -94,8 +94,8 @@ describe('useNpcEditor', () => {
       const editor = useNpcEditor();
       editor.save(0, { 名称: '李四改名', 类型: '朋友' });
       // After rename cascade, 王五's 关系网变量[0].对象 should be updated
-      // Note: save() calls cascadeNpcRename before writing, so we need to check
-      // the final state after setValue
+      // Note: save() runs the rename cascades (cascadeNpcRenameLocations / cascadeNpcRenameNetwork)
+      // before writing, so we need to check the final state after setValue
       const npcs = mockState.get<Array<Record<string, unknown>>>('社交.关系');
       const wangwu = npcs![1];
       const network = wangwu['关系网变量'] as Array<{ 对象: string }>;
@@ -147,7 +147,7 @@ describe('useNpcEditor', () => {
       const editor = useNpcEditor();
       editor.delete(0); // delete 李四
       const npcs = mockState.get<Array<Record<string, unknown>>>('社交.关系');
-      // 王五's 关系網変量 should no longer reference 李四
+      // 王五's 关系网变量 should no longer reference 李四
       const wangwu = npcs![0]; // after delete, 王五 is now index 0
       const network = wangwu['关系网变量'] as Array<{ 对象: string }> | undefined;
       expect(network ?? []).toHaveLength(0);

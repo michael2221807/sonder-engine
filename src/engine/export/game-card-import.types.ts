@@ -85,7 +85,7 @@ export interface ImportOptions {
   enableNsfw: boolean;
   /** Optional opening-generation progress callback (UI ⑦ progress). Phase ∈ phaseE/F/G. */
   onOpeningProgress?: (phase: string, progress: number) => void;
-  /** Optional abort signal for the opening (UI ⑦ is non-cancelable, but kept for tests/future). */
+  /** Optional abort signal for the opening (the UI's skip-opening button aborts it: CardImportFlow cancelOpening). */
   abortSignal?: AbortSignal;
 }
 

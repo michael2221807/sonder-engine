@@ -3,8 +3,7 @@
  * Protagonist template logic — Story 5 (P4).
  *
  * Pure, pack-agnostic helpers for the fixed / template / blank protagonist modes
- * (handover §4A). Consumed by the export UI (ProtagonistModeSelector, P5) and as a
- * safety net by the service. Returns error/warning CODES (UI resolves i18n) — the
+ * (handover §4A). Used by the import side (game-card-import-service, CardImportFlow). Returns error/warning CODES (UI resolves i18n) — the
  * engine emits no display strings.
  *
  * Character-data placement (implementation decision, recorded in the plan):

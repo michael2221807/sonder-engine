@@ -798,7 +798,6 @@ export function useCreationFlow(): UseCreationFlowReturn {
     return null;
   }
 
-  /** Type guard: check that a parsed value is a non-null, non-array object */
   // ─── Finalisation ────────────────────────────────────────────
 
   /**

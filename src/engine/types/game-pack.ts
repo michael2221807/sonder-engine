@@ -168,7 +168,7 @@ export interface CreationStep {
    */
   statePath?: string;
   /**
-   * 2026-04-11 fix — 从选中的 preset 对象中提取哪一个字段作为写入值。
+   * 从选中的 preset 对象中提取哪一个字段作为写入值。
    *
    * 场景：select-one 选了一个完整的 preset `{ id, name, description, talent_cost }`，
    * 但 `角色.身份.出身` 期望一个字符串。`valueField: "name"` 表示提取 `preset.name`

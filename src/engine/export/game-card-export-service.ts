@@ -132,7 +132,7 @@ export class GameCardExportService {
     let promptOverrides: Array<{ key: string; value: unknown }> | undefined;
     if (flags.includedEngineConfig) {
       // Only THIS card's pack overlays (not all packs the author played — F4 privacy).
-      // Structural passthrough — avoids a fragile ConfigOverlay import (same rationale as backup-service).
+      // Structural passthrough of ConfigOverlay into the bundle's ConfigOverlayExport shape.
       configOverlays = (await this.configStore.listOverlays(options.cardMeta.packId)) as unknown as ConfigOverlayExport[];
       promptOverrides = await this.promptStorage.exportAll();
     }

@@ -249,8 +249,9 @@ export class GameCardImportService {
    * threw (the UI surfaces a retry); the backup handle is retained on failure so undo can be retried.
    *
    * NSFW note: undo reverts the GLOBAL `aga_nsfw_settings` flag, but the already-created save keeps
-   * `系统.nsfwMode` in its tree (by design — undo restores globals, not the save). Re-loading that save
-   * later will sync the reverted global flag back into the tree.
+   * `系统.nsfwMode` in its tree (by design — undo restores globals, not the save). Whether a later reload
+   * syncs the reverted global flag back into the tree depends on syncNsfwFromLocalStorage, which does
+   * nothing when the key is absent.
    */
   async undoGlobalChanges(): Promise<boolean> {
     if (!this.deps || !this.lastGlobalBackup) return false;

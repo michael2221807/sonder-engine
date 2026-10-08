@@ -3,8 +3,10 @@
  * Card import — optional payload appliers (Story 6 P4, OD-D 9-payload matrix).
  *
  * Each function maps 1:1 to a row of the OD-D matrix (handover §5). They are split into:
- *   - SAVE-SCOPED (always applied): customPresets, imageAssets, worldBooks. These land in
+ *   - SAVE-SCOPED (always applied): imageAssets, worldBooks. These land in
  *     the new save / new profile and never touch the player's global state.
+ *   - customPresets are always applied too, but they are keyed by pack and written into the
+ *     player's own custom-preset library (original ids kept, OD-J), not into the new save.
  *   - GLOBAL opt-in (applied ONLY when the player ticked the flag; default OFF; never
  *     silently overwrite): configOverlays, settings, promptOverrides, builtinPromptOverrides.
  *   - apiTemplate: NEVER applied (info-only row). It is surfaced in the UI ("fill your own

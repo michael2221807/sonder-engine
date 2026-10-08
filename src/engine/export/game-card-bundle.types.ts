@@ -94,8 +94,7 @@ interface ApiTemplateExport {
 // ─── Engine config overlays / prompt overrides (U16 / D14) ───────
 
 /**
- * ConfigStore overlay — structurally inlined to avoid a fragile cross-module import
- * (mirrors ConfigOverlay in core/config-system, same rationale as backup-service).
+ * ConfigStore overlay — a structural copy of ConfigOverlay (engine/types/config.ts).
  */
 export interface ConfigOverlayExport {
   domainId: string;

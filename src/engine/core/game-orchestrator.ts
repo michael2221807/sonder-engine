@@ -49,8 +49,6 @@ import type { WorldHeartbeatPipeline } from '../pipeline/sub-pipelines/world-hea
 import type { NpcGenerationPipeline } from '../pipeline/sub-pipelines/npc-generation';
 import type { PrivacyProfileRepairPipeline } from '../pipeline/sub-pipelines/privacy-profile-repair';
 import type { FieldRepairPipeline } from '../pipeline/sub-pipelines/field-repair';
-// Phase 4 (2026-04-19): BodyPolish was promoted from sub-pipeline to a
-// proper pipeline stage. The sub-pipeline file has been removed.
 import type { NpcMemorySummarizer } from '../social/npc-memory-summarizer';
 import type { ImageService } from '../image/image-service';
 import type { TtsService } from '../tts/tts-service';
@@ -102,10 +100,9 @@ export interface SubPipelineBundle {
   /**
    * 记忆管理器 — 供 runRound 在主回合结束后查询中期/长期记忆容量并触发对应子管线。
    *
-   * 2026-04-11 CR M-06 修复：类型从具体类 `MemoryManager` 改为 `IMemoryManager` 接口。
-   * 所有需要的方法（`shouldRefineMidTerm` / `shouldSummarizeLongTerm` /
+   * 类型是 `IMemoryManager` 接口（可直接 mock），所需方法（`shouldRefineMidTerm` / `shouldSummarizeLongTerm` /
    * `shouldCompactLongTerm` / `fallbackTrimLongTerm` / `getEffectiveConfig` /
-   * `commitSummaryResult`）现在都在 IMemoryManager 上，可直接 mock。
+   * `commitSummaryResult`）都在接口上。
    */
   memoryManager?: IMemoryManager;
   /** 引擎路径配置 — 供 runRound 识别玩家位置变更，判断是否触发 NPC 生成 */

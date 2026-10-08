@@ -1,7 +1,7 @@
 /**
  * useNpcEditor — CRUD composable for NPC relationship entries.
  *
- * Wraps: useGameState().setValue() on 社交.関係 array
+ * Wraps: useGameState().setValue() on 社交.关系 array
  * Why: Centralizes NPC save/delete with cascade (location NPC lists,
  *      relationship network references, Engram coordination).
  *
@@ -168,7 +168,7 @@ export function useNpcEditor(): UseNpcEditorReturn {
     );
     if (locChanged) setValue(P.locations, locations);
 
-    // Cascade 2: remove from other NPCs' 关系網変量 back-references
+    // Cascade 2: remove from other NPCs' 关系网变量 back-references
     const updatedList = originalList.map(npc => {
       const network = npc[F.relationshipNetwork] as
         | Array<{ 对象: string; 关系: string; 备注?: string }>

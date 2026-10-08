@@ -36,11 +36,10 @@ export const useEngineStateStore = defineStore('engineState', () => {
   /**
    * 持有 linkBehaviorRunner 注入的 BehaviorRunner 引用（与 linkStateManager 同模式）。
    *
-   * 2026-07-05 之前 runOnGameLoad 只在 CharacterInitPipeline（创角）里触发，
-   * 真实读档（HomeView / ManagementView / 卡片导入 activateSave）从不执行
-   * onGameLoad 钩子——effect-lifecycle 的过期清理、npc-dedup 的同名 NPC 融合、
-   * validation-repair 的存档修复在读档时全部是死钩子。注入后 loadGame() 在
-   * loadTree 之后统一分发 onGameLoad，历史脏存档读档即自愈。
+   * loadGame() 在 loadTree 之后统一分发 onGameLoad，所以真实读档（HomeView / ManagementView /
+   * 卡片导入 activateSave）都会跑 effect-lifecycle 的过期清理、npc-dedup 的同名 NPC 融合、
+   * validation-repair 的存档修复，历史脏存档读档即自愈。
+   * Changelog: 2026-07-05（此前 onGameLoad 只在创角里触发）。
    */
   let _linkedBehaviorRunner: { runOnGameLoad(sm: StateManager): void } | null = null;
 
@@ -175,16 +174,15 @@ export const useEngineStateStore = defineStore('engineState', () => {
   /**
    * 从 UI 层写入状态树 — 用于 SchemaForm / 内联编辑等交互
    *
-   * 2026-04-13：改为优先调用 StateManager.set()（如已 linked），原因：
+   * 优先调用 StateManager.set()（如已 linked），原因：
    * 1. StateManager.set 使用 lodash `_set` 做路径写入，正确处理嵌套创建、
-   *    数组索引、过滤器路径（[名称=X] 语法），比手写的 tree 行走更健壮
+   *    数组索引、过滤器路径（[名称=X] 语法）
    * 2. 内部走 `cloneDeep` 写入，避免 UI 层传入的对象与状态树产生引用混叠
-   *    （之前 setValue 直接赋对象引用，导致后续 UI 编辑改到快照里的对象也
-   *    污染主状态树）
    * 3. 触发 recordChange + 'state:changed' 事件，变更可被回放/回滚/调试面板捕获
-   * 4. 响应式链路与 AI 命令写入完全一致，消除 UI/AI 两路径的微妙差异
+   * 4. 响应式链路与 AI 命令写入完全一致
+   * Changelog: 2026-04-13（此前直接赋对象引用，后续 UI 编辑会污染快照里的对象）。
    *
-   * 未 linked 时走降级路径（仅测试场景），行为与旧实现一致。
+   * 未 linked 时走降级路径（仅测试场景）。
    */
   function setValue(path: StatePath, value: unknown): void {
     if (_linkedStateManager) {

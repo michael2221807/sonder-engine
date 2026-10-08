@@ -221,7 +221,7 @@ export async function createGameLoop(deps: {
             settings: DEFAULT_ENHANCED_OPENING_SETTINGS,
             nsfwMode: args.nsfwMode,
             choices: { selections: {} },
-            // No abort: ⑦ is non-cancelable in the UI, so a never-aborting signal is intentional.
+            // The UI's skip-opening button aborts args.abortSignal; the never-aborting fallback only covers callers that pass none.
             abortSignal: args.abortSignal ?? new AbortController().signal,
             onProgress: args.onProgress ?? (() => {}),
             firstRoundSetup: args.firstRoundSetup, // D7: author opening-style hint
