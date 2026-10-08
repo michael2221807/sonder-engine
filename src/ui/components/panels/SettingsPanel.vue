@@ -19,11 +19,23 @@ import PlotVectorSettingsSection from '../settings/PlotVectorSettingsSection.vue
 import { useGameState } from '@/ui/composables/useGameState';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
-import { DEFAULT_MAX_ACTIVE_THREADS } from '@/engine/plot/types';
 import {
   DEFAULT_ENGINE_PATHS, DEFAULT_HEARTBEAT_HISTORY_LIMIT, DEFAULT_HEARTBEAT_FORGET_ROUNDS, DEFAULT_NPC_DEMOTION_THRESHOLD,
 } from '@/engine/pipeline/types';
 import type { AxisMode as PlotTimelineAxis } from '@/ui/components/panels/plot/scheduler-layout';
+import {
+  SETTINGS_KEY, ACCENT_PRESETS, defaultSettings, knownSettings, applyRootMetrics, presetSwatches, collectClearableCacheKeys,
+  type UserSettings,
+} from '@/ui/composables/settings/settings-io';
+import { NSFW_KEY, defaultNsfw, parseNsfwSettings, type NsfwGenderFilter, type NsfwSettings } from '@/ui/composables/settings/nsfw';
+import { PLOT_SETTINGS_KEY, defaultPlotSettings, parsePlotSettings, type PlotSettings } from '@/ui/composables/settings/plot';
+import { TEXT_REPLACE_KEY, parseTextRules, emptyRuleForm, filterImportedRules, type TextReplaceRule } from '@/ui/composables/settings/text-replace';
+import {
+  FEATURE_TOGGLES_KEY, defaultFeatureToggles, parseFeatureToggles, mergeFeatureTogglesForSave, readCotSettings, clampCotRingSize,
+  parseLowLoadSettings, lowLoadMaxRequestsFromInput, COT_LS_KEY, BODY_POLISH_LS_KEY, PRESENCE_LS_KEY, IMAGE_GEN_LS_KEY,
+  type FeatureToggles,
+} from '@/ui/composables/settings/feature-toggles';
+import { sectionMatchesSearchText, type NavCategory } from '@/ui/composables/settings/nav-search';
 import { writePlotTimelineAxis } from '@/ui/composables/usePlotTimelineAxis';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
@@ -37,62 +49,9 @@ import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n();
 
-const SETTINGS_KEY = 'aga_user_settings';
-
-/** User settings shape */
-interface UserSettings {
-  fontSize: number;
-  themeAccent: string;
-  enableAnimations: boolean;
-  autoSaveInterval: number;
-  language: string;
-}
-
-interface AccentPreset {
-  id: string;
-  hue1: number;
-  hue2: number;
-  labelKey: string;
-}
-
-const ACCENT_PRESETS: AccentPreset[] = [
-  { id: 'sage-amber',      hue1: 150, hue2: 75,  labelKey: 'settings.ui.themeAccent.presets.sage' },
-  { id: 'ocean-coral',     hue1: 220, hue2: 15,  labelKey: 'settings.ui.themeAccent.presets.ocean' },
-  { id: 'lavender-gold',   hue1: 280, hue2: 55,  labelKey: 'settings.ui.themeAccent.presets.lavender' },
-  { id: 'rose-teal',       hue1: 345, hue2: 175, labelKey: 'settings.ui.themeAccent.presets.rose' },
-  { id: 'mint-peach',      hue1: 165, hue2: 40,  labelKey: 'settings.ui.themeAccent.presets.mint' },
-  { id: 'indigo-amber',    hue1: 255, hue2: 70,  labelKey: 'settings.ui.themeAccent.presets.indigo' },
-  { id: 'emerald-ruby',    hue1: 145, hue2: 5,   labelKey: 'settings.ui.themeAccent.presets.emerald' },
-  { id: 'cyan-magenta',    hue1: 200, hue2: 330, labelKey: 'settings.ui.themeAccent.presets.cyan' },
-  { id: 'copper-slate',    hue1: 35,  hue2: 240, labelKey: 'settings.ui.themeAccent.presets.copper' },
-  { id: 'twilight-dawn',   hue1: 290, hue2: 25,  labelKey: 'settings.ui.themeAccent.presets.twilight' },
-];
-
-const defaultSettings: UserSettings = {
-  fontSize: 14,
-  themeAccent: 'sage-amber',
-  enableAnimations: true,
-  autoSaveInterval: 5,
-  language: 'zh-CN',
-};
-
 const settings = ref<UserSettings>({ ...defaultSettings });
 
 // ─── Persistence ───
-
-/**
- * The stored settings this build knows, over the defaults. A key an older build saved (showActionOptions, removed
- * 2026-10-03) is dropped: kept, it would make 「重置全部」 show forever for a player at the defaults.
- */
-function knownSettings(raw: unknown): UserSettings {
-  const known: UserSettings = { ...defaultSettings };
-  if (!raw || typeof raw !== 'object') return known;
-  const stored = raw as Partial<Record<keyof UserSettings, unknown>>;
-  for (const key of Object.keys(defaultSettings) as (keyof UserSettings)[]) {
-    if (stored[key] !== undefined) (known as Record<keyof UserSettings, unknown>)[key] = stored[key];
-  }
-  return known;
-}
 
 function loadSettings(): void {
   try {
@@ -149,17 +108,6 @@ function applyFontSize(): void {
   eventBus.emit('ui:toast', { type: 'success', message: t('settings.ui.fontSize.toast', { size }), duration: 1200 });
 }
 
-// Font size × UI scale both drive the root font-size so rem units scale
-// consistently. The `--narrative-font-size` var stays in sync for narrative
-// text that explicitly opts in.
-function applyRootMetrics(fontPx: number, scalePct: number): void {
-  const rootPx = (fontPx * scalePct) / 100;
-  document.documentElement.style.fontSize = `${rootPx}px`;
-  document.documentElement.style.setProperty('--base-font-size', `${fontPx}px`);
-  document.documentElement.style.setProperty('--narrative-font-size', `${fontPx}px`);
-  document.documentElement.style.setProperty('--ui-scale', `${scalePct}%`);
-}
-
 function applyThemeColor(): void {
   const preset = ACCENT_PRESETS.find(p => p.id === settings.value.themeAccent);
   if (!preset) return;
@@ -172,13 +120,6 @@ function applyThemeColor(): void {
 function selectPreset(presetId: string): void {
   settings.value.themeAccent = presetId;
   applyThemeColor();
-}
-
-function presetSwatches(preset: AccentPreset): { primary: string; secondary: string } {
-  return {
-    primary: `oklch(0.78 0.08 ${preset.hue1})`,
-    secondary: `oklch(0.80 0.09 ${preset.hue2})`,
-  };
 }
 
 import { SUPPORTED_LOCALES } from '@/ui/i18n';
@@ -325,19 +266,6 @@ watch(() => isLoaded.value, (loaded) => {
 // 读取顺序（与 privacy-profile-validator.readNsfwSettings 一致）：
 //   状态树 → localStorage → 硬编码默认 false / 'female'
 
-const NSFW_KEY = 'aga_nsfw_settings';
-type NsfwGenderFilter = 'all' | 'male' | 'female';
-
-interface NsfwSettings {
-  nsfwMode: boolean;
-  nsfwGenderFilter: NsfwGenderFilter;
-}
-
-const defaultNsfw: NsfwSettings = {
-  nsfwMode: false,
-  nsfwGenderFilter: 'female',
-};
-
 const nsfwSettings = ref<NsfwSettings>({ ...defaultNsfw });
 
 const nsfwGenderOptions = computed<Array<{ value: NsfwGenderFilter; label: string }>>(() => [
@@ -350,16 +278,7 @@ function loadNsfwSettings(): void {
   try {
     const raw = localStorage.getItem(NSFW_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as Partial<NsfwSettings>;
-      nsfwSettings.value = {
-        nsfwMode: typeof parsed.nsfwMode === 'boolean' ? parsed.nsfwMode : defaultNsfw.nsfwMode,
-        nsfwGenderFilter:
-          parsed.nsfwGenderFilter === 'all' ||
-          parsed.nsfwGenderFilter === 'male' ||
-          parsed.nsfwGenderFilter === 'female'
-            ? parsed.nsfwGenderFilter
-            : defaultNsfw.nsfwGenderFilter,
-      };
+      nsfwSettings.value = parseNsfwSettings(raw);
     }
   } catch {
     nsfwSettings.value = { ...defaultNsfw };
@@ -476,39 +395,6 @@ watch(debugSettings, () => {
 
 // ─── Plot Direction Settings (Sprint Plot-1 P6) ─────────────
 
-const PLOT_SETTINGS_KEY = 'aga_plot_settings';
-
-interface PlotSettings {
-  enabled: boolean;
-  criticalConfirmGate: boolean;
-  confidenceThreshold: number;
-  showGaugesInMainPanel: boolean;
-  opportunityMaxTier: 1 | 2 | 3;
-  autoAdvanceSkippable: boolean;
-  showEvalLog: boolean;
-  /** Plot Threads D2: how many threads may be active at once (1-5). */
-  maxActiveThreads: number;
-  /**
-   * Plot Threads D4: scheduler view axis. Persisted in this blob for reload, but
-   * the LIVE value is the state tree (`系统.设置.plot.timelineAxis`) — both this
-   * panel and the scheduler's own toggle write it through `writePlotTimelineAxis`,
-   * so the two controls never hold two copies (review fix, 2026-08-22).
-   */
-  timelineAxis: PlotTimelineAxis;
-}
-
-const defaultPlotSettings: PlotSettings = {
-  enabled: true,
-  criticalConfirmGate: true,
-  confidenceThreshold: 0.7,
-  showGaugesInMainPanel: true,
-  opportunityMaxTier: 3,
-  autoAdvanceSkippable: true,
-  showEvalLog: false,
-  maxActiveThreads: DEFAULT_MAX_ACTIVE_THREADS,
-  timelineAxis: 'round',
-};
-
 const plotSettings = ref<PlotSettings>({ ...defaultPlotSettings });
 
 const timelineAxisOptions = computed<Array<{ value: PlotTimelineAxis; label: string }>>(() => [
@@ -525,14 +411,7 @@ function setTimelineAxisSetting(mode: PlotTimelineAxis): void {
 
 function loadPlotSettings(): void {
   try {
-    const raw = JSON.parse(localStorage.getItem(PLOT_SETTINGS_KEY) ?? '{}') as Partial<PlotSettings>;
-    // Plot Threads: validate on load (same discipline as loadLowLoadSettings) — a
-    // NaN cap would silently disable the concurrency limit in plot-store.activateArc.
-    const cap = typeof raw.maxActiveThreads === 'number' && Number.isFinite(raw.maxActiveThreads)
-      ? Math.max(1, Math.min(5, Math.round(raw.maxActiveThreads)))
-      : defaultPlotSettings.maxActiveThreads;
-    const axis: PlotTimelineAxis = raw.timelineAxis === 'date' ? 'date' : 'round';
-    plotSettings.value = { ...defaultPlotSettings, ...raw, maxActiveThreads: cap, timelineAxis: axis };
+    plotSettings.value = parsePlotSettings(localStorage.getItem(PLOT_SETTINGS_KEY) ?? '{}');
   } catch { plotSettings.value = { ...defaultPlotSettings }; }
 }
 
@@ -565,25 +444,12 @@ watch(() => isLoaded.value, (loaded) => {
 
 // ─── B.2.4.2 Text replace rules ──────────────────────────────
 
-const TEXT_REPLACE_KEY = 'aga_text_replace_rules';
-
-interface TextReplaceRule {
-  id: string;
-  enabled: boolean;
-  mode: 'regex' | 'text';
-  pattern: string;
-  replacement: string;
-  ignoreCase: boolean;
-  global: boolean;
-}
-
 const textReplaceRules = ref<TextReplaceRule[]>([]);
 const showReplaceModal = ref(false);
 
 function loadTextRules(): void {
   try {
-    const raw = JSON.parse(localStorage.getItem(TEXT_REPLACE_KEY) ?? '[]');
-    textReplaceRules.value = Array.isArray(raw) ? raw : [];
+    textReplaceRules.value = parseTextRules(localStorage.getItem(TEXT_REPLACE_KEY) ?? '[]');
   } catch { textReplaceRules.value = []; }
 }
 
@@ -592,15 +458,13 @@ function saveTextRules(): void {
 }
 
 const editingRule = ref<TextReplaceRule | null>(null);
-const ruleForm = ref<Omit<TextReplaceRule, 'id'>>({
-  enabled: true, mode: 'text', pattern: '', replacement: '', ignoreCase: false, global: true,
-});
+const ruleForm = ref<Omit<TextReplaceRule, 'id'>>(emptyRuleForm());
 const ruleFormError = ref('');
 const showRuleEditor = ref(false);
 
 function openNewRule(): void {
   editingRule.value = null;
-  ruleForm.value = { enabled: true, mode: 'text', pattern: '', replacement: '', ignoreCase: false, global: true };
+  ruleForm.value = emptyRuleForm();
   ruleFormError.value = '';
   showRuleEditor.value = true;
 }
@@ -674,12 +538,7 @@ function openImportSettings(): void {
       if (raw.actionOptions) actionOptions.value = normalizeActionOptionsStyle(raw.actionOptions);
       if (raw.debugSettings) debugSettings.value = { ...defaultDebug, ...(raw.debugSettings as Partial<DebugSettings>) };
       if (Array.isArray(raw.textReplaceRules)) {
-        textReplaceRules.value = (raw.textReplaceRules as unknown[]).filter(
-          (item): item is TextReplaceRule =>
-            typeof (item as TextReplaceRule).id === 'string' &&
-            typeof (item as TextReplaceRule).pattern === 'string' &&
-            typeof (item as TextReplaceRule).replacement === 'string',
-        );
+        textReplaceRules.value = filterImportedRules(raw.textReplaceRules as unknown[]);
         saveTextRules();
       }
       eventBus.emit('ui:toast', { type: 'success', message: t('settings.advanced.importExport.importToast'), duration: 1500 });
@@ -694,34 +553,8 @@ function openImportSettings(): void {
 
 const showClearCacheConfirm = ref(false);
 
-/** Keys that must never be cleared by "clear cache" — they hold user config, not transient caches */
-const CACHE_PROTECTED_KEYS = new Set([
-  'aga_api_management',
-  'aga_ai_settings',
-  'aga_engram_config',
-  'aga_user_settings',
-  'aga_action_options_settings',
-  'aga_debug_settings',
-  'aga_text_replace_rules',
-  'aga_autosave_settings',
-  'aga_feature_toggles',
-  'aga_memory_settings',
-  'aga_nsfw_settings',
-  'aga_plot_settings',
-  'aga_heartbeat_settings',
-  'aga_assistant_settings',
-  'aga_ui_scale',
-  'aga_text_speed',
-]);
-
 function clearCache(): void {
-  const keysToRemove: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && (k.startsWith('aga_') || k.startsWith('aga-')) && !CACHE_PROTECTED_KEYS.has(k)) {
-      keysToRemove.push(k);
-    }
-  }
+  const keysToRemove = collectClearableCacheKeys();
   keysToRemove.forEach((k) => localStorage.removeItem(k));
   showClearCacheConfirm.value = false;
   eventBus.emit('ui:toast', { type: 'success', message: t('settings.advanced.clearCache.toast', { count: keysToRemove.length }), duration: 2000 });
@@ -877,42 +710,11 @@ onMounted(() => {
 // Each is stored in the game state tree and synced to localStorage
 // where appropriate so the engine can read them at runtime.
 
-const FEATURE_TOGGLES_KEY = 'aga_feature_toggles';
-
-interface FeatureToggles {
-  text_optimization: boolean;
-  world_heartbeat: boolean;
-  location_npc_generation: boolean;
-  npc_chat: boolean;
-  field_repair: boolean;
-  plot_decompose: boolean;
-  assistant: boolean;
-  cot: boolean;
-  bodyPolish: boolean;
-  imageGeneration: boolean;
-  privacy_repair: boolean;
-}
-
-const defaultFeatureToggles: FeatureToggles = {
-  text_optimization: false,
-  world_heartbeat: true,
-  location_npc_generation: true,
-  npc_chat: true,
-  field_repair: true,
-  plot_decompose: true,
-  assistant: true,
-  cot: false,
-  bodyPolish: false,
-  imageGeneration: false,
-  privacy_repair: true,
-};
-
 const featureToggles = ref<FeatureToggles>({ ...defaultFeatureToggles });
 
 function loadFeatureToggles(): void {
   try {
-    const raw = JSON.parse(localStorage.getItem(FEATURE_TOGGLES_KEY) ?? '{}') as Partial<FeatureToggles>;
-    featureToggles.value = { ...defaultFeatureToggles, ...raw };
+    featureToggles.value = parseFeatureToggles(localStorage.getItem(FEATURE_TOGGLES_KEY) ?? '{}');
   } catch {
     featureToggles.value = { ...defaultFeatureToggles };
   }
@@ -920,14 +722,8 @@ function loadFeatureToggles(): void {
 
 function saveFeatureToggles(): void {
   try {
-    // Read-merge: `aga_feature_toggles` is co-owned with APIPanel, which writes
-    // panel-exclusive usageType keys (imageGen_*, world_builder, engram_batch_solidify,
-    // card_edge_classify, image*Tokenizer …). This panel's ref is loaded once on mount
-    // and (under <KeepAlive>) never refreshed, so a plain overwrite with this panel's
-    // stale, narrow shape would erase any key APIPanel added afterward. Merge over the
-    // current on-disk value to preserve foreign keys.
-    const existing = JSON.parse(localStorage.getItem(FEATURE_TOGGLES_KEY) ?? '{}') as Record<string, unknown>;
-    localStorage.setItem(FEATURE_TOGGLES_KEY, JSON.stringify({ ...existing, ...featureToggles.value }));
+    // Read-merge over the on-disk value (the key is co-owned with APIPanel; see mergeFeatureTogglesForSave).
+    localStorage.setItem(FEATURE_TOGGLES_KEY, mergeFeatureTogglesForSave(localStorage.getItem(FEATURE_TOGGLES_KEY) ?? '{}', featureToggles.value));
   } catch { /* ignore */ }
 }
 
@@ -938,11 +734,6 @@ function toggleFeature(key: keyof FeatureToggles): void {
 
 watch(featureToggles, () => saveFeatureToggles(), { deep: true });
 
-const COT_LS_KEY = 'aga_cot_settings';
-const BODY_POLISH_LS_KEY = 'aga_body_polish_settings';
-const PRESENCE_LS_KEY = 'aga_presence_settings';
-const IMAGE_GEN_LS_KEY = 'aga_image_gen_settings';
-
 const cotSettings = ref({
   enabled: false,
   judgeEnabled: false,
@@ -951,14 +742,7 @@ const cotSettings = ref({
 });
 
 function loadCotSettings(): void {
-  cotSettings.value = {
-    enabled: get('系统.设置.cot.enabled') === true,
-    judgeEnabled: get('系统.设置.cot.judgeEnabled') === true,
-    injectStep2: get('系统.设置.cot.injectStep2') !== false,
-    ringSize: typeof get('系统.设置.cot.reasoningRingSize') === 'number'
-      ? (get('系统.设置.cot.reasoningRingSize') as number)
-      : 3,
-  };
+  cotSettings.value = readCotSettings(get);
 }
 
 function saveCotToLocalStorage(): void {
@@ -979,7 +763,7 @@ function toggleCotSetting(key: 'enabled' | 'judgeEnabled' | 'injectStep2'): void
 }
 
 function updateCotRingSize(val: string): void {
-  const n = Math.min(10, Math.max(1, parseInt(val) || 3));
+  const n = clampCotRingSize(val);
   cotSettings.value.ringSize = n;
   setValue('系统.设置.cot.reasoningRingSize', n);
   saveCotToLocalStorage();
@@ -1029,10 +813,10 @@ function loadLowLoadSettings(): void {
   try {
     const raw = localStorage.getItem(AI_SETTINGS_KEY_SETTINGS);
     if (!raw) return;
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    lowLoadEnabled.value = parsed.lowLoadMode === true;
-    if (typeof parsed.lowLoadMaxRequests === 'number') {
-      lowLoadMaxRequests.value = Math.max(1, Math.min(10, parsed.lowLoadMaxRequests));
+    const parsed = parseLowLoadSettings(raw);
+    lowLoadEnabled.value = parsed.enabled;
+    if (parsed.maxRequests !== undefined) {
+      lowLoadMaxRequests.value = parsed.maxRequests;
     }
   } catch { /* ignore */ }
 }
@@ -1057,8 +841,8 @@ function toggleLowLoad(): void {
 }
 
 function updateLowLoadMaxRequests(val: string): void {
-  const n = parseInt(val, 10);
-  if (isFinite(n) && n >= 1 && n <= 10) {
+  const n = lowLoadMaxRequestsFromInput(val);
+  if (n !== null) {
     lowLoadMaxRequests.value = n;
     saveLowLoadSettings();
   }
@@ -1088,11 +872,6 @@ const settingsSearch = ref('');
 const settingsContentRef = ref<HTMLElement | null>(null);
 const activeNavId = ref('settings-nsfw');
 
-interface NavCategory {
-  id: string;
-  label: string;
-}
-
 const navCategories = computed<NavCategory[]>(() => [
   { id: 'settings-nsfw', label: t('settings.nav.nsfw') },
   { id: 'settings-ai-features', label: t('settings.nav.aiFeatures') },
@@ -1115,15 +894,12 @@ const navCategories = computed<NavCategory[]>(() => [
 ]);
 
 function sectionMatchesSearch(sectionId: string): boolean {
-  const q = settingsSearch.value.trim().toLowerCase();
-  if (!q) return true;
-  const cat = navCategories.value.find((c) => c.id === sectionId);
-  if (cat && cat.label.toLowerCase().includes(q)) return true;
-  const container = settingsContentRef.value;
-  if (!container) return true;
-  const el = container.querySelector(`#${sectionId}`);
-  if (!el) return true;
-  return el.textContent?.toLowerCase().includes(q) ?? true;
+  return sectionMatchesSearchText(
+    settingsSearch.value,
+    () => navCategories.value.find((c) => c.id === sectionId),
+    () => settingsContentRef.value,
+    sectionId,
+  );
 }
 
 const visibleCategoryIds = computed(() => {
