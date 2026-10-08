@@ -128,6 +128,26 @@ export class EntityBuilder {
     options?: { includeAllNpcTypes?: boolean },
   ): EngramEntity[] {
     const entityMap: EntityMap = new Map();
+
+    // ── 1 + 2. 玩家 + 社交关系中的 NPC ──
+    const playerName = this.seedPlayerAndNpcs(entityMap, stateManager, paths, options);
+
+    // ── 3 + 4. 从 events 补充 role / location 实体 ──
+    this.addEventEntities(entityMap, events, playerName);
+
+    // ── 5. Fix firstSeen/lastSeen from events ──
+    this.fixSeenRounds(entityMap, events, playerName);
+
+    return Array.from(entityMap.values());
+  }
+
+  /** Steps 1-2: the player entity, then the relationship-array NPCs. Returns the resolved player name. */
+  private seedPlayerAndNpcs(
+    entityMap: EntityMap,
+    stateManager: EngramStateReader,
+    paths: EntityBuilderPaths,
+    options?: { includeAllNpcTypes?: boolean },
+  ): string {
     const F = DEFAULT_ENGINE_PATHS.npcFieldNames;
 
     // ── 1. 玩家 ──
@@ -151,7 +171,15 @@ export class EntityBuilder {
         });
       }
     }
+    return playerName;
+  }
 
+  /** Steps 3-4: pre-scan known locations, then add role / location / legacy-field entities. */
+  private addEventEntities(
+    entityMap: EntityMap,
+    events: EngramEventNode[],
+    playerName: string,
+  ): void {
     // ── 3. Pre-scan: collect all known location names from events ──
     const knownLocations = new Set<string>();
     for (const event of events) {
@@ -210,7 +238,14 @@ export class EntityBuilder {
         this.upsertEntity(entityMap, event.location, 'location', round, '');
       }
     }
+  }
 
+  /** Step 5: derive firstSeen/lastSeen of non-player entities from the events. */
+  private fixSeenRounds(
+    entityMap: EntityMap,
+    events: EngramEventNode[],
+    playerName: string,
+  ): void {
     // ── 5. Fix firstSeen/lastSeen from events ──
     // Step 2 hardcodes round=0 for relationship-sourced entities because 社交.関係
     // doesn't record when an NPC was added. This post-processing pass derives the
@@ -255,8 +290,6 @@ export class EntityBuilder {
         entity.lastSeen = er.last;
       }
     }
-
-    return Array.from(entityMap.values());
   }
 
   /**

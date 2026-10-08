@@ -32,6 +32,7 @@ import type { CompileTrace, CompileTraceEntry, EnginePathConfig } from '../pipel
 import { stringifySnapshotForPrompt } from '../memory/snapshot-sanitizer';
 import { estimateTextTokens } from '../core/metrics-helpers';
 import { PIECE_ID } from './piece-ids';
+import type { AIMessage } from '../ai/types';
 
 // ─── Constants (PO decisions 2026-09-04, positioning doc §8.2) ───
 
@@ -41,6 +42,48 @@ export const STEP2_FEW_SHOT_PAIRS = 2;
 export const LEGACY_FEW_SHOT_PAIRS = 3;
 /** History pairs for the post-round sub-pipelines (field repair, Engram batch solidify). */
 export const SUB_PIPELINE_HISTORY_PAIRS = 3;
+/**
+ * The last SUB_PIPELINE_HISTORY_PAIRS narrative pairs wrapped with the same XML tags
+ * `context-assembly` uses, as chat messages for a post-round sub-pipeline call (shared by
+ * field repair and Engram batch solidify).
+ */
+export function buildSubPipelineHistory(
+  narrativeHistory: unknown,
+): AIMessage[] {
+  if (!Array.isArray(narrativeHistory) || narrativeHistory.length === 0) return [];
+
+  const keepCount = SUB_PIPELINE_HISTORY_PAIRS * 2;
+  const tail = (narrativeHistory as Array<{ role: string; content?: string }>).slice(-keepCount);
+  return tail.map((m): AIMessage => {
+    const role = m.role as AIMessage['role'];
+    let wrapped = m.content ?? '';
+    if (role === 'user') wrapped = `<玩家输入>\n${wrapped}\n</玩家输入>`;
+    else if (role === 'assistant') wrapped = `<叙事正文>\n${wrapped}\n</叙事正文>`;
+    return { role, content: wrapped };
+  });
+}
+
+/**
+ * Plain `- line` list of the last 8 short-term memory entries - the fallback memory block when
+ * no retriever result is available. Returns '' when there is nothing to list; each caller
+ * supplies its own empty-state wording. `contentKey` is the pack's entry text field.
+ */
+export function formatShortTermFallback(shortTerm: unknown, contentKey: string): string {
+  if (!Array.isArray(shortTerm) || shortTerm.length === 0) return '';
+  return shortTerm
+    .slice(-8)
+    .map((m) => {
+      if (typeof m === 'string') return `- ${m}`;
+      if (m && typeof m === 'object') {
+        const content = (m as Record<string, unknown>)[contentKey] ?? (m as Record<string, unknown>)['content'];
+        return typeof content === 'string' ? `- ${content}` : '';
+      }
+      return '';
+    })
+    .filter(Boolean)
+    .join('\n');
+}
+
 /** World-event log projection: always keep the newest N entries… */
 export const WORLD_EVENT_RECENT_COUNT = 5;
 /** …plus at most M older entries relevant to the present NPCs / current location. */

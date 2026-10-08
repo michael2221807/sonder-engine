@@ -43,7 +43,7 @@ import { loadEngramConfig } from '../../memory/engram/engram-config';
 import { eventBus } from '../../core/event-bus';
 import { stripThinkingBlocks } from '../../ai/thinking-tags';
 import { stringifySnapshotForPrompt } from '../../memory/snapshot-sanitizer';
-import { SUB_PIPELINE_HISTORY_PAIRS } from '../../prompt/context-compiler';
+import { buildSubPipelineHistory, formatShortTermFallback } from '../../prompt/context-compiler';
 import {
   findIncompleteFields,
   readRequiredFieldsConfig,
@@ -901,18 +901,7 @@ export class FieldRepairPipeline {
     }
     const shortTerm = this.stateManager.get<unknown[]>(DEFAULT_ENGINE_PATHS.shortTermMemory) ?? [];
     if (!Array.isArray(shortTerm) || shortTerm.length === 0) return '（暂无短期记忆）';
-    return shortTerm
-      .slice(-8)
-      .map((m) => {
-        if (typeof m === 'string') return `- ${m}`;
-        if (m && typeof m === 'object') {
-          const content = (m as Record<string, unknown>)['内容'] ?? (m as Record<string, unknown>)['content'];
-          return typeof content === 'string' ? `- ${content}` : '';
-        }
-        return '';
-      })
-      .filter(Boolean)
-      .join('\n');
+    return formatShortTermFallback(shortTerm, '内容');
   }
 
   /**
@@ -920,20 +909,8 @@ export class FieldRepairPipeline {
    * same XML tags `context-assembly` uses, so the AI sees a coherent format.
    */
   private loadChatHistory(): AIMessage[] {
-    const narrativeHistory = this.stateManager.get<NarrativeEntry[]>(this.paths.narrativeHistory);
-    if (!Array.isArray(narrativeHistory) || narrativeHistory.length === 0) return [];
-
-    // Recent narrative as CONTEXT for the repair call. Constant since 2026-09-04
-    // (Context Compiler v1, PO decision Q3 removed the player setting).
-    const keepCount = SUB_PIPELINE_HISTORY_PAIRS * 2;
-    const tail = narrativeHistory.slice(-keepCount);
-    return tail.map((m): AIMessage => {
-      const role = m.role as AIMessage['role'];
-      let wrapped = m.content ?? '';
-      if (role === 'user') wrapped = `<玩家输入>\n${wrapped}\n</玩家输入>`;
-      else if (role === 'assistant') wrapped = `<叙事正文>\n${wrapped}\n</叙事正文>`;
-      return { role, content: wrapped };
-    });
+    // Recent narrative as CONTEXT for the repair call.
+    return buildSubPipelineHistory(this.stateManager.get<NarrativeEntry[]>(this.paths.narrativeHistory));
   }
 
   /**

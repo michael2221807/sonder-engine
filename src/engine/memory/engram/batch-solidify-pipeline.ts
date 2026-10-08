@@ -25,7 +25,7 @@ import { loadEngramConfig } from './engram-config';
 import { normalizeLocationRecords } from './engram-types';
 import { parseLooseJson } from '../../ai/json-extract';
 import { stringifySnapshotForPrompt } from '../../memory/snapshot-sanitizer';
-import { SUB_PIPELINE_HISTORY_PAIRS } from '../../prompt/context-compiler';
+import { buildSubPipelineHistory, formatShortTermFallback } from '../../prompt/context-compiler';
 import { SYSTEM_PATHS } from '../../pipeline/system-paths';
 import { DEFAULT_ENGINE_PATHS } from '../../pipeline/types';
 import { TIANMING_MEMORY_ENTRY_CONTENT_KEY } from '../../pack/tianming-coupling';
@@ -270,7 +270,7 @@ export class EngramBatchSolidifyPipeline {
   async run(
     onProgress?: (phase: BatchSolidifyPhase) => void,
   ): Promise<BatchSolidifyResult> {
-    const { aiService, stateManager, engramEditor, engramManager, paths, jailbreakPrompt } = this.deps;
+    const { stateManager, engramEditor, engramManager, paths } = this.deps;
 
     if (!loadEngramConfig().enabled) {
       throw new Error('Engram is not enabled');
@@ -283,6 +283,110 @@ export class EngramBatchSolidifyPipeline {
     // ── Data sync: handle deletions + description updates BEFORE AI call ──
 
     const knownDescriptions = this.buildKnownDescriptions();
+    // Build the full set of names that currently exist in state tree
+    const { locationNameSet, stateTreeNames } = this.collectStateTreeNames();
+
+    // 1. Invalidate edges + entities for deleted NPC/locations (removed from state tree)
+    await this.invalidateDeletedEntries(stateTreeNames);
+
+    // 2. Sync descriptions: update non-user-edited entities whose state tree description changed
+    await this.syncEntityDescriptions(knownDescriptions, locationNameSet);
+
+    if (!report.hasMissing) {
+      onProgress?.('done');
+      return { created: 0, skipped: 0, skippedDetails: [], alreadyComplete: true };
+    }
+
+    // 3. Create entities for names in state tree but not in Engram
+    const allMissing = [
+      ...report.missingNpcEntities,
+      ...report.missingLocationEntities,
+    ];
+
+    if (allMissing.length > 0) {
+      const toCreate = this.collectEntitiesToCreate(allMissing, locationNameSet, knownDescriptions);
+      if (toCreate.length > 0) {
+        const r = await engramEditor.bulkCreateEntities(toCreate);
+        console.log(`[BatchSolidify] Created ${r.created.length} missing entities`);
+      }
+    }
+
+    // ── Build AI context and call ──
+    const rawResponse = await this.callAI(report, allMissing, knownDescriptions, onProgress);
+
+    // Phase 3: Parse + validate
+    const aiOutput = parseAIResponse(rawResponse);
+    console.log(`[BatchSolidify] Parsed ${aiOutput.facts.length} facts, ${aiOutput.descriptions.length} descriptions from AI response`);
+
+    // Write AI-generated descriptions BEFORE checking facts — AI may return
+    // only descriptions with empty facts, and we must not discard them.
+    if (aiOutput.descriptions.length > 0) {
+      await this.applyAIDescriptions(aiOutput.descriptions);
+    }
+
+    if (aiOutput.facts.length === 0) {
+      onProgress?.('done');
+      return { created: 0, skipped: 0, skippedDetails: [], alreadyComplete: false };
+    }
+
+    const validNames = this.buildValidNameSet();
+    const { valid, skipped: validationSkipped } = validateFacts(aiOutput.facts, validNames);
+
+    if (valid.length === 0) {
+      onProgress?.('done');
+      return {
+        created: 0,
+        skipped: validationSkipped.length,
+        skippedDetails: validationSkipped,
+        alreadyComplete: false,
+      };
+    }
+
+    // Inject via bulkCreateEdges
+    onProgress?.('applying');
+    console.log(`[BatchSolidify] Injecting ${valid.length} validated edges (${validationSkipped.length} skipped in validation)`);
+    const bulkResult = await engramEditor.bulkCreateEdges(valid, {
+      defaultCore: false,
+      defaultSource: 'batch-sync',
+    });
+    console.log(`[BatchSolidify] bulkCreateEdges: created=${bulkResult.created.length}, skipped=${bulkResult.skipped.length}`);
+    if (bulkResult.skipped.length > 0) {
+      console.log('[BatchSolidify] Skipped edges:', bulkResult.skipped.slice(0, 5));
+    }
+
+    // Clean up orphan stubs: entities with _pendingEnrichment that have zero edges.
+    // These are created by bulkCreateEdges auto-stub for AI-hallucinated names.
+    await this.removeOrphanStubs();
+
+    // Note: we intentionally do NOT call processResponse(syntheticEmpty) here.
+    // processResponse triggers Step 4 "NPC importance filter" which deletes edges
+    // where neither endpoint is an "important NPC" — this kills all location↔location
+    // edges we just created. Entity descriptions are already filled in the fix step
+    // above, so EntityBuilder rebuild is not needed.
+
+    // Auto-vectorize new entities and edges (fire-and-forget)
+    engramManager.vectorizePending(stateManager).catch(err =>
+      console.warn('[BatchSolidify] Vectorization failed (non-blocking):', err),
+    );
+
+    onProgress?.('done');
+
+    const allSkipped = [
+      ...validationSkipped,
+      ...bulkResult.skipped,
+    ];
+
+    return {
+      created: bulkResult.created.length,
+      skipped: allSkipped.length,
+      skippedDetails: allSkipped,
+      alreadyComplete: false,
+    };
+  }
+
+  /** Names currently present in the state tree (NPCs, locations, player). Sync, runs outside any lock. */
+  private collectStateTreeNames(): { locationNameSet: Set<string>; stateTreeNames: Set<string> } {
+    const { stateManager, paths } = this.deps;
     const locationNameSet = new Set<string>();
     for (const loc of normalizeLocationRecords(stateManager.get<unknown>(paths.locations))) {
       const n = loc[paths.locationNameField];
@@ -302,8 +406,13 @@ export class EngramBatchSolidifyPipeline {
     const playerName = stateManager.get<string>(paths.playerName);
     if (playerName) stateTreeNames.add(playerName);
 
-    // 1. Invalidate edges + entities for deleted NPC/locations (removed from state tree)
-    await engramManager.withWriteLock(() => {
+    return { locationNameSet, stateTreeNames };
+  }
+
+  /** Write-lock window 1: invalidate edges + entities whose state-tree entry was deleted. */
+  private invalidateDeletedEntries(stateTreeNames: Set<string>): Promise<void> {
+    const { stateManager, engramManager, paths } = this.deps;
+    return engramManager.withWriteLock(() => {
       const currentEngram = stateManager.get<{
         entities: EngramEntity[];
         v2Edges: EngramEdge[];
@@ -338,9 +447,15 @@ export class EngramBatchSolidifyPipeline {
         console.log('[BatchSolidify] Invalidated edges/entities for deleted state tree entries');
       }
     });
+  }
 
-    // 2. Sync descriptions: update non-user-edited entities whose state tree description changed
-    await engramManager.withWriteLock(() => {
+  /** Write-lock window 2: refresh summaries of non-user entities from the state tree. */
+  private syncEntityDescriptions(
+    knownDescriptions: Map<string, string>,
+    locationNameSet: Set<string>,
+  ): Promise<void> {
+    const { stateManager, engramManager, paths } = this.deps;
+    return engramManager.withWriteLock(() => {
       const currentEngram = stateManager.get<{ entities: EngramEntity[] }>(paths.engramMemory);
       if (!currentEngram?.entities) return;
       let fixedCount = 0;
@@ -365,40 +480,40 @@ export class EngramBatchSolidifyPipeline {
       if (fixedCount > 0) stateManager.set(paths.engramMemory, currentEngram, 'system');
       if (fixedCount > 0) console.log(`[BatchSolidify] Synced ${fixedCount} entity descriptions from state tree`);
     });
+  }
 
-    if (!report.hasMissing) {
-      onProgress?.('done');
-      return { created: 0, skipped: 0, skippedDetails: [], alreadyComplete: true };
+  /** Names in the state tree that Engram does not have an entity for yet. Sync read, outside any lock. */
+  private collectEntitiesToCreate(
+    allMissing: string[],
+    locationNameSet: Set<string>,
+    knownDescriptions: Map<string, string>,
+  ): Array<{ name: string; type?: 'npc' | 'location' | 'item' | 'player'; summary?: string }> {
+    const { stateManager, paths } = this.deps;
+    const engram = stateManager.get<{ entities: EngramEntity[] }>(paths.engramMemory);
+    const existingNames = new Set(
+      (engram?.entities ?? []).filter(e => !e._pendingEnrichment).map(e => e.name),
+    );
+    const toCreate: Array<{ name: string; type?: 'npc' | 'location' | 'item' | 'player'; summary?: string }> = [];
+    for (const name of allMissing) {
+      if (existingNames.has(name)) continue;
+      existingNames.add(name);
+      toCreate.push({
+        name,
+        type: locationNameSet.has(name) ? 'location' : undefined,
+        summary: knownDescriptions.get(name) || name,
+      });
     }
+    return toCreate;
+  }
 
-    // 3. Create entities for names in state tree but not in Engram
-    const allMissing = [
-      ...report.missingNpcEntities,
-      ...report.missingLocationEntities,
-    ];
-
-    if (allMissing.length > 0) {
-      const engram = stateManager.get<{ entities: EngramEntity[] }>(paths.engramMemory);
-      const existingNames = new Set(
-        (engram?.entities ?? []).filter(e => !e._pendingEnrichment).map(e => e.name),
-      );
-      const toCreate: Array<{ name: string; type?: 'npc' | 'location' | 'item' | 'player'; summary?: string }> = [];
-      for (const name of allMissing) {
-        if (existingNames.has(name)) continue;
-        existingNames.add(name);
-        toCreate.push({
-          name,
-          type: locationNameSet.has(name) ? 'location' : undefined,
-          summary: knownDescriptions.get(name) || name,
-        });
-      }
-      if (toCreate.length > 0) {
-        const r = await engramEditor.bulkCreateEntities(toCreate);
-        console.log(`[BatchSolidify] Created ${r.created.length} missing entities`);
-      }
-    }
-
-    // ── Build AI context and call ──
+  /** Build the prompt context, call the model (phase 'generating'), return the raw reply. */
+  private async callAI(
+    report: MissingReport,
+    allMissing: string[],
+    knownDescriptions: Map<string, string>,
+    onProgress?: (phase: BatchSolidifyPhase) => void,
+  ): Promise<string> {
+    const { aiService, stateManager, paths, jailbreakPrompt } = this.deps;
     onProgress?.('generating');
 
     const gameStateJson = this.buildGameStateJson();
@@ -447,69 +562,39 @@ export class EngramBatchSolidifyPipeline {
       throw err;
     }
 
-    // Phase 3: Parse + validate
-    const aiOutput = parseAIResponse(rawResponse);
-    console.log(`[BatchSolidify] Parsed ${aiOutput.facts.length} facts, ${aiOutput.descriptions.length} descriptions from AI response`);
+    return rawResponse;
+  }
 
-    // Write AI-generated descriptions BEFORE checking facts — AI may return
-    // only descriptions with empty facts, and we must not discard them.
-    if (aiOutput.descriptions.length > 0) {
-      await engramManager.withWriteLock(() => {
-        const currentEngram = stateManager.get<{ entities: EngramEntity[] }>(paths.engramMemory);
-        if (!currentEngram?.entities) return;
-        let count = 0;
-        for (const desc of aiOutput.descriptions) {
-          const name = desc.name.trim();
-          const summary = desc.summary.trim();
-          if (!name || !summary) continue;
-          const entity = currentEngram.entities.find(e => e.name === name);
-          if (entity && (!entity.summary || entity.summary === entity.name)) {
-            entity.summary = summary;
-            if (entity._pendingEnrichment) entity._pendingEnrichment = undefined;
-            entity.is_embedded = false;
-            count++;
-          }
+  /** Write-lock window 3: apply the model's entity descriptions to still-empty summaries. */
+  private applyAIDescriptions(descriptions: ParsedEntityDesc[]): Promise<void> {
+    const { stateManager, engramManager, paths } = this.deps;
+    return engramManager.withWriteLock(() => {
+      const currentEngram = stateManager.get<{ entities: EngramEntity[] }>(paths.engramMemory);
+      if (!currentEngram?.entities) return;
+      let count = 0;
+      for (const desc of descriptions) {
+        const name = desc.name.trim();
+        const summary = desc.summary.trim();
+        if (!name || !summary) continue;
+        const entity = currentEngram.entities.find(e => e.name === name);
+        if (entity && (!entity.summary || entity.summary === entity.name)) {
+          entity.summary = summary;
+          if (entity._pendingEnrichment) entity._pendingEnrichment = undefined;
+          entity.is_embedded = false;
+          count++;
         }
-        if (count > 0) {
-          stateManager.set(paths.engramMemory, currentEngram, 'system');
-          console.log(`[BatchSolidify] Applied ${count} AI-generated descriptions`);
-        }
-      });
-    }
-
-    if (aiOutput.facts.length === 0) {
-      onProgress?.('done');
-      return { created: 0, skipped: 0, skippedDetails: [], alreadyComplete: false };
-    }
-
-    const validNames = this.buildValidNameSet();
-    const { valid, skipped: validationSkipped } = validateFacts(aiOutput.facts, validNames);
-
-    if (valid.length === 0) {
-      onProgress?.('done');
-      return {
-        created: 0,
-        skipped: validationSkipped.length,
-        skippedDetails: validationSkipped,
-        alreadyComplete: false,
-      };
-    }
-
-    // Inject via bulkCreateEdges
-    onProgress?.('applying');
-    console.log(`[BatchSolidify] Injecting ${valid.length} validated edges (${validationSkipped.length} skipped in validation)`);
-    const bulkResult = await engramEditor.bulkCreateEdges(valid, {
-      defaultCore: false,
-      defaultSource: 'batch-sync',
+      }
+      if (count > 0) {
+        stateManager.set(paths.engramMemory, currentEngram, 'system');
+        console.log(`[BatchSolidify] Applied ${count} AI-generated descriptions`);
+      }
     });
-    console.log(`[BatchSolidify] bulkCreateEdges: created=${bulkResult.created.length}, skipped=${bulkResult.skipped.length}`);
-    if (bulkResult.skipped.length > 0) {
-      console.log('[BatchSolidify] Skipped edges:', bulkResult.skipped.slice(0, 5));
-    }
+  }
 
-    // Clean up orphan stubs: entities with _pendingEnrichment that have zero edges.
-    // These are created by bulkCreateEdges auto-stub for AI-hallucinated names.
-    await engramManager.withWriteLock(() => {
+  /** Write-lock window 4: drop auto-stubs that ended up with no edge. */
+  private removeOrphanStubs(): Promise<void> {
+    const { stateManager, engramManager, paths } = this.deps;
+    return engramManager.withWriteLock(() => {
       const postEngram = stateManager.get<{ entities: EngramEntity[]; v2Edges: EngramEdge[] }>(paths.engramMemory);
       if (!postEngram?.entities) return;
       const edgeNames = new Set<string>();
@@ -527,31 +612,6 @@ export class EngramBatchSolidifyPipeline {
         console.log(`[BatchSolidify] Removed ${removed} orphan stub entities`);
       }
     });
-
-    // Note: we intentionally do NOT call processResponse(syntheticEmpty) here.
-    // processResponse triggers Step 4 "NPC importance filter" which deletes edges
-    // where neither endpoint is an "important NPC" — this kills all location↔location
-    // edges we just created. Entity descriptions are already filled in the fix step
-    // above, so EntityBuilder rebuild is not needed.
-
-    // Auto-vectorize new entities and edges (fire-and-forget)
-    engramManager.vectorizePending(stateManager).catch(err =>
-      console.warn('[BatchSolidify] Vectorization failed (non-blocking):', err),
-    );
-
-    onProgress?.('done');
-
-    const allSkipped = [
-      ...validationSkipped,
-      ...bulkResult.skipped,
-    ];
-
-    return {
-      created: bulkResult.created.length,
-      skipped: allSkipped.length,
-      skippedDetails: allSkipped,
-      alreadyComplete: false,
-    };
   }
 
   private buildKnownDescriptions(): Map<string, string> {
@@ -603,38 +663,12 @@ export class EngramBatchSolidifyPipeline {
       } catch { /* fallback */ }
     }
     const shortTerm = this.deps.stateManager.get<unknown[]>(DEFAULT_ENGINE_PATHS.shortTermMemory) ?? [];
-    if (!Array.isArray(shortTerm) || shortTerm.length === 0) return '（暂无记忆）';
-    return shortTerm
-      .slice(-8)
-      .map(m => {
-        if (typeof m === 'string') return `- ${m}`;
-        if (m && typeof m === 'object') {
-          const content = (m as Record<string, unknown>)[TIANMING_MEMORY_ENTRY_CONTENT_KEY] ?? (m as Record<string, unknown>)['content'];
-          return typeof content === 'string' ? `- ${content}` : '';
-        }
-        return '';
-      })
-      .filter(Boolean)
-      .join('\n') || '（暂无记忆）';
+    return formatShortTermFallback(shortTerm, TIANMING_MEMORY_ENTRY_CONTENT_KEY) || '（暂无记忆）';
   }
 
   private loadChatHistory(): AIMessage[] {
-    const narrativeHistory = this.deps.stateManager.get<Array<{ role: string; content: string }>>(
-      this.deps.paths.narrativeHistory,
-    );
-    if (!Array.isArray(narrativeHistory) || narrativeHistory.length === 0) return [];
-
-    // Recent narrative as CONTEXT for edge generation (not format examples). Constant since
-    // 2026-09-04 (Context Compiler v1, PO decision Q3 removed the player setting).
-    const keepCount = SUB_PIPELINE_HISTORY_PAIRS * 2;
-    const tail = narrativeHistory.slice(-keepCount);
-    return tail.map((m): AIMessage => {
-      const role = m.role as AIMessage['role'];
-      let wrapped = m.content ?? '';
-      if (role === 'user') wrapped = `<玩家输入>\n${wrapped}\n</玩家输入>`;
-      else if (role === 'assistant') wrapped = `<叙事正文>\n${wrapped}\n</叙事正文>`;
-      return { role, content: wrapped };
-    });
+    // Recent narrative as CONTEXT for edge generation (not format examples).
+    return buildSubPipelineHistory(this.deps.stateManager.get<unknown>(this.deps.paths.narrativeHistory));
   }
 
   private buildTaskMessage(report: MissingReport, entitiesWithoutDesc: string[]): string {
