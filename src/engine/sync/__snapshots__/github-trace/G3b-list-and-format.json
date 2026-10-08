@@ -1,0 +1,85 @@
+{
+  "list": {
+    "outcome": {
+      "ok": [
+        {
+          "slotKey": "prof_a",
+          "updatedAt": "2026-10-08T00:00:01.000Z",
+          "sizeKB": 9,
+          "profileName": "Alice",
+          "packId": "tianming",
+          "slotCount": 2,
+          "lastPlayedAt": "2026-10-08T00:00:00.000Z",
+          "lastRound": 3,
+          "uploadedByLabel": "Windows · Chrome",
+          "uploadedByDeviceId": "dev_0a0b0c0d"
+        },
+        {
+          "slotKey": "global",
+          "updatedAt": "2026-10-08T00:00:02.000Z",
+          "sizeKB": 2,
+          "uploadedByLabel": "Windows · Chrome",
+          "uploadedByDeviceId": "dev_0a0b0c0d"
+        }
+      ]
+    },
+    "trace": [
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a/manifest.json"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha3"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_bad/manifest.json"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha6"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_orphan/manifest.json"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/global/manifest.json"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha5"
+      }
+    ],
+    "warnings": [
+      "[GitHubSync] skip corrupted slot manifest slots/prof_bad:"
+    ]
+  },
+  "listAuthError": {
+    "threw": {
+      "name": "Error",
+      "message": "GitHub API 403: {\"message\":\"fake 403\"}",
+      "status": 403
+    }
+  },
+  "formats": {
+    "empty": {
+      "ok": "empty"
+    },
+    "v2": {
+      "ok": "v2"
+    },
+    "v3FromGlobalOnly": {
+      "ok": "v3"
+    },
+    "bothV2AndSlots": {
+      "ok": "v3"
+    }
+  }
+}

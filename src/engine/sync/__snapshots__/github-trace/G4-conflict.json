@@ -1,0 +1,139 @@
+{
+  "rows": [
+    {
+      "label": "no baseline",
+      "v2": {
+        "ok": {
+          "conflict": true,
+          "cloud": {
+            "exists": true,
+            "updatedAt": "2026-10-08T00:00:00.000Z",
+            "sizeKB": 15,
+            "uploadedByLabel": "Windows · Chrome",
+            "uploadedByDeviceId": "dev_0a0b0c0d"
+          }
+        }
+      },
+      "slot": {
+        "ok": {
+          "conflict": true,
+          "cloud": {
+            "exists": true,
+            "updatedAt": "2026-10-08T00:00:01.000Z",
+            "sizeKB": 9,
+            "uploadedByLabel": "Windows · Chrome",
+            "uploadedByDeviceId": "dev_0a0b0c0d"
+          }
+        }
+      },
+      "global": {
+        "ok": {
+          "conflict": true,
+          "cloud": {
+            "exists": true,
+            "updatedAt": "2026-10-08T00:00:02.000Z",
+            "sizeKB": 2,
+            "uploadedByLabel": "Windows · Chrome",
+            "uploadedByDeviceId": "dev_0a0b0c0d"
+          }
+        }
+      }
+    },
+    {
+      "label": "equal",
+      "v2": {
+        "ok": {
+          "conflict": false,
+          "cloud": {
+            "exists": true,
+            "updatedAt": "2026-10-08T00:00:00.000Z",
+            "sizeKB": 15,
+            "uploadedByLabel": "Windows · Chrome",
+            "uploadedByDeviceId": "dev_0a0b0c0d"
+          }
+        }
+      },
+      "slot": {
+        "ok": {
+          "conflict": false,
+          "cloud": {
+            "exists": true,
+            "updatedAt": "2026-10-08T00:00:01.000Z",
+            "sizeKB": 9,
+            "uploadedByLabel": "Windows · Chrome",
+            "uploadedByDeviceId": "dev_0a0b0c0d"
+          }
+        }
+      },
+      "global": {
+        "ok": {
+          "conflict": false,
+          "cloud": {
+            "exists": true,
+            "updatedAt": "2026-10-08T00:00:02.000Z",
+            "sizeKB": 2,
+            "uploadedByLabel": "Windows · Chrome",
+            "uploadedByDeviceId": "dev_0a0b0c0d"
+          }
+        }
+      }
+    },
+    {
+      "label": "different",
+      "v2": {
+        "ok": {
+          "conflict": true,
+          "cloud": {
+            "exists": true,
+            "updatedAt": "2026-10-08T00:00:00.000Z",
+            "sizeKB": 15,
+            "uploadedByLabel": "Windows · Chrome",
+            "uploadedByDeviceId": "dev_0a0b0c0d"
+          }
+        }
+      },
+      "slot": {
+        "ok": {
+          "conflict": true,
+          "cloud": {
+            "exists": true,
+            "updatedAt": "2026-10-08T00:00:01.000Z",
+            "sizeKB": 9,
+            "uploadedByLabel": "Windows · Chrome",
+            "uploadedByDeviceId": "dev_0a0b0c0d"
+          }
+        }
+      },
+      "global": {
+        "ok": {
+          "conflict": true,
+          "cloud": {
+            "exists": true,
+            "updatedAt": "2026-10-08T00:00:02.000Z",
+            "sizeKB": 2,
+            "uploadedByLabel": "Windows · Chrome",
+            "uploadedByDeviceId": "dev_0a0b0c0d"
+          }
+        }
+      }
+    }
+  ],
+  "noCloud": {
+    "v2": {
+      "ok": {
+        "conflict": false,
+        "cloud": {
+          "exists": false
+        }
+      }
+    },
+    "slot": {
+      "ok": {
+        "conflict": false,
+        "cloud": {
+          "exists": false
+        }
+      }
+    }
+  }
+}

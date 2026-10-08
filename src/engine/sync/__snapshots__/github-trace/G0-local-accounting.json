@@ -1,0 +1,73 @@
+{
+  "steps": {
+    "fresh": {
+      "token": "",
+      "owner": "",
+      "repo": "aga-cloud-save",
+      "configured": false,
+      "autoSync": false
+    },
+    "afterSetters": {
+      "token": "tok",
+      "owner": "who",
+      "repo": "aga-cloud-save",
+      "configured": true
+    },
+    "afterClear": {
+      "token": "",
+      "owner": "",
+      "configured": false
+    },
+    "autoSync": {
+      "on": true,
+      "off": false
+    },
+    "scalar": {
+      "baseline": "2026-01-01T00:00:00.000Z",
+      "pending": true
+    },
+    "scalarCleared": {
+      "baseline": "",
+      "pending": false
+    },
+    "slotMaps": {
+      "filled": {
+        "baselines": {
+          "prof_a": "T1",
+          "global": "T2"
+        },
+        "pending": {
+          "prof_a": true,
+          "prof_b": true
+        }
+      },
+      "after": {
+        "baselines": {
+          "global": "T2"
+        },
+        "pending": {
+          "prof_a": true
+        }
+      }
+    },
+    "selfHeal": {
+      "brokenJson": {},
+      "array": {},
+      "string": {},
+      "null": {}
+    }
+  },
+  "fingerprints": {
+    "base": "e7530be2aa2c62ef2fee896920f5e83149e424b7c501fa14b52b0bf6ec290324",
+    "sameContentOtherTime": "e7530be2aa2c62ef2fee896920f5e83149e424b7c501fa14b52b0bf6ec290324",
+    "reorderedAndVolatileChanged": "e7530be2aa2c62ef2fee896920f5e83149e424b7c501fa14b52b0bf6ec290324",
+    "changedSetting": "58fda8c0c2d9ad130519d0d9c5eefebf8db835f63a533e444afde0110efd7a3f",
+    "withoutOverrides": "252fd6ddfbba2d70c71b3717c53694e376a6323f0c088911e99e923dbbe2a014"
+  },
+  "ls": {
+    "aga_device_id": "dev_0a0b0c0d",
+    "aga_github_sync_baselines": "null",
+    "aga_github_sync_pending_map": "{\"prof_a\":true}",
+    "aga_github_sync_repo": "aga-cloud-save"
+  }
+}

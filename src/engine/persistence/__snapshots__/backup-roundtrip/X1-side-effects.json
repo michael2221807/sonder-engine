@@ -1,0 +1,9 @@
+{
+  "emits": [],
+  "databasesChanged": [],
+  "lsChanged": {
+    "added": {},
+    "removed": [],
+    "changed": {}
+  }
+}

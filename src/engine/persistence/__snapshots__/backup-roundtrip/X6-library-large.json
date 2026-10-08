@@ -1,0 +1,29 @@
+{
+  "off": {
+    "imageIntegrity": {
+      "referencedAssets": 12,
+      "exportedAssets": 12
+    }
+  },
+  "on": {
+    "imageIntegrity": {
+      "referencedAssets": 14,
+      "exportedAssets": 14
+    }
+  },
+  "emits": [
+    {
+      "event": "ui:toast",
+      "payload": {
+        "type": "info",
+        "i18nKey": "engine.toast.referenceLibraryLarge",
+        "i18nParams": {
+          "mb": 250
+        },
+        "message": "本次备份含参考素材约 250MB，上传/下载会变慢（图片按 20MB 分卷，不会失败）。不需要时可取消勾选「包含参考素材」。",
+        "id": "reference-library-large",
+        "duration": 6000
+      }
+    }
+  ]
+}

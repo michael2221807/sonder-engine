@@ -1,0 +1,169 @@
+{
+  "outcome": {
+    "ok": "__undefined__"
+  },
+  "status": [
+    {
+      "stage": "uploading",
+      "message": "正在导出存档…"
+    },
+    {
+      "stage": "uploading",
+      "message": "正在压缩并上传…"
+    },
+    {
+      "stage": "uploading",
+      "message": "正在压缩并上传分块 1…"
+    },
+    {
+      "stage": "uploading",
+      "message": "正在压缩并上传分块 2…"
+    },
+    {
+      "stage": "uploading",
+      "message": "正在更新索引…"
+    },
+    {
+      "stage": "uploading",
+      "message": "正在清理旧分块…"
+    },
+    {
+      "stage": "done",
+      "message": "上传完成"
+    }
+  ],
+  "trace": [
+    {
+      "method": "GET",
+      "path": "/repos/octo/aga-cloud-save/contents/v2"
+    },
+    {
+      "method": "PUT",
+      "path": "/repos/octo/aga-cloud-save/contents/v2/state.muyrtkyo1f9a.gz",
+      "body": {
+        "message": "sync 2026-10-08T00:01:00",
+        "chunk": {
+          "plainLength": 5273,
+          "plainSha256": "8969b5cc33e05a0d93e243d1976cd069d44b7f08b278a3816af4c13338c492ed"
+        }
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/repos/octo/aga-cloud-save/contents/v2/img-0.muyrtkyo1f9a.gz",
+      "body": {
+        "message": "sync 2026-10-08T00:01:00",
+        "chunk": {
+          "plainLength": 3401,
+          "plainSha256": "fddc0faf31a5a1925d1d151058432eb8ff17ac012b67b7e8f69ec9600e886790"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/repos/octo/aga-cloud-save/contents/v2/manifest.json"
+    },
+    {
+      "method": "PUT",
+      "path": "/repos/octo/aga-cloud-save/contents/v2/manifest.json",
+      "body": {
+        "message": "sync 2026-10-08T00:01:00",
+        "sha": "sha3",
+        "manifest": {
+          "manifestVersion": 2,
+          "createdAt": "2026-10-08T00:01:00.000Z",
+          "engineVersion": "0.1.0",
+          "totalSizeBytes": 15322,
+          "bundleChecksum": "c19c14f11cbd25b0ff425a1588843450069ca929237fef7d07e7709b3634acd0",
+          "chunks": [
+            {
+              "name": "state",
+              "path": "v2/state.muyrtkyo1f9a.gz",
+              "compressedSize": "<gz>",
+              "originalSize": 5273,
+              "checksum": "<gz>"
+            },
+            {
+              "name": "img-0",
+              "path": "v2/img-0.muyrtkyo1f9a.gz",
+              "compressedSize": "<gz>",
+              "originalSize": 3401,
+              "checksum": "<gz>"
+            }
+          ],
+          "uploadedBy": {
+            "deviceId": "dev_0a0b0c0d",
+            "deviceLabel": "Windows · Chrome"
+          }
+        }
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/repos/octo/aga-cloud-save/contents/v2/state.muyrsao01f9a.gz",
+      "body": {
+        "message": "cleanup v2/state.muyrsao01f9a.gz",
+        "sha": "sha1"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/repos/octo/aga-cloud-save/contents/v2/state.muyrsao01f9a.gz"
+    },
+    {
+      "method": "DELETE",
+      "path": "/repos/octo/aga-cloud-save/contents/v2/state.muyrsao01f9a.gz",
+      "body": {
+        "message": "cleanup v2/state.muyrsao01f9a.gz",
+        "sha": "sha1"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/repos/octo/aga-cloud-save/contents/v2/img-0.muyrsao01f9a.gz",
+      "body": {
+        "message": "cleanup v2/img-0.muyrsao01f9a.gz",
+        "sha": "sha2"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/repos/octo/aga-cloud-save/contents/v2/stray.gz",
+      "body": {
+        "message": "cleanup v2/stray.gz",
+        "sha": "sha4"
+      }
+    }
+  ],
+  "backupCalls": [
+    {
+      "method": "exportForSync",
+      "args": []
+    },
+    {
+      "method": "exportForSync",
+      "args": []
+    }
+  ],
+  "lsDiff": {
+    "added": {},
+    "removed": [],
+    "changed": {
+      "aga_github_sync_baseline": {
+        "from": "SRC-BASELINE",
+        "to": "2026-10-08T00:01:00.000Z"
+      }
+    }
+  },
+  "headers": [
+    "[[\"Accept\",\"application/vnd.github+json\"],[\"Authorization\",\"Bearer ghp_FAKE0000\"],[\"X-GitHub-Api-Version\",\"2022-11-28\"]]"
+  ],
+  "repoAfter": [
+    "v2/img-0.muyrtkyo1f9a.gz",
+    "v2/manifest.json",
+    "v2/state.muyrtkyo1f9a.gz",
+    "v2/sub/inner.gz"
+  ],
+  "warnings": [],
+  "baseline": "2026-10-08T00:01:00.000Z"
+}

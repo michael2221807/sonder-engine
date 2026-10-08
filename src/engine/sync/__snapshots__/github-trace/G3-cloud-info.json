@@ -1,0 +1,105 @@
+{
+  "corruptedJson": {
+    "v2": {
+      "threw": {
+        "name": "SyntaxError",
+        "message": "<json parse message>"
+      }
+    },
+    "slot": {
+      "ok": {
+        "exists": false
+      }
+    },
+    "global": {
+      "ok": {
+        "exists": false
+      }
+    },
+    "warnings": [
+      "[GitHubSync] corrupted manifest for slot prof_x:",
+      "[GitHubSync] corrupted manifest for slot global:"
+    ]
+  },
+  "unexpectedEncoding": {
+    "v2": {
+      "threw": {
+        "name": "Error",
+        "message": "Unexpected blob encoding: utf-8"
+      }
+    },
+    "slot": {
+      "ok": {
+        "exists": false
+      }
+    }
+  },
+  "missing": {
+    "v2": {
+      "ok": {
+        "exists": false
+      }
+    },
+    "slot": {
+      "ok": {
+        "exists": false
+      }
+    },
+    "global": {
+      "ok": {
+        "exists": false
+      }
+    }
+  },
+  "serverErrors": {
+    "v2": {
+      "threw": {
+        "name": "Error",
+        "message": "GitHub API 500: {\"message\":\"fake 500\"}",
+        "status": 500
+      }
+    },
+    "slot": {
+      "threw": {
+        "name": "Error",
+        "message": "GitHub API 403: {\"message\":\"fake 403\"}",
+        "status": 403
+      }
+    }
+  },
+  "healthy": {
+    "v2": {
+      "ok": {
+        "exists": true,
+        "updatedAt": "2026-10-08T00:00:00.000Z",
+        "sizeKB": 15,
+        "uploadedByLabel": "Windows · Chrome",
+        "uploadedByDeviceId": "dev_0a0b0c0d"
+      }
+    },
+    "slot": {
+      "ok": {
+        "exists": true,
+        "updatedAt": "2026-10-08T00:00:01.000Z",
+        "sizeKB": 9,
+        "uploadedByLabel": "Windows · Chrome",
+        "uploadedByDeviceId": "dev_0a0b0c0d"
+      }
+    },
+    "global": {
+      "ok": {
+        "exists": true,
+        "updatedAt": "2026-10-08T00:00:02.000Z",
+        "sizeKB": 2,
+        "uploadedByLabel": "Windows · Chrome",
+        "uploadedByDeviceId": "dev_0a0b0c0d"
+      }
+    },
+    "invalidSlotId": {
+      "threw": {
+        "name": "Error",
+        "message": "非法的档案 ID：\"../evil\""
+      }
+    }
+  }
+}

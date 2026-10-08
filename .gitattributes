@@ -4,3 +4,7 @@ src/engine/pipeline/stages/__snapshots__/request-matrix/*.json text eol=lf
 src/engine/ai/__snapshots__/reply-corpus/*.json text eol=lf
 src/engine/image/__snapshots__/**/*.json text eol=lf
 src/engine/pipeline/__snapshots__/path-contract/*.json text eol=lf
+# R6 step 0 behaviour locks (backup round trip, GitHub request trace, memory writes): compared byte for byte.
+src/engine/persistence/__snapshots__/**/*.json text eol=lf
+src/engine/sync/__snapshots__/**/*.json text eol=lf
+src/engine/memory/__snapshots__/**/*.json text eol=lf

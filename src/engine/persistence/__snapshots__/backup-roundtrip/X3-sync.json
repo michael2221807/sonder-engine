@@ -1,0 +1,54 @@
+{
+  "prof_a": {
+    "imageIntegrity": {
+      "referencedAssets": 10,
+      "exportedAssets": 10
+    },
+    "worldBookIntegrity": {
+      "expectedBooks": 1,
+      "exportedBooks": 1,
+      "degradedProfiles": []
+    },
+    "displayMeta": {
+      "profileId": "prof_a",
+      "profileName": "Alice",
+      "packId": "tianming",
+      "slotCount": 2,
+      "lastPlayedAt": "2026-10-08T00:00:00.000Z",
+      "lastRound": 3
+    },
+    "bundleSha256": "54cc32e90dd95ea73d988c9946f7a1d4e89fdb87b51f28f3b3054abd8fa00fbe"
+  },
+  "prof_b_reference": {
+    "imageIntegrity": {
+      "referencedAssets": 2,
+      "exportedAssets": 2
+    },
+    "worldBookIntegrity": {
+      "expectedBooks": 0,
+      "exportedBooks": 2,
+      "degradedProfiles": []
+    },
+    "displayMeta": {
+      "profileId": "prof_b",
+      "profileName": "Bob",
+      "packId": "tianming",
+      "slotCount": 2,
+      "lastPlayedAt": "2026-10-08T00:00:00.000Z",
+      "lastRound": 5
+    },
+    "bundleSha256": "9c5746909e5a2ac262aa786e7f5f9efd1dba194b5cf92d28ecc7e6b575b9b9b5"
+  },
+  "sameBytesAsExportProfile": true,
+  "listProfileIds": [
+    "prof_a",
+    "prof_b"
+  ],
+  "missingProfile": {
+    "threw": {
+      "name": "Error",
+      "message": "Profile \"prof_nope\" does not exist"
+    }
+  },
+  "emits": []
+}

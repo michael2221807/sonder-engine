@@ -1,0 +1,4205 @@
+{
+  "ok": {
+    "steps": [
+      {
+        "label": "round 1",
+        "returned": {
+          "roundNumber": 1,
+          "capturedAt": 1791417660000,
+          "totalDurationMs": "<ms>",
+          "event": {
+            "eventId": "evt_muyrtkyo_4fzyo8",
+            "title": "陆沉来到青石镇的酒肆，遇见了老板娘林暖",
+            "roles": [
+              "陆沉",
+              "Lin Nuan"
+            ],
+            "location": [
+              "青石镇"
+            ],
+            "timeAnchor": "1年3月5日 14:20"
+          },
+          "entities": {
+            "total": 4,
+            "deltas": [
+              {
+                "name": "陆沉",
+                "type": "player",
+                "isNew": true,
+                "descriptionUpdated": false,
+                "mentionCount": 3
+              },
+              {
+                "name": "Lin Nuan",
+                "type": "npc",
+                "isNew": true,
+                "descriptionUpdated": false,
+                "mentionCount": 2
+              },
+              {
+                "name": "Guan Yu",
+                "type": "npc",
+                "isNew": true,
+                "descriptionUpdated": false,
+                "mentionCount": 1
+              },
+              {
+                "name": "青石镇",
+                "type": "location",
+                "isNew": true,
+                "descriptionUpdated": false,
+                "mentionCount": 2
+              }
+            ]
+          },
+          "relations": {
+            "total": 0,
+            "deltas": []
+          },
+          "snapshotVersion": 2,
+          "trimmed": {
+            "eventsBefore": 1,
+            "eventsAfter": 1,
+            "entitiesBefore": 4,
+            "entitiesAfter": 4
+          },
+          "vectorizeQueued": 7,
+          "edges": {
+            "total": 2,
+            "newCount": 2,
+            "reinforcedCount": 0,
+            "prunedCount": 0,
+            "topNew": [
+              {
+                "sourceEntity": "Lin Nuan",
+                "targetEntity": "陆沉",
+                "fact": "Lin Nuan runs the tavern in Qingshi town where Lu Chen first met her",
+                "episodeCount": 1,
+                "isNew": true
+              },
+              {
+                "sourceEntity": "Lin Nuan",
+                "targetEntity": "青石镇",
+                "fact": "Lin Nuan keeps the tavern in Qingshi town",
+                "episodeCount": 1,
+                "isNew": true
+              }
+            ]
+          }
+        },
+        "engramMemory": {
+          "events": [
+            {
+              "id": "evt_muyrtkyo_4fzyo8",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "陆沉来到青石镇的酒肆，遇见了老板娘林暖。林暖笑着递上一碗热茶。",
+              "summary": "陆沉来到青石镇的酒肆，遇见了老板娘林暖(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Lin Nuan) 陆沉来到青石镇的酒肆，遇见了老板娘林暖。林暖笑着递上一碗热茶。",
+              "structured_kv": {
+                "event": "陆沉来到青石镇的酒肆，遇见了老板娘林暖",
+                "role": [
+                  "陆沉",
+                  "Lin Nuan"
+                ],
+                "location": [
+                  "青石镇"
+                ],
+                "time_anchor": "1年3月5日 14:20",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "time": "1年3月5日 14:20",
+              "location": "青石镇",
+              "roundNumber": 1,
+              "mentionedEntities": [
+                "陆沉",
+                "Lin Nuan"
+              ],
+              "midTermSummary": "陆沉在酒肆遇见 Lin Nuan，她递来热茶。"
+            }
+          ],
+          "entities": [
+            {
+              "name": "陆沉",
+              "type": "player",
+              "attributes": {
+                "source": "event_role",
+                "lastEventId": "evt_muyrtkyo_4fzyo8"
+              },
+              "firstSeen": 0,
+              "lastSeen": 1,
+              "mentionCount": 3,
+              "summary": "玩家角色",
+              "is_embedded": true
+            },
+            {
+              "name": "Lin Nuan",
+              "type": "npc",
+              "attributes": {
+                "relationToPlayer": "__undefined__",
+                "location": "青石镇",
+                "source": "event_role",
+                "lastEventId": "evt_muyrtkyo_4fzyo8"
+              },
+              "firstSeen": 1,
+              "lastSeen": 1,
+              "mentionCount": 2,
+              "summary": "Runs the tavern in Qingshi town.；bright eyes, long black hair",
+              "is_embedded": true
+            },
+            {
+              "name": "Guan Yu",
+              "type": "npc",
+              "attributes": {
+                "relationToPlayer": "__undefined__",
+                "location": "__undefined__",
+                "source": "relationship"
+              },
+              "firstSeen": 0,
+              "lastSeen": 0,
+              "mentionCount": 1,
+              "summary": "A wandering swordsman.；sharp brows",
+              "is_embedded": true
+            },
+            {
+              "name": "青石镇",
+              "type": "location",
+              "attributes": {
+                "source": "event_location",
+                "lastEventId": "evt_muyrtkyo_4fzyo8"
+              },
+              "firstSeen": 1,
+              "lastSeen": 1,
+              "mentionCount": 2,
+              "summary": "",
+              "is_embedded": true
+            }
+          ],
+          "relations": [],
+          "v2Edges": [
+            {
+              "id": "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "陆沉",
+              "fact": "Lin Nuan runs the tavern in Qingshi town where Lu Chen first met her",
+              "episodes": [
+                "evt_muyrtkyo_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 1,
+              "learnedAtRound": 1,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "lin nuan|青石镇|linnuankeepsthetaverninqingshitown",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "青石镇",
+              "fact": "Lin Nuan keeps the tavern in Qingshi town",
+              "episodes": [
+                "evt_muyrtkyo_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 1,
+              "learnedAtRound": 1,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            }
+          ],
+          "meta": {
+            "lastUpdated": 1791417660000,
+            "eventCount": 1,
+            "embeddedEventCount": 1,
+            "embeddedEntityCount": 4,
+            "schemaVersion": 5,
+            "v2PendingReview": null
+          }
+        },
+        "memory": {
+          "短期": [],
+          "中期": [],
+          "长期": [],
+          "隐式中期": []
+        },
+        "vectorRows": [
+          [
+            "engram_vectors_prof_m_slot_m",
+            {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "04a0cb78c1064d07b86f4e2ef20b6a0456486030f2315be8727ecc72569b467b"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 6,
+                  "sha256": "3193b635d15b211b354a9b02497034f37dcd54acf64b4aac6428c797a845fbb5"
+                },
+                "Lin Nuan": {
+                  "dim": 6,
+                  "sha256": "c7e54058a6ebe5dacee51f64d9575fab889c87343c2e31bbb156bba41f76edd6"
+                },
+                "Guan Yu": {
+                  "dim": 6,
+                  "sha256": "432bcc8cc2fcf694de980e78e646af45d0a51112b9bdc6624676dd2346d2f03c"
+                },
+                "青石镇": {
+                  "dim": 6,
+                  "sha256": "96c5ba86811b6a772139f44b79fd9f545f510d701ab90369b6fbc042c6f0f886"
+                }
+              },
+              "edgeVectors": {
+                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                  "dim": 6,
+                  "sha256": "553b780c40add429c456261ec7036bdba4318817b405f31b04df931ee58d387d"
+                },
+                "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                  "dim": 6,
+                  "sha256": "4f17b8aa6f3f0c4135904574346c5a8f883e30ca0198e4c08a559a744c632130"
+                }
+              },
+              "model": "embed-m",
+              "dim": 6
+            }
+          ]
+        ],
+        "vectorCalls": [
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "set",
+            "key": "engram_vectors_prof_m_slot_m",
+            "value": {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "04a0cb78c1064d07b86f4e2ef20b6a0456486030f2315be8727ecc72569b467b"
+                }
+              },
+              "entityVectors": {},
+              "edgeVectors": {},
+              "model": "embed-m",
+              "dim": 6
+            }
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "set",
+            "key": "engram_vectors_prof_m_slot_m",
+            "value": {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "04a0cb78c1064d07b86f4e2ef20b6a0456486030f2315be8727ecc72569b467b"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 6,
+                  "sha256": "3193b635d15b211b354a9b02497034f37dcd54acf64b4aac6428c797a845fbb5"
+                },
+                "Lin Nuan": {
+                  "dim": 6,
+                  "sha256": "c7e54058a6ebe5dacee51f64d9575fab889c87343c2e31bbb156bba41f76edd6"
+                },
+                "Guan Yu": {
+                  "dim": 6,
+                  "sha256": "432bcc8cc2fcf694de980e78e646af45d0a51112b9bdc6624676dd2346d2f03c"
+                },
+                "青石镇": {
+                  "dim": 6,
+                  "sha256": "96c5ba86811b6a772139f44b79fd9f545f510d701ab90369b6fbc042c6f0f886"
+                }
+              },
+              "edgeVectors": {},
+              "model": "embed-m",
+              "dim": 6
+            }
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "set",
+            "key": "engram_vectors_prof_m_slot_m",
+            "value": {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "04a0cb78c1064d07b86f4e2ef20b6a0456486030f2315be8727ecc72569b467b"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 6,
+                  "sha256": "3193b635d15b211b354a9b02497034f37dcd54acf64b4aac6428c797a845fbb5"
+                },
+                "Lin Nuan": {
+                  "dim": 6,
+                  "sha256": "c7e54058a6ebe5dacee51f64d9575fab889c87343c2e31bbb156bba41f76edd6"
+                },
+                "Guan Yu": {
+                  "dim": 6,
+                  "sha256": "432bcc8cc2fcf694de980e78e646af45d0a51112b9bdc6624676dd2346d2f03c"
+                },
+                "青石镇": {
+                  "dim": 6,
+                  "sha256": "96c5ba86811b6a772139f44b79fd9f545f510d701ab90369b6fbc042c6f0f886"
+                }
+              },
+              "edgeVectors": {
+                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                  "dim": 6,
+                  "sha256": "553b780c40add429c456261ec7036bdba4318817b405f31b04df931ee58d387d"
+                },
+                "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                  "dim": 6,
+                  "sha256": "4f17b8aa6f3f0c4135904574346c5a8f883e30ca0198e4c08a559a744c632130"
+                }
+              },
+              "model": "embed-m",
+              "dim": 6
+            }
+          }
+        ],
+        "aiCalls": [],
+        "fetchCalls": [
+          {
+            "method": "POST",
+            "url": "https://embed.test/v1/embeddings",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer k-emb"
+            },
+            "body": {
+              "model": "embed-m",
+              "input": [
+                "陆沉来到青石镇的酒肆，遇见了老板娘林暖(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Lin Nuan) 陆沉来到青石镇的酒肆，遇见了老板娘林暖。林暖笑着递上一碗热茶。",
+                "陆沉 玩家角色",
+                "Lin Nuan Runs the tavern in Qingshi town.；bright eyes, long black hair",
+                "Guan Yu A wandering swordsman.；sharp brows",
+                "青石镇",
+                "Lin Nuan runs the tavern in Qingshi town where Lu Chen first met her",
+                "Lin Nuan keeps the tavern in Qingshi town"
+              ]
+            }
+          }
+        ],
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "type": "load"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "元数据.回合序号",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.events",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.meta.embeddedEventCount",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.entities",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.meta.embeddedEntityCount",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.v2Edges",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "round 2",
+        "returned": {
+          "roundNumber": 2,
+          "capturedAt": 1791417720000,
+          "totalDurationMs": "<ms>",
+          "event": {
+            "eventId": "evt_muyruv9c_4fzyo8",
+            "title": "第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招",
+            "roles": [
+              "陆沉",
+              "Guan Yu"
+            ],
+            "location": [
+              "青石镇"
+            ],
+            "timeAnchor": "1年3月5日 14:20"
+          },
+          "entities": {
+            "total": 4,
+            "deltas": []
+          },
+          "relations": {
+            "total": 0,
+            "deltas": []
+          },
+          "snapshotVersion": 2,
+          "trimmed": {
+            "eventsBefore": 2,
+            "eventsAfter": 2,
+            "entitiesBefore": 4,
+            "entitiesAfter": 4
+          },
+          "vectorizeQueued": 4,
+          "edges": {
+            "total": 5,
+            "newCount": 3,
+            "reinforcedCount": 1,
+            "prunedCount": 0,
+            "topNew": [
+              {
+                "sourceEntity": "Lin Nuan",
+                "targetEntity": "陆沉",
+                "fact": "In Qingshi town Lin Nuan runs the tavern where Lu Chen first met her that morning",
+                "episodeCount": 1,
+                "isNew": true
+              },
+              {
+                "sourceEntity": "Guan Yu",
+                "targetEntity": "陆沉",
+                "fact": "Guan Yu spars with Lu Chen in the tavern backyard",
+                "episodeCount": 1,
+                "isNew": true
+              },
+              {
+                "sourceEntity": "Guan Yu",
+                "targetEntity": "青石镇",
+                "fact": "Guan Yu keeps the tavern in Qingshi town",
+                "episodeCount": 1,
+                "isNew": true
+              }
+            ]
+          }
+        },
+        "engramMemory": {
+          "events": [
+            {
+              "id": "evt_muyrtkyo_4fzyo8",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "陆沉来到青石镇的酒肆，遇见了老板娘林暖。林暖笑着递上一碗热茶。",
+              "summary": "陆沉来到青石镇的酒肆，遇见了老板娘林暖(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Lin Nuan) 陆沉来到青石镇的酒肆，遇见了老板娘林暖。林暖笑着递上一碗热茶。",
+              "structured_kv": {
+                "event": "陆沉来到青石镇的酒肆，遇见了老板娘林暖",
+                "role": [
+                  "陆沉",
+                  "Lin Nuan"
+                ],
+                "location": [
+                  "青石镇"
+                ],
+                "time_anchor": "1年3月5日 14:20",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "time": "1年3月5日 14:20",
+              "location": "青石镇",
+              "roundNumber": 1,
+              "mentionedEntities": [
+                "陆沉",
+                "Lin Nuan"
+              ],
+              "midTermSummary": "陆沉在酒肆遇见 Lin Nuan，她递来热茶。"
+            },
+            {
+              "id": "evt_muyruv9c_4fzyo8",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招。",
+              "summary": "第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Guan Yu) 第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招。",
+              "structured_kv": {
+                "event": "第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招",
+                "role": [
+                  "陆沉",
+                  "Guan Yu"
+                ],
+                "location": [
+                  "青石镇"
+                ],
+                "time_anchor": "1年3月5日 14:20",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "time": "1年3月5日 14:20",
+              "location": "青石镇",
+              "roundNumber": 2,
+              "mentionedEntities": [
+                "陆沉",
+                "Guan Yu"
+              ],
+              "midTermSummary": "陆沉与 Guan Yu 在酒肆后院切磋。"
+            }
+          ],
+          "entities": [
+            {
+              "name": "陆沉",
+              "type": "player",
+              "attributes": {
+                "source": "event_role",
+                "lastEventId": "evt_muyruv9c_4fzyo8"
+              },
+              "firstSeen": 0,
+              "lastSeen": 2,
+              "mentionCount": 5,
+              "summary": "玩家角色",
+              "is_embedded": true
+            },
+            {
+              "name": "Lin Nuan",
+              "type": "npc",
+              "attributes": {
+                "relationToPlayer": "__undefined__",
+                "location": "青石镇",
+                "source": "event_role",
+                "lastEventId": "evt_muyrtkyo_4fzyo8"
+              },
+              "firstSeen": 1,
+              "lastSeen": 1,
+              "mentionCount": 2,
+              "summary": "Runs the tavern in Qingshi town.；bright eyes, long black hair",
+              "is_embedded": true
+            },
+            {
+              "name": "Guan Yu",
+              "type": "npc",
+              "attributes": {
+                "relationToPlayer": "__undefined__",
+                "location": "__undefined__",
+                "source": "event_role",
+                "lastEventId": "evt_muyruv9c_4fzyo8"
+              },
+              "firstSeen": 2,
+              "lastSeen": 2,
+              "mentionCount": 2,
+              "summary": "A wandering swordsman.；sharp brows",
+              "is_embedded": true
+            },
+            {
+              "name": "青石镇",
+              "type": "location",
+              "attributes": {
+                "source": "event_location",
+                "lastEventId": "evt_muyruv9c_4fzyo8"
+              },
+              "firstSeen": 1,
+              "lastSeen": 2,
+              "mentionCount": 4,
+              "summary": "",
+              "is_embedded": true
+            }
+          ],
+          "relations": [],
+          "v2Edges": [
+            {
+              "id": "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "陆沉",
+              "fact": "Lin Nuan runs the tavern in Qingshi town where Lu Chen first met her",
+              "episodes": [
+                "evt_muyrtkyo_4fzyo8",
+                "evt_muyruv9c_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 2,
+              "learnedAtRound": 1,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "lin nuan|陆沉|inqingshitownlinnuanrunsthetavernwherelu",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "陆沉",
+              "fact": "In Qingshi town Lin Nuan runs the tavern where Lu Chen first met her that morning",
+              "episodes": [
+                "evt_muyruv9c_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 2,
+              "lastSeenRound": 2,
+              "learnedAtRound": 2,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "guan yu|陆沉|guanyusparswithlucheninthetavernbackyard",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "陆沉",
+              "fact": "Guan Yu spars with Lu Chen in the tavern backyard",
+              "episodes": [
+                "evt_muyruv9c_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 2,
+              "lastSeenRound": 2,
+              "learnedAtRound": 2,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "guan yu|青石镇|guanyukeepsthetaverninqingshitown",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "青石镇",
+              "fact": "Guan Yu keeps the tavern in Qingshi town",
+              "episodes": [
+                "evt_muyruv9c_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 2,
+              "lastSeenRound": 2,
+              "learnedAtRound": 2,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "lin nuan|青石镇|linnuankeepsthetaverninqingshitown",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "青石镇",
+              "fact": "Lin Nuan keeps the tavern in Qingshi town",
+              "episodes": [
+                "evt_muyrtkyo_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 1,
+              "learnedAtRound": 1,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            }
+          ],
+          "meta": {
+            "lastUpdated": 1791417720000,
+            "eventCount": 2,
+            "embeddedEventCount": 2,
+            "embeddedEntityCount": 4,
+            "schemaVersion": 5,
+            "v2PendingReview": [
+              {
+                "newFact": "In Qingshi town Lin Nuan runs the tavern where Lu Chen first met her that morning",
+                "oldEdgeId": "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu",
+                "similarity": 0.8048886949438002
+              },
+              {
+                "newFact": "In Qingshi town Lin Nuan runs the tavern where Lu Chen first met her that morning",
+                "oldEdgeId": "lin nuan|青石镇|linnuankeepsthetaverninqingshitown",
+                "similarity": 0.8284413068267465
+              }
+            ]
+          }
+        },
+        "memory": "<unchanged since the previous step>",
+        "vectorRows": [
+          [
+            "engram_vectors_prof_m_slot_m",
+            {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "04a0cb78c1064d07b86f4e2ef20b6a0456486030f2315be8727ecc72569b467b"
+                },
+                "evt_muyruv9c_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "dc686bee27cb17b36064afe0d57a3d69c02e7b7125089f0d1f23d283e9129098"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 6,
+                  "sha256": "3193b635d15b211b354a9b02497034f37dcd54acf64b4aac6428c797a845fbb5"
+                },
+                "Lin Nuan": {
+                  "dim": 6,
+                  "sha256": "c7e54058a6ebe5dacee51f64d9575fab889c87343c2e31bbb156bba41f76edd6"
+                },
+                "Guan Yu": {
+                  "dim": 6,
+                  "sha256": "432bcc8cc2fcf694de980e78e646af45d0a51112b9bdc6624676dd2346d2f03c"
+                },
+                "青石镇": {
+                  "dim": 6,
+                  "sha256": "96c5ba86811b6a772139f44b79fd9f545f510d701ab90369b6fbc042c6f0f886"
+                }
+              },
+              "edgeVectors": {
+                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                  "dim": 6,
+                  "sha256": "553b780c40add429c456261ec7036bdba4318817b405f31b04df931ee58d387d"
+                },
+                "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                  "dim": 6,
+                  "sha256": "4f17b8aa6f3f0c4135904574346c5a8f883e30ca0198e4c08a559a744c632130"
+                },
+                "lin nuan|陆沉|inqingshitownlinnuanrunsthetavernwherelu": {
+                  "dim": 6,
+                  "sha256": "1e72aa904a298d20ac2e2dfa69322ea6b71dcbc593eba1a4c601832f52ff72fc"
+                },
+                "guan yu|陆沉|guanyusparswithlucheninthetavernbackyard": {
+                  "dim": 6,
+                  "sha256": "fd7e849a7d53042bd4f3c6bea1869e8957109b8fb8c4aad8e61eb3a43bbed4bd"
+                },
+                "guan yu|青石镇|guanyukeepsthetaverninqingshitown": {
+                  "dim": 6,
+                  "sha256": "72193c9ccb3cb5c3c6cc4e624581086c35f54ca636055be542a853b589b5f8fc"
+                }
+              },
+              "model": "embed-m",
+              "dim": 6
+            }
+          ]
+        ],
+        "vectorCalls": [
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "set",
+            "key": "engram_vectors_prof_m_slot_m",
+            "value": {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "04a0cb78c1064d07b86f4e2ef20b6a0456486030f2315be8727ecc72569b467b"
+                },
+                "evt_muyruv9c_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "dc686bee27cb17b36064afe0d57a3d69c02e7b7125089f0d1f23d283e9129098"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 6,
+                  "sha256": "3193b635d15b211b354a9b02497034f37dcd54acf64b4aac6428c797a845fbb5"
+                },
+                "Lin Nuan": {
+                  "dim": 6,
+                  "sha256": "c7e54058a6ebe5dacee51f64d9575fab889c87343c2e31bbb156bba41f76edd6"
+                },
+                "Guan Yu": {
+                  "dim": 6,
+                  "sha256": "432bcc8cc2fcf694de980e78e646af45d0a51112b9bdc6624676dd2346d2f03c"
+                },
+                "青石镇": {
+                  "dim": 6,
+                  "sha256": "96c5ba86811b6a772139f44b79fd9f545f510d701ab90369b6fbc042c6f0f886"
+                }
+              },
+              "edgeVectors": {
+                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                  "dim": 6,
+                  "sha256": "553b780c40add429c456261ec7036bdba4318817b405f31b04df931ee58d387d"
+                },
+                "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                  "dim": 6,
+                  "sha256": "4f17b8aa6f3f0c4135904574346c5a8f883e30ca0198e4c08a559a744c632130"
+                }
+              },
+              "model": "embed-m",
+              "dim": 6
+            }
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "set",
+            "key": "engram_vectors_prof_m_slot_m",
+            "value": {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "04a0cb78c1064d07b86f4e2ef20b6a0456486030f2315be8727ecc72569b467b"
+                },
+                "evt_muyruv9c_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "dc686bee27cb17b36064afe0d57a3d69c02e7b7125089f0d1f23d283e9129098"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 6,
+                  "sha256": "3193b635d15b211b354a9b02497034f37dcd54acf64b4aac6428c797a845fbb5"
+                },
+                "Lin Nuan": {
+                  "dim": 6,
+                  "sha256": "c7e54058a6ebe5dacee51f64d9575fab889c87343c2e31bbb156bba41f76edd6"
+                },
+                "Guan Yu": {
+                  "dim": 6,
+                  "sha256": "432bcc8cc2fcf694de980e78e646af45d0a51112b9bdc6624676dd2346d2f03c"
+                },
+                "青石镇": {
+                  "dim": 6,
+                  "sha256": "96c5ba86811b6a772139f44b79fd9f545f510d701ab90369b6fbc042c6f0f886"
+                }
+              },
+              "edgeVectors": {
+                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                  "dim": 6,
+                  "sha256": "553b780c40add429c456261ec7036bdba4318817b405f31b04df931ee58d387d"
+                },
+                "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                  "dim": 6,
+                  "sha256": "4f17b8aa6f3f0c4135904574346c5a8f883e30ca0198e4c08a559a744c632130"
+                },
+                "lin nuan|陆沉|inqingshitownlinnuanrunsthetavernwherelu": {
+                  "dim": 6,
+                  "sha256": "1e72aa904a298d20ac2e2dfa69322ea6b71dcbc593eba1a4c601832f52ff72fc"
+                },
+                "guan yu|陆沉|guanyusparswithlucheninthetavernbackyard": {
+                  "dim": 6,
+                  "sha256": "fd7e849a7d53042bd4f3c6bea1869e8957109b8fb8c4aad8e61eb3a43bbed4bd"
+                },
+                "guan yu|青石镇|guanyukeepsthetaverninqingshitown": {
+                  "dim": 6,
+                  "sha256": "72193c9ccb3cb5c3c6cc4e624581086c35f54ca636055be542a853b589b5f8fc"
+                }
+              },
+              "model": "embed-m",
+              "dim": 6
+            }
+          }
+        ],
+        "aiCalls": [],
+        "fetchCalls": [
+          {
+            "method": "POST",
+            "url": "https://embed.test/v1/embeddings",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer k-emb"
+            },
+            "body": {
+              "model": "embed-m",
+              "input": [
+                "In Qingshi town Lin Nuan runs the tavern where Lu Chen first met her that morning",
+                "Guan Yu spars with Lu Chen in the tavern backyard",
+                "Guan Yu keeps the tavern in Qingshi town"
+              ]
+            }
+          },
+          {
+            "method": "POST",
+            "url": "https://embed.test/v1/embeddings",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer k-emb"
+            },
+            "body": {
+              "model": "embed-m",
+              "input": [
+                "第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Guan Yu) 第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招。"
+              ]
+            }
+          }
+        ],
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "元数据.回合序号",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.events",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.meta.embeddedEventCount",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.v2Edges",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "round 3",
+        "returned": {
+          "roundNumber": 3,
+          "capturedAt": 1791417780000,
+          "totalDurationMs": "<ms>",
+          "event": {
+            "eventId": "evt_muyrw5k0_4fzyo8",
+            "title": "傍晚，Lin Nuan 告诉陆沉，Guan Yu 其实是她多年未见的旧友",
+            "roles": [
+              "陆沉",
+              "Lin Nuan",
+              "Guan Yu"
+            ],
+            "location": [
+              "青石镇"
+            ],
+            "timeAnchor": "1年3月5日 14:20"
+          },
+          "entities": {
+            "total": 4,
+            "deltas": []
+          },
+          "relations": {
+            "total": 0,
+            "deltas": []
+          },
+          "snapshotVersion": 2,
+          "trimmed": {
+            "eventsBefore": 3,
+            "eventsAfter": 3,
+            "entitiesBefore": 4,
+            "entitiesAfter": 4
+          },
+          "vectorizeQueued": 4,
+          "edges": {
+            "total": 8,
+            "newCount": 3,
+            "reinforcedCount": 0,
+            "prunedCount": 0,
+            "topNew": [
+              {
+                "sourceEntity": "Lin Nuan",
+                "targetEntity": "Guan Yu",
+                "fact": "Lin Nuan and Guan Yu are old friends who have not met for years",
+                "episodeCount": 1,
+                "isNew": true
+              },
+              {
+                "sourceEntity": "Guan Yu",
+                "targetEntity": "青石镇",
+                "fact": "Guan Yu drinks at the tavern every evening",
+                "episodeCount": 1,
+                "isNew": true
+              },
+              {
+                "sourceEntity": "Guan Yu",
+                "targetEntity": "青石镇",
+                "fact": "Guan Yu drinks at the tavern every single evening",
+                "episodeCount": 1,
+                "isNew": true
+              }
+            ]
+          }
+        },
+        "engramMemory": {
+          "events": [
+            {
+              "id": "evt_muyrtkyo_4fzyo8",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "陆沉来到青石镇的酒肆，遇见了老板娘林暖。林暖笑着递上一碗热茶。",
+              "summary": "陆沉来到青石镇的酒肆，遇见了老板娘林暖(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Lin Nuan) 陆沉来到青石镇的酒肆，遇见了老板娘林暖。林暖笑着递上一碗热茶。",
+              "structured_kv": {
+                "event": "陆沉来到青石镇的酒肆，遇见了老板娘林暖",
+                "role": [
+                  "陆沉",
+                  "Lin Nuan"
+                ],
+                "location": [
+                  "青石镇"
+                ],
+                "time_anchor": "1年3月5日 14:20",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "time": "1年3月5日 14:20",
+              "location": "青石镇",
+              "roundNumber": 1,
+              "mentionedEntities": [
+                "陆沉",
+                "Lin Nuan"
+              ],
+              "midTermSummary": "陆沉在酒肆遇见 Lin Nuan，她递来热茶。"
+            },
+            {
+              "id": "evt_muyruv9c_4fzyo8",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招。",
+              "summary": "第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Guan Yu) 第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招。",
+              "structured_kv": {
+                "event": "第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招",
+                "role": [
+                  "陆沉",
+                  "Guan Yu"
+                ],
+                "location": [
+                  "青石镇"
+                ],
+                "time_anchor": "1年3月5日 14:20",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "time": "1年3月5日 14:20",
+              "location": "青石镇",
+              "roundNumber": 2,
+              "mentionedEntities": [
+                "陆沉",
+                "Guan Yu"
+              ],
+              "midTermSummary": "陆沉与 Guan Yu 在酒肆后院切磋。"
+            },
+            {
+              "id": "evt_muyrw5k0_4fzyo8",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "傍晚，Lin Nuan 告诉陆沉，Guan Yu 其实是她多年未见的旧友。",
+              "summary": "傍晚，Lin Nuan 告诉陆沉，Guan Yu 其实是她多年未见的旧友(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Lin Nuan, Guan Yu) 傍晚，Lin Nuan 告诉陆沉，Guan Yu 其实是她多年未见的旧友。",
+              "structured_kv": {
+                "event": "傍晚，Lin Nuan 告诉陆沉，Guan Yu 其实是她多年未见的旧友",
+                "role": [
+                  "陆沉",
+                  "Lin Nuan",
+                  "Guan Yu"
+                ],
+                "location": [
+                  "青石镇"
+                ],
+                "time_anchor": "1年3月5日 14:20",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "time": "1年3月5日 14:20",
+              "location": "青石镇",
+              "roundNumber": 3,
+              "mentionedEntities": [
+                "陆沉",
+                "Lin Nuan",
+                "Guan Yu"
+              ],
+              "midTermSummary": "Lin Nuan 说出 Guan Yu 是旧友。"
+            }
+          ],
+          "entities": [
+            {
+              "name": "陆沉",
+              "type": "player",
+              "attributes": {
+                "source": "event_role",
+                "lastEventId": "evt_muyrw5k0_4fzyo8"
+              },
+              "firstSeen": 0,
+              "lastSeen": 3,
+              "mentionCount": 7,
+              "summary": "玩家角色",
+              "is_embedded": true
+            },
+            {
+              "name": "Lin Nuan",
+              "type": "npc",
+              "attributes": {
+                "relationToPlayer": "__undefined__",
+                "location": "青石镇",
+                "source": "event_role",
+                "lastEventId": "evt_muyrw5k0_4fzyo8"
+              },
+              "firstSeen": 1,
+              "lastSeen": 3,
+              "mentionCount": 3,
+              "summary": "Runs the tavern in Qingshi town.；bright eyes, long black hair",
+              "is_embedded": true
+            },
+            {
+              "name": "Guan Yu",
+              "type": "npc",
+              "attributes": {
+                "relationToPlayer": "__undefined__",
+                "location": "__undefined__",
+                "source": "event_role",
+                "lastEventId": "evt_muyrw5k0_4fzyo8"
+              },
+              "firstSeen": 2,
+              "lastSeen": 3,
+              "mentionCount": 3,
+              "summary": "A wandering swordsman.；sharp brows",
+              "is_embedded": true
+            },
+            {
+              "name": "青石镇",
+              "type": "location",
+              "attributes": {
+                "source": "event_location",
+                "lastEventId": "evt_muyrw5k0_4fzyo8"
+              },
+              "firstSeen": 1,
+              "lastSeen": 3,
+              "mentionCount": 6,
+              "summary": "",
+              "is_embedded": true
+            }
+          ],
+          "relations": [],
+          "v2Edges": [
+            {
+              "id": "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "陆沉",
+              "fact": "Lin Nuan runs the tavern in Qingshi town where Lu Chen first met her",
+              "episodes": [
+                "evt_muyrtkyo_4fzyo8",
+                "evt_muyruv9c_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 2,
+              "learnedAtRound": 1,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "lin nuan|guan yu|linnuanandguanyuareoldfriendswhohavenotm",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "Guan Yu",
+              "fact": "Lin Nuan and Guan Yu are old friends who have not met for years",
+              "episodes": [
+                "evt_muyrw5k0_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 3,
+              "lastSeenRound": 3,
+              "learnedAtRound": 3,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "guan yu|青石镇|guanyudrinksatthetaverneveryevening",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "青石镇",
+              "fact": "Guan Yu drinks at the tavern every evening",
+              "episodes": [
+                "evt_muyrw5k0_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 3,
+              "lastSeenRound": 3,
+              "learnedAtRound": 3,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "guan yu|青石镇|guanyudrinksatthetaverneverysingleevenin",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "青石镇",
+              "fact": "Guan Yu drinks at the tavern every single evening",
+              "episodes": [
+                "evt_muyrw5k0_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 3,
+              "lastSeenRound": 3,
+              "learnedAtRound": 3,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "lin nuan|陆沉|inqingshitownlinnuanrunsthetavernwherelu",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "陆沉",
+              "fact": "In Qingshi town Lin Nuan runs the tavern where Lu Chen first met her that morning",
+              "episodes": [
+                "evt_muyruv9c_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 2,
+              "lastSeenRound": 2,
+              "learnedAtRound": 2,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "guan yu|陆沉|guanyusparswithlucheninthetavernbackyard",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "陆沉",
+              "fact": "Guan Yu spars with Lu Chen in the tavern backyard",
+              "episodes": [
+                "evt_muyruv9c_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 2,
+              "lastSeenRound": 2,
+              "learnedAtRound": 2,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "guan yu|青石镇|guanyukeepsthetaverninqingshitown",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "青石镇",
+              "fact": "Guan Yu keeps the tavern in Qingshi town",
+              "episodes": [
+                "evt_muyruv9c_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 2,
+              "lastSeenRound": 2,
+              "learnedAtRound": 2,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "lin nuan|青石镇|linnuankeepsthetaverninqingshitown",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "青石镇",
+              "fact": "Lin Nuan keeps the tavern in Qingshi town",
+              "episodes": [
+                "evt_muyrtkyo_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 1,
+              "learnedAtRound": 1,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            }
+          ],
+          "meta": {
+            "lastUpdated": 1791417780000,
+            "eventCount": 3,
+            "embeddedEventCount": 3,
+            "embeddedEntityCount": 4,
+            "schemaVersion": 5,
+            "v2PendingReview": [
+              {
+                "newFact": "In Qingshi town Lin Nuan runs the tavern where Lu Chen first met her that morning",
+                "oldEdgeId": "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu",
+                "similarity": 0.8048886949438002
+              },
+              {
+                "newFact": "In Qingshi town Lin Nuan runs the tavern where Lu Chen first met her that morning",
+                "oldEdgeId": "lin nuan|青石镇|linnuankeepsthetaverninqingshitown",
+                "similarity": 0.8284413068267465
+              },
+              {
+                "newFact": "Lin Nuan and Guan Yu are old friends who have not met for years",
+                "oldEdgeId": "lin nuan|青石镇|linnuankeepsthetaverninqingshitown",
+                "similarity": 0.9425943646509435
+              },
+              {
+                "newFact": "Lin Nuan and Guan Yu are old friends who have not met for years",
+                "oldEdgeId": "guan yu|陆沉|guanyusparswithlucheninthetavernbackyard",
+                "similarity": 0.8361849320970147
+              },
+              {
+                "newFact": "Lin Nuan and Guan Yu are old friends who have not met for years",
+                "oldEdgeId": "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu",
+                "similarity": 0.7971370278640858
+              },
+              {
+                "newFact": "Lin Nuan and Guan Yu are old friends who have not met for years",
+                "oldEdgeId": "lin nuan|陆沉|inqingshitownlinnuanrunsthetavernwherelu",
+                "similarity": 0.7833910319537745
+              },
+              {
+                "newFact": "Lin Nuan and Guan Yu are old friends who have not met for years",
+                "oldEdgeId": "guan yu|青石镇|guanyukeepsthetaverninqingshitown",
+                "similarity": 0.7682726850819006
+              }
+            ]
+          }
+        },
+        "memory": "<unchanged since the previous step>",
+        "vectorRows": [
+          [
+            "engram_vectors_prof_m_slot_m",
+            {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "04a0cb78c1064d07b86f4e2ef20b6a0456486030f2315be8727ecc72569b467b"
+                },
+                "evt_muyruv9c_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "dc686bee27cb17b36064afe0d57a3d69c02e7b7125089f0d1f23d283e9129098"
+                },
+                "evt_muyrw5k0_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "fc407929cd85c525ef3bf53eddba72dfa4ffe69f66e593b13e1bc4b063608631"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 6,
+                  "sha256": "3193b635d15b211b354a9b02497034f37dcd54acf64b4aac6428c797a845fbb5"
+                },
+                "Lin Nuan": {
+                  "dim": 6,
+                  "sha256": "c7e54058a6ebe5dacee51f64d9575fab889c87343c2e31bbb156bba41f76edd6"
+                },
+                "Guan Yu": {
+                  "dim": 6,
+                  "sha256": "432bcc8cc2fcf694de980e78e646af45d0a51112b9bdc6624676dd2346d2f03c"
+                },
+                "青石镇": {
+                  "dim": 6,
+                  "sha256": "96c5ba86811b6a772139f44b79fd9f545f510d701ab90369b6fbc042c6f0f886"
+                }
+              },
+              "edgeVectors": {
+                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                  "dim": 6,
+                  "sha256": "553b780c40add429c456261ec7036bdba4318817b405f31b04df931ee58d387d"
+                },
+                "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                  "dim": 6,
+                  "sha256": "4f17b8aa6f3f0c4135904574346c5a8f883e30ca0198e4c08a559a744c632130"
+                },
+                "lin nuan|陆沉|inqingshitownlinnuanrunsthetavernwherelu": {
+                  "dim": 6,
+                  "sha256": "1e72aa904a298d20ac2e2dfa69322ea6b71dcbc593eba1a4c601832f52ff72fc"
+                },
+                "guan yu|陆沉|guanyusparswithlucheninthetavernbackyard": {
+                  "dim": 6,
+                  "sha256": "fd7e849a7d53042bd4f3c6bea1869e8957109b8fb8c4aad8e61eb3a43bbed4bd"
+                },
+                "guan yu|青石镇|guanyukeepsthetaverninqingshitown": {
+                  "dim": 6,
+                  "sha256": "72193c9ccb3cb5c3c6cc4e624581086c35f54ca636055be542a853b589b5f8fc"
+                },
+                "lin nuan|guan yu|linnuanandguanyuareoldfriendswhohavenotm": {
+                  "dim": 6,
+                  "sha256": "f719fc645ace702aad8e68f24f9d9acba007851375edef071baafb37d2108032"
+                },
+                "guan yu|青石镇|guanyudrinksatthetaverneveryevening": {
+                  "dim": 6,
+                  "sha256": "c064be7080f8cdcfaad9eb7f5747ba092cfcbaa930b4e1d67b202891e247c56e"
+                },
+                "guan yu|青石镇|guanyudrinksatthetaverneverysingleevenin": {
+                  "dim": 6,
+                  "sha256": "268cb94f69f9104645c98f013b877e494ed2e938268e6792cb15102827146348"
+                }
+              },
+              "model": "embed-m",
+              "dim": 6
+            }
+          ]
+        ],
+        "vectorCalls": [
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "set",
+            "key": "engram_vectors_prof_m_slot_m",
+            "value": {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "04a0cb78c1064d07b86f4e2ef20b6a0456486030f2315be8727ecc72569b467b"
+                },
+                "evt_muyruv9c_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "dc686bee27cb17b36064afe0d57a3d69c02e7b7125089f0d1f23d283e9129098"
+                },
+                "evt_muyrw5k0_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "fc407929cd85c525ef3bf53eddba72dfa4ffe69f66e593b13e1bc4b063608631"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 6,
+                  "sha256": "3193b635d15b211b354a9b02497034f37dcd54acf64b4aac6428c797a845fbb5"
+                },
+                "Lin Nuan": {
+                  "dim": 6,
+                  "sha256": "c7e54058a6ebe5dacee51f64d9575fab889c87343c2e31bbb156bba41f76edd6"
+                },
+                "Guan Yu": {
+                  "dim": 6,
+                  "sha256": "432bcc8cc2fcf694de980e78e646af45d0a51112b9bdc6624676dd2346d2f03c"
+                },
+                "青石镇": {
+                  "dim": 6,
+                  "sha256": "96c5ba86811b6a772139f44b79fd9f545f510d701ab90369b6fbc042c6f0f886"
+                }
+              },
+              "edgeVectors": {
+                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                  "dim": 6,
+                  "sha256": "553b780c40add429c456261ec7036bdba4318817b405f31b04df931ee58d387d"
+                },
+                "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                  "dim": 6,
+                  "sha256": "4f17b8aa6f3f0c4135904574346c5a8f883e30ca0198e4c08a559a744c632130"
+                },
+                "lin nuan|陆沉|inqingshitownlinnuanrunsthetavernwherelu": {
+                  "dim": 6,
+                  "sha256": "1e72aa904a298d20ac2e2dfa69322ea6b71dcbc593eba1a4c601832f52ff72fc"
+                },
+                "guan yu|陆沉|guanyusparswithlucheninthetavernbackyard": {
+                  "dim": 6,
+                  "sha256": "fd7e849a7d53042bd4f3c6bea1869e8957109b8fb8c4aad8e61eb3a43bbed4bd"
+                },
+                "guan yu|青石镇|guanyukeepsthetaverninqingshitown": {
+                  "dim": 6,
+                  "sha256": "72193c9ccb3cb5c3c6cc4e624581086c35f54ca636055be542a853b589b5f8fc"
+                }
+              },
+              "model": "embed-m",
+              "dim": 6
+            }
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "set",
+            "key": "engram_vectors_prof_m_slot_m",
+            "value": {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "04a0cb78c1064d07b86f4e2ef20b6a0456486030f2315be8727ecc72569b467b"
+                },
+                "evt_muyruv9c_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "dc686bee27cb17b36064afe0d57a3d69c02e7b7125089f0d1f23d283e9129098"
+                },
+                "evt_muyrw5k0_4fzyo8": {
+                  "dim": 6,
+                  "sha256": "fc407929cd85c525ef3bf53eddba72dfa4ffe69f66e593b13e1bc4b063608631"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 6,
+                  "sha256": "3193b635d15b211b354a9b02497034f37dcd54acf64b4aac6428c797a845fbb5"
+                },
+                "Lin Nuan": {
+                  "dim": 6,
+                  "sha256": "c7e54058a6ebe5dacee51f64d9575fab889c87343c2e31bbb156bba41f76edd6"
+                },
+                "Guan Yu": {
+                  "dim": 6,
+                  "sha256": "432bcc8cc2fcf694de980e78e646af45d0a51112b9bdc6624676dd2346d2f03c"
+                },
+                "青石镇": {
+                  "dim": 6,
+                  "sha256": "96c5ba86811b6a772139f44b79fd9f545f510d701ab90369b6fbc042c6f0f886"
+                }
+              },
+              "edgeVectors": {
+                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                  "dim": 6,
+                  "sha256": "553b780c40add429c456261ec7036bdba4318817b405f31b04df931ee58d387d"
+                },
+                "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                  "dim": 6,
+                  "sha256": "4f17b8aa6f3f0c4135904574346c5a8f883e30ca0198e4c08a559a744c632130"
+                },
+                "lin nuan|陆沉|inqingshitownlinnuanrunsthetavernwherelu": {
+                  "dim": 6,
+                  "sha256": "1e72aa904a298d20ac2e2dfa69322ea6b71dcbc593eba1a4c601832f52ff72fc"
+                },
+                "guan yu|陆沉|guanyusparswithlucheninthetavernbackyard": {
+                  "dim": 6,
+                  "sha256": "fd7e849a7d53042bd4f3c6bea1869e8957109b8fb8c4aad8e61eb3a43bbed4bd"
+                },
+                "guan yu|青石镇|guanyukeepsthetaverninqingshitown": {
+                  "dim": 6,
+                  "sha256": "72193c9ccb3cb5c3c6cc4e624581086c35f54ca636055be542a853b589b5f8fc"
+                },
+                "lin nuan|guan yu|linnuanandguanyuareoldfriendswhohavenotm": {
+                  "dim": 6,
+                  "sha256": "f719fc645ace702aad8e68f24f9d9acba007851375edef071baafb37d2108032"
+                },
+                "guan yu|青石镇|guanyudrinksatthetaverneveryevening": {
+                  "dim": 6,
+                  "sha256": "c064be7080f8cdcfaad9eb7f5747ba092cfcbaa930b4e1d67b202891e247c56e"
+                },
+                "guan yu|青石镇|guanyudrinksatthetaverneverysingleevenin": {
+                  "dim": 6,
+                  "sha256": "268cb94f69f9104645c98f013b877e494ed2e938268e6792cb15102827146348"
+                }
+              },
+              "model": "embed-m",
+              "dim": 6
+            }
+          }
+        ],
+        "aiCalls": [],
+        "fetchCalls": [
+          {
+            "method": "POST",
+            "url": "https://embed.test/v1/embeddings",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer k-emb"
+            },
+            "body": {
+              "model": "embed-m",
+              "input": [
+                "Lin Nuan and Guan Yu are old friends who have not met for years",
+                "Guan Yu is a stranger to Lin Nuan and has never met her",
+                "Guan Yu drinks at the tavern every evening",
+                "Guan Yu drinks at the tavern every single evening"
+              ]
+            }
+          },
+          {
+            "method": "POST",
+            "url": "https://embed.test/v1/embeddings",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer k-emb"
+            },
+            "body": {
+              "model": "embed-m",
+              "input": [
+                "傍晚，Lin Nuan 告诉陆沉，Guan Yu 其实是她多年未见的旧友(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Lin Nuan, Guan Yu) 傍晚，Lin Nuan 告诉陆沉，Guan Yu 其实是她多年未见的旧友。"
+              ]
+            }
+          }
+        ],
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "元数据.回合序号",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.events",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.meta.embeddedEventCount",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.v2Edges",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "retrieve",
+        "returned": "相关事实：\n1. [Lin Nuan→陆沉] In Qingshi town Lin Nuan runs the tavern where Lu Chen first met her that morning（第2轮）\n2. [Lin Nuan→陆沉] Lin Nuan runs the tavern in Qingshi town where Lu Chen first met her（第2轮）\n3. [Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends who have not met for years（第3轮）\n4. [Guan Yu→青石镇] Guan Yu drinks at the tavern every single evening（第3轮）",
+        "readSnapshot": {
+          "query": "Lin Nuan tavern Lu Chen old friends",
+          "capturedAt": 1791418320000,
+          "totalDurationMs": "<ms>",
+          "candidates": [
+            {
+              "text": "[Lin Nuan→陆沉] In Qingshi town Lin Nuan runs the tavern where Lu Chen first met her that morning",
+              "finalScore": 0.8799999999999999,
+              "source": "edge",
+              "components": [
+                {
+                  "label": "边余弦",
+                  "rawValue": 0.5,
+                  "weight": 0.6,
+                  "contribution": 0.3,
+                  "color": "blue"
+                },
+                {
+                  "label": "边BM25",
+                  "rawValue": 0.3333333333333333,
+                  "weight": 0.6,
+                  "contribution": 0.19999999999999998,
+                  "color": "green"
+                },
+                {
+                  "label": "精排",
+                  "rawValue": 0.95,
+                  "weight": 0.4,
+                  "contribution": 0.38,
+                  "color": "orange"
+                }
+              ],
+              "outcome": "injected",
+              "roundNumber": 2,
+              "preRerankScore": 0.8333333333333333,
+              "rerankBlendedScore": 0.8799999999999999
+            },
+            {
+              "text": "[Lin Nuan→陆沉] Lin Nuan runs the tavern in Qingshi town where Lu Chen first met her",
+              "finalScore": 0.772,
+              "source": "edge",
+              "components": [
+                {
+                  "label": "边余弦",
+                  "rawValue": 0.2,
+                  "weight": 0.6,
+                  "contribution": 0.12,
+                  "color": "blue"
+                },
+                {
+                  "label": "边BM25",
+                  "rawValue": 0.5,
+                  "weight": 0.6,
+                  "contribution": 0.3,
+                  "color": "green"
+                },
+                {
+                  "label": "精排",
+                  "rawValue": 0.88,
+                  "weight": 0.4,
+                  "contribution": 0.35200000000000004,
+                  "color": "orange"
+                }
+              ],
+              "outcome": "injected",
+              "roundNumber": 2,
+              "preRerankScore": 0.7,
+              "rerankBlendedScore": 0.772
+            },
+            {
+              "text": "[Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends who have not met for years",
+              "finalScore": 0.6240000000000001,
+              "source": "edge",
+              "components": [
+                {
+                  "label": "边余弦",
+                  "rawValue": 0.25,
+                  "weight": 0.6,
+                  "contribution": 0.15,
+                  "color": "blue"
+                },
+                {
+                  "label": "边BM25",
+                  "rawValue": 0.25,
+                  "weight": 0.6,
+                  "contribution": 0.15,
+                  "color": "green"
+                },
+                {
+                  "label": "精排",
+                  "rawValue": 0.81,
+                  "weight": 0.4,
+                  "contribution": 0.32400000000000007,
+                  "color": "orange"
+                }
+              ],
+              "outcome": "injected",
+              "roundNumber": 3,
+              "preRerankScore": 0.5,
+              "rerankBlendedScore": 0.6240000000000001
+            },
+            {
+              "text": "[Guan Yu→青石镇] Guan Yu drinks at the tavern every single evening",
+              "finalScore": 0.571,
+              "source": "edge",
+              "components": [
+                {
+                  "label": "边余弦",
+                  "rawValue": 0.3333333333333333,
+                  "weight": 0.6,
+                  "contribution": 0.19999999999999998,
+                  "color": "blue"
+                },
+                {
+                  "label": "边BM25",
+                  "rawValue": 0.125,
+                  "weight": 0.6,
+                  "contribution": 0.075,
+                  "color": "green"
+                },
+                {
+                  "label": "精排",
+                  "rawValue": 0.74,
+                  "weight": 0.4,
+                  "contribution": 0.296,
+                  "color": "orange"
+                }
+              ],
+              "outcome": "injected",
+              "roundNumber": 3,
+              "preRerankScore": 0.4583333333333333,
+              "rerankBlendedScore": 0.571
+            },
+            {
+              "text": "[Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard",
+              "finalScore": 0.34285714285714286,
+              "source": "edge",
+              "components": [
+                {
+                  "label": "边余弦",
+                  "rawValue": 0.14285714285714285,
+                  "weight": 1,
+                  "contribution": 0.14285714285714285,
+                  "color": "blue"
+                },
+                {
+                  "label": "边BM25",
+                  "rawValue": 0.2,
+                  "weight": 1,
+                  "contribution": 0.2,
+                  "color": "green"
+                }
+              ],
+              "outcome": "filtered-by-rerank",
+              "roundNumber": 2
+            },
+            {
+              "text": "[Lin Nuan→青石镇] Lin Nuan keeps the tavern in Qingshi town",
+              "finalScore": 0.3333333333333333,
+              "source": "edge",
+              "components": [
+                {
+                  "label": "边余弦",
+                  "rawValue": 0.16666666666666666,
+                  "weight": 1,
+                  "contribution": 0.16666666666666666,
+                  "color": "blue"
+                },
+                {
+                  "label": "边BM25",
+                  "rawValue": 0.16666666666666666,
+                  "weight": 1,
+                  "contribution": 0.16666666666666666,
+                  "color": "green"
+                }
+              ],
+              "outcome": "filtered-by-rerank",
+              "roundNumber": 1
+            },
+            {
+              "text": "[Guan Yu→青石镇] Guan Yu drinks at the tavern every evening",
+              "finalScore": 0.25396825396825395,
+              "source": "edge",
+              "components": [
+                {
+                  "label": "边余弦",
+                  "rawValue": 0.1111111111111111,
+                  "weight": 1,
+                  "contribution": 0.1111111111111111,
+                  "color": "blue"
+                },
+                {
+                  "label": "边BM25",
+                  "rawValue": 0.14285714285714285,
+                  "weight": 1,
+                  "contribution": 0.14285714285714285,
+                  "color": "green"
+                }
+              ],
+              "outcome": "filtered-by-rerank",
+              "roundNumber": 3
+            },
+            {
+              "text": "[Guan Yu→青石镇] Guan Yu keeps the tavern in Qingshi town",
+              "finalScore": 0.2361111111111111,
+              "source": "edge",
+              "components": [
+                {
+                  "label": "边余弦",
+                  "rawValue": 0.125,
+                  "weight": 1,
+                  "contribution": 0.125,
+                  "color": "blue"
+                },
+                {
+                  "label": "边BM25",
+                  "rawValue": 0.1111111111111111,
+                  "weight": 1,
+                  "contribution": 0.1111111111111111,
+                  "color": "green"
+                }
+              ],
+              "outcome": "filtered-by-rerank",
+              "roundNumber": 2
+            },
+            {
+              "text": "Lin Nuan: Runs the tavern in Qingshi town.；bright eyes, long black hair",
+              "finalScore": 0.8333333333333333,
+              "source": "entity",
+              "components": [
+                {
+                  "label": "实体余弦",
+                  "rawValue": 0.3333333333333333,
+                  "weight": 1,
+                  "contribution": 0.3333333333333333,
+                  "color": "blue"
+                },
+                {
+                  "label": "实体BM25",
+                  "rawValue": 0.5,
+                  "weight": 1,
+                  "contribution": 0.5,
+                  "color": "green"
+                }
+              ],
+              "outcome": "filtered-by-rerank",
+              "entityName": "Lin Nuan"
+            },
+            {
+              "text": "Guan Yu: A wandering swordsman.；sharp brows",
+              "finalScore": 0.5,
+              "source": "entity",
+              "components": [
+                {
+                  "label": "实体余弦",
+                  "rawValue": 0.5,
+                  "weight": 1,
+                  "contribution": 0.5,
+                  "color": "blue"
+                }
+              ],
+              "outcome": "filtered-by-rerank",
+              "entityName": "Guan Yu"
+            },
+            {
+              "text": "陆沉: 玩家角色",
+              "finalScore": 0.25,
+              "source": "entity",
+              "components": [
+                {
+                  "label": "实体余弦",
+                  "rawValue": 0.25,
+                  "weight": 1,
+                  "contribution": 0.25,
+                  "color": "blue"
+                }
+              ],
+              "outcome": "filtered-by-rerank",
+              "entityName": "陆沉"
+            },
+            {
+              "text": "青石镇: ",
+              "finalScore": 0.2,
+              "source": "entity",
+              "components": [
+                {
+                  "label": "实体余弦",
+                  "rawValue": 0.2,
+                  "weight": 1,
+                  "contribution": 0.2,
+                  "color": "blue"
+                }
+              ],
+              "outcome": "filtered-by-rerank",
+              "entityName": "青石镇"
+            },
+            {
+              "text": "陆沉在酒肆遇见 Lin Nuan，她递来热茶。",
+              "finalScore": 0.8333333333333333,
+              "source": "event",
+              "components": [
+                {
+                  "label": "事件余弦",
+                  "rawValue": 0.5,
+                  "weight": 1,
+                  "contribution": 0.5,
+                  "color": "blue"
+                },
+                {
+                  "label": "事件BM25",
+                  "rawValue": 0.3333333333333333,
+                  "weight": 1,
+                  "contribution": 0.3333333333333333,
+                  "color": "green"
+                }
+              ],
+              "outcome": "filtered-by-rerank",
+              "eventId": "evt_muyrtkyo_4fzyo8",
+              "roundNumber": 1
+            },
+            {
+              "text": "Lin Nuan 说出 Guan Yu 是旧友。",
+              "finalScore": 0.75,
+              "source": "event",
+              "components": [
+                {
+                  "label": "事件余弦",
+                  "rawValue": 0.25,
+                  "weight": 1,
+                  "contribution": 0.25,
+                  "color": "blue"
+                },
+                {
+                  "label": "事件BM25",
+                  "rawValue": 0.5,
+                  "weight": 1,
+                  "contribution": 0.5,
+                  "color": "green"
+                }
+              ],
+              "outcome": "filtered-by-rerank",
+              "eventId": "evt_muyrw5k0_4fzyo8",
+              "roundNumber": 3
+            },
+            {
+              "text": "陆沉与 Guan Yu 在酒肆后院切磋。",
+              "finalScore": 0.3333333333333333,
+              "source": "event",
+              "components": [
+                {
+                  "label": "事件余弦",
+                  "rawValue": 0.3333333333333333,
+                  "weight": 1,
+                  "contribution": 0.3333333333333333,
+                  "color": "blue"
+                }
+              ],
+              "outcome": "filtered-by-rerank",
+              "eventId": "evt_muyruv9c_4fzyo8",
+              "roundNumber": 2
+            }
+          ],
+          "pipeline": {
+            "vectorEventCount": 3,
+            "vectorEntityCount": 4,
+            "graphCount": 16,
+            "afterMerge": 8,
+            "afterRerank": 4,
+            "injectedCount": 4
+          },
+          "config": {
+            "minScore": 0.1,
+            "topK": 8,
+            "rerankEnabled": true,
+            "rerankTopN": 4,
+            "embeddingEnabled": true,
+            "shortTermWindow": 2,
+            "maxCandidates": 8,
+            "edgeBudget": 4,
+            "entityBudget": 2,
+            "eventBudget": 2
+          }
+        },
+        "engramMemory": "<unchanged since the previous step>",
+        "memory": "<unchanged since the previous step>",
+        "vectorRows": "<unchanged since the previous step>",
+        "vectorCalls": [
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          }
+        ],
+        "aiCalls": [],
+        "fetchCalls": [
+          {
+            "method": "POST",
+            "url": "https://embed.test/v1/embeddings",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer k-emb"
+            },
+            "body": {
+              "model": "embed-m",
+              "input": [
+                "Lin Nuan tavern Lu Chen old friends"
+              ]
+            }
+          },
+          {
+            "method": "POST",
+            "url": "https://rerank.test/v1/rerank",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer k-rr"
+            },
+            "body": {
+              "model": "rerank-m",
+              "query": "Lin Nuan tavern Lu Chen old friends",
+              "documents": [
+                "[Lin Nuan→陆沉] In Qingshi town Lin Nuan runs the tavern where Lu Chen first met her that morning",
+                "[Lin Nuan→陆沉] Lin Nuan runs the tavern in Qingshi town where Lu Chen first met her",
+                "[Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends who have not met for years",
+                "[Guan Yu→青石镇] Guan Yu drinks at the tavern every single evening",
+                "Lin Nuan: Runs the tavern in Qingshi town.；bright eyes, long black hair",
+                "Guan Yu: A wandering swordsman.；sharp brows",
+                "陆沉在酒肆遇见 Lin Nuan，她递来热茶。",
+                "Lin Nuan 说出 Guan Yu 是旧友。"
+              ],
+              "top_n": 4,
+              "return_documents": false
+            }
+          }
+        ],
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "元数据.回合序号",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      }
+    ],
+    "usageLookups": 8
+  },
+  "fail": {
+    "steps": [
+      {
+        "label": "round 1",
+        "returned": {
+          "roundNumber": 1,
+          "capturedAt": 1791417660000,
+          "totalDurationMs": "<ms>",
+          "event": {
+            "eventId": "evt_muyrtkyo_4fzyo8",
+            "title": "陆沉来到青石镇的酒肆，遇见了老板娘林暖",
+            "roles": [
+              "陆沉",
+              "Lin Nuan"
+            ],
+            "location": [
+              "青石镇"
+            ],
+            "timeAnchor": "1年3月5日 14:20"
+          },
+          "entities": {
+            "total": 4,
+            "deltas": [
+              {
+                "name": "陆沉",
+                "type": "player",
+                "isNew": true,
+                "descriptionUpdated": false,
+                "mentionCount": 3
+              },
+              {
+                "name": "Lin Nuan",
+                "type": "npc",
+                "isNew": true,
+                "descriptionUpdated": false,
+                "mentionCount": 2
+              },
+              {
+                "name": "Guan Yu",
+                "type": "npc",
+                "isNew": true,
+                "descriptionUpdated": false,
+                "mentionCount": 1
+              },
+              {
+                "name": "青石镇",
+                "type": "location",
+                "isNew": true,
+                "descriptionUpdated": false,
+                "mentionCount": 2
+              }
+            ]
+          },
+          "relations": {
+            "total": 0,
+            "deltas": []
+          },
+          "snapshotVersion": 2,
+          "trimmed": {
+            "eventsBefore": 1,
+            "eventsAfter": 1,
+            "entitiesBefore": 4,
+            "entitiesAfter": 4
+          },
+          "vectorizeQueued": 7,
+          "edges": {
+            "total": 2,
+            "newCount": 2,
+            "reinforcedCount": 0,
+            "prunedCount": 0,
+            "topNew": [
+              {
+                "sourceEntity": "Lin Nuan",
+                "targetEntity": "陆沉",
+                "fact": "Lin Nuan runs the tavern in Qingshi town where Lu Chen first met her",
+                "episodeCount": 1,
+                "isNew": true
+              },
+              {
+                "sourceEntity": "Lin Nuan",
+                "targetEntity": "青石镇",
+                "fact": "Lin Nuan keeps the tavern in Qingshi town",
+                "episodeCount": 1,
+                "isNew": true
+              }
+            ]
+          }
+        },
+        "engramMemory": {
+          "events": [
+            {
+              "id": "evt_muyrtkyo_4fzyo8",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "陆沉来到青石镇的酒肆，遇见了老板娘林暖。林暖笑着递上一碗热茶。",
+              "summary": "陆沉来到青石镇的酒肆，遇见了老板娘林暖(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Lin Nuan) 陆沉来到青石镇的酒肆，遇见了老板娘林暖。林暖笑着递上一碗热茶。",
+              "structured_kv": {
+                "event": "陆沉来到青石镇的酒肆，遇见了老板娘林暖",
+                "role": [
+                  "陆沉",
+                  "Lin Nuan"
+                ],
+                "location": [
+                  "青石镇"
+                ],
+                "time_anchor": "1年3月5日 14:20",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "time": "1年3月5日 14:20",
+              "location": "青石镇",
+              "roundNumber": 1,
+              "mentionedEntities": [
+                "陆沉",
+                "Lin Nuan"
+              ],
+              "midTermSummary": "陆沉在酒肆遇见 Lin Nuan，她递来热茶。"
+            }
+          ],
+          "entities": [
+            {
+              "name": "陆沉",
+              "type": "player",
+              "attributes": {
+                "source": "event_role",
+                "lastEventId": "evt_muyrtkyo_4fzyo8"
+              },
+              "firstSeen": 0,
+              "lastSeen": 1,
+              "mentionCount": 3,
+              "summary": "玩家角色",
+              "is_embedded": true
+            },
+            {
+              "name": "Lin Nuan",
+              "type": "npc",
+              "attributes": {
+                "relationToPlayer": "__undefined__",
+                "location": "青石镇",
+                "source": "event_role",
+                "lastEventId": "evt_muyrtkyo_4fzyo8"
+              },
+              "firstSeen": 1,
+              "lastSeen": 1,
+              "mentionCount": 2,
+              "summary": "Runs the tavern in Qingshi town.；bright eyes, long black hair",
+              "is_embedded": true
+            },
+            {
+              "name": "Guan Yu",
+              "type": "npc",
+              "attributes": {
+                "relationToPlayer": "__undefined__",
+                "location": "__undefined__",
+                "source": "relationship"
+              },
+              "firstSeen": 0,
+              "lastSeen": 0,
+              "mentionCount": 1,
+              "summary": "A wandering swordsman.；sharp brows",
+              "is_embedded": true
+            },
+            {
+              "name": "青石镇",
+              "type": "location",
+              "attributes": {
+                "source": "event_location",
+                "lastEventId": "evt_muyrtkyo_4fzyo8"
+              },
+              "firstSeen": 1,
+              "lastSeen": 1,
+              "mentionCount": 2,
+              "summary": "",
+              "is_embedded": true
+            }
+          ],
+          "relations": [],
+          "v2Edges": [
+            {
+              "id": "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "陆沉",
+              "fact": "Lin Nuan runs the tavern in Qingshi town where Lu Chen first met her",
+              "episodes": [
+                "evt_muyrtkyo_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 1,
+              "learnedAtRound": 1,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "lin nuan|青石镇|linnuankeepsthetaverninqingshitown",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "青石镇",
+              "fact": "Lin Nuan keeps the tavern in Qingshi town",
+              "episodes": [
+                "evt_muyrtkyo_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 1,
+              "learnedAtRound": 1,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            }
+          ],
+          "meta": {
+            "lastUpdated": 1791417660000,
+            "eventCount": 1,
+            "embeddedEventCount": 1,
+            "embeddedEntityCount": 4,
+            "schemaVersion": 5,
+            "v2PendingReview": null
+          }
+        },
+        "memory": {
+          "短期": [],
+          "中期": [],
+          "长期": [],
+          "隐式中期": []
+        },
+        "vectorRows": [
+          [
+            "engram_vectors_prof_m_slot_m",
+            {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                },
+                "Lin Nuan": {
+                  "dim": 384,
+                  "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                },
+                "Guan Yu": {
+                  "dim": 384,
+                  "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+                },
+                "青石镇": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                }
+              },
+              "edgeVectors": {
+                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                  "dim": 384,
+                  "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
+                },
+                "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                  "dim": 384,
+                  "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+                }
+              },
+              "model": "embed-m",
+              "dim": 384
+            }
+          ]
+        ],
+        "vectorCalls": [
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "set",
+            "key": "engram_vectors_prof_m_slot_m",
+            "value": {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                }
+              },
+              "entityVectors": {},
+              "edgeVectors": {},
+              "model": "embed-m",
+              "dim": 384
+            }
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "set",
+            "key": "engram_vectors_prof_m_slot_m",
+            "value": {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                },
+                "Lin Nuan": {
+                  "dim": 384,
+                  "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                },
+                "Guan Yu": {
+                  "dim": 384,
+                  "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+                },
+                "青石镇": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                }
+              },
+              "edgeVectors": {},
+              "model": "embed-m",
+              "dim": 384
+            }
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "set",
+            "key": "engram_vectors_prof_m_slot_m",
+            "value": {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                },
+                "Lin Nuan": {
+                  "dim": 384,
+                  "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                },
+                "Guan Yu": {
+                  "dim": 384,
+                  "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+                },
+                "青石镇": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                }
+              },
+              "edgeVectors": {
+                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                  "dim": 384,
+                  "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
+                },
+                "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                  "dim": 384,
+                  "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+                }
+              },
+              "model": "embed-m",
+              "dim": 384
+            }
+          }
+        ],
+        "aiCalls": [],
+        "fetchCalls": [
+          {
+            "method": "POST",
+            "url": "https://embed.test/v1/embeddings",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer k-emb"
+            },
+            "body": {
+              "model": "embed-m",
+              "input": [
+                "陆沉来到青石镇的酒肆，遇见了老板娘林暖(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Lin Nuan) 陆沉来到青石镇的酒肆，遇见了老板娘林暖。林暖笑着递上一碗热茶。",
+                "陆沉 玩家角色",
+                "Lin Nuan Runs the tavern in Qingshi town.；bright eyes, long black hair",
+                "Guan Yu A wandering swordsman.；sharp brows",
+                "青石镇",
+                "Lin Nuan runs the tavern in Qingshi town where Lu Chen first met her",
+                "Lin Nuan keeps the tavern in Qingshi town"
+              ]
+            }
+          }
+        ],
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "type": "load"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "元数据.回合序号",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.events",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.meta.embeddedEventCount",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.entities",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.meta.embeddedEntityCount",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.v2Edges",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "round 2",
+        "returned": {
+          "roundNumber": 2,
+          "capturedAt": 1791417720000,
+          "totalDurationMs": "<ms>",
+          "event": {
+            "eventId": "evt_muyruv9c_4fzyo8",
+            "title": "第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招",
+            "roles": [
+              "陆沉",
+              "Guan Yu"
+            ],
+            "location": [
+              "青石镇"
+            ],
+            "timeAnchor": "1年3月5日 14:20"
+          },
+          "entities": {
+            "total": 4,
+            "deltas": []
+          },
+          "relations": {
+            "total": 0,
+            "deltas": []
+          },
+          "snapshotVersion": 2,
+          "trimmed": {
+            "eventsBefore": 2,
+            "eventsAfter": 2,
+            "entitiesBefore": 4,
+            "entitiesAfter": 4
+          },
+          "vectorizeQueued": 4,
+          "edges": {
+            "total": 4,
+            "newCount": 2,
+            "reinforcedCount": 1,
+            "prunedCount": 0,
+            "topNew": [
+              {
+                "sourceEntity": "Guan Yu",
+                "targetEntity": "陆沉",
+                "fact": "Guan Yu spars with Lu Chen in the tavern backyard",
+                "episodeCount": 1,
+                "isNew": true
+              },
+              {
+                "sourceEntity": "Guan Yu",
+                "targetEntity": "青石镇",
+                "fact": "Guan Yu keeps the tavern in Qingshi town",
+                "episodeCount": 1,
+                "isNew": true
+              }
+            ]
+          }
+        },
+        "engramMemory": {
+          "events": [
+            {
+              "id": "evt_muyrtkyo_4fzyo8",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "陆沉来到青石镇的酒肆，遇见了老板娘林暖。林暖笑着递上一碗热茶。",
+              "summary": "陆沉来到青石镇的酒肆，遇见了老板娘林暖(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Lin Nuan) 陆沉来到青石镇的酒肆，遇见了老板娘林暖。林暖笑着递上一碗热茶。",
+              "structured_kv": {
+                "event": "陆沉来到青石镇的酒肆，遇见了老板娘林暖",
+                "role": [
+                  "陆沉",
+                  "Lin Nuan"
+                ],
+                "location": [
+                  "青石镇"
+                ],
+                "time_anchor": "1年3月5日 14:20",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "time": "1年3月5日 14:20",
+              "location": "青石镇",
+              "roundNumber": 1,
+              "mentionedEntities": [
+                "陆沉",
+                "Lin Nuan"
+              ],
+              "midTermSummary": "陆沉在酒肆遇见 Lin Nuan，她递来热茶。"
+            },
+            {
+              "id": "evt_muyruv9c_4fzyo8",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招。",
+              "summary": "第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Guan Yu) 第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招。",
+              "structured_kv": {
+                "event": "第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招",
+                "role": [
+                  "陆沉",
+                  "Guan Yu"
+                ],
+                "location": [
+                  "青石镇"
+                ],
+                "time_anchor": "1年3月5日 14:20",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "time": "1年3月5日 14:20",
+              "location": "青石镇",
+              "roundNumber": 2,
+              "mentionedEntities": [
+                "陆沉",
+                "Guan Yu"
+              ],
+              "midTermSummary": "陆沉与 Guan Yu 在酒肆后院切磋。"
+            }
+          ],
+          "entities": [
+            {
+              "name": "陆沉",
+              "type": "player",
+              "attributes": {
+                "source": "event_role",
+                "lastEventId": "evt_muyruv9c_4fzyo8"
+              },
+              "firstSeen": 0,
+              "lastSeen": 2,
+              "mentionCount": 5,
+              "summary": "玩家角色",
+              "is_embedded": true
+            },
+            {
+              "name": "Lin Nuan",
+              "type": "npc",
+              "attributes": {
+                "relationToPlayer": "__undefined__",
+                "location": "青石镇",
+                "source": "event_role",
+                "lastEventId": "evt_muyrtkyo_4fzyo8"
+              },
+              "firstSeen": 1,
+              "lastSeen": 1,
+              "mentionCount": 2,
+              "summary": "Runs the tavern in Qingshi town.；bright eyes, long black hair",
+              "is_embedded": true
+            },
+            {
+              "name": "Guan Yu",
+              "type": "npc",
+              "attributes": {
+                "relationToPlayer": "__undefined__",
+                "location": "__undefined__",
+                "source": "event_role",
+                "lastEventId": "evt_muyruv9c_4fzyo8"
+              },
+              "firstSeen": 2,
+              "lastSeen": 2,
+              "mentionCount": 2,
+              "summary": "A wandering swordsman.；sharp brows",
+              "is_embedded": true
+            },
+            {
+              "name": "青石镇",
+              "type": "location",
+              "attributes": {
+                "source": "event_location",
+                "lastEventId": "evt_muyruv9c_4fzyo8"
+              },
+              "firstSeen": 1,
+              "lastSeen": 2,
+              "mentionCount": 4,
+              "summary": "",
+              "is_embedded": true
+            }
+          ],
+          "relations": [],
+          "v2Edges": [
+            {
+              "id": "lin nuan|陆沉|inqingshitownlinnuanrunsthetavernwherelu",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "陆沉",
+              "fact": "In Qingshi town Lin Nuan runs the tavern where Lu Chen first met her that morning",
+              "episodes": [
+                "evt_muyrtkyo_4fzyo8",
+                "evt_muyruv9c_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 2,
+              "learnedAtRound": 1,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "guan yu|陆沉|guanyusparswithlucheninthetavernbackyard",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "陆沉",
+              "fact": "Guan Yu spars with Lu Chen in the tavern backyard",
+              "episodes": [
+                "evt_muyruv9c_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 2,
+              "lastSeenRound": 2,
+              "learnedAtRound": 2,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "guan yu|青石镇|guanyukeepsthetaverninqingshitown",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "青石镇",
+              "fact": "Guan Yu keeps the tavern in Qingshi town",
+              "episodes": [
+                "evt_muyruv9c_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 2,
+              "lastSeenRound": 2,
+              "learnedAtRound": 2,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "lin nuan|青石镇|linnuankeepsthetaverninqingshitown",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "青石镇",
+              "fact": "Lin Nuan keeps the tavern in Qingshi town",
+              "episodes": [
+                "evt_muyrtkyo_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 1,
+              "learnedAtRound": 1,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            }
+          ],
+          "meta": {
+            "lastUpdated": 1791417720000,
+            "eventCount": 2,
+            "embeddedEventCount": 2,
+            "embeddedEntityCount": 4,
+            "schemaVersion": 5,
+            "v2PendingReview": [
+              {
+                "newFact": "Guan Yu keeps the tavern in Qingshi town",
+                "oldEdgeId": "lin nuan|青石镇|linnuankeepsthetaverninqingshitown",
+                "similarity": 0.7499999999999999
+              }
+            ]
+          }
+        },
+        "memory": "<unchanged since the previous step>",
+        "vectorRows": [
+          [
+            "engram_vectors_prof_m_slot_m",
+            {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                },
+                "evt_muyruv9c_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "6315dc53b58c67289cf884755e99caf8aa3c4ca6099fc05bc85bcba002930004"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                },
+                "Lin Nuan": {
+                  "dim": 384,
+                  "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                },
+                "Guan Yu": {
+                  "dim": 384,
+                  "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+                },
+                "青石镇": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                }
+              },
+              "edgeVectors": {
+                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                  "dim": 384,
+                  "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
+                },
+                "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                  "dim": 384,
+                  "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+                },
+                "lin nuan|陆沉|inqingshitownlinnuanrunsthetavernwherelu": {
+                  "dim": 384,
+                  "sha256": "4e392c6f65bb635c4d40dfa5b25b31d45ff626f5145c4c002f9031f29c769719"
+                },
+                "guan yu|陆沉|guanyusparswithlucheninthetavernbackyard": {
+                  "dim": 384,
+                  "sha256": "23df6e4c1b9eb92ba9e3d6e915a59d235e9bd96a7d40fb0d412edc52ecd95a0b"
+                },
+                "guan yu|青石镇|guanyukeepsthetaverninqingshitown": {
+                  "dim": 384,
+                  "sha256": "ae7258bbea641943816878993c470335c77ed63bc424937cc80b11f8d02e139d"
+                }
+              },
+              "model": "embed-m",
+              "dim": 384
+            }
+          ]
+        ],
+        "vectorCalls": [
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "set",
+            "key": "engram_vectors_prof_m_slot_m",
+            "value": {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                },
+                "Lin Nuan": {
+                  "dim": 384,
+                  "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                },
+                "Guan Yu": {
+                  "dim": 384,
+                  "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+                },
+                "青石镇": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                }
+              },
+              "edgeVectors": {
+                "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                  "dim": 384,
+                  "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+                }
+              },
+              "model": "embed-m",
+              "dim": 384
+            }
+          },
+          {
+            "op": "set",
+            "key": "engram_vectors_prof_m_slot_m",
+            "value": {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                },
+                "evt_muyruv9c_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "6315dc53b58c67289cf884755e99caf8aa3c4ca6099fc05bc85bcba002930004"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                },
+                "Lin Nuan": {
+                  "dim": 384,
+                  "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                },
+                "Guan Yu": {
+                  "dim": 384,
+                  "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+                },
+                "青石镇": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                }
+              },
+              "edgeVectors": {
+                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                  "dim": 384,
+                  "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
+                },
+                "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                  "dim": 384,
+                  "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+                }
+              },
+              "model": "embed-m",
+              "dim": 384
+            }
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "set",
+            "key": "engram_vectors_prof_m_slot_m",
+            "value": {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                },
+                "evt_muyruv9c_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "6315dc53b58c67289cf884755e99caf8aa3c4ca6099fc05bc85bcba002930004"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                },
+                "Lin Nuan": {
+                  "dim": 384,
+                  "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                },
+                "Guan Yu": {
+                  "dim": 384,
+                  "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+                },
+                "青石镇": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                }
+              },
+              "edgeVectors": {
+                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                  "dim": 384,
+                  "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
+                },
+                "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                  "dim": 384,
+                  "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+                },
+                "lin nuan|陆沉|inqingshitownlinnuanrunsthetavernwherelu": {
+                  "dim": 384,
+                  "sha256": "4e392c6f65bb635c4d40dfa5b25b31d45ff626f5145c4c002f9031f29c769719"
+                },
+                "guan yu|陆沉|guanyusparswithlucheninthetavernbackyard": {
+                  "dim": 384,
+                  "sha256": "23df6e4c1b9eb92ba9e3d6e915a59d235e9bd96a7d40fb0d412edc52ecd95a0b"
+                },
+                "guan yu|青石镇|guanyukeepsthetaverninqingshitown": {
+                  "dim": 384,
+                  "sha256": "ae7258bbea641943816878993c470335c77ed63bc424937cc80b11f8d02e139d"
+                }
+              },
+              "model": "embed-m",
+              "dim": 384
+            }
+          }
+        ],
+        "aiCalls": [],
+        "fetchCalls": [
+          {
+            "method": "POST",
+            "url": "https://embed.test/v1/embeddings",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer k-emb"
+            },
+            "body": {
+              "model": "embed-m",
+              "input": [
+                "In Qingshi town Lin Nuan runs the tavern where Lu Chen first met her that morning",
+                "Guan Yu spars with Lu Chen in the tavern backyard",
+                "Guan Yu keeps the tavern in Qingshi town"
+              ]
+            }
+          },
+          {
+            "method": "POST",
+            "url": "https://embed.test/v1/embeddings",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer k-emb"
+            },
+            "body": {
+              "model": "embed-m",
+              "input": [
+                "第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Guan Yu) 第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招。"
+              ]
+            }
+          }
+        ],
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "元数据.回合序号",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.events",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.meta.embeddedEventCount",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.v2Edges",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "round 3",
+        "returned": {
+          "roundNumber": 3,
+          "capturedAt": 1791417780000,
+          "totalDurationMs": "<ms>",
+          "event": {
+            "eventId": "evt_muyrw5k0_4fzyo8",
+            "title": "傍晚，Lin Nuan 告诉陆沉，Guan Yu 其实是她多年未见的旧友",
+            "roles": [
+              "陆沉",
+              "Lin Nuan",
+              "Guan Yu"
+            ],
+            "location": [
+              "青石镇"
+            ],
+            "timeAnchor": "1年3月5日 14:20"
+          },
+          "entities": {
+            "total": 4,
+            "deltas": []
+          },
+          "relations": {
+            "total": 0,
+            "deltas": []
+          },
+          "snapshotVersion": 2,
+          "trimmed": {
+            "eventsBefore": 3,
+            "eventsAfter": 3,
+            "entitiesBefore": 4,
+            "entitiesAfter": 4
+          },
+          "vectorizeQueued": 4,
+          "edges": {
+            "total": 7,
+            "newCount": 3,
+            "reinforcedCount": 0,
+            "prunedCount": 0,
+            "topNew": [
+              {
+                "sourceEntity": "Lin Nuan",
+                "targetEntity": "Guan Yu",
+                "fact": "Lin Nuan and Guan Yu are old friends who have not met for years",
+                "episodeCount": 1,
+                "isNew": true
+              },
+              {
+                "sourceEntity": "Guan Yu",
+                "targetEntity": "Lin Nuan",
+                "fact": "Guan Yu is a stranger to Lin Nuan and has never met her",
+                "episodeCount": 1,
+                "isNew": true
+              },
+              {
+                "sourceEntity": "Guan Yu",
+                "targetEntity": "青石镇",
+                "fact": "Guan Yu drinks at the tavern every single evening",
+                "episodeCount": 1,
+                "isNew": true
+              }
+            ]
+          }
+        },
+        "engramMemory": {
+          "events": [
+            {
+              "id": "evt_muyrtkyo_4fzyo8",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "陆沉来到青石镇的酒肆，遇见了老板娘林暖。林暖笑着递上一碗热茶。",
+              "summary": "陆沉来到青石镇的酒肆，遇见了老板娘林暖(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Lin Nuan) 陆沉来到青石镇的酒肆，遇见了老板娘林暖。林暖笑着递上一碗热茶。",
+              "structured_kv": {
+                "event": "陆沉来到青石镇的酒肆，遇见了老板娘林暖",
+                "role": [
+                  "陆沉",
+                  "Lin Nuan"
+                ],
+                "location": [
+                  "青石镇"
+                ],
+                "time_anchor": "1年3月5日 14:20",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "time": "1年3月5日 14:20",
+              "location": "青石镇",
+              "roundNumber": 1,
+              "mentionedEntities": [
+                "陆沉",
+                "Lin Nuan"
+              ],
+              "midTermSummary": "陆沉在酒肆遇见 Lin Nuan，她递来热茶。"
+            },
+            {
+              "id": "evt_muyruv9c_4fzyo8",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招。",
+              "summary": "第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Guan Yu) 第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招。",
+              "structured_kv": {
+                "event": "第二天清晨，陆沉在酒肆后院练剑，Guan Yu 恰好路过，二人切磋了几招",
+                "role": [
+                  "陆沉",
+                  "Guan Yu"
+                ],
+                "location": [
+                  "青石镇"
+                ],
+                "time_anchor": "1年3月5日 14:20",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "time": "1年3月5日 14:20",
+              "location": "青石镇",
+              "roundNumber": 2,
+              "mentionedEntities": [
+                "陆沉",
+                "Guan Yu"
+              ],
+              "midTermSummary": "陆沉与 Guan Yu 在酒肆后院切磋。"
+            },
+            {
+              "id": "evt_muyrw5k0_4fzyo8",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "傍晚，Lin Nuan 告诉陆沉，Guan Yu 其实是她多年未见的旧友。",
+              "summary": "傍晚，Lin Nuan 告诉陆沉，Guan Yu 其实是她多年未见的旧友(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Lin Nuan, Guan Yu) 傍晚，Lin Nuan 告诉陆沉，Guan Yu 其实是她多年未见的旧友。",
+              "structured_kv": {
+                "event": "傍晚，Lin Nuan 告诉陆沉，Guan Yu 其实是她多年未见的旧友",
+                "role": [
+                  "陆沉",
+                  "Lin Nuan",
+                  "Guan Yu"
+                ],
+                "location": [
+                  "青石镇"
+                ],
+                "time_anchor": "1年3月5日 14:20",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "time": "1年3月5日 14:20",
+              "location": "青石镇",
+              "roundNumber": 3,
+              "mentionedEntities": [
+                "陆沉",
+                "Lin Nuan",
+                "Guan Yu"
+              ],
+              "midTermSummary": "Lin Nuan 说出 Guan Yu 是旧友。"
+            }
+          ],
+          "entities": [
+            {
+              "name": "陆沉",
+              "type": "player",
+              "attributes": {
+                "source": "event_role",
+                "lastEventId": "evt_muyrw5k0_4fzyo8"
+              },
+              "firstSeen": 0,
+              "lastSeen": 3,
+              "mentionCount": 7,
+              "summary": "玩家角色",
+              "is_embedded": true
+            },
+            {
+              "name": "Lin Nuan",
+              "type": "npc",
+              "attributes": {
+                "relationToPlayer": "__undefined__",
+                "location": "青石镇",
+                "source": "event_role",
+                "lastEventId": "evt_muyrw5k0_4fzyo8"
+              },
+              "firstSeen": 1,
+              "lastSeen": 3,
+              "mentionCount": 3,
+              "summary": "Runs the tavern in Qingshi town.；bright eyes, long black hair",
+              "is_embedded": true
+            },
+            {
+              "name": "Guan Yu",
+              "type": "npc",
+              "attributes": {
+                "relationToPlayer": "__undefined__",
+                "location": "__undefined__",
+                "source": "event_role",
+                "lastEventId": "evt_muyrw5k0_4fzyo8"
+              },
+              "firstSeen": 2,
+              "lastSeen": 3,
+              "mentionCount": 3,
+              "summary": "A wandering swordsman.；sharp brows",
+              "is_embedded": true
+            },
+            {
+              "name": "青石镇",
+              "type": "location",
+              "attributes": {
+                "source": "event_location",
+                "lastEventId": "evt_muyrw5k0_4fzyo8"
+              },
+              "firstSeen": 1,
+              "lastSeen": 3,
+              "mentionCount": 6,
+              "summary": "",
+              "is_embedded": true
+            }
+          ],
+          "relations": [],
+          "v2Edges": [
+            {
+              "id": "lin nuan|陆沉|inqingshitownlinnuanrunsthetavernwherelu",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "陆沉",
+              "fact": "In Qingshi town Lin Nuan runs the tavern where Lu Chen first met her that morning",
+              "episodes": [
+                "evt_muyrtkyo_4fzyo8",
+                "evt_muyruv9c_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 2,
+              "learnedAtRound": 1,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "lin nuan|guan yu|linnuanandguanyuareoldfriendswhohavenotm",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "Guan Yu",
+              "fact": "Lin Nuan and Guan Yu are old friends who have not met for years",
+              "episodes": [
+                "evt_muyrw5k0_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 3,
+              "lastSeenRound": 3,
+              "learnedAtRound": 3,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "guan yu|lin nuan|guanyuisastrangertolinnuanandhasnevermet",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "Lin Nuan",
+              "fact": "Guan Yu is a stranger to Lin Nuan and has never met her",
+              "episodes": [
+                "evt_muyrw5k0_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 3,
+              "lastSeenRound": 3,
+              "learnedAtRound": 3,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "guan yu|青石镇|guanyudrinksatthetaverneverysingleevenin",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "青石镇",
+              "fact": "Guan Yu drinks at the tavern every single evening",
+              "episodes": [
+                "evt_muyrw5k0_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 3,
+              "lastSeenRound": 3,
+              "learnedAtRound": 3,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "guan yu|陆沉|guanyusparswithlucheninthetavernbackyard",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "陆沉",
+              "fact": "Guan Yu spars with Lu Chen in the tavern backyard",
+              "episodes": [
+                "evt_muyruv9c_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 2,
+              "lastSeenRound": 2,
+              "learnedAtRound": 2,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "guan yu|青石镇|guanyukeepsthetaverninqingshitown",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "青石镇",
+              "fact": "Guan Yu keeps the tavern in Qingshi town",
+              "episodes": [
+                "evt_muyruv9c_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 2,
+              "lastSeenRound": 2,
+              "learnedAtRound": 2,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            },
+            {
+              "id": "lin nuan|青石镇|linnuankeepsthetaverninqingshitown",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "青石镇",
+              "fact": "Lin Nuan keeps the tavern in Qingshi town",
+              "episodes": [
+                "evt_muyrtkyo_4fzyo8"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 1,
+              "learnedAtRound": 1,
+              "core": "__undefined__",
+              "source": "__undefined__",
+              "canonEntryId": "__undefined__"
+            }
+          ],
+          "meta": {
+            "lastUpdated": 1791417780000,
+            "eventCount": 3,
+            "embeddedEventCount": 3,
+            "embeddedEntityCount": 4,
+            "schemaVersion": 5,
+            "v2PendingReview": [
+              {
+                "newFact": "Guan Yu keeps the tavern in Qingshi town",
+                "oldEdgeId": "lin nuan|青石镇|linnuankeepsthetaverninqingshitown",
+                "similarity": 0.7499999999999999
+              }
+            ]
+          }
+        },
+        "memory": "<unchanged since the previous step>",
+        "vectorRows": [
+          [
+            "engram_vectors_prof_m_slot_m",
+            {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                },
+                "evt_muyruv9c_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "6315dc53b58c67289cf884755e99caf8aa3c4ca6099fc05bc85bcba002930004"
+                },
+                "evt_muyrw5k0_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "bc9fc82e36067d782e8243dfb0957b9c58fb3d0facbb10e371ea3beec60d186d"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                },
+                "Lin Nuan": {
+                  "dim": 384,
+                  "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                },
+                "Guan Yu": {
+                  "dim": 384,
+                  "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+                },
+                "青石镇": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                }
+              },
+              "edgeVectors": {
+                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                  "dim": 384,
+                  "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
+                },
+                "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                  "dim": 384,
+                  "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+                },
+                "lin nuan|陆沉|inqingshitownlinnuanrunsthetavernwherelu": {
+                  "dim": 384,
+                  "sha256": "4e392c6f65bb635c4d40dfa5b25b31d45ff626f5145c4c002f9031f29c769719"
+                },
+                "guan yu|陆沉|guanyusparswithlucheninthetavernbackyard": {
+                  "dim": 384,
+                  "sha256": "23df6e4c1b9eb92ba9e3d6e915a59d235e9bd96a7d40fb0d412edc52ecd95a0b"
+                },
+                "guan yu|青石镇|guanyukeepsthetaverninqingshitown": {
+                  "dim": 384,
+                  "sha256": "ae7258bbea641943816878993c470335c77ed63bc424937cc80b11f8d02e139d"
+                },
+                "lin nuan|guan yu|linnuanandguanyuareoldfriendswhohavenotm": {
+                  "dim": 384,
+                  "sha256": "dfb8244cdbfef2e8c8c5aa9ea7a5139c500c7dd325dcb47c17823c6105465b15"
+                },
+                "guan yu|lin nuan|guanyuisastrangertolinnuanandhasnevermet": {
+                  "dim": 384,
+                  "sha256": "379fe1e7046a36b29eb0e627589ffe880aedf5f2b790810aafacf3d8b57c86ee"
+                },
+                "guan yu|青石镇|guanyudrinksatthetaverneverysingleevenin": {
+                  "dim": 384,
+                  "sha256": "98a4384863c81ebbacb1fff911ce2e10a6cde6fae6527ea5d7d8e278342a4fa2"
+                }
+              },
+              "model": "embed-m",
+              "dim": 384
+            }
+          ]
+        ],
+        "vectorCalls": [
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "set",
+            "key": "engram_vectors_prof_m_slot_m",
+            "value": {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                },
+                "evt_muyruv9c_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "6315dc53b58c67289cf884755e99caf8aa3c4ca6099fc05bc85bcba002930004"
+                },
+                "evt_muyrw5k0_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "bc9fc82e36067d782e8243dfb0957b9c58fb3d0facbb10e371ea3beec60d186d"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                },
+                "Lin Nuan": {
+                  "dim": 384,
+                  "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                },
+                "Guan Yu": {
+                  "dim": 384,
+                  "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+                },
+                "青石镇": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                }
+              },
+              "edgeVectors": {
+                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                  "dim": 384,
+                  "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
+                },
+                "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                  "dim": 384,
+                  "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+                },
+                "lin nuan|陆沉|inqingshitownlinnuanrunsthetavernwherelu": {
+                  "dim": 384,
+                  "sha256": "4e392c6f65bb635c4d40dfa5b25b31d45ff626f5145c4c002f9031f29c769719"
+                },
+                "guan yu|陆沉|guanyusparswithlucheninthetavernbackyard": {
+                  "dim": 384,
+                  "sha256": "23df6e4c1b9eb92ba9e3d6e915a59d235e9bd96a7d40fb0d412edc52ecd95a0b"
+                },
+                "guan yu|青石镇|guanyukeepsthetaverninqingshitown": {
+                  "dim": 384,
+                  "sha256": "ae7258bbea641943816878993c470335c77ed63bc424937cc80b11f8d02e139d"
+                }
+              },
+              "model": "embed-m",
+              "dim": 384
+            }
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "set",
+            "key": "engram_vectors_prof_m_slot_m",
+            "value": {
+              "eventVectors": {
+                "evt_muyrtkyo_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                },
+                "evt_muyruv9c_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "6315dc53b58c67289cf884755e99caf8aa3c4ca6099fc05bc85bcba002930004"
+                },
+                "evt_muyrw5k0_4fzyo8": {
+                  "dim": 384,
+                  "sha256": "bc9fc82e36067d782e8243dfb0957b9c58fb3d0facbb10e371ea3beec60d186d"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                },
+                "Lin Nuan": {
+                  "dim": 384,
+                  "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                },
+                "Guan Yu": {
+                  "dim": 384,
+                  "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+                },
+                "青石镇": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                }
+              },
+              "edgeVectors": {
+                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                  "dim": 384,
+                  "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
+                },
+                "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                  "dim": 384,
+                  "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+                },
+                "lin nuan|陆沉|inqingshitownlinnuanrunsthetavernwherelu": {
+                  "dim": 384,
+                  "sha256": "4e392c6f65bb635c4d40dfa5b25b31d45ff626f5145c4c002f9031f29c769719"
+                },
+                "guan yu|陆沉|guanyusparswithlucheninthetavernbackyard": {
+                  "dim": 384,
+                  "sha256": "23df6e4c1b9eb92ba9e3d6e915a59d235e9bd96a7d40fb0d412edc52ecd95a0b"
+                },
+                "guan yu|青石镇|guanyukeepsthetaverninqingshitown": {
+                  "dim": 384,
+                  "sha256": "ae7258bbea641943816878993c470335c77ed63bc424937cc80b11f8d02e139d"
+                },
+                "lin nuan|guan yu|linnuanandguanyuareoldfriendswhohavenotm": {
+                  "dim": 384,
+                  "sha256": "dfb8244cdbfef2e8c8c5aa9ea7a5139c500c7dd325dcb47c17823c6105465b15"
+                },
+                "guan yu|lin nuan|guanyuisastrangertolinnuanandhasnevermet": {
+                  "dim": 384,
+                  "sha256": "379fe1e7046a36b29eb0e627589ffe880aedf5f2b790810aafacf3d8b57c86ee"
+                },
+                "guan yu|青石镇|guanyudrinksatthetaverneverysingleevenin": {
+                  "dim": 384,
+                  "sha256": "98a4384863c81ebbacb1fff911ce2e10a6cde6fae6527ea5d7d8e278342a4fa2"
+                }
+              },
+              "model": "embed-m",
+              "dim": 384
+            }
+          }
+        ],
+        "aiCalls": [],
+        "fetchCalls": [
+          {
+            "method": "POST",
+            "url": "https://embed.test/v1/embeddings",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer k-emb"
+            },
+            "body": {
+              "model": "embed-m",
+              "input": [
+                "Lin Nuan and Guan Yu are old friends who have not met for years",
+                "Guan Yu is a stranger to Lin Nuan and has never met her",
+                "Guan Yu drinks at the tavern every evening",
+                "Guan Yu drinks at the tavern every single evening"
+              ]
+            }
+          },
+          {
+            "method": "POST",
+            "url": "https://embed.test/v1/embeddings",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer k-emb"
+            },
+            "body": {
+              "model": "embed-m",
+              "input": [
+                "傍晚，Lin Nuan 告诉陆沉，Guan Yu 其实是她多年未见的旧友(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Lin Nuan, Guan Yu) 傍晚，Lin Nuan 告诉陆沉，Guan Yu 其实是她多年未见的旧友。"
+              ]
+            }
+          }
+        ],
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "元数据.回合序号",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.events",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.meta.embeddedEventCount",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory.v2Edges",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "retrieve",
+        "returned": "相关事实：\n1. [Lin Nuan→陆沉] In Qingshi town Lin Nuan runs the tavern where Lu Chen first met her that morning（第2轮）\n2. [Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends who have not met for years（第3轮）\n3. [Lin Nuan→青石镇] Lin Nuan keeps the tavern in Qingshi town（第1轮）\n4. [Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard（第2轮）\n\n相关事件：\n- Lin Nuan 说出 Guan Yu 是旧友。（第3轮）\n- 陆沉在酒肆遇见 Lin Nuan，她递来热茶。（第1轮）",
+        "readSnapshot": {
+          "query": "Lin Nuan tavern Lu Chen old friends",
+          "capturedAt": 1791418320000,
+          "totalDurationMs": "<ms>",
+          "candidates": [
+            {
+              "text": "[Lin Nuan→陆沉] In Qingshi town Lin Nuan runs the tavern where Lu Chen first met her that morning",
+              "finalScore": 1,
+              "source": "edge",
+              "components": [
+                {
+                  "label": "边余弦",
+                  "rawValue": 0.5,
+                  "weight": 1,
+                  "contribution": 0.5,
+                  "color": "blue"
+                },
+                {
+                  "label": "边BM25",
+                  "rawValue": 0.5,
+                  "weight": 1,
+                  "contribution": 0.5,
+                  "color": "green"
+                }
+              ],
+              "outcome": "injected",
+              "roundNumber": 2
+            },
+            {
+              "text": "[Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends who have not met for years",
+              "finalScore": 0.6666666666666666,
+              "source": "edge",
+              "components": [
+                {
+                  "label": "边余弦",
+                  "rawValue": 0.3333333333333333,
+                  "weight": 1,
+                  "contribution": 0.3333333333333333,
+                  "color": "blue"
+                },
+                {
+                  "label": "边BM25",
+                  "rawValue": 0.3333333333333333,
+                  "weight": 1,
+                  "contribution": 0.3333333333333333,
+                  "color": "green"
+                }
+              ],
+              "outcome": "injected",
+              "roundNumber": 3
+            },
+            {
+              "text": "[Lin Nuan→青石镇] Lin Nuan keeps the tavern in Qingshi town",
+              "finalScore": 0.45,
+              "source": "edge",
+              "components": [
+                {
+                  "label": "边余弦",
+                  "rawValue": 0.25,
+                  "weight": 1,
+                  "contribution": 0.25,
+                  "color": "blue"
+                },
+                {
+                  "label": "边BM25",
+                  "rawValue": 0.2,
+                  "weight": 1,
+                  "contribution": 0.2,
+                  "color": "green"
+                }
+              ],
+              "outcome": "injected",
+              "roundNumber": 1
+            },
+            {
+              "text": "[Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard",
+              "finalScore": 0.45,
+              "source": "edge",
+              "components": [
+                {
+                  "label": "边余弦",
+                  "rawValue": 0.2,
+                  "weight": 1,
+                  "contribution": 0.2,
+                  "color": "blue"
+                },
+                {
+                  "label": "边BM25",
+                  "rawValue": 0.25,
+                  "weight": 1,
+                  "contribution": 0.25,
+                  "color": "green"
+                }
+              ],
+              "outcome": "injected",
+              "roundNumber": 2
+            },
+            {
+              "text": "Lin Nuan: Runs the tavern in Qingshi town.；bright eyes, long black hair",
+              "finalScore": 1,
+              "source": "entity",
+              "components": [
+                {
+                  "label": "实体余弦",
+                  "rawValue": 0.5,
+                  "weight": 1,
+                  "contribution": 0.5,
+                  "color": "blue"
+                },
+                {
+                  "label": "实体BM25",
+                  "rawValue": 0.5,
+                  "weight": 1,
+                  "contribution": 0.5,
+                  "color": "green"
+                }
+              ],
+              "outcome": "filtered-as-redundant",
+              "entityName": "Lin Nuan"
+            },
+            {
+              "text": "Lin Nuan 说出 Guan Yu 是旧友。",
+              "finalScore": 1,
+              "source": "event",
+              "components": [
+                {
+                  "label": "事件余弦",
+                  "rawValue": 0.5,
+                  "weight": 1,
+                  "contribution": 0.5,
+                  "color": "blue"
+                },
+                {
+                  "label": "事件BM25",
+                  "rawValue": 0.5,
+                  "weight": 1,
+                  "contribution": 0.5,
+                  "color": "green"
+                }
+              ],
+              "outcome": "injected",
+              "eventId": "evt_muyrw5k0_4fzyo8",
+              "roundNumber": 3
+            },
+            {
+              "text": "陆沉在酒肆遇见 Lin Nuan，她递来热茶。",
+              "finalScore": 0.3333333333333333,
+              "source": "event",
+              "components": [
+                {
+                  "label": "事件BM25",
+                  "rawValue": 0.3333333333333333,
+                  "weight": 1,
+                  "contribution": 0.3333333333333333,
+                  "color": "green"
+                }
+              ],
+              "outcome": "injected",
+              "eventId": "evt_muyrtkyo_4fzyo8",
+              "roundNumber": 1
+            },
+            {
+              "text": "[Guan Yu→Lin Nuan] Guan Yu is a stranger to Lin Nuan and has never met her",
+              "finalScore": 0.3333333333333333,
+              "source": "edge",
+              "components": [
+                {
+                  "label": "边余弦",
+                  "rawValue": 0.16666666666666666,
+                  "weight": 1,
+                  "contribution": 0.16666666666666666,
+                  "color": "blue"
+                },
+                {
+                  "label": "边BM25",
+                  "rawValue": 0.16666666666666666,
+                  "weight": 1,
+                  "contribution": 0.16666666666666666,
+                  "color": "green"
+                }
+              ],
+              "outcome": "filtered-by-topK",
+              "roundNumber": 3
+            },
+            {
+              "text": "[Guan Yu→青石镇] Guan Yu keeps the tavern in Qingshi town",
+              "finalScore": 0.26785714285714285,
+              "source": "edge",
+              "components": [
+                {
+                  "label": "边余弦",
+                  "rawValue": 0.14285714285714285,
+                  "weight": 1,
+                  "contribution": 0.14285714285714285,
+                  "color": "blue"
+                },
+                {
+                  "label": "边BM25",
+                  "rawValue": 0.125,
+                  "weight": 1,
+                  "contribution": 0.125,
+                  "color": "green"
+                }
+              ],
+              "outcome": "filtered-by-topK",
+              "roundNumber": 2
+            },
+            {
+              "text": "[Guan Yu→青石镇] Guan Yu drinks at the tavern every single evening",
+              "finalScore": 0.26785714285714285,
+              "source": "edge",
+              "components": [
+                {
+                  "label": "边余弦",
+                  "rawValue": 0.125,
+                  "weight": 1,
+                  "contribution": 0.125,
+                  "color": "blue"
+                },
+                {
+                  "label": "边BM25",
+                  "rawValue": 0.14285714285714285,
+                  "weight": 1,
+                  "contribution": 0.14285714285714285,
+                  "color": "green"
+                }
+              ],
+              "outcome": "filtered-by-topK",
+              "roundNumber": 3
+            }
+          ],
+          "pipeline": {
+            "vectorEventCount": 1,
+            "vectorEntityCount": 1,
+            "graphCount": 14,
+            "afterMerge": 7,
+            "afterRerank": 7,
+            "injectedCount": 6
+          },
+          "config": {
+            "minScore": 0.1,
+            "topK": 8,
+            "rerankEnabled": true,
+            "rerankTopN": 0,
+            "embeddingEnabled": true,
+            "shortTermWindow": 2,
+            "maxCandidates": 8,
+            "edgeBudget": 4,
+            "entityBudget": 2,
+            "eventBudget": 2
+          }
+        },
+        "engramMemory": "<unchanged since the previous step>",
+        "memory": "<unchanged since the previous step>",
+        "vectorRows": "<unchanged since the previous step>",
+        "vectorCalls": [
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          }
+        ],
+        "aiCalls": [],
+        "fetchCalls": [
+          {
+            "method": "POST",
+            "url": "https://embed.test/v1/embeddings",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer k-emb"
+            },
+            "body": {
+              "model": "embed-m",
+              "input": [
+                "Lin Nuan tavern Lu Chen old friends"
+              ]
+            }
+          },
+          {
+            "method": "POST",
+            "url": "https://rerank.test/v1/rerank",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer k-rr"
+            },
+            "body": {
+              "model": "rerank-m",
+              "query": "Lin Nuan tavern Lu Chen old friends",
+              "documents": [
+                "[Lin Nuan→陆沉] In Qingshi town Lin Nuan runs the tavern where Lu Chen first met her that morning",
+                "[Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends who have not met for years",
+                "[Lin Nuan→青石镇] Lin Nuan keeps the tavern in Qingshi town",
+                "[Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard",
+                "Lin Nuan: Runs the tavern in Qingshi town.；bright eyes, long black hair",
+                "Lin Nuan 说出 Guan Yu 是旧友。",
+                "陆沉在酒肆遇见 Lin Nuan，她递来热茶。"
+              ],
+              "top_n": 4,
+              "return_documents": false
+            }
+          }
+        ],
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "元数据.回合序号",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      }
+    ],
+    "usageLookups": 8
+  },
+  "warnings": [
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:",
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:",
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:",
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:",
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:",
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:",
+    "[Reranker] Rerank failed, falling back to score sort:"
+  ]
+}

@@ -1,0 +1,3995 @@
+{
+  "nativeRerank": [
+    {
+      "label": "rerank ok",
+      "query": "Lin Nuan tavern tea Lu Chen",
+      "text": "相关事实：\n1. [Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard（第8轮）\n2. [Lin Nuan→陆沉] Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern（第8轮）\n3. [Lin Nuan→青石镇] Lin Nuan keeps the oldest tavern in Qingshi town（第8轮）\n4. [Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends from the same town（第8轮）",
+      "readSnapshot": {
+        "query": "Lin Nuan tavern tea Lu Chen",
+        "capturedAt": 1791418320000,
+        "totalDurationMs": "<ms>",
+        "candidates": [
+          {
+            "text": "[Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard",
+            "finalScore": 0.8799999999999999,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边余弦",
+                "rawValue": 0.5,
+                "weight": 0.6,
+                "contribution": 0.3,
+                "color": "blue"
+              },
+              {
+                "label": "边BM25",
+                "rawValue": 0.3333333333333333,
+                "weight": 0.6,
+                "contribution": 0.19999999999999998,
+                "color": "green"
+              },
+              {
+                "label": "精排",
+                "rawValue": 0.95,
+                "weight": 0.4,
+                "contribution": 0.38,
+                "color": "orange"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8,
+            "preRerankScore": 0.8333333333333333,
+            "rerankBlendedScore": 0.8799999999999999
+          },
+          {
+            "text": "[Lin Nuan→陆沉] Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern",
+            "finalScore": 0.752,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边余弦",
+                "rawValue": 0.16666666666666666,
+                "weight": 0.6,
+                "contribution": 0.09999999999999999,
+                "color": "blue"
+              },
+              {
+                "label": "边BM25",
+                "rawValue": 0.5,
+                "weight": 0.6,
+                "contribution": 0.3,
+                "color": "green"
+              },
+              {
+                "label": "精排",
+                "rawValue": 0.88,
+                "weight": 0.4,
+                "contribution": 0.35200000000000004,
+                "color": "orange"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8,
+            "preRerankScore": 0.6666666666666666,
+            "rerankBlendedScore": 0.752
+          },
+          {
+            "text": "[Lin Nuan→青石镇] Lin Nuan keeps the oldest tavern in Qingshi town",
+            "finalScore": 0.6739999999999999,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边余弦",
+                "rawValue": 0.3333333333333333,
+                "weight": 0.6,
+                "contribution": 0.19999999999999998,
+                "color": "blue"
+              },
+              {
+                "label": "边BM25",
+                "rawValue": 0.25,
+                "weight": 0.6,
+                "contribution": 0.15,
+                "color": "green"
+              },
+              {
+                "label": "精排",
+                "rawValue": 0.81,
+                "weight": 0.4,
+                "contribution": 0.32400000000000007,
+                "color": "orange"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8,
+            "preRerankScore": 0.5833333333333333,
+            "rerankBlendedScore": 0.6739999999999999
+          },
+          {
+            "text": "[Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends from the same town",
+            "finalScore": 0.5017142857142857,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边余弦",
+                "rawValue": 0.14285714285714285,
+                "weight": 0.6,
+                "contribution": 0.0857142857142857,
+                "color": "blue"
+              },
+              {
+                "label": "边BM25",
+                "rawValue": 0.2,
+                "weight": 0.6,
+                "contribution": 0.12,
+                "color": "green"
+              },
+              {
+                "label": "精排",
+                "rawValue": 0.74,
+                "weight": 0.4,
+                "contribution": 0.296,
+                "color": "orange"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8,
+            "preRerankScore": 0.34285714285714286,
+            "rerankBlendedScore": 0.5017142857142857
+          },
+          {
+            "text": "[后山→青石镇] The back mountain rises right behind Qingshi town",
+            "finalScore": 0.25,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边余弦",
+                "rawValue": 0.25,
+                "weight": 1,
+                "contribution": 0.25,
+                "color": "blue"
+              }
+            ],
+            "outcome": "filtered-by-rerank",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Village Elder→后山] Village Elder warns about storms over the back mountain",
+            "finalScore": 0.2,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边余弦",
+                "rawValue": 0.2,
+                "weight": 1,
+                "contribution": 0.2,
+                "color": "blue"
+              }
+            ],
+            "outcome": "filtered-by-rerank",
+            "roundNumber": 8
+          },
+          {
+            "text": "Lin Nuan: Runs the tavern in Qingshi town, bright eyes and long black hair",
+            "finalScore": 0.75,
+            "source": "entity",
+            "components": [
+              {
+                "label": "实体余弦",
+                "rawValue": 0.25,
+                "weight": 1,
+                "contribution": 0.25,
+                "color": "blue"
+              },
+              {
+                "label": "实体BM25",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "green"
+              }
+            ],
+            "outcome": "filtered-by-rerank",
+            "entityName": "Lin Nuan"
+          },
+          {
+            "text": "后山: A foggy forest behind the town",
+            "finalScore": 0.5,
+            "source": "entity",
+            "components": [
+              {
+                "label": "实体余弦",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "blue"
+              }
+            ],
+            "outcome": "filtered-by-rerank",
+            "entityName": "后山"
+          },
+          {
+            "text": "青石镇: A small town at the foot of the mountain",
+            "finalScore": 0.3333333333333333,
+            "source": "entity",
+            "components": [
+              {
+                "label": "实体余弦",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "blue"
+              }
+            ],
+            "outcome": "filtered-by-rerank",
+            "entityName": "青石镇"
+          },
+          {
+            "text": "Village Elder: The oldest person in the village, knows every storm",
+            "finalScore": 0.2,
+            "source": "entity",
+            "components": [
+              {
+                "label": "实体余弦",
+                "rawValue": 0.2,
+                "weight": 1,
+                "contribution": 0.2,
+                "color": "blue"
+              }
+            ],
+            "outcome": "filtered-by-rerank",
+            "entityName": "Village Elder"
+          },
+          {
+            "text": "陆沉: 玩家角色",
+            "finalScore": 0.16666666666666666,
+            "source": "entity",
+            "components": [
+              {
+                "label": "实体余弦",
+                "rawValue": 0.16666666666666666,
+                "weight": 1,
+                "contribution": 0.16666666666666666,
+                "color": "blue"
+              }
+            ],
+            "outcome": "filtered-by-rerank",
+            "entityName": "陆沉"
+          },
+          {
+            "text": "Guan Yu: A wandering swordsman with sharp brows",
+            "finalScore": 0.14285714285714285,
+            "source": "entity",
+            "components": [
+              {
+                "label": "实体余弦",
+                "rawValue": 0.14285714285714285,
+                "weight": 1,
+                "contribution": 0.14285714285714285,
+                "color": "blue"
+              }
+            ],
+            "outcome": "filtered-by-rerank",
+            "entityName": "Guan Yu"
+          },
+          {
+            "text": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+            "finalScore": 0.8333333333333333,
+            "source": "event",
+            "components": [
+              {
+                "label": "事件余弦",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "blue"
+              },
+              {
+                "label": "事件BM25",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "green"
+              }
+            ],
+            "outcome": "filtered-by-rerank",
+            "eventId": "evt_r1",
+            "roundNumber": 1
+          },
+          {
+            "text": "The village elder warns everyone about a storm coming over the back mountain",
+            "finalScore": 0.5,
+            "source": "event",
+            "components": [
+              {
+                "label": "事件余弦",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "blue"
+              }
+            ],
+            "outcome": "filtered-by-rerank",
+            "eventId": "evt_r3",
+            "roundNumber": 3
+          },
+          {
+            "text": "Lin Nuan names Guan Yu as an old friend.",
+            "finalScore": 0.5,
+            "source": "event",
+            "components": [
+              {
+                "label": "事件余弦",
+                "rawValue": 0.16666666666666666,
+                "weight": 1,
+                "contribution": 0.16666666666666666,
+                "color": "blue"
+              },
+              {
+                "label": "事件BM25",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "green"
+              }
+            ],
+            "outcome": "filtered-by-rerank",
+            "eventId": "evt_r4",
+            "roundNumber": 8
+          },
+          {
+            "text": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+            "finalScore": 0.45,
+            "source": "event",
+            "components": [
+              {
+                "label": "事件余弦",
+                "rawValue": 0.2,
+                "weight": 1,
+                "contribution": 0.2,
+                "color": "blue"
+              },
+              {
+                "label": "事件BM25",
+                "rawValue": 0.25,
+                "weight": 1,
+                "contribution": 0.25,
+                "color": "green"
+              }
+            ],
+            "outcome": "filtered-by-rerank",
+            "eventId": "evt_r2",
+            "roundNumber": 2
+          },
+          {
+            "text": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+            "finalScore": 0.25,
+            "source": "event",
+            "components": [
+              {
+                "label": "事件余弦",
+                "rawValue": 0.25,
+                "weight": 1,
+                "contribution": 0.25,
+                "color": "blue"
+              }
+            ],
+            "outcome": "filtered-by-rerank",
+            "eventId": "evt_r5",
+            "roundNumber": 9
+          }
+        ],
+        "pipeline": {
+          "vectorEventCount": 5,
+          "vectorEntityCount": 6,
+          "graphCount": 10,
+          "afterMerge": 12,
+          "afterRerank": 4,
+          "injectedCount": 4
+        },
+        "config": {
+          "minScore": 0.05,
+          "topK": 10,
+          "rerankEnabled": true,
+          "rerankTopN": 4,
+          "embeddingEnabled": true,
+          "shortTermWindow": 3,
+          "maxCandidates": 12,
+          "edgeBudget": 6,
+          "entityBudget": 3,
+          "eventBudget": 3
+        }
+      },
+      "recorder": [
+        {
+          "recordReadSnapshot": {
+            "query": "Lin Nuan tavern tea Lu Chen",
+            "capturedAt": 1791418320000,
+            "totalDurationMs": "<ms>",
+            "candidates": [
+              {
+                "text": "[Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard",
+                "finalScore": 0.8799999999999999,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边余弦",
+                    "rawValue": 0.5,
+                    "weight": 0.6,
+                    "contribution": 0.3,
+                    "color": "blue"
+                  },
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 0.6,
+                    "contribution": 0.19999999999999998,
+                    "color": "green"
+                  },
+                  {
+                    "label": "精排",
+                    "rawValue": 0.95,
+                    "weight": 0.4,
+                    "contribution": 0.38,
+                    "color": "orange"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8,
+                "preRerankScore": 0.8333333333333333,
+                "rerankBlendedScore": 0.8799999999999999
+              },
+              {
+                "text": "[Lin Nuan→陆沉] Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern",
+                "finalScore": 0.752,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边余弦",
+                    "rawValue": 0.16666666666666666,
+                    "weight": 0.6,
+                    "contribution": 0.09999999999999999,
+                    "color": "blue"
+                  },
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.5,
+                    "weight": 0.6,
+                    "contribution": 0.3,
+                    "color": "green"
+                  },
+                  {
+                    "label": "精排",
+                    "rawValue": 0.88,
+                    "weight": 0.4,
+                    "contribution": 0.35200000000000004,
+                    "color": "orange"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8,
+                "preRerankScore": 0.6666666666666666,
+                "rerankBlendedScore": 0.752
+              },
+              {
+                "text": "[Lin Nuan→青石镇] Lin Nuan keeps the oldest tavern in Qingshi town",
+                "finalScore": 0.6739999999999999,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边余弦",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 0.6,
+                    "contribution": 0.19999999999999998,
+                    "color": "blue"
+                  },
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.25,
+                    "weight": 0.6,
+                    "contribution": 0.15,
+                    "color": "green"
+                  },
+                  {
+                    "label": "精排",
+                    "rawValue": 0.81,
+                    "weight": 0.4,
+                    "contribution": 0.32400000000000007,
+                    "color": "orange"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8,
+                "preRerankScore": 0.5833333333333333,
+                "rerankBlendedScore": 0.6739999999999999
+              },
+              {
+                "text": "[Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends from the same town",
+                "finalScore": 0.5017142857142857,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边余弦",
+                    "rawValue": 0.14285714285714285,
+                    "weight": 0.6,
+                    "contribution": 0.0857142857142857,
+                    "color": "blue"
+                  },
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.2,
+                    "weight": 0.6,
+                    "contribution": 0.12,
+                    "color": "green"
+                  },
+                  {
+                    "label": "精排",
+                    "rawValue": 0.74,
+                    "weight": 0.4,
+                    "contribution": 0.296,
+                    "color": "orange"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8,
+                "preRerankScore": 0.34285714285714286,
+                "rerankBlendedScore": 0.5017142857142857
+              },
+              {
+                "text": "[后山→青石镇] The back mountain rises right behind Qingshi town",
+                "finalScore": 0.25,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边余弦",
+                    "rawValue": 0.25,
+                    "weight": 1,
+                    "contribution": 0.25,
+                    "color": "blue"
+                  }
+                ],
+                "outcome": "filtered-by-rerank",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Village Elder→后山] Village Elder warns about storms over the back mountain",
+                "finalScore": 0.2,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边余弦",
+                    "rawValue": 0.2,
+                    "weight": 1,
+                    "contribution": 0.2,
+                    "color": "blue"
+                  }
+                ],
+                "outcome": "filtered-by-rerank",
+                "roundNumber": 8
+              },
+              {
+                "text": "Lin Nuan: Runs the tavern in Qingshi town, bright eyes and long black hair",
+                "finalScore": 0.75,
+                "source": "entity",
+                "components": [
+                  {
+                    "label": "实体余弦",
+                    "rawValue": 0.25,
+                    "weight": 1,
+                    "contribution": 0.25,
+                    "color": "blue"
+                  },
+                  {
+                    "label": "实体BM25",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "filtered-by-rerank",
+                "entityName": "Lin Nuan"
+              },
+              {
+                "text": "后山: A foggy forest behind the town",
+                "finalScore": 0.5,
+                "source": "entity",
+                "components": [
+                  {
+                    "label": "实体余弦",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "blue"
+                  }
+                ],
+                "outcome": "filtered-by-rerank",
+                "entityName": "后山"
+              },
+              {
+                "text": "青石镇: A small town at the foot of the mountain",
+                "finalScore": 0.3333333333333333,
+                "source": "entity",
+                "components": [
+                  {
+                    "label": "实体余弦",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "blue"
+                  }
+                ],
+                "outcome": "filtered-by-rerank",
+                "entityName": "青石镇"
+              },
+              {
+                "text": "Village Elder: The oldest person in the village, knows every storm",
+                "finalScore": 0.2,
+                "source": "entity",
+                "components": [
+                  {
+                    "label": "实体余弦",
+                    "rawValue": 0.2,
+                    "weight": 1,
+                    "contribution": 0.2,
+                    "color": "blue"
+                  }
+                ],
+                "outcome": "filtered-by-rerank",
+                "entityName": "Village Elder"
+              },
+              {
+                "text": "陆沉: 玩家角色",
+                "finalScore": 0.16666666666666666,
+                "source": "entity",
+                "components": [
+                  {
+                    "label": "实体余弦",
+                    "rawValue": 0.16666666666666666,
+                    "weight": 1,
+                    "contribution": 0.16666666666666666,
+                    "color": "blue"
+                  }
+                ],
+                "outcome": "filtered-by-rerank",
+                "entityName": "陆沉"
+              },
+              {
+                "text": "Guan Yu: A wandering swordsman with sharp brows",
+                "finalScore": 0.14285714285714285,
+                "source": "entity",
+                "components": [
+                  {
+                    "label": "实体余弦",
+                    "rawValue": 0.14285714285714285,
+                    "weight": 1,
+                    "contribution": 0.14285714285714285,
+                    "color": "blue"
+                  }
+                ],
+                "outcome": "filtered-by-rerank",
+                "entityName": "Guan Yu"
+              },
+              {
+                "text": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+                "finalScore": 0.8333333333333333,
+                "source": "event",
+                "components": [
+                  {
+                    "label": "事件余弦",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "blue"
+                  },
+                  {
+                    "label": "事件BM25",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "filtered-by-rerank",
+                "eventId": "evt_r1",
+                "roundNumber": 1
+              },
+              {
+                "text": "The village elder warns everyone about a storm coming over the back mountain",
+                "finalScore": 0.5,
+                "source": "event",
+                "components": [
+                  {
+                    "label": "事件余弦",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "blue"
+                  }
+                ],
+                "outcome": "filtered-by-rerank",
+                "eventId": "evt_r3",
+                "roundNumber": 3
+              },
+              {
+                "text": "Lin Nuan names Guan Yu as an old friend.",
+                "finalScore": 0.5,
+                "source": "event",
+                "components": [
+                  {
+                    "label": "事件余弦",
+                    "rawValue": 0.16666666666666666,
+                    "weight": 1,
+                    "contribution": 0.16666666666666666,
+                    "color": "blue"
+                  },
+                  {
+                    "label": "事件BM25",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "filtered-by-rerank",
+                "eventId": "evt_r4",
+                "roundNumber": 8
+              },
+              {
+                "text": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+                "finalScore": 0.45,
+                "source": "event",
+                "components": [
+                  {
+                    "label": "事件余弦",
+                    "rawValue": 0.2,
+                    "weight": 1,
+                    "contribution": 0.2,
+                    "color": "blue"
+                  },
+                  {
+                    "label": "事件BM25",
+                    "rawValue": 0.25,
+                    "weight": 1,
+                    "contribution": 0.25,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "filtered-by-rerank",
+                "eventId": "evt_r2",
+                "roundNumber": 2
+              },
+              {
+                "text": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+                "finalScore": 0.25,
+                "source": "event",
+                "components": [
+                  {
+                    "label": "事件余弦",
+                    "rawValue": 0.25,
+                    "weight": 1,
+                    "contribution": 0.25,
+                    "color": "blue"
+                  }
+                ],
+                "outcome": "filtered-by-rerank",
+                "eventId": "evt_r5",
+                "roundNumber": 9
+              }
+            ],
+            "pipeline": {
+              "vectorEventCount": 5,
+              "vectorEntityCount": 6,
+              "graphCount": 10,
+              "afterMerge": 12,
+              "afterRerank": 4,
+              "injectedCount": 4
+            },
+            "config": {
+              "minScore": 0.05,
+              "topK": 10,
+              "rerankEnabled": true,
+              "rerankTopN": 4,
+              "embeddingEnabled": true,
+              "shortTermWindow": 3,
+              "maxCandidates": 12,
+              "edgeBudget": 6,
+              "entityBudget": 3,
+              "eventBudget": 3
+            }
+          }
+        },
+        {
+          "recordRetrieve": {
+            "vectorCandidateCount": 11,
+            "graphCandidateCount": 10,
+            "afterMergeCount": 12,
+            "afterRerankCount": 4,
+            "rerankUsed": true,
+            "embeddingFallback": false,
+            "topScores": [
+              {
+                "text": "Guan Yu spars with Lu Chen in the tavern backyard",
+                "score": 0.8799999999999999,
+                "source": "edge"
+              },
+              {
+                "text": "Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern",
+                "score": 0.752,
+                "source": "edge"
+              },
+              {
+                "text": "Lin Nuan keeps the oldest tavern in Qingshi town",
+                "score": 0.6739999999999999,
+                "source": "edge"
+              },
+              {
+                "text": "Lin Nuan and Guan Yu are old friends from the same town",
+                "score": 0.5017142857142857,
+                "source": "edge"
+              }
+            ]
+          }
+        }
+      ],
+      "step": {
+        "label": "rerank ok",
+        "engramMemory": {
+          "events": [
+            {
+              "id": "evt_r1",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+              "summary": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+              "structured_kv": {
+                "event": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 1
+            },
+            {
+              "id": "evt_r2",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+              "summary": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+              "structured_kv": {
+                "event": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 2
+            },
+            {
+              "id": "evt_r3",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "The village elder warns everyone about a storm coming over the back mountain",
+              "summary": "The village elder warns everyone about a storm coming over the back mountain",
+              "structured_kv": {
+                "event": "The village elder warns everyone about a storm coming over the back mountain",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 3
+            },
+            {
+              "id": "evt_r4",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Lin Nuan tells Lu Chen that Guan Yu is an old friend she has not seen for years",
+              "summary": "Lin Nuan tells Lu Chen that Guan Yu is an old friend she has not seen for years",
+              "structured_kv": {
+                "event": "Lin Nuan tells Lu Chen that Guan Yu is an old friend she has not seen for years",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 8,
+              "midTermSummary": "Lin Nuan names Guan Yu as an old friend."
+            },
+            {
+              "id": "evt_r5",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+              "summary": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+              "structured_kv": {
+                "event": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 9
+            },
+            {
+              "id": "evt_r6",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Lu Chen walks the back mountain path at night under heavy fog",
+              "summary": "Lu Chen walks the back mountain path at night under heavy fog",
+              "structured_kv": {
+                "event": "Lu Chen walks the back mountain path at night under heavy fog",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 10
+            }
+          ],
+          "entities": [
+            {
+              "name": "陆沉",
+              "type": "player",
+              "summary": "玩家角色",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "Lin Nuan",
+              "type": "npc",
+              "summary": "Runs the tavern in Qingshi town, bright eyes and long black hair",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "Guan Yu",
+              "type": "npc",
+              "summary": "A wandering swordsman with sharp brows",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "Village Elder",
+              "type": "npc",
+              "summary": "The oldest person in the village, knows every storm",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "青石镇",
+              "type": "location",
+              "summary": "A small town at the foot of the mountain",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "后山",
+              "type": "location",
+              "summary": "A foggy forest behind the town",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            }
+          ],
+          "relations": [],
+          "v2Edges": [
+            {
+              "id": "edge_1",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "陆沉",
+              "fact": "Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_2",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "Guan Yu",
+              "fact": "Lin Nuan and Guan Yu are old friends from the same town",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_3",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "陆沉",
+              "fact": "Guan Yu spars with Lu Chen in the tavern backyard",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_4",
+              "sourceEntity": "Village Elder",
+              "targetEntity": "后山",
+              "fact": "Village Elder warns about storms over the back mountain",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_5",
+              "sourceEntity": "后山",
+              "targetEntity": "青石镇",
+              "fact": "The back mountain rises right behind Qingshi town",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_6",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "青石镇",
+              "fact": "Lin Nuan keeps the oldest tavern in Qingshi town",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_old",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "Lin Nuan",
+              "fact": "Guan Yu is a stranger to Lin Nuan and has never met her",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8,
+              "invalidAtRound": 7,
+              "temporalStatus": "superseded"
+            },
+            {
+              "id": "edge_gone",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "后山",
+              "fact": "Guan Yu lived on the back mountain before the storm hit",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8,
+              "invalidAtRound": 6,
+              "temporalStatus": "historical"
+            }
+          ],
+          "meta": {
+            "lastUpdated": 1,
+            "eventCount": 6,
+            "embeddedEventCount": 0,
+            "embeddedEntityCount": 0,
+            "schemaVersion": 5
+          }
+        },
+        "memory": {
+          "短期": [],
+          "中期": [],
+          "长期": [],
+          "隐式中期": []
+        },
+        "vectorRows": [
+          [
+            "engram_vectors_prof_m_slot_m",
+            {
+              "eventVectors": {
+                "evt_r1": {
+                  "dim": 6,
+                  "sha256": "7abda81e0420a17f425c9c9bd1665483f7e8ea9a6660d546401b11db688bfdb6"
+                },
+                "evt_r2": {
+                  "dim": 6,
+                  "sha256": "0e1e3f305a04c59d73e6d6c98a75a61f07f27eb8d53c42f46f1a3856e38089bd"
+                },
+                "evt_r3": {
+                  "dim": 6,
+                  "sha256": "db8371cbeb1a004f4fb2d1d8d7cf54fb99bba9611b38d74480e9ec260e0b85a0"
+                },
+                "evt_r4": {
+                  "dim": 6,
+                  "sha256": "c555528c74e7300e39a6239c8bb799f4625bd1afa6356a97936040f1866acc0b"
+                },
+                "evt_r5": {
+                  "dim": 6,
+                  "sha256": "882afadfe0061e549cba71c6e849fd88c625151740dde8b404bbf8e52a13ca9e"
+                },
+                "evt_r6": {
+                  "dim": 6,
+                  "sha256": "67061cb1492a7dfc2ae7b70eaa3597d31ead0b97981e93c62300d4a26b1ae4c6"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 6,
+                  "sha256": "3193b635d15b211b354a9b02497034f37dcd54acf64b4aac6428c797a845fbb5"
+                },
+                "Lin Nuan": {
+                  "dim": 6,
+                  "sha256": "1d81cb299b21bd21f1e13907223abfddef39b6bd7195bcae6159be450c4fdf44"
+                },
+                "Guan Yu": {
+                  "dim": 6,
+                  "sha256": "ca07ab0808159acbbcd7c1228733a17037f3b9f0f06986cbda23e82e59c140ff"
+                },
+                "Village Elder": {
+                  "dim": 6,
+                  "sha256": "f49a69c8ac1d9549d3d9c540405cc24dcff4f63ab6a80ba984c0cd57301ded48"
+                },
+                "青石镇": {
+                  "dim": 6,
+                  "sha256": "d0a04c9426ae780bf437b5e4da262090f981143d9922856763ba9107385b0519"
+                },
+                "后山": {
+                  "dim": 6,
+                  "sha256": "42bdae9b1d020291e43470f67e22da99cdefc3ac7b4373804ebd7e365e563003"
+                }
+              },
+              "edgeVectors": {
+                "edge_1": {
+                  "dim": 6,
+                  "sha256": "52b54e6684c3c2b41b48b59669d5d0cf5cb6957ee605e9df94c05ad7eab45403"
+                },
+                "edge_2": {
+                  "dim": 6,
+                  "sha256": "238a6cf925c82b0f7daceb489d38956386dc6f30e264bb0c00dd2cfb19819f4c"
+                },
+                "edge_3": {
+                  "dim": 6,
+                  "sha256": "fd7e849a7d53042bd4f3c6bea1869e8957109b8fb8c4aad8e61eb3a43bbed4bd"
+                },
+                "edge_4": {
+                  "dim": 6,
+                  "sha256": "5045887498a3b7be25d6c1e101ed92e49e9195b48bed8b827fdd3dc059f8fca5"
+                },
+                "edge_5": {
+                  "dim": 6,
+                  "sha256": "368183fdd8a46e1170a38552755e4e8016ef39120a23331ed4083d9c5600a81f"
+                },
+                "edge_6": {
+                  "dim": 6,
+                  "sha256": "ca186a1f55f54ebb8048cd1c59c49c150cf80adb35afc6140b85b3b6f21c0eef"
+                },
+                "edge_old": {
+                  "dim": 6,
+                  "sha256": "343625d494b7b9b44e0ded78a58b5c2793b10983f3e949a2740e3676ae99945b"
+                },
+                "edge_gone": {
+                  "dim": 6,
+                  "sha256": "881b89f4d4d345ebaca2b3a6c7431b0638477eb9779a8c5cdfe96a9d80c1b89c"
+                }
+              },
+              "model": "corpus",
+              "dim": 6
+            }
+          ]
+        ],
+        "vectorCalls": [
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          }
+        ],
+        "aiCalls": [],
+        "fetchCalls": [
+          {
+            "method": "POST",
+            "url": "https://embed.test/v1/embeddings",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer k-emb"
+            },
+            "body": {
+              "model": "embed-m",
+              "input": [
+                "Lin Nuan tavern tea Lu Chen"
+              ]
+            }
+          },
+          {
+            "method": "POST",
+            "url": "https://rerank.test/v1/rerank",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer k-rr"
+            },
+            "body": {
+              "model": "rerank-m",
+              "query": "Lin Nuan tavern tea Lu Chen",
+              "documents": [
+                "[Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard",
+                "[Lin Nuan→陆沉] Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern",
+                "[Lin Nuan→青石镇] Lin Nuan keeps the oldest tavern in Qingshi town",
+                "[Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends from the same town",
+                "[后山→青石镇] The back mountain rises right behind Qingshi town",
+                "[Village Elder→后山] Village Elder warns about storms over the back mountain",
+                "Lin Nuan: Runs the tavern in Qingshi town, bright eyes and long black hair",
+                "后山: A foggy forest behind the town",
+                "青石镇: A small town at the foot of the mountain",
+                "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+                "The village elder warns everyone about a storm coming over the back mountain",
+                "Lin Nuan names Guan Yu as an old friend."
+              ],
+              "top_n": 4,
+              "return_documents": false
+            }
+          }
+        ],
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "type": "load"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "元数据.回合序号",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "rerankEndpointDown": [
+    {
+      "label": "rerank 500",
+      "query": "Lin Nuan tavern tea Lu Chen",
+      "text": "相关事实：\n1. [Lin Nuan→陆沉] Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern（第8轮）\n2. [后山→青石镇] The back mountain rises right behind Qingshi town（第8轮）\n3. [Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard（第8轮）\n4. [Village Elder→后山] Village Elder warns about storms over the back mountain（第8轮）\n5. [Lin Nuan→青石镇] Lin Nuan keeps the oldest tavern in Qingshi town（第8轮）\n6. [Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends from the same town（第8轮）\n\n相关事件：\n- Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea（第1轮）\n- Lin Nuan names Guan Yu as an old friend.（第8轮）\n- Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match（第2轮）",
+      "readSnapshot": {
+        "query": "Lin Nuan tavern tea Lu Chen",
+        "capturedAt": 1791418320000,
+        "totalDurationMs": "<ms>",
+        "candidates": [
+          {
+            "text": "[Lin Nuan→陆沉] Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern",
+            "finalScore": 0.5,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边BM25",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[后山→青石镇] The back mountain rises right behind Qingshi town",
+            "finalScore": 0.5,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边图展开",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "purple"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard",
+            "finalScore": 0.3333333333333333,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边BM25",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Village Elder→后山] Village Elder warns about storms over the back mountain",
+            "finalScore": 0.3333333333333333,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边图展开",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "purple"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Lin Nuan→青石镇] Lin Nuan keeps the oldest tavern in Qingshi town",
+            "finalScore": 0.25,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边BM25",
+                "rawValue": 0.25,
+                "weight": 1,
+                "contribution": 0.25,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends from the same town",
+            "finalScore": 0.2,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边BM25",
+                "rawValue": 0.2,
+                "weight": 1,
+                "contribution": 0.2,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "Lin Nuan: Runs the tavern in Qingshi town, bright eyes and long black hair",
+            "finalScore": 0.5,
+            "source": "entity",
+            "components": [
+              {
+                "label": "实体BM25",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "green"
+              }
+            ],
+            "outcome": "filtered-as-redundant",
+            "entityName": "Lin Nuan"
+          },
+          {
+            "text": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+            "finalScore": 0.5,
+            "source": "event",
+            "components": [
+              {
+                "label": "事件BM25",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "eventId": "evt_r1",
+            "roundNumber": 1
+          },
+          {
+            "text": "Lin Nuan names Guan Yu as an old friend.",
+            "finalScore": 0.3333333333333333,
+            "source": "event",
+            "components": [
+              {
+                "label": "事件BM25",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "eventId": "evt_r4",
+            "roundNumber": 8
+          },
+          {
+            "text": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+            "finalScore": 0.25,
+            "source": "event",
+            "components": [
+              {
+                "label": "事件BM25",
+                "rawValue": 0.25,
+                "weight": 1,
+                "contribution": 0.25,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "eventId": "evt_r2",
+            "roundNumber": 2
+          }
+        ],
+        "pipeline": {
+          "vectorEventCount": 0,
+          "vectorEntityCount": 0,
+          "graphCount": 4,
+          "afterMerge": 10,
+          "afterRerank": 10,
+          "injectedCount": 9
+        },
+        "config": {
+          "minScore": 0.05,
+          "topK": 10,
+          "rerankEnabled": true,
+          "rerankTopN": 0,
+          "embeddingEnabled": true,
+          "shortTermWindow": 3,
+          "maxCandidates": 12,
+          "edgeBudget": 6,
+          "entityBudget": 3,
+          "eventBudget": 3
+        }
+      },
+      "recorder": [
+        {
+          "recordReadSnapshot": {
+            "query": "Lin Nuan tavern tea Lu Chen",
+            "capturedAt": 1791418320000,
+            "totalDurationMs": "<ms>",
+            "candidates": [
+              {
+                "text": "[Lin Nuan→陆沉] Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern",
+                "finalScore": 0.5,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[后山→青石镇] The back mountain rises right behind Qingshi town",
+                "finalScore": 0.5,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边图展开",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "purple"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard",
+                "finalScore": 0.3333333333333333,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Village Elder→后山] Village Elder warns about storms over the back mountain",
+                "finalScore": 0.3333333333333333,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边图展开",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "purple"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Lin Nuan→青石镇] Lin Nuan keeps the oldest tavern in Qingshi town",
+                "finalScore": 0.25,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.25,
+                    "weight": 1,
+                    "contribution": 0.25,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends from the same town",
+                "finalScore": 0.2,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.2,
+                    "weight": 1,
+                    "contribution": 0.2,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "Lin Nuan: Runs the tavern in Qingshi town, bright eyes and long black hair",
+                "finalScore": 0.5,
+                "source": "entity",
+                "components": [
+                  {
+                    "label": "实体BM25",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "filtered-as-redundant",
+                "entityName": "Lin Nuan"
+              },
+              {
+                "text": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+                "finalScore": 0.5,
+                "source": "event",
+                "components": [
+                  {
+                    "label": "事件BM25",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "eventId": "evt_r1",
+                "roundNumber": 1
+              },
+              {
+                "text": "Lin Nuan names Guan Yu as an old friend.",
+                "finalScore": 0.3333333333333333,
+                "source": "event",
+                "components": [
+                  {
+                    "label": "事件BM25",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "eventId": "evt_r4",
+                "roundNumber": 8
+              },
+              {
+                "text": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+                "finalScore": 0.25,
+                "source": "event",
+                "components": [
+                  {
+                    "label": "事件BM25",
+                    "rawValue": 0.25,
+                    "weight": 1,
+                    "contribution": 0.25,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "eventId": "evt_r2",
+                "roundNumber": 2
+              }
+            ],
+            "pipeline": {
+              "vectorEventCount": 0,
+              "vectorEntityCount": 0,
+              "graphCount": 4,
+              "afterMerge": 10,
+              "afterRerank": 10,
+              "injectedCount": 9
+            },
+            "config": {
+              "minScore": 0.05,
+              "topK": 10,
+              "rerankEnabled": true,
+              "rerankTopN": 0,
+              "embeddingEnabled": true,
+              "shortTermWindow": 3,
+              "maxCandidates": 12,
+              "edgeBudget": 6,
+              "entityBudget": 3,
+              "eventBudget": 3
+            }
+          }
+        },
+        {
+          "recordRetrieve": {
+            "vectorCandidateCount": 0,
+            "graphCandidateCount": 6,
+            "afterMergeCount": 10,
+            "afterRerankCount": 10,
+            "rerankUsed": false,
+            "embeddingFallback": true,
+            "topScores": [
+              {
+                "text": "Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern",
+                "score": 0.5,
+                "source": "edge"
+              },
+              {
+                "text": "The back mountain rises right behind Qingshi town",
+                "score": 0.5,
+                "source": "edge"
+              },
+              {
+                "text": "Guan Yu spars with Lu Chen in the tavern backyard",
+                "score": 0.3333333333333333,
+                "source": "edge"
+              },
+              {
+                "text": "Village Elder warns about storms over the back mountain",
+                "score": 0.3333333333333333,
+                "source": "edge"
+              },
+              {
+                "text": "Lin Nuan keeps the oldest tavern in Qingshi town",
+                "score": 0.25,
+                "source": "edge"
+              }
+            ]
+          }
+        }
+      ],
+      "step": {
+        "label": "rerank 500",
+        "engramMemory": {
+          "events": [
+            {
+              "id": "evt_r1",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+              "summary": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+              "structured_kv": {
+                "event": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 1
+            },
+            {
+              "id": "evt_r2",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+              "summary": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+              "structured_kv": {
+                "event": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 2
+            },
+            {
+              "id": "evt_r3",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "The village elder warns everyone about a storm coming over the back mountain",
+              "summary": "The village elder warns everyone about a storm coming over the back mountain",
+              "structured_kv": {
+                "event": "The village elder warns everyone about a storm coming over the back mountain",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 3
+            },
+            {
+              "id": "evt_r4",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Lin Nuan tells Lu Chen that Guan Yu is an old friend she has not seen for years",
+              "summary": "Lin Nuan tells Lu Chen that Guan Yu is an old friend she has not seen for years",
+              "structured_kv": {
+                "event": "Lin Nuan tells Lu Chen that Guan Yu is an old friend she has not seen for years",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 8,
+              "midTermSummary": "Lin Nuan names Guan Yu as an old friend."
+            },
+            {
+              "id": "evt_r5",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+              "summary": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+              "structured_kv": {
+                "event": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 9
+            },
+            {
+              "id": "evt_r6",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Lu Chen walks the back mountain path at night under heavy fog",
+              "summary": "Lu Chen walks the back mountain path at night under heavy fog",
+              "structured_kv": {
+                "event": "Lu Chen walks the back mountain path at night under heavy fog",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 10
+            }
+          ],
+          "entities": [
+            {
+              "name": "陆沉",
+              "type": "player",
+              "summary": "玩家角色",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "Lin Nuan",
+              "type": "npc",
+              "summary": "Runs the tavern in Qingshi town, bright eyes and long black hair",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "Guan Yu",
+              "type": "npc",
+              "summary": "A wandering swordsman with sharp brows",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "Village Elder",
+              "type": "npc",
+              "summary": "The oldest person in the village, knows every storm",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "青石镇",
+              "type": "location",
+              "summary": "A small town at the foot of the mountain",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "后山",
+              "type": "location",
+              "summary": "A foggy forest behind the town",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            }
+          ],
+          "relations": [],
+          "v2Edges": [
+            {
+              "id": "edge_1",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "陆沉",
+              "fact": "Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_2",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "Guan Yu",
+              "fact": "Lin Nuan and Guan Yu are old friends from the same town",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_3",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "陆沉",
+              "fact": "Guan Yu spars with Lu Chen in the tavern backyard",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_4",
+              "sourceEntity": "Village Elder",
+              "targetEntity": "后山",
+              "fact": "Village Elder warns about storms over the back mountain",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_5",
+              "sourceEntity": "后山",
+              "targetEntity": "青石镇",
+              "fact": "The back mountain rises right behind Qingshi town",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_6",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "青石镇",
+              "fact": "Lin Nuan keeps the oldest tavern in Qingshi town",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_old",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "Lin Nuan",
+              "fact": "Guan Yu is a stranger to Lin Nuan and has never met her",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8,
+              "invalidAtRound": 7,
+              "temporalStatus": "superseded"
+            },
+            {
+              "id": "edge_gone",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "后山",
+              "fact": "Guan Yu lived on the back mountain before the storm hit",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8,
+              "invalidAtRound": 6,
+              "temporalStatus": "historical"
+            }
+          ],
+          "meta": {
+            "lastUpdated": 1,
+            "eventCount": 6,
+            "embeddedEventCount": 0,
+            "embeddedEntityCount": 0,
+            "schemaVersion": 5
+          }
+        },
+        "memory": {
+          "短期": [],
+          "中期": [],
+          "长期": [],
+          "隐式中期": []
+        },
+        "vectorRows": [
+          [
+            "engram_vectors_prof_m_slot_m",
+            {
+              "eventVectors": {
+                "evt_r1": {
+                  "dim": 6,
+                  "sha256": "7abda81e0420a17f425c9c9bd1665483f7e8ea9a6660d546401b11db688bfdb6"
+                },
+                "evt_r2": {
+                  "dim": 6,
+                  "sha256": "0e1e3f305a04c59d73e6d6c98a75a61f07f27eb8d53c42f46f1a3856e38089bd"
+                },
+                "evt_r3": {
+                  "dim": 6,
+                  "sha256": "db8371cbeb1a004f4fb2d1d8d7cf54fb99bba9611b38d74480e9ec260e0b85a0"
+                },
+                "evt_r4": {
+                  "dim": 6,
+                  "sha256": "c555528c74e7300e39a6239c8bb799f4625bd1afa6356a97936040f1866acc0b"
+                },
+                "evt_r5": {
+                  "dim": 6,
+                  "sha256": "882afadfe0061e549cba71c6e849fd88c625151740dde8b404bbf8e52a13ca9e"
+                },
+                "evt_r6": {
+                  "dim": 6,
+                  "sha256": "67061cb1492a7dfc2ae7b70eaa3597d31ead0b97981e93c62300d4a26b1ae4c6"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 6,
+                  "sha256": "3193b635d15b211b354a9b02497034f37dcd54acf64b4aac6428c797a845fbb5"
+                },
+                "Lin Nuan": {
+                  "dim": 6,
+                  "sha256": "1d81cb299b21bd21f1e13907223abfddef39b6bd7195bcae6159be450c4fdf44"
+                },
+                "Guan Yu": {
+                  "dim": 6,
+                  "sha256": "ca07ab0808159acbbcd7c1228733a17037f3b9f0f06986cbda23e82e59c140ff"
+                },
+                "Village Elder": {
+                  "dim": 6,
+                  "sha256": "f49a69c8ac1d9549d3d9c540405cc24dcff4f63ab6a80ba984c0cd57301ded48"
+                },
+                "青石镇": {
+                  "dim": 6,
+                  "sha256": "d0a04c9426ae780bf437b5e4da262090f981143d9922856763ba9107385b0519"
+                },
+                "后山": {
+                  "dim": 6,
+                  "sha256": "42bdae9b1d020291e43470f67e22da99cdefc3ac7b4373804ebd7e365e563003"
+                }
+              },
+              "edgeVectors": {
+                "edge_1": {
+                  "dim": 6,
+                  "sha256": "52b54e6684c3c2b41b48b59669d5d0cf5cb6957ee605e9df94c05ad7eab45403"
+                },
+                "edge_2": {
+                  "dim": 6,
+                  "sha256": "238a6cf925c82b0f7daceb489d38956386dc6f30e264bb0c00dd2cfb19819f4c"
+                },
+                "edge_3": {
+                  "dim": 6,
+                  "sha256": "fd7e849a7d53042bd4f3c6bea1869e8957109b8fb8c4aad8e61eb3a43bbed4bd"
+                },
+                "edge_4": {
+                  "dim": 6,
+                  "sha256": "5045887498a3b7be25d6c1e101ed92e49e9195b48bed8b827fdd3dc059f8fca5"
+                },
+                "edge_5": {
+                  "dim": 6,
+                  "sha256": "368183fdd8a46e1170a38552755e4e8016ef39120a23331ed4083d9c5600a81f"
+                },
+                "edge_6": {
+                  "dim": 6,
+                  "sha256": "ca186a1f55f54ebb8048cd1c59c49c150cf80adb35afc6140b85b3b6f21c0eef"
+                },
+                "edge_old": {
+                  "dim": 6,
+                  "sha256": "343625d494b7b9b44e0ded78a58b5c2793b10983f3e949a2740e3676ae99945b"
+                },
+                "edge_gone": {
+                  "dim": 6,
+                  "sha256": "881b89f4d4d345ebaca2b3a6c7431b0638477eb9779a8c5cdfe96a9d80c1b89c"
+                }
+              },
+              "model": "corpus",
+              "dim": 6
+            }
+          ]
+        ],
+        "vectorCalls": [
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          }
+        ],
+        "aiCalls": [],
+        "fetchCalls": [
+          {
+            "method": "POST",
+            "url": "https://embed.test/v1/embeddings",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer k-emb"
+            },
+            "body": {
+              "model": "embed-m",
+              "input": [
+                "Lin Nuan tavern tea Lu Chen"
+              ]
+            }
+          },
+          {
+            "method": "POST",
+            "url": "https://rerank.test/v1/rerank",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer k-rr"
+            },
+            "body": {
+              "model": "rerank-m",
+              "query": "Lin Nuan tavern tea Lu Chen",
+              "documents": [
+                "[Lin Nuan→陆沉] Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern",
+                "[后山→青石镇] The back mountain rises right behind Qingshi town",
+                "[Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard",
+                "[Village Elder→后山] Village Elder warns about storms over the back mountain",
+                "[Lin Nuan→青石镇] Lin Nuan keeps the oldest tavern in Qingshi town",
+                "[Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends from the same town",
+                "Lin Nuan: Runs the tavern in Qingshi town, bright eyes and long black hair",
+                "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+                "Lin Nuan names Guan Yu as an old friend.",
+                "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match"
+              ],
+              "top_n": 4,
+              "return_documents": false
+            }
+          }
+        ],
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "type": "load"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "元数据.回合序号",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "rerankNotConfigured": [
+    {
+      "label": "rerank without an api",
+      "query": "Lin Nuan tavern tea Lu Chen",
+      "text": "相关事实：\n1. [Lin Nuan→陆沉] Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern（第8轮）\n2. [Lin Nuan→青石镇] Lin Nuan keeps the oldest tavern in Qingshi town（第8轮）\n3. [Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard（第8轮）\n4. [后山→青石镇] The back mountain rises right behind Qingshi town（第8轮）\n5. [Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends from the same town（第8轮）\n6. [Village Elder→后山] Village Elder warns about storms over the back mountain（第8轮）\n\n相关事件：\n- Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea（第1轮）\n- Lin Nuan names Guan Yu as an old friend.（第8轮）\n- Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match（第2轮）",
+      "readSnapshot": {
+        "query": "Lin Nuan tavern tea Lu Chen",
+        "capturedAt": 1791418320000,
+        "totalDurationMs": "<ms>",
+        "candidates": [
+          {
+            "text": "[Lin Nuan→陆沉] Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern",
+            "finalScore": 1,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边余弦",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "blue"
+              },
+              {
+                "label": "边BM25",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Lin Nuan→青石镇] Lin Nuan keeps the oldest tavern in Qingshi town",
+            "finalScore": 0.5833333333333333,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边余弦",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "blue"
+              },
+              {
+                "label": "边BM25",
+                "rawValue": 0.25,
+                "weight": 1,
+                "contribution": 0.25,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard",
+            "finalScore": 0.5833333333333333,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边余弦",
+                "rawValue": 0.25,
+                "weight": 1,
+                "contribution": 0.25,
+                "color": "blue"
+              },
+              {
+                "label": "边BM25",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[后山→青石镇] The back mountain rises right behind Qingshi town",
+            "finalScore": 0.5,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边图展开",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "purple"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends from the same town",
+            "finalScore": 0.4,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边余弦",
+                "rawValue": 0.2,
+                "weight": 1,
+                "contribution": 0.2,
+                "color": "blue"
+              },
+              {
+                "label": "边BM25",
+                "rawValue": 0.2,
+                "weight": 1,
+                "contribution": 0.2,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Village Elder→后山] Village Elder warns about storms over the back mountain",
+            "finalScore": 0.3333333333333333,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边图展开",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "purple"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "Lin Nuan: Runs the tavern in Qingshi town, bright eyes and long black hair",
+            "finalScore": 1,
+            "source": "entity",
+            "components": [
+              {
+                "label": "实体余弦",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "blue"
+              },
+              {
+                "label": "实体BM25",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "green"
+              }
+            ],
+            "outcome": "filtered-as-redundant",
+            "entityName": "Lin Nuan"
+          },
+          {
+            "text": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+            "finalScore": 1,
+            "source": "event",
+            "components": [
+              {
+                "label": "事件余弦",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "blue"
+              },
+              {
+                "label": "事件BM25",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "eventId": "evt_r1",
+            "roundNumber": 1
+          },
+          {
+            "text": "Lin Nuan names Guan Yu as an old friend.",
+            "finalScore": 0.6666666666666666,
+            "source": "event",
+            "components": [
+              {
+                "label": "事件余弦",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "blue"
+              },
+              {
+                "label": "事件BM25",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "eventId": "evt_r4",
+            "roundNumber": 8
+          },
+          {
+            "text": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+            "finalScore": 0.5,
+            "source": "event",
+            "components": [
+              {
+                "label": "事件余弦",
+                "rawValue": 0.25,
+                "weight": 1,
+                "contribution": 0.25,
+                "color": "blue"
+              },
+              {
+                "label": "事件BM25",
+                "rawValue": 0.25,
+                "weight": 1,
+                "contribution": 0.25,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "eventId": "evt_r2",
+            "roundNumber": 2
+          },
+          {
+            "text": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+            "finalScore": 0.2,
+            "source": "event",
+            "components": [
+              {
+                "label": "事件余弦",
+                "rawValue": 0.2,
+                "weight": 1,
+                "contribution": 0.2,
+                "color": "blue"
+              }
+            ],
+            "outcome": "filtered-by-topK",
+            "eventId": "evt_r5",
+            "roundNumber": 9
+          }
+        ],
+        "pipeline": {
+          "vectorEventCount": 4,
+          "vectorEntityCount": 1,
+          "graphCount": 8,
+          "afterMerge": 10,
+          "afterRerank": 10,
+          "injectedCount": 9
+        },
+        "config": {
+          "minScore": 0.05,
+          "topK": 10,
+          "rerankEnabled": true,
+          "rerankTopN": 0,
+          "embeddingEnabled": true,
+          "shortTermWindow": 3,
+          "maxCandidates": 12,
+          "edgeBudget": 6,
+          "entityBudget": 3,
+          "eventBudget": 3
+        }
+      },
+      "recorder": [
+        {
+          "recordReadSnapshot": {
+            "query": "Lin Nuan tavern tea Lu Chen",
+            "capturedAt": 1791418320000,
+            "totalDurationMs": "<ms>",
+            "candidates": [
+              {
+                "text": "[Lin Nuan→陆沉] Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern",
+                "finalScore": 1,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边余弦",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "blue"
+                  },
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Lin Nuan→青石镇] Lin Nuan keeps the oldest tavern in Qingshi town",
+                "finalScore": 0.5833333333333333,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边余弦",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "blue"
+                  },
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.25,
+                    "weight": 1,
+                    "contribution": 0.25,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard",
+                "finalScore": 0.5833333333333333,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边余弦",
+                    "rawValue": 0.25,
+                    "weight": 1,
+                    "contribution": 0.25,
+                    "color": "blue"
+                  },
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[后山→青石镇] The back mountain rises right behind Qingshi town",
+                "finalScore": 0.5,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边图展开",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "purple"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends from the same town",
+                "finalScore": 0.4,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边余弦",
+                    "rawValue": 0.2,
+                    "weight": 1,
+                    "contribution": 0.2,
+                    "color": "blue"
+                  },
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.2,
+                    "weight": 1,
+                    "contribution": 0.2,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Village Elder→后山] Village Elder warns about storms over the back mountain",
+                "finalScore": 0.3333333333333333,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边图展开",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "purple"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "Lin Nuan: Runs the tavern in Qingshi town, bright eyes and long black hair",
+                "finalScore": 1,
+                "source": "entity",
+                "components": [
+                  {
+                    "label": "实体余弦",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "blue"
+                  },
+                  {
+                    "label": "实体BM25",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "filtered-as-redundant",
+                "entityName": "Lin Nuan"
+              },
+              {
+                "text": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+                "finalScore": 1,
+                "source": "event",
+                "components": [
+                  {
+                    "label": "事件余弦",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "blue"
+                  },
+                  {
+                    "label": "事件BM25",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "eventId": "evt_r1",
+                "roundNumber": 1
+              },
+              {
+                "text": "Lin Nuan names Guan Yu as an old friend.",
+                "finalScore": 0.6666666666666666,
+                "source": "event",
+                "components": [
+                  {
+                    "label": "事件余弦",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "blue"
+                  },
+                  {
+                    "label": "事件BM25",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "eventId": "evt_r4",
+                "roundNumber": 8
+              },
+              {
+                "text": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+                "finalScore": 0.5,
+                "source": "event",
+                "components": [
+                  {
+                    "label": "事件余弦",
+                    "rawValue": 0.25,
+                    "weight": 1,
+                    "contribution": 0.25,
+                    "color": "blue"
+                  },
+                  {
+                    "label": "事件BM25",
+                    "rawValue": 0.25,
+                    "weight": 1,
+                    "contribution": 0.25,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "eventId": "evt_r2",
+                "roundNumber": 2
+              },
+              {
+                "text": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+                "finalScore": 0.2,
+                "source": "event",
+                "components": [
+                  {
+                    "label": "事件余弦",
+                    "rawValue": 0.2,
+                    "weight": 1,
+                    "contribution": 0.2,
+                    "color": "blue"
+                  }
+                ],
+                "outcome": "filtered-by-topK",
+                "eventId": "evt_r5",
+                "roundNumber": 9
+              }
+            ],
+            "pipeline": {
+              "vectorEventCount": 4,
+              "vectorEntityCount": 1,
+              "graphCount": 8,
+              "afterMerge": 10,
+              "afterRerank": 10,
+              "injectedCount": 9
+            },
+            "config": {
+              "minScore": 0.05,
+              "topK": 10,
+              "rerankEnabled": true,
+              "rerankTopN": 0,
+              "embeddingEnabled": true,
+              "shortTermWindow": 3,
+              "maxCandidates": 12,
+              "edgeBudget": 6,
+              "entityBudget": 3,
+              "eventBudget": 3
+            }
+          }
+        },
+        {
+          "recordRetrieve": {
+            "vectorCandidateCount": 5,
+            "graphCandidateCount": 10,
+            "afterMergeCount": 10,
+            "afterRerankCount": 10,
+            "rerankUsed": false,
+            "embeddingFallback": false,
+            "topScores": [
+              {
+                "text": "Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern",
+                "score": 1,
+                "source": "edge"
+              },
+              {
+                "text": "Lin Nuan keeps the oldest tavern in Qingshi town",
+                "score": 0.5833333333333333,
+                "source": "edge"
+              },
+              {
+                "text": "Guan Yu spars with Lu Chen in the tavern backyard",
+                "score": 0.5833333333333333,
+                "source": "edge"
+              },
+              {
+                "text": "The back mountain rises right behind Qingshi town",
+                "score": 0.5,
+                "source": "edge"
+              },
+              {
+                "text": "Lin Nuan and Guan Yu are old friends from the same town",
+                "score": 0.4,
+                "source": "edge"
+              }
+            ]
+          }
+        }
+      ],
+      "step": {
+        "label": "rerank without an api",
+        "engramMemory": {
+          "events": [
+            {
+              "id": "evt_r1",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+              "summary": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+              "structured_kv": {
+                "event": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 1
+            },
+            {
+              "id": "evt_r2",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+              "summary": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+              "structured_kv": {
+                "event": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 2
+            },
+            {
+              "id": "evt_r3",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "The village elder warns everyone about a storm coming over the back mountain",
+              "summary": "The village elder warns everyone about a storm coming over the back mountain",
+              "structured_kv": {
+                "event": "The village elder warns everyone about a storm coming over the back mountain",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 3
+            },
+            {
+              "id": "evt_r4",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Lin Nuan tells Lu Chen that Guan Yu is an old friend she has not seen for years",
+              "summary": "Lin Nuan tells Lu Chen that Guan Yu is an old friend she has not seen for years",
+              "structured_kv": {
+                "event": "Lin Nuan tells Lu Chen that Guan Yu is an old friend she has not seen for years",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 8,
+              "midTermSummary": "Lin Nuan names Guan Yu as an old friend."
+            },
+            {
+              "id": "evt_r5",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+              "summary": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+              "structured_kv": {
+                "event": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 9
+            },
+            {
+              "id": "evt_r6",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Lu Chen walks the back mountain path at night under heavy fog",
+              "summary": "Lu Chen walks the back mountain path at night under heavy fog",
+              "structured_kv": {
+                "event": "Lu Chen walks the back mountain path at night under heavy fog",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 10
+            }
+          ],
+          "entities": [
+            {
+              "name": "陆沉",
+              "type": "player",
+              "summary": "玩家角色",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "Lin Nuan",
+              "type": "npc",
+              "summary": "Runs the tavern in Qingshi town, bright eyes and long black hair",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "Guan Yu",
+              "type": "npc",
+              "summary": "A wandering swordsman with sharp brows",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "Village Elder",
+              "type": "npc",
+              "summary": "The oldest person in the village, knows every storm",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "青石镇",
+              "type": "location",
+              "summary": "A small town at the foot of the mountain",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "后山",
+              "type": "location",
+              "summary": "A foggy forest behind the town",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            }
+          ],
+          "relations": [],
+          "v2Edges": [
+            {
+              "id": "edge_1",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "陆沉",
+              "fact": "Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_2",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "Guan Yu",
+              "fact": "Lin Nuan and Guan Yu are old friends from the same town",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_3",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "陆沉",
+              "fact": "Guan Yu spars with Lu Chen in the tavern backyard",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_4",
+              "sourceEntity": "Village Elder",
+              "targetEntity": "后山",
+              "fact": "Village Elder warns about storms over the back mountain",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_5",
+              "sourceEntity": "后山",
+              "targetEntity": "青石镇",
+              "fact": "The back mountain rises right behind Qingshi town",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_6",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "青石镇",
+              "fact": "Lin Nuan keeps the oldest tavern in Qingshi town",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_old",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "Lin Nuan",
+              "fact": "Guan Yu is a stranger to Lin Nuan and has never met her",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8,
+              "invalidAtRound": 7,
+              "temporalStatus": "superseded"
+            },
+            {
+              "id": "edge_gone",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "后山",
+              "fact": "Guan Yu lived on the back mountain before the storm hit",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8,
+              "invalidAtRound": 6,
+              "temporalStatus": "historical"
+            }
+          ],
+          "meta": {
+            "lastUpdated": 1,
+            "eventCount": 6,
+            "embeddedEventCount": 0,
+            "embeddedEntityCount": 0,
+            "schemaVersion": 5
+          }
+        },
+        "memory": {
+          "短期": [],
+          "中期": [],
+          "长期": [],
+          "隐式中期": []
+        },
+        "vectorRows": [
+          [
+            "engram_vectors_prof_m_slot_m",
+            {
+              "eventVectors": {
+                "evt_r1": {
+                  "dim": 384,
+                  "sha256": "e37ad3460944fd3a37adb2c2bc48e7890c4b52f23285f6cee5850e56968c4f83"
+                },
+                "evt_r2": {
+                  "dim": 384,
+                  "sha256": "bd99b0376b37152048480847b86c7db752be1a18dc6228c8f6b64eb136a20be1"
+                },
+                "evt_r3": {
+                  "dim": 384,
+                  "sha256": "f5ae5a16f71149e5cb45a29d90d22b4f931f386f4af5347dbfef689b7a01565e"
+                },
+                "evt_r4": {
+                  "dim": 384,
+                  "sha256": "5cf9747c7e93b84cccc3fced12a6787b8c14774d81076a99717f43de36be28e5"
+                },
+                "evt_r5": {
+                  "dim": 384,
+                  "sha256": "444f3f067541d709bda821e2d242282f2b66f6723a10b824bb7b6be1a8291050"
+                },
+                "evt_r6": {
+                  "dim": 384,
+                  "sha256": "a8793e7598de50b26a582ca40ec3c591515e2b2e535604f64b31d0bc46947325"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                },
+                "Lin Nuan": {
+                  "dim": 384,
+                  "sha256": "222bbbaaf9272f25798fa014857f9bb96b73cbfd76427d1f27bd8145baebc2e7"
+                },
+                "Guan Yu": {
+                  "dim": 384,
+                  "sha256": "f46ebb4fe9111fb41c7e788542ff1d88719b211710bfc03c56faad7c01c9fd86"
+                },
+                "Village Elder": {
+                  "dim": 384,
+                  "sha256": "c382777ee7e2011e0ee77738fd498037e3c71c365a2da2dbd6eac5fd0de1e6bc"
+                },
+                "青石镇": {
+                  "dim": 384,
+                  "sha256": "bfb71508f2acf58e701b1bebdf9d7f189d03a11524425fb2c2ede75acd91042d"
+                },
+                "后山": {
+                  "dim": 384,
+                  "sha256": "e7b8aad5dae592deecb79dbaf49397367fac65af866e92f0471dad8fdbc1ee97"
+                }
+              },
+              "edgeVectors": {
+                "edge_1": {
+                  "dim": 384,
+                  "sha256": "12e4abf2b2d5138669e52cb537d93b8a875d8dbe0867128c32f2f26857b8a156"
+                },
+                "edge_2": {
+                  "dim": 384,
+                  "sha256": "09537185467dd7c43e18254ad7c2e150a5d3eb01471550d75186203e45e4c02a"
+                },
+                "edge_3": {
+                  "dim": 384,
+                  "sha256": "23df6e4c1b9eb92ba9e3d6e915a59d235e9bd96a7d40fb0d412edc52ecd95a0b"
+                },
+                "edge_4": {
+                  "dim": 384,
+                  "sha256": "922d55c76255c211149d80df4d7e396ea970a63f72199d0e73a64359feab6140"
+                },
+                "edge_5": {
+                  "dim": 384,
+                  "sha256": "276f08bc1b29538908e8f140d39bfd00fa591d6b9d50b2cca0e5b3b2a3da2cb8"
+                },
+                "edge_6": {
+                  "dim": 384,
+                  "sha256": "97daa8eda1f9ee2e0bd2abef79952a353a5f1396fba8796e0dd8c9da2c5c04da"
+                },
+                "edge_old": {
+                  "dim": 384,
+                  "sha256": "379fe1e7046a36b29eb0e627589ffe880aedf5f2b790810aafacf3d8b57c86ee"
+                },
+                "edge_gone": {
+                  "dim": 384,
+                  "sha256": "d48e595bea5c4f63520cf8b2f0cb4725e36c2b8a2dd4aaf242f195e7af0782b9"
+                }
+              },
+              "model": "corpus",
+              "dim": 384
+            }
+          ]
+        ],
+        "vectorCalls": [
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          }
+        ],
+        "aiCalls": [],
+        "fetchCalls": [],
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "type": "load"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "元数据.回合序号",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "llmRerank": [
+    {
+      "label": "rerank through the chat model",
+      "query": "Lin Nuan tavern tea Lu Chen",
+      "text": "相关事实：\n1. [Lin Nuan→陆沉] Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern（第8轮）\n2. [后山→青石镇] The back mountain rises right behind Qingshi town（第8轮）\n3. [Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard（第8轮）\n4. [Village Elder→后山] Village Elder warns about storms over the back mountain（第8轮）\n5. [Lin Nuan→青石镇] Lin Nuan keeps the oldest tavern in Qingshi town（第8轮）\n6. [Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends from the same town（第8轮）\n\n相关事件：\n- Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea（第1轮）\n- Lin Nuan names Guan Yu as an old friend.（第8轮）\n- Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match（第2轮）",
+      "readSnapshot": {
+        "query": "Lin Nuan tavern tea Lu Chen",
+        "capturedAt": 1791418320000,
+        "totalDurationMs": "<ms>",
+        "candidates": [
+          {
+            "text": "[Lin Nuan→陆沉] Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern",
+            "finalScore": 0.5,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边BM25",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[后山→青石镇] The back mountain rises right behind Qingshi town",
+            "finalScore": 0.5,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边图展开",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "purple"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard",
+            "finalScore": 0.3333333333333333,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边BM25",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Village Elder→后山] Village Elder warns about storms over the back mountain",
+            "finalScore": 0.3333333333333333,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边图展开",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "purple"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Lin Nuan→青石镇] Lin Nuan keeps the oldest tavern in Qingshi town",
+            "finalScore": 0.25,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边BM25",
+                "rawValue": 0.25,
+                "weight": 1,
+                "contribution": 0.25,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends from the same town",
+            "finalScore": 0.2,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边BM25",
+                "rawValue": 0.2,
+                "weight": 1,
+                "contribution": 0.2,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "Lin Nuan: Runs the tavern in Qingshi town, bright eyes and long black hair",
+            "finalScore": 0.5,
+            "source": "entity",
+            "components": [
+              {
+                "label": "实体BM25",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "green"
+              }
+            ],
+            "outcome": "filtered-as-redundant",
+            "entityName": "Lin Nuan"
+          },
+          {
+            "text": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+            "finalScore": 0.5,
+            "source": "event",
+            "components": [
+              {
+                "label": "事件BM25",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "eventId": "evt_r1",
+            "roundNumber": 1
+          },
+          {
+            "text": "Lin Nuan names Guan Yu as an old friend.",
+            "finalScore": 0.3333333333333333,
+            "source": "event",
+            "components": [
+              {
+                "label": "事件BM25",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "eventId": "evt_r4",
+            "roundNumber": 8
+          },
+          {
+            "text": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+            "finalScore": 0.25,
+            "source": "event",
+            "components": [
+              {
+                "label": "事件BM25",
+                "rawValue": 0.25,
+                "weight": 1,
+                "contribution": 0.25,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "eventId": "evt_r2",
+            "roundNumber": 2
+          }
+        ],
+        "pipeline": {
+          "vectorEventCount": 0,
+          "vectorEntityCount": 0,
+          "graphCount": 4,
+          "afterMerge": 10,
+          "afterRerank": 10,
+          "injectedCount": 9
+        },
+        "config": {
+          "minScore": 0.05,
+          "topK": 10,
+          "rerankEnabled": true,
+          "rerankTopN": 0,
+          "embeddingEnabled": false,
+          "shortTermWindow": 3,
+          "maxCandidates": 12,
+          "edgeBudget": 6,
+          "entityBudget": 3,
+          "eventBudget": 3
+        }
+      },
+      "recorder": [
+        {
+          "recordReadSnapshot": {
+            "query": "Lin Nuan tavern tea Lu Chen",
+            "capturedAt": 1791418320000,
+            "totalDurationMs": "<ms>",
+            "candidates": [
+              {
+                "text": "[Lin Nuan→陆沉] Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern",
+                "finalScore": 0.5,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[后山→青石镇] The back mountain rises right behind Qingshi town",
+                "finalScore": 0.5,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边图展开",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "purple"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard",
+                "finalScore": 0.3333333333333333,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Village Elder→后山] Village Elder warns about storms over the back mountain",
+                "finalScore": 0.3333333333333333,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边图展开",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "purple"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Lin Nuan→青石镇] Lin Nuan keeps the oldest tavern in Qingshi town",
+                "finalScore": 0.25,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.25,
+                    "weight": 1,
+                    "contribution": 0.25,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends from the same town",
+                "finalScore": 0.2,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.2,
+                    "weight": 1,
+                    "contribution": 0.2,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "Lin Nuan: Runs the tavern in Qingshi town, bright eyes and long black hair",
+                "finalScore": 0.5,
+                "source": "entity",
+                "components": [
+                  {
+                    "label": "实体BM25",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "filtered-as-redundant",
+                "entityName": "Lin Nuan"
+              },
+              {
+                "text": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+                "finalScore": 0.5,
+                "source": "event",
+                "components": [
+                  {
+                    "label": "事件BM25",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "eventId": "evt_r1",
+                "roundNumber": 1
+              },
+              {
+                "text": "Lin Nuan names Guan Yu as an old friend.",
+                "finalScore": 0.3333333333333333,
+                "source": "event",
+                "components": [
+                  {
+                    "label": "事件BM25",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "eventId": "evt_r4",
+                "roundNumber": 8
+              },
+              {
+                "text": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+                "finalScore": 0.25,
+                "source": "event",
+                "components": [
+                  {
+                    "label": "事件BM25",
+                    "rawValue": 0.25,
+                    "weight": 1,
+                    "contribution": 0.25,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "eventId": "evt_r2",
+                "roundNumber": 2
+              }
+            ],
+            "pipeline": {
+              "vectorEventCount": 0,
+              "vectorEntityCount": 0,
+              "graphCount": 4,
+              "afterMerge": 10,
+              "afterRerank": 10,
+              "injectedCount": 9
+            },
+            "config": {
+              "minScore": 0.05,
+              "topK": 10,
+              "rerankEnabled": true,
+              "rerankTopN": 0,
+              "embeddingEnabled": false,
+              "shortTermWindow": 3,
+              "maxCandidates": 12,
+              "edgeBudget": 6,
+              "entityBudget": 3,
+              "eventBudget": 3
+            }
+          }
+        },
+        {
+          "recordRetrieve": {
+            "vectorCandidateCount": 0,
+            "graphCandidateCount": 6,
+            "afterMergeCount": 10,
+            "afterRerankCount": 10,
+            "rerankUsed": false,
+            "embeddingFallback": false,
+            "topScores": [
+              {
+                "text": "Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern",
+                "score": 0.5,
+                "source": "edge"
+              },
+              {
+                "text": "The back mountain rises right behind Qingshi town",
+                "score": 0.5,
+                "source": "edge"
+              },
+              {
+                "text": "Guan Yu spars with Lu Chen in the tavern backyard",
+                "score": 0.3333333333333333,
+                "source": "edge"
+              },
+              {
+                "text": "Village Elder warns about storms over the back mountain",
+                "score": 0.3333333333333333,
+                "source": "edge"
+              },
+              {
+                "text": "Lin Nuan keeps the oldest tavern in Qingshi town",
+                "score": 0.25,
+                "source": "edge"
+              }
+            ]
+          }
+        }
+      ],
+      "step": {
+        "label": "rerank through the chat model",
+        "engramMemory": {
+          "events": [
+            {
+              "id": "evt_r1",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+              "summary": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+              "structured_kv": {
+                "event": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 1
+            },
+            {
+              "id": "evt_r2",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+              "summary": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+              "structured_kv": {
+                "event": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 2
+            },
+            {
+              "id": "evt_r3",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "The village elder warns everyone about a storm coming over the back mountain",
+              "summary": "The village elder warns everyone about a storm coming over the back mountain",
+              "structured_kv": {
+                "event": "The village elder warns everyone about a storm coming over the back mountain",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 3
+            },
+            {
+              "id": "evt_r4",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Lin Nuan tells Lu Chen that Guan Yu is an old friend she has not seen for years",
+              "summary": "Lin Nuan tells Lu Chen that Guan Yu is an old friend she has not seen for years",
+              "structured_kv": {
+                "event": "Lin Nuan tells Lu Chen that Guan Yu is an old friend she has not seen for years",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 8,
+              "midTermSummary": "Lin Nuan names Guan Yu as an old friend."
+            },
+            {
+              "id": "evt_r5",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+              "summary": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+              "structured_kv": {
+                "event": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 9
+            },
+            {
+              "id": "evt_r6",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Lu Chen walks the back mountain path at night under heavy fog",
+              "summary": "Lu Chen walks the back mountain path at night under heavy fog",
+              "structured_kv": {
+                "event": "Lu Chen walks the back mountain path at night under heavy fog",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 10
+            }
+          ],
+          "entities": [
+            {
+              "name": "陆沉",
+              "type": "player",
+              "summary": "玩家角色",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "Lin Nuan",
+              "type": "npc",
+              "summary": "Runs the tavern in Qingshi town, bright eyes and long black hair",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "Guan Yu",
+              "type": "npc",
+              "summary": "A wandering swordsman with sharp brows",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "Village Elder",
+              "type": "npc",
+              "summary": "The oldest person in the village, knows every storm",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "青石镇",
+              "type": "location",
+              "summary": "A small town at the foot of the mountain",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "后山",
+              "type": "location",
+              "summary": "A foggy forest behind the town",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            }
+          ],
+          "relations": [],
+          "v2Edges": [
+            {
+              "id": "edge_1",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "陆沉",
+              "fact": "Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_2",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "Guan Yu",
+              "fact": "Lin Nuan and Guan Yu are old friends from the same town",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_3",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "陆沉",
+              "fact": "Guan Yu spars with Lu Chen in the tavern backyard",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_4",
+              "sourceEntity": "Village Elder",
+              "targetEntity": "后山",
+              "fact": "Village Elder warns about storms over the back mountain",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_5",
+              "sourceEntity": "后山",
+              "targetEntity": "青石镇",
+              "fact": "The back mountain rises right behind Qingshi town",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_6",
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "青石镇",
+              "fact": "Lin Nuan keeps the oldest tavern in Qingshi town",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "edge_old",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "Lin Nuan",
+              "fact": "Guan Yu is a stranger to Lin Nuan and has never met her",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8,
+              "invalidAtRound": 7,
+              "temporalStatus": "superseded"
+            },
+            {
+              "id": "edge_gone",
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "后山",
+              "fact": "Guan Yu lived on the back mountain before the storm hit",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8,
+              "invalidAtRound": 6,
+              "temporalStatus": "historical"
+            }
+          ],
+          "meta": {
+            "schemaVersion": 5
+          }
+        },
+        "memory": {
+          "短期": [],
+          "中期": [],
+          "长期": [],
+          "隐式中期": []
+        },
+        "vectorRows": [],
+        "vectorCalls": [],
+        "aiCalls": [
+          {
+            "messages": [
+              {
+                "role": "user",
+                "content": "{\"task\":\"rerank\",\"query\":\"Lin Nuan tavern tea Lu Chen\",\"documents\":[\"[Lin Nuan→陆沉] Lin Nuan serves hot tea to Lu Chen at the Qingshi tavern\",\"[后山→青石镇] The back mountain rises right behind Qingshi town\",\"[Guan Yu→陆沉] Guan Yu spars with Lu Chen in the tavern backyard\",\"[Village Elder→后山] Village Elder warns about storms over the back mountain\",\"[Lin Nuan→青石镇] Lin Nuan keeps the oldest tavern in Qingshi town\",\"[Lin Nuan→Guan Yu] Lin Nuan and Guan Yu are old friends from the same town\",\"Lin Nuan: Runs the tavern in Qingshi town, bright eyes and long black hair\",\"Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea\",\"Lin Nuan names Guan Yu as an old friend.\",\"Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match\"],\"top_k\":4}"
+              }
+            ],
+            "usageType": "rerank"
+          }
+        ],
+        "fetchCalls": [],
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "type": "load"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "元数据.回合序号",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "warnings": [
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:",
+    "[Reranker] Rerank failed, falling back to score sort:",
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:"
+  ]
+}

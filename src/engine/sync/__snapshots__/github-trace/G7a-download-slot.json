@@ -1,0 +1,90 @@
+{
+  "outcome": {
+    "ok": "__undefined__"
+  },
+  "status": [
+    {
+      "stage": "downloading",
+      "message": "正在获取云端索引…"
+    },
+    {
+      "stage": "downloading",
+      "message": "正在下载分块 1/2…"
+    },
+    {
+      "stage": "downloading",
+      "message": "正在下载分块 2/2…"
+    },
+    {
+      "stage": "downloading",
+      "message": "正在校验并恢复…"
+    },
+    {
+      "stage": "done",
+      "message": "下载并恢复完成"
+    }
+  ],
+  "trace": [
+    {
+      "method": "GET",
+      "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a/manifest.json"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/octo/aga-cloud-save/git/blobs/sha3"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a/state.muyrsbfs1f9a.gz"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/octo/aga-cloud-save/git/blobs/sha1"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a/img-0.muyrsbfs1f9a.gz"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/octo/aga-cloud-save/git/blobs/sha2"
+    }
+  ],
+  "backupCalls": [
+    {
+      "method": "importProfileReplace",
+      "args": [
+        {
+          "blob": true,
+          "size": 9310,
+          "sha256": "7615d8ebba3b49fe6b402b25c58e971842af9e242bbc9b1e43836a8e37cc0238"
+        }
+      ]
+    },
+    {
+      "method": "listProfileIds",
+      "args": []
+    }
+  ],
+  "lsDiff": {
+    "added": {
+      "aga_github_sync_baselines": "{\"prof_a\":\"2026-10-08T00:00:01.000Z\"}"
+    },
+    "removed": [],
+    "changed": {}
+  },
+  "headers": [
+    "[[\"Accept\",\"application/vnd.github+json\"],[\"Authorization\",\"Bearer ghp_FAKE0000\"],[\"X-GitHub-Api-Version\",\"2022-11-28\"]]"
+  ],
+  "repoAfter": [
+    "slots/prof_a/img-0.muyrsbfs1f9a.gz",
+    "slots/prof_a/manifest.json",
+    "slots/prof_a/state.muyrsbfs1f9a.gz"
+  ],
+  "warnings": [],
+  "baselineIsManifestCreatedAt": true,
+  "profileIds": [
+    "prof_local",
+    "prof_a"
+  ]
+}

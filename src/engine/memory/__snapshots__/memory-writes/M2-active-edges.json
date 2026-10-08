@@ -1,0 +1,3200 @@
+{
+  "steps": [
+    {
+      "label": "round 1",
+      "returned": {
+        "roundNumber": 1,
+        "capturedAt": 1791417660000,
+        "totalDurationMs": "<ms>",
+        "event": {
+          "eventId": "evt_muyrtkyo_4fzyo8",
+          "title": "陆沉在山道上遇到了一口古井和一位隐士，隐士讲起古井的来历",
+          "roles": [
+            "陆沉"
+          ],
+          "location": [
+            "青石镇"
+          ],
+          "timeAnchor": "1年3月5日 14:20"
+        },
+        "entities": {
+          "total": 8,
+          "deltas": [
+            {
+              "name": "陆沉",
+              "type": "player",
+              "isNew": true,
+              "descriptionUpdated": false,
+              "mentionCount": 3
+            },
+            {
+              "name": "Lin Nuan",
+              "type": "npc",
+              "isNew": true,
+              "descriptionUpdated": false,
+              "mentionCount": 1
+            },
+            {
+              "name": "Guan Yu",
+              "type": "npc",
+              "isNew": true,
+              "descriptionUpdated": false,
+              "mentionCount": 1
+            },
+            {
+              "name": "青石镇",
+              "type": "location",
+              "isNew": true,
+              "descriptionUpdated": false,
+              "mentionCount": 2
+            },
+            {
+              "name": "Old Well",
+              "type": "npc",
+              "isNew": true,
+              "descriptionUpdated": false,
+              "mentionCount": 1
+            },
+            {
+              "name": "Stranger One",
+              "type": "npc",
+              "isNew": true,
+              "descriptionUpdated": false,
+              "mentionCount": 1
+            },
+            {
+              "name": "Stranger Two",
+              "type": "npc",
+              "isNew": true,
+              "descriptionUpdated": false,
+              "mentionCount": 1
+            }
+          ]
+        },
+        "relations": {
+          "total": 0,
+          "deltas": []
+        },
+        "snapshotVersion": 2,
+        "trimmed": {
+          "eventsBefore": 1,
+          "eventsAfter": 1,
+          "entitiesBefore": 8,
+          "entitiesAfter": 8
+        },
+        "vectorizeQueued": 12,
+        "edges": {
+          "total": 3,
+          "newCount": 3,
+          "reinforcedCount": 0,
+          "prunedCount": 0,
+          "topNew": [
+            {
+              "sourceEntity": "Old Well",
+              "targetEntity": "陆沉",
+              "fact": "The Old Well lies on the mountain path where Lu Chen met the hermit",
+              "episodeCount": 1,
+              "isNew": true
+            },
+            {
+              "sourceEntity": "Stranger One",
+              "targetEntity": "Stranger Two",
+              "fact": "A stranger meets another stranger on the road",
+              "episodeCount": 1,
+              "isNew": true
+            },
+            {
+              "sourceEntity": "Old Hermit",
+              "targetEntity": "Old Well",
+              "fact": "Old Hermit guards the secret of the old well for years",
+              "episodeCount": 1,
+              "isNew": true
+            }
+          ]
+        }
+      },
+      "engramMemory": {
+        "events": [
+          {
+            "id": "evt_muyrtkyo_4fzyo8",
+            "subject": "陆沉",
+            "action": "narrative",
+            "tags": [
+              "narrative"
+            ],
+            "text": "陆沉在山道上遇到了一口古井和一位隐士，隐士讲起古井的来历。",
+            "summary": "陆沉在山道上遇到了一口古井和一位隐士，隐士讲起古井的来历(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉) 陆沉在山道上遇到了一口古井和一位隐士，隐士讲起古井的来历。",
+            "structured_kv": {
+              "event": "陆沉在山道上遇到了一口古井和一位隐士，隐士讲起古井的来历",
+              "role": [
+                "陆沉"
+              ],
+              "location": [
+                "青石镇"
+              ],
+              "time_anchor": "1年3月5日 14:20",
+              "causality": "承接",
+              "logic": []
+            },
+            "is_embedded": true,
+            "time": "1年3月5日 14:20",
+            "location": "青石镇",
+            "roundNumber": 1,
+            "mentionedEntities": [
+              "陆沉"
+            ],
+            "midTermSummary": "陆沉在山道遇到古井与隐士。"
+          }
+        ],
+        "entities": [
+          {
+            "name": "陆沉",
+            "type": "player",
+            "attributes": {
+              "source": "event_role",
+              "lastEventId": "evt_muyrtkyo_4fzyo8"
+            },
+            "firstSeen": 0,
+            "lastSeen": 1,
+            "mentionCount": 3,
+            "summary": "玩家角色",
+            "is_embedded": true
+          },
+          {
+            "name": "Lin Nuan",
+            "type": "npc",
+            "attributes": {
+              "relationToPlayer": "__undefined__",
+              "location": "青石镇",
+              "source": "relationship"
+            },
+            "firstSeen": 0,
+            "lastSeen": 0,
+            "mentionCount": 1,
+            "summary": "Runs the tavern in Qingshi town.；bright eyes, long black hair",
+            "is_embedded": true
+          },
+          {
+            "name": "Guan Yu",
+            "type": "npc",
+            "attributes": {
+              "relationToPlayer": "__undefined__",
+              "location": "__undefined__",
+              "source": "relationship"
+            },
+            "firstSeen": 0,
+            "lastSeen": 0,
+            "mentionCount": 1,
+            "summary": "A wandering swordsman.；sharp brows",
+            "is_embedded": true
+          },
+          {
+            "name": "青石镇",
+            "type": "location",
+            "attributes": {
+              "source": "event_location",
+              "lastEventId": "evt_muyrtkyo_4fzyo8"
+            },
+            "firstSeen": 1,
+            "lastSeen": 1,
+            "mentionCount": 2,
+            "summary": "",
+            "is_embedded": true
+          },
+          {
+            "name": "Old Hermit",
+            "type": "npc",
+            "summary": "a hermit the player wrote down",
+            "attributes": {},
+            "firstSeen": 0,
+            "lastSeen": 1,
+            "mentionCount": 0,
+            "is_embedded": true,
+            "source": "user",
+            "userEditedAtRound": 0
+          },
+          {
+            "name": "Old Well",
+            "type": "npc",
+            "summary": "",
+            "attributes": {},
+            "firstSeen": 1,
+            "lastSeen": 1,
+            "mentionCount": 1,
+            "is_embedded": true,
+            "_pendingEnrichment": true
+          },
+          {
+            "name": "Stranger One",
+            "type": "npc",
+            "summary": "",
+            "attributes": {},
+            "firstSeen": 1,
+            "lastSeen": 1,
+            "mentionCount": 1,
+            "is_embedded": true,
+            "_pendingEnrichment": true
+          },
+          {
+            "name": "Stranger Two",
+            "type": "npc",
+            "summary": "",
+            "attributes": {},
+            "firstSeen": 1,
+            "lastSeen": 1,
+            "mentionCount": 1,
+            "is_embedded": true,
+            "_pendingEnrichment": true
+          }
+        ],
+        "relations": [],
+        "v2Edges": [
+          {
+            "id": "old well|陆沉|theoldwellliesonthemountainpathwhereluch",
+            "sourceEntity": "Old Well",
+            "targetEntity": "陆沉",
+            "fact": "The Old Well lies on the mountain path where Lu Chen met the hermit",
+            "episodes": [
+              "evt_muyrtkyo_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 1,
+            "lastSeenRound": 1,
+            "learnedAtRound": 1,
+            "core": "__undefined__",
+            "source": "__undefined__",
+            "canonEntryId": "__undefined__"
+          },
+          {
+            "id": "stranger one|stranger two|astrangermeetsanotherstrangerontheroad",
+            "sourceEntity": "Stranger One",
+            "targetEntity": "Stranger Two",
+            "fact": "A stranger meets another stranger on the road",
+            "episodes": [
+              "evt_muyrtkyo_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 1,
+            "lastSeenRound": 1,
+            "learnedAtRound": 1,
+            "core": "__undefined__",
+            "source": "__undefined__",
+            "canonEntryId": "__undefined__"
+          },
+          {
+            "id": "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory",
+            "sourceEntity": "Old Hermit",
+            "targetEntity": "Old Well",
+            "fact": "Old Hermit guards the secret of the old well for years",
+            "episodes": [
+              "evt_muyrtkyo_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 1,
+            "lastSeenRound": 1,
+            "learnedAtRound": 1,
+            "core": "__undefined__",
+            "source": "__undefined__",
+            "canonEntryId": "__undefined__"
+          }
+        ],
+        "meta": {
+          "lastUpdated": 1791417660000,
+          "eventCount": 1,
+          "embeddedEventCount": 1,
+          "embeddedEntityCount": 8,
+          "schemaVersion": 5,
+          "v2PendingReview": null
+        }
+      },
+      "memory": {
+        "短期": [],
+        "中期": [],
+        "长期": [],
+        "隐式中期": []
+      },
+      "vectorRows": [
+        [
+          "engram_vectors_prof_m_slot_m",
+          {
+            "eventVectors": {
+              "evt_muyrtkyo_4fzyo8": {
+                "dim": 384,
+                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+              }
+            },
+            "entityVectors": {
+              "陆沉": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Lin Nuan": {
+                "dim": 384,
+                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+              },
+              "Guan Yu": {
+                "dim": 384,
+                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+              },
+              "青石镇": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Old Hermit": {
+                "dim": 384,
+                "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
+              },
+              "Old Well": {
+                "dim": 384,
+                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+              },
+              "Stranger One": {
+                "dim": 384,
+                "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
+              },
+              "Stranger Two": {
+                "dim": 384,
+                "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
+              }
+            },
+            "edgeVectors": {
+              "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "dim": 384,
+                "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
+              },
+              "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "dim": 384,
+                "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
+              },
+              "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "dim": 384,
+                "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
+              }
+            },
+            "model": "unknown",
+            "dim": 384
+          }
+        ]
+      ],
+      "vectorCalls": [
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "set",
+          "key": "engram_vectors_prof_m_slot_m",
+          "value": {
+            "eventVectors": {
+              "evt_muyrtkyo_4fzyo8": {
+                "dim": 384,
+                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+              }
+            },
+            "entityVectors": {},
+            "edgeVectors": {},
+            "model": "unknown",
+            "dim": 384
+          }
+        },
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "set",
+          "key": "engram_vectors_prof_m_slot_m",
+          "value": {
+            "eventVectors": {
+              "evt_muyrtkyo_4fzyo8": {
+                "dim": 384,
+                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+              }
+            },
+            "entityVectors": {
+              "陆沉": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Lin Nuan": {
+                "dim": 384,
+                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+              },
+              "Guan Yu": {
+                "dim": 384,
+                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+              },
+              "青石镇": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Old Hermit": {
+                "dim": 384,
+                "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
+              },
+              "Old Well": {
+                "dim": 384,
+                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+              },
+              "Stranger One": {
+                "dim": 384,
+                "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
+              },
+              "Stranger Two": {
+                "dim": 384,
+                "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
+              }
+            },
+            "edgeVectors": {},
+            "model": "unknown",
+            "dim": 384
+          }
+        },
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "set",
+          "key": "engram_vectors_prof_m_slot_m",
+          "value": {
+            "eventVectors": {
+              "evt_muyrtkyo_4fzyo8": {
+                "dim": 384,
+                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+              }
+            },
+            "entityVectors": {
+              "陆沉": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Lin Nuan": {
+                "dim": 384,
+                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+              },
+              "Guan Yu": {
+                "dim": 384,
+                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+              },
+              "青石镇": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Old Hermit": {
+                "dim": 384,
+                "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
+              },
+              "Old Well": {
+                "dim": 384,
+                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+              },
+              "Stranger One": {
+                "dim": 384,
+                "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
+              },
+              "Stranger Two": {
+                "dim": 384,
+                "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
+              }
+            },
+            "edgeVectors": {
+              "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "dim": 384,
+                "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
+              },
+              "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "dim": 384,
+                "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
+              },
+              "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "dim": 384,
+                "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
+              }
+            },
+            "model": "unknown",
+            "dim": 384
+          }
+        }
+      ],
+      "aiCalls": [],
+      "fetchCalls": [],
+      "emits": [
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "type": "load"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "元数据.回合序号",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.events",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.meta.embeddedEventCount",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.entities",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.meta.embeddedEntityCount",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.v2Edges",
+            "action": "set",
+            "source": "system"
+          }
+        }
+      ]
+    },
+    {
+      "label": "round 2: the stub survives the rebuild",
+      "returned": {
+        "roundNumber": 2,
+        "capturedAt": 1791417720000,
+        "totalDurationMs": "<ms>",
+        "event": {
+          "eventId": "evt_muyruv9c_4fzyo8",
+          "title": "第二天，陆沉回到酒肆，Lin Nuan 问起了古井的传闻",
+          "roles": [
+            "陆沉",
+            "Lin Nuan"
+          ],
+          "location": [
+            "青石镇"
+          ],
+          "timeAnchor": "1年3月5日 14:20"
+        },
+        "entities": {
+          "total": 8,
+          "deltas": []
+        },
+        "relations": {
+          "total": 0,
+          "deltas": []
+        },
+        "snapshotVersion": 2,
+        "trimmed": {
+          "eventsBefore": 2,
+          "eventsAfter": 2,
+          "entitiesBefore": 8,
+          "entitiesAfter": 8
+        },
+        "vectorizeQueued": 2,
+        "edges": {
+          "total": 4,
+          "newCount": 1,
+          "reinforcedCount": 0,
+          "prunedCount": 0,
+          "topNew": [
+            {
+              "sourceEntity": "Lin Nuan",
+              "targetEntity": "Old Well",
+              "fact": "Lin Nuan asks Lu Chen about the rumour of the old well",
+              "episodeCount": 1,
+              "isNew": true
+            }
+          ]
+        }
+      },
+      "engramMemory": {
+        "events": [
+          {
+            "id": "evt_muyrtkyo_4fzyo8",
+            "subject": "陆沉",
+            "action": "narrative",
+            "tags": [
+              "narrative"
+            ],
+            "text": "陆沉在山道上遇到了一口古井和一位隐士，隐士讲起古井的来历。",
+            "summary": "陆沉在山道上遇到了一口古井和一位隐士，隐士讲起古井的来历(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉) 陆沉在山道上遇到了一口古井和一位隐士，隐士讲起古井的来历。",
+            "structured_kv": {
+              "event": "陆沉在山道上遇到了一口古井和一位隐士，隐士讲起古井的来历",
+              "role": [
+                "陆沉"
+              ],
+              "location": [
+                "青石镇"
+              ],
+              "time_anchor": "1年3月5日 14:20",
+              "causality": "承接",
+              "logic": []
+            },
+            "is_embedded": true,
+            "time": "1年3月5日 14:20",
+            "location": "青石镇",
+            "roundNumber": 1,
+            "mentionedEntities": [
+              "陆沉"
+            ],
+            "midTermSummary": "陆沉在山道遇到古井与隐士。"
+          },
+          {
+            "id": "evt_muyruv9c_4fzyo8",
+            "subject": "陆沉",
+            "action": "narrative",
+            "tags": [
+              "narrative"
+            ],
+            "text": "第二天，陆沉回到酒肆，Lin Nuan 问起了古井的传闻。",
+            "summary": "第二天，陆沉回到酒肆，Lin Nuan 问起了古井的传闻(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Lin Nuan) 第二天，陆沉回到酒肆，Lin Nuan 问起了古井的传闻。",
+            "structured_kv": {
+              "event": "第二天，陆沉回到酒肆，Lin Nuan 问起了古井的传闻",
+              "role": [
+                "陆沉",
+                "Lin Nuan"
+              ],
+              "location": [
+                "青石镇"
+              ],
+              "time_anchor": "1年3月5日 14:20",
+              "causality": "承接",
+              "logic": []
+            },
+            "is_embedded": true,
+            "time": "1年3月5日 14:20",
+            "location": "青石镇",
+            "roundNumber": 2,
+            "mentionedEntities": [
+              "陆沉",
+              "Lin Nuan"
+            ],
+            "midTermSummary": "陆沉向 Lin Nuan 讲起古井。"
+          }
+        ],
+        "entities": [
+          {
+            "name": "陆沉",
+            "type": "player",
+            "attributes": {
+              "source": "event_role",
+              "lastEventId": "evt_muyruv9c_4fzyo8"
+            },
+            "firstSeen": 0,
+            "lastSeen": 2,
+            "mentionCount": 5,
+            "summary": "玩家角色",
+            "is_embedded": true
+          },
+          {
+            "name": "Lin Nuan",
+            "type": "npc",
+            "attributes": {
+              "relationToPlayer": "__undefined__",
+              "location": "青石镇",
+              "source": "event_role",
+              "lastEventId": "evt_muyruv9c_4fzyo8"
+            },
+            "firstSeen": 2,
+            "lastSeen": 2,
+            "mentionCount": 2,
+            "summary": "Runs the tavern in Qingshi town.；bright eyes, long black hair",
+            "is_embedded": true
+          },
+          {
+            "name": "Guan Yu",
+            "type": "npc",
+            "attributes": {
+              "relationToPlayer": "__undefined__",
+              "location": "__undefined__",
+              "source": "relationship"
+            },
+            "firstSeen": 0,
+            "lastSeen": 0,
+            "mentionCount": 1,
+            "summary": "A wandering swordsman.；sharp brows",
+            "is_embedded": true
+          },
+          {
+            "name": "青石镇",
+            "type": "location",
+            "attributes": {
+              "source": "event_location",
+              "lastEventId": "evt_muyruv9c_4fzyo8"
+            },
+            "firstSeen": 1,
+            "lastSeen": 2,
+            "mentionCount": 4,
+            "summary": "",
+            "is_embedded": true
+          },
+          {
+            "name": "Old Hermit",
+            "type": "npc",
+            "summary": "a hermit the player wrote down",
+            "attributes": {},
+            "firstSeen": 0,
+            "lastSeen": 2,
+            "mentionCount": 0,
+            "is_embedded": true,
+            "source": "user",
+            "userEditedAtRound": 0
+          },
+          {
+            "name": "Old Well",
+            "type": "npc",
+            "summary": "",
+            "attributes": {},
+            "firstSeen": 1,
+            "lastSeen": 2,
+            "mentionCount": 1,
+            "is_embedded": true,
+            "_pendingEnrichment": true
+          },
+          {
+            "name": "Stranger One",
+            "type": "npc",
+            "summary": "",
+            "attributes": {},
+            "firstSeen": 1,
+            "lastSeen": 2,
+            "mentionCount": 1,
+            "is_embedded": true,
+            "_pendingEnrichment": true
+          },
+          {
+            "name": "Stranger Two",
+            "type": "npc",
+            "summary": "",
+            "attributes": {},
+            "firstSeen": 1,
+            "lastSeen": 2,
+            "mentionCount": 1,
+            "is_embedded": true,
+            "_pendingEnrichment": true
+          }
+        ],
+        "relations": [],
+        "v2Edges": [
+          {
+            "id": "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw",
+            "sourceEntity": "Lin Nuan",
+            "targetEntity": "Old Well",
+            "fact": "Lin Nuan asks Lu Chen about the rumour of the old well",
+            "episodes": [
+              "evt_muyruv9c_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 2,
+            "lastSeenRound": 2,
+            "learnedAtRound": 2,
+            "core": "__undefined__",
+            "source": "__undefined__",
+            "canonEntryId": "__undefined__"
+          },
+          {
+            "id": "old well|陆沉|theoldwellliesonthemountainpathwhereluch",
+            "sourceEntity": "Old Well",
+            "targetEntity": "陆沉",
+            "fact": "The Old Well lies on the mountain path where Lu Chen met the hermit",
+            "episodes": [
+              "evt_muyrtkyo_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 1,
+            "lastSeenRound": 1,
+            "learnedAtRound": 1,
+            "core": "__undefined__",
+            "source": "__undefined__",
+            "canonEntryId": "__undefined__"
+          },
+          {
+            "id": "stranger one|stranger two|astrangermeetsanotherstrangerontheroad",
+            "sourceEntity": "Stranger One",
+            "targetEntity": "Stranger Two",
+            "fact": "A stranger meets another stranger on the road",
+            "episodes": [
+              "evt_muyrtkyo_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 1,
+            "lastSeenRound": 1,
+            "learnedAtRound": 1,
+            "core": "__undefined__",
+            "source": "__undefined__",
+            "canonEntryId": "__undefined__"
+          },
+          {
+            "id": "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory",
+            "sourceEntity": "Old Hermit",
+            "targetEntity": "Old Well",
+            "fact": "Old Hermit guards the secret of the old well for years",
+            "episodes": [
+              "evt_muyrtkyo_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 1,
+            "lastSeenRound": 1,
+            "learnedAtRound": 1,
+            "core": "__undefined__",
+            "source": "__undefined__",
+            "canonEntryId": "__undefined__"
+          }
+        ],
+        "meta": {
+          "lastUpdated": 1791417720000,
+          "eventCount": 2,
+          "embeddedEventCount": 2,
+          "embeddedEntityCount": 8,
+          "schemaVersion": 5,
+          "v2PendingReview": null
+        }
+      },
+      "memory": "<unchanged since the previous step>",
+      "vectorRows": [
+        [
+          "engram_vectors_prof_m_slot_m",
+          {
+            "eventVectors": {
+              "evt_muyrtkyo_4fzyo8": {
+                "dim": 384,
+                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+              },
+              "evt_muyruv9c_4fzyo8": {
+                "dim": 384,
+                "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
+              }
+            },
+            "entityVectors": {
+              "陆沉": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Lin Nuan": {
+                "dim": 384,
+                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+              },
+              "Guan Yu": {
+                "dim": 384,
+                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+              },
+              "青石镇": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Old Hermit": {
+                "dim": 384,
+                "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
+              },
+              "Old Well": {
+                "dim": 384,
+                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+              },
+              "Stranger One": {
+                "dim": 384,
+                "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
+              },
+              "Stranger Two": {
+                "dim": 384,
+                "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
+              }
+            },
+            "edgeVectors": {
+              "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "dim": 384,
+                "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
+              },
+              "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "dim": 384,
+                "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
+              },
+              "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "dim": 384,
+                "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
+              },
+              "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
+                "dim": 384,
+                "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
+              }
+            },
+            "model": "unknown",
+            "dim": 384
+          }
+        ]
+      ],
+      "vectorCalls": [
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "set",
+          "key": "engram_vectors_prof_m_slot_m",
+          "value": {
+            "eventVectors": {
+              "evt_muyrtkyo_4fzyo8": {
+                "dim": 384,
+                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+              },
+              "evt_muyruv9c_4fzyo8": {
+                "dim": 384,
+                "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
+              }
+            },
+            "entityVectors": {
+              "陆沉": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Lin Nuan": {
+                "dim": 384,
+                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+              },
+              "Guan Yu": {
+                "dim": 384,
+                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+              },
+              "青石镇": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Old Hermit": {
+                "dim": 384,
+                "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
+              },
+              "Old Well": {
+                "dim": 384,
+                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+              },
+              "Stranger One": {
+                "dim": 384,
+                "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
+              },
+              "Stranger Two": {
+                "dim": 384,
+                "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
+              }
+            },
+            "edgeVectors": {
+              "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "dim": 384,
+                "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
+              },
+              "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "dim": 384,
+                "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
+              },
+              "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "dim": 384,
+                "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
+              }
+            },
+            "model": "unknown",
+            "dim": 384
+          }
+        },
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "set",
+          "key": "engram_vectors_prof_m_slot_m",
+          "value": {
+            "eventVectors": {
+              "evt_muyrtkyo_4fzyo8": {
+                "dim": 384,
+                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+              },
+              "evt_muyruv9c_4fzyo8": {
+                "dim": 384,
+                "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
+              }
+            },
+            "entityVectors": {
+              "陆沉": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Lin Nuan": {
+                "dim": 384,
+                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+              },
+              "Guan Yu": {
+                "dim": 384,
+                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+              },
+              "青石镇": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Old Hermit": {
+                "dim": 384,
+                "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
+              },
+              "Old Well": {
+                "dim": 384,
+                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+              },
+              "Stranger One": {
+                "dim": 384,
+                "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
+              },
+              "Stranger Two": {
+                "dim": 384,
+                "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
+              }
+            },
+            "edgeVectors": {
+              "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "dim": 384,
+                "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
+              },
+              "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "dim": 384,
+                "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
+              },
+              "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "dim": 384,
+                "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
+              },
+              "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
+                "dim": 384,
+                "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
+              }
+            },
+            "model": "unknown",
+            "dim": 384
+          }
+        }
+      ],
+      "aiCalls": [],
+      "fetchCalls": [],
+      "emits": [
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "元数据.回合序号",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.events",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.meta.embeddedEventCount",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.v2Edges",
+            "action": "set",
+            "source": "system"
+          }
+        }
+      ]
+    },
+    {
+      "label": "round 3: canon mutations ride the same write",
+      "returned": {
+        "roundNumber": 3,
+        "capturedAt": 1791417780000,
+        "totalDurationMs": "<ms>",
+        "event": {
+          "eventId": "evt_muyrw5k0_4fzyo8",
+          "title": "陆沉在酒肆里听 Guan Yu 说起了他们的约定，约定写成了设定",
+          "roles": [],
+          "location": [
+            "青石镇"
+          ],
+          "timeAnchor": "1年3月5日 14:20"
+        },
+        "entities": {
+          "total": 9,
+          "deltas": [
+            {
+              "name": "林月",
+              "type": "location",
+              "isNew": true,
+              "descriptionUpdated": false,
+              "mentionCount": 1
+            }
+          ]
+        },
+        "relations": {
+          "total": 0,
+          "deltas": []
+        },
+        "snapshotVersion": 2,
+        "trimmed": {
+          "eventsBefore": 3,
+          "eventsAfter": 3,
+          "entitiesBefore": 9,
+          "entitiesAfter": 9
+        },
+        "vectorizeQueued": 4,
+        "edges": {
+          "total": 6,
+          "newCount": 2,
+          "reinforcedCount": 0,
+          "prunedCount": 0,
+          "topNew": [
+            {
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "陆沉",
+              "fact": "Guan Yu is the sworn brother of Lu Chen",
+              "episodeCount": 1,
+              "isNew": true
+            },
+            {
+              "sourceEntity": "林月",
+              "targetEntity": "陆沉",
+              "fact": "林月是玩家的妹妹",
+              "episodeCount": 1,
+              "isNew": true
+            }
+          ]
+        }
+      },
+      "engramMemory": {
+        "events": [
+          {
+            "id": "evt_muyrtkyo_4fzyo8",
+            "subject": "陆沉",
+            "action": "narrative",
+            "tags": [
+              "narrative"
+            ],
+            "text": "陆沉在山道上遇到了一口古井和一位隐士，隐士讲起古井的来历。",
+            "summary": "陆沉在山道上遇到了一口古井和一位隐士，隐士讲起古井的来历(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉) 陆沉在山道上遇到了一口古井和一位隐士，隐士讲起古井的来历。",
+            "structured_kv": {
+              "event": "陆沉在山道上遇到了一口古井和一位隐士，隐士讲起古井的来历",
+              "role": [
+                "陆沉"
+              ],
+              "location": [
+                "青石镇"
+              ],
+              "time_anchor": "1年3月5日 14:20",
+              "causality": "承接",
+              "logic": []
+            },
+            "is_embedded": true,
+            "time": "1年3月5日 14:20",
+            "location": "青石镇",
+            "roundNumber": 1,
+            "mentionedEntities": [
+              "陆沉"
+            ],
+            "midTermSummary": "陆沉在山道遇到古井与隐士。"
+          },
+          {
+            "id": "evt_muyruv9c_4fzyo8",
+            "subject": "陆沉",
+            "action": "narrative",
+            "tags": [
+              "narrative"
+            ],
+            "text": "第二天，陆沉回到酒肆，Lin Nuan 问起了古井的传闻。",
+            "summary": "第二天，陆沉回到酒肆，Lin Nuan 问起了古井的传闻(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Lin Nuan) 第二天，陆沉回到酒肆，Lin Nuan 问起了古井的传闻。",
+            "structured_kv": {
+              "event": "第二天，陆沉回到酒肆，Lin Nuan 问起了古井的传闻",
+              "role": [
+                "陆沉",
+                "Lin Nuan"
+              ],
+              "location": [
+                "青石镇"
+              ],
+              "time_anchor": "1年3月5日 14:20",
+              "causality": "承接",
+              "logic": []
+            },
+            "is_embedded": true,
+            "time": "1年3月5日 14:20",
+            "location": "青石镇",
+            "roundNumber": 2,
+            "mentionedEntities": [
+              "陆沉",
+              "Lin Nuan"
+            ],
+            "midTermSummary": "陆沉向 Lin Nuan 讲起古井。"
+          },
+          {
+            "id": "evt_muyrw5k0_4fzyo8",
+            "subject": "陆沉",
+            "action": "narrative",
+            "tags": [
+              "narrative"
+            ],
+            "text": "陆沉在酒肆里听 Guan Yu 说起了他们的约定，约定写成了设定。",
+            "summary": "陆沉在酒肆里听 Guan Yu 说起了他们的约定，约定写成了设定(承接):\n(1年3月5日 14:20 | 青石镇) 陆沉在酒肆里听 Guan Yu 说起了他们的约定，约定写成了设定。",
+            "structured_kv": {
+              "event": "陆沉在酒肆里听 Guan Yu 说起了他们的约定，约定写成了设定",
+              "role": [],
+              "location": [
+                "青石镇"
+              ],
+              "time_anchor": "1年3月5日 14:20",
+              "causality": "承接",
+              "logic": []
+            },
+            "is_embedded": true,
+            "time": "1年3月5日 14:20",
+            "location": "青石镇",
+            "roundNumber": 3,
+            "mentionedEntities": [
+              "陆沉"
+            ]
+          }
+        ],
+        "entities": [
+          {
+            "name": "陆沉",
+            "type": "player",
+            "attributes": {
+              "source": "event_role",
+              "lastEventId": "evt_muyruv9c_4fzyo8"
+            },
+            "firstSeen": 0,
+            "lastSeen": 3,
+            "mentionCount": 6,
+            "summary": "玩家角色",
+            "is_embedded": true
+          },
+          {
+            "name": "Lin Nuan",
+            "type": "npc",
+            "attributes": {
+              "relationToPlayer": "__undefined__",
+              "location": "青石镇",
+              "source": "event_role",
+              "lastEventId": "evt_muyruv9c_4fzyo8"
+            },
+            "firstSeen": 2,
+            "lastSeen": 2,
+            "mentionCount": 2,
+            "summary": "Runs the tavern in Qingshi town.；bright eyes, long black hair",
+            "is_embedded": true
+          },
+          {
+            "name": "Guan Yu",
+            "type": "npc",
+            "attributes": {
+              "relationToPlayer": "__undefined__",
+              "location": "__undefined__",
+              "source": "relationship"
+            },
+            "firstSeen": 0,
+            "lastSeen": 0,
+            "mentionCount": 1,
+            "summary": "A wandering swordsman.；sharp brows",
+            "is_embedded": true
+          },
+          {
+            "name": "青石镇",
+            "type": "location",
+            "attributes": {
+              "source": "event_location",
+              "lastEventId": "evt_muyrw5k0_4fzyo8"
+            },
+            "firstSeen": 1,
+            "lastSeen": 3,
+            "mentionCount": 6,
+            "summary": "",
+            "is_embedded": true
+          },
+          {
+            "name": "Old Hermit",
+            "type": "npc",
+            "summary": "a hermit the player wrote down",
+            "attributes": {},
+            "firstSeen": 0,
+            "lastSeen": 3,
+            "mentionCount": 0,
+            "is_embedded": true,
+            "source": "user",
+            "userEditedAtRound": 0
+          },
+          {
+            "name": "Old Well",
+            "type": "npc",
+            "summary": "",
+            "attributes": {},
+            "firstSeen": 1,
+            "lastSeen": 3,
+            "mentionCount": 1,
+            "is_embedded": true,
+            "_pendingEnrichment": true
+          },
+          {
+            "name": "Stranger One",
+            "type": "npc",
+            "summary": "",
+            "attributes": {},
+            "firstSeen": 1,
+            "lastSeen": 3,
+            "mentionCount": 1,
+            "is_embedded": true,
+            "_pendingEnrichment": true
+          },
+          {
+            "name": "Stranger Two",
+            "type": "npc",
+            "summary": "",
+            "attributes": {},
+            "firstSeen": 1,
+            "lastSeen": 3,
+            "mentionCount": 1,
+            "is_embedded": true,
+            "_pendingEnrichment": true
+          },
+          {
+            "name": "林月",
+            "type": "location",
+            "summary": "",
+            "attributes": {},
+            "firstSeen": 3,
+            "lastSeen": 3,
+            "mentionCount": 1,
+            "is_embedded": true,
+            "_pendingEnrichment": true
+          }
+        ],
+        "relations": [],
+        "v2Edges": [
+          {
+            "id": "guan yu|陆沉|guanyuistheswornbrotherofluchen",
+            "sourceEntity": "Guan Yu",
+            "targetEntity": "陆沉",
+            "fact": "Guan Yu is the sworn brother of Lu Chen",
+            "episodes": [
+              "evt_muyrw5k0_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 3,
+            "lastSeenRound": 3,
+            "learnedAtRound": 3,
+            "core": true,
+            "source": "user-canon",
+            "canonEntryId": "canon_1"
+          },
+          {
+            "id": "林月|陆沉|林月是玩家的妹妹",
+            "sourceEntity": "林月",
+            "targetEntity": "陆沉",
+            "fact": "林月是玩家的妹妹",
+            "episodes": [
+              "evt_muyrw5k0_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 3,
+            "lastSeenRound": 3,
+            "learnedAtRound": 3,
+            "core": true,
+            "source": "user-canon",
+            "canonEntryId": "canon_2"
+          },
+          {
+            "id": "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw",
+            "sourceEntity": "Lin Nuan",
+            "targetEntity": "Old Well",
+            "fact": "Lin Nuan asks Lu Chen about the rumour of the old well",
+            "episodes": [
+              "evt_muyruv9c_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 2,
+            "lastSeenRound": 2,
+            "learnedAtRound": 2,
+            "core": "__undefined__",
+            "source": "__undefined__",
+            "canonEntryId": "__undefined__"
+          },
+          {
+            "id": "old well|陆沉|theoldwellliesonthemountainpathwhereluch",
+            "sourceEntity": "Old Well",
+            "targetEntity": "陆沉",
+            "fact": "The Old Well lies on the mountain path where Lu Chen met the hermit",
+            "episodes": [
+              "evt_muyrtkyo_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 1,
+            "lastSeenRound": 1,
+            "learnedAtRound": 1,
+            "core": "__undefined__",
+            "source": "__undefined__",
+            "canonEntryId": "__undefined__"
+          },
+          {
+            "id": "stranger one|stranger two|astrangermeetsanotherstrangerontheroad",
+            "sourceEntity": "Stranger One",
+            "targetEntity": "Stranger Two",
+            "fact": "A stranger meets another stranger on the road",
+            "episodes": [
+              "evt_muyrtkyo_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 1,
+            "lastSeenRound": 1,
+            "learnedAtRound": 1,
+            "core": "__undefined__",
+            "source": "__undefined__",
+            "canonEntryId": "__undefined__"
+          },
+          {
+            "id": "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory",
+            "sourceEntity": "Old Hermit",
+            "targetEntity": "Old Well",
+            "fact": "Old Hermit guards the secret of the old well for years",
+            "episodes": [
+              "evt_muyrtkyo_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 1,
+            "lastSeenRound": 1,
+            "learnedAtRound": 1,
+            "core": "__undefined__",
+            "source": "__undefined__",
+            "canonEntryId": "__undefined__"
+          }
+        ],
+        "meta": {
+          "lastUpdated": 1791417780000,
+          "eventCount": 3,
+          "embeddedEventCount": 3,
+          "embeddedEntityCount": 9,
+          "schemaVersion": 5,
+          "v2PendingReview": null
+        }
+      },
+      "memory": "<unchanged since the previous step>",
+      "vectorRows": [
+        [
+          "engram_vectors_prof_m_slot_m",
+          {
+            "eventVectors": {
+              "evt_muyrtkyo_4fzyo8": {
+                "dim": 384,
+                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+              },
+              "evt_muyruv9c_4fzyo8": {
+                "dim": 384,
+                "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
+              },
+              "evt_muyrw5k0_4fzyo8": {
+                "dim": 384,
+                "sha256": "1c9396c6e96a407266b3efe776c0bd39112a09da2393dc164e1b8c43171dcf38"
+              }
+            },
+            "entityVectors": {
+              "陆沉": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Lin Nuan": {
+                "dim": 384,
+                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+              },
+              "Guan Yu": {
+                "dim": 384,
+                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+              },
+              "青石镇": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Old Hermit": {
+                "dim": 384,
+                "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
+              },
+              "Old Well": {
+                "dim": 384,
+                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+              },
+              "Stranger One": {
+                "dim": 384,
+                "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
+              },
+              "Stranger Two": {
+                "dim": 384,
+                "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
+              },
+              "林月": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              }
+            },
+            "edgeVectors": {
+              "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "dim": 384,
+                "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
+              },
+              "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "dim": 384,
+                "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
+              },
+              "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "dim": 384,
+                "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
+              },
+              "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
+                "dim": 384,
+                "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
+              },
+              "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
+                "dim": 384,
+                "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
+              },
+              "林月|陆沉|林月是玩家的妹妹": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              }
+            },
+            "model": "unknown",
+            "dim": 384
+          }
+        ]
+      ],
+      "vectorCalls": [
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "set",
+          "key": "engram_vectors_prof_m_slot_m",
+          "value": {
+            "eventVectors": {
+              "evt_muyrtkyo_4fzyo8": {
+                "dim": 384,
+                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+              },
+              "evt_muyruv9c_4fzyo8": {
+                "dim": 384,
+                "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
+              },
+              "evt_muyrw5k0_4fzyo8": {
+                "dim": 384,
+                "sha256": "1c9396c6e96a407266b3efe776c0bd39112a09da2393dc164e1b8c43171dcf38"
+              }
+            },
+            "entityVectors": {
+              "陆沉": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Lin Nuan": {
+                "dim": 384,
+                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+              },
+              "Guan Yu": {
+                "dim": 384,
+                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+              },
+              "青石镇": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Old Hermit": {
+                "dim": 384,
+                "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
+              },
+              "Old Well": {
+                "dim": 384,
+                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+              },
+              "Stranger One": {
+                "dim": 384,
+                "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
+              },
+              "Stranger Two": {
+                "dim": 384,
+                "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
+              }
+            },
+            "edgeVectors": {
+              "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "dim": 384,
+                "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
+              },
+              "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "dim": 384,
+                "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
+              },
+              "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "dim": 384,
+                "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
+              },
+              "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
+                "dim": 384,
+                "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
+              }
+            },
+            "model": "unknown",
+            "dim": 384
+          }
+        },
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "set",
+          "key": "engram_vectors_prof_m_slot_m",
+          "value": {
+            "eventVectors": {
+              "evt_muyrtkyo_4fzyo8": {
+                "dim": 384,
+                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+              },
+              "evt_muyruv9c_4fzyo8": {
+                "dim": 384,
+                "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
+              },
+              "evt_muyrw5k0_4fzyo8": {
+                "dim": 384,
+                "sha256": "1c9396c6e96a407266b3efe776c0bd39112a09da2393dc164e1b8c43171dcf38"
+              }
+            },
+            "entityVectors": {
+              "陆沉": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Lin Nuan": {
+                "dim": 384,
+                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+              },
+              "Guan Yu": {
+                "dim": 384,
+                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+              },
+              "青石镇": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Old Hermit": {
+                "dim": 384,
+                "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
+              },
+              "Old Well": {
+                "dim": 384,
+                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+              },
+              "Stranger One": {
+                "dim": 384,
+                "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
+              },
+              "Stranger Two": {
+                "dim": 384,
+                "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
+              },
+              "林月": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              }
+            },
+            "edgeVectors": {
+              "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "dim": 384,
+                "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
+              },
+              "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "dim": 384,
+                "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
+              },
+              "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "dim": 384,
+                "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
+              },
+              "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
+                "dim": 384,
+                "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
+              }
+            },
+            "model": "unknown",
+            "dim": 384
+          }
+        },
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "set",
+          "key": "engram_vectors_prof_m_slot_m",
+          "value": {
+            "eventVectors": {
+              "evt_muyrtkyo_4fzyo8": {
+                "dim": 384,
+                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+              },
+              "evt_muyruv9c_4fzyo8": {
+                "dim": 384,
+                "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
+              },
+              "evt_muyrw5k0_4fzyo8": {
+                "dim": 384,
+                "sha256": "1c9396c6e96a407266b3efe776c0bd39112a09da2393dc164e1b8c43171dcf38"
+              }
+            },
+            "entityVectors": {
+              "陆沉": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Lin Nuan": {
+                "dim": 384,
+                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+              },
+              "Guan Yu": {
+                "dim": 384,
+                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+              },
+              "青石镇": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Old Hermit": {
+                "dim": 384,
+                "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
+              },
+              "Old Well": {
+                "dim": 384,
+                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+              },
+              "Stranger One": {
+                "dim": 384,
+                "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
+              },
+              "Stranger Two": {
+                "dim": 384,
+                "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
+              },
+              "林月": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              }
+            },
+            "edgeVectors": {
+              "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "dim": 384,
+                "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
+              },
+              "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "dim": 384,
+                "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
+              },
+              "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "dim": 384,
+                "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
+              },
+              "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
+                "dim": 384,
+                "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
+              },
+              "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
+                "dim": 384,
+                "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
+              },
+              "林月|陆沉|林月是玩家的妹妹": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              }
+            },
+            "model": "unknown",
+            "dim": 384
+          }
+        }
+      ],
+      "aiCalls": [],
+      "fetchCalls": [],
+      "emits": [
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "元数据.回合序号",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.events",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.meta.embeddedEventCount",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.entities",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.meta.embeddedEntityCount",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.v2Edges",
+            "action": "set",
+            "source": "system"
+          }
+        }
+      ]
+    },
+    {
+      "label": "round 4: includeAllNpcTypes and the batch defaults",
+      "returned": {
+        "roundNumber": 4,
+        "capturedAt": 1791417840000,
+        "totalDurationMs": "<ms>",
+        "event": {
+          "eventId": "evt_muyrxfuo_4fzyo8",
+          "title": "陆沉与 Guan Yu 比剑",
+          "roles": [],
+          "location": [
+            "青石镇"
+          ],
+          "timeAnchor": "1年3月5日 14:20"
+        },
+        "entities": {
+          "total": 10,
+          "deltas": [
+            {
+              "name": "Extra Wang",
+              "type": "npc",
+              "isNew": true,
+              "descriptionUpdated": false,
+              "mentionCount": 1
+            }
+          ]
+        },
+        "relations": {
+          "total": 0,
+          "deltas": []
+        },
+        "snapshotVersion": 2,
+        "trimmed": {
+          "eventsBefore": 4,
+          "eventsAfter": 4,
+          "entitiesBefore": 10,
+          "entitiesAfter": 10
+        },
+        "vectorizeQueued": 3,
+        "edges": {
+          "total": 7,
+          "newCount": 1,
+          "reinforcedCount": 0,
+          "prunedCount": 0,
+          "topNew": [
+            {
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "陆沉",
+              "fact": "Guan Yu spars with Lu Chen on the mountain path every dawn",
+              "episodeCount": 1,
+              "isNew": true
+            }
+          ]
+        }
+      },
+      "engramMemory": {
+        "events": [
+          {
+            "id": "evt_muyrtkyo_4fzyo8",
+            "subject": "陆沉",
+            "action": "narrative",
+            "tags": [
+              "narrative"
+            ],
+            "text": "陆沉在山道上遇到了一口古井和一位隐士，隐士讲起古井的来历。",
+            "summary": "陆沉在山道上遇到了一口古井和一位隐士，隐士讲起古井的来历(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉) 陆沉在山道上遇到了一口古井和一位隐士，隐士讲起古井的来历。",
+            "structured_kv": {
+              "event": "陆沉在山道上遇到了一口古井和一位隐士，隐士讲起古井的来历",
+              "role": [
+                "陆沉"
+              ],
+              "location": [
+                "青石镇"
+              ],
+              "time_anchor": "1年3月5日 14:20",
+              "causality": "承接",
+              "logic": []
+            },
+            "is_embedded": true,
+            "time": "1年3月5日 14:20",
+            "location": "青石镇",
+            "roundNumber": 1,
+            "mentionedEntities": [
+              "陆沉"
+            ],
+            "midTermSummary": "陆沉在山道遇到古井与隐士。"
+          },
+          {
+            "id": "evt_muyruv9c_4fzyo8",
+            "subject": "陆沉",
+            "action": "narrative",
+            "tags": [
+              "narrative"
+            ],
+            "text": "第二天，陆沉回到酒肆，Lin Nuan 问起了古井的传闻。",
+            "summary": "第二天，陆沉回到酒肆，Lin Nuan 问起了古井的传闻(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Lin Nuan) 第二天，陆沉回到酒肆，Lin Nuan 问起了古井的传闻。",
+            "structured_kv": {
+              "event": "第二天，陆沉回到酒肆，Lin Nuan 问起了古井的传闻",
+              "role": [
+                "陆沉",
+                "Lin Nuan"
+              ],
+              "location": [
+                "青石镇"
+              ],
+              "time_anchor": "1年3月5日 14:20",
+              "causality": "承接",
+              "logic": []
+            },
+            "is_embedded": true,
+            "time": "1年3月5日 14:20",
+            "location": "青石镇",
+            "roundNumber": 2,
+            "mentionedEntities": [
+              "陆沉",
+              "Lin Nuan"
+            ],
+            "midTermSummary": "陆沉向 Lin Nuan 讲起古井。"
+          },
+          {
+            "id": "evt_muyrw5k0_4fzyo8",
+            "subject": "陆沉",
+            "action": "narrative",
+            "tags": [
+              "narrative"
+            ],
+            "text": "陆沉在酒肆里听 Guan Yu 说起了他们的约定，约定写成了设定。",
+            "summary": "陆沉在酒肆里听 Guan Yu 说起了他们的约定，约定写成了设定(承接):\n(1年3月5日 14:20 | 青石镇) 陆沉在酒肆里听 Guan Yu 说起了他们的约定，约定写成了设定。",
+            "structured_kv": {
+              "event": "陆沉在酒肆里听 Guan Yu 说起了他们的约定，约定写成了设定",
+              "role": [],
+              "location": [
+                "青石镇"
+              ],
+              "time_anchor": "1年3月5日 14:20",
+              "causality": "承接",
+              "logic": []
+            },
+            "is_embedded": true,
+            "time": "1年3月5日 14:20",
+            "location": "青石镇",
+            "roundNumber": 3,
+            "mentionedEntities": [
+              "陆沉"
+            ]
+          },
+          {
+            "id": "evt_muyrxfuo_4fzyo8",
+            "subject": "陆沉",
+            "action": "narrative",
+            "tags": [
+              "narrative"
+            ],
+            "text": "陆沉与 Guan Yu 比剑。",
+            "summary": "陆沉与 Guan Yu 比剑(承接):\n(1年3月5日 14:20 | 青石镇) 陆沉与 Guan Yu 比剑。",
+            "structured_kv": {
+              "event": "陆沉与 Guan Yu 比剑",
+              "role": [],
+              "location": [
+                "青石镇"
+              ],
+              "time_anchor": "1年3月5日 14:20",
+              "causality": "承接",
+              "logic": []
+            },
+            "is_embedded": true,
+            "time": "1年3月5日 14:20",
+            "location": "青石镇",
+            "roundNumber": 4,
+            "mentionedEntities": [
+              "陆沉"
+            ]
+          }
+        ],
+        "entities": [
+          {
+            "name": "陆沉",
+            "type": "player",
+            "attributes": {
+              "source": "event_role",
+              "lastEventId": "evt_muyruv9c_4fzyo8"
+            },
+            "firstSeen": 0,
+            "lastSeen": 4,
+            "mentionCount": 7,
+            "summary": "玩家角色",
+            "is_embedded": true
+          },
+          {
+            "name": "Lin Nuan",
+            "type": "npc",
+            "attributes": {
+              "relationToPlayer": "__undefined__",
+              "location": "青石镇",
+              "source": "event_role",
+              "lastEventId": "evt_muyruv9c_4fzyo8"
+            },
+            "firstSeen": 2,
+            "lastSeen": 2,
+            "mentionCount": 2,
+            "summary": "Runs the tavern in Qingshi town.；bright eyes, long black hair",
+            "is_embedded": true
+          },
+          {
+            "name": "Guan Yu",
+            "type": "npc",
+            "attributes": {
+              "relationToPlayer": "__undefined__",
+              "location": "__undefined__",
+              "source": "relationship"
+            },
+            "firstSeen": 0,
+            "lastSeen": 0,
+            "mentionCount": 1,
+            "summary": "A wandering swordsman.；sharp brows",
+            "is_embedded": true
+          },
+          {
+            "name": "Extra Wang",
+            "type": "npc",
+            "attributes": {
+              "relationToPlayer": "__undefined__",
+              "location": "__undefined__",
+              "source": "relationship"
+            },
+            "firstSeen": 0,
+            "lastSeen": 0,
+            "mentionCount": 1,
+            "summary": "a passer-by",
+            "is_embedded": true
+          },
+          {
+            "name": "青石镇",
+            "type": "location",
+            "attributes": {
+              "source": "event_location",
+              "lastEventId": "evt_muyrxfuo_4fzyo8"
+            },
+            "firstSeen": 1,
+            "lastSeen": 4,
+            "mentionCount": 8,
+            "summary": "",
+            "is_embedded": true
+          },
+          {
+            "name": "Old Hermit",
+            "type": "npc",
+            "summary": "a hermit the player wrote down",
+            "attributes": {},
+            "firstSeen": 0,
+            "lastSeen": 4,
+            "mentionCount": 0,
+            "is_embedded": true,
+            "source": "user",
+            "userEditedAtRound": 0
+          },
+          {
+            "name": "Old Well",
+            "type": "npc",
+            "summary": "",
+            "attributes": {},
+            "firstSeen": 1,
+            "lastSeen": 4,
+            "mentionCount": 1,
+            "is_embedded": true,
+            "_pendingEnrichment": true
+          },
+          {
+            "name": "Stranger One",
+            "type": "npc",
+            "summary": "",
+            "attributes": {},
+            "firstSeen": 1,
+            "lastSeen": 4,
+            "mentionCount": 1,
+            "is_embedded": true,
+            "_pendingEnrichment": true
+          },
+          {
+            "name": "Stranger Two",
+            "type": "npc",
+            "summary": "",
+            "attributes": {},
+            "firstSeen": 1,
+            "lastSeen": 4,
+            "mentionCount": 1,
+            "is_embedded": true,
+            "_pendingEnrichment": true
+          },
+          {
+            "name": "林月",
+            "type": "location",
+            "summary": "",
+            "attributes": {},
+            "firstSeen": 3,
+            "lastSeen": 4,
+            "mentionCount": 1,
+            "is_embedded": true,
+            "_pendingEnrichment": true
+          }
+        ],
+        "relations": [],
+        "v2Edges": [
+          {
+            "id": "guan yu|陆沉|guanyusparswithluchenonthemountainpathev",
+            "sourceEntity": "Guan Yu",
+            "targetEntity": "陆沉",
+            "fact": "Guan Yu spars with Lu Chen on the mountain path every dawn",
+            "episodes": [
+              "evt_muyrxfuo_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 4,
+            "lastSeenRound": 4,
+            "learnedAtRound": 4,
+            "core": true,
+            "source": "opening",
+            "canonEntryId": "__undefined__"
+          },
+          {
+            "id": "guan yu|陆沉|guanyuistheswornbrotherofluchen",
+            "sourceEntity": "Guan Yu",
+            "targetEntity": "陆沉",
+            "fact": "Guan Yu is the sworn brother of Lu Chen",
+            "episodes": [
+              "evt_muyrw5k0_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 3,
+            "lastSeenRound": 3,
+            "learnedAtRound": 3,
+            "core": true,
+            "source": "user-canon",
+            "canonEntryId": "canon_1"
+          },
+          {
+            "id": "林月|陆沉|林月是玩家的妹妹",
+            "sourceEntity": "林月",
+            "targetEntity": "陆沉",
+            "fact": "林月是玩家的妹妹",
+            "episodes": [
+              "evt_muyrw5k0_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 3,
+            "lastSeenRound": 3,
+            "learnedAtRound": 3,
+            "core": true,
+            "source": "user-canon",
+            "canonEntryId": "canon_2"
+          },
+          {
+            "id": "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw",
+            "sourceEntity": "Lin Nuan",
+            "targetEntity": "Old Well",
+            "fact": "Lin Nuan asks Lu Chen about the rumour of the old well",
+            "episodes": [
+              "evt_muyruv9c_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 2,
+            "lastSeenRound": 2,
+            "learnedAtRound": 2,
+            "core": "__undefined__",
+            "source": "__undefined__",
+            "canonEntryId": "__undefined__"
+          },
+          {
+            "id": "old well|陆沉|theoldwellliesonthemountainpathwhereluch",
+            "sourceEntity": "Old Well",
+            "targetEntity": "陆沉",
+            "fact": "The Old Well lies on the mountain path where Lu Chen met the hermit",
+            "episodes": [
+              "evt_muyrtkyo_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 1,
+            "lastSeenRound": 1,
+            "learnedAtRound": 1,
+            "core": "__undefined__",
+            "source": "__undefined__",
+            "canonEntryId": "__undefined__"
+          },
+          {
+            "id": "stranger one|stranger two|astrangermeetsanotherstrangerontheroad",
+            "sourceEntity": "Stranger One",
+            "targetEntity": "Stranger Two",
+            "fact": "A stranger meets another stranger on the road",
+            "episodes": [
+              "evt_muyrtkyo_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 1,
+            "lastSeenRound": 1,
+            "learnedAtRound": 1,
+            "core": "__undefined__",
+            "source": "__undefined__",
+            "canonEntryId": "__undefined__"
+          },
+          {
+            "id": "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory",
+            "sourceEntity": "Old Hermit",
+            "targetEntity": "Old Well",
+            "fact": "Old Hermit guards the secret of the old well for years",
+            "episodes": [
+              "evt_muyrtkyo_4fzyo8"
+            ],
+            "is_embedded": true,
+            "createdAtRound": 1,
+            "lastSeenRound": 1,
+            "learnedAtRound": 1,
+            "core": "__undefined__",
+            "source": "__undefined__",
+            "canonEntryId": "__undefined__"
+          }
+        ],
+        "meta": {
+          "lastUpdated": 1791417840000,
+          "eventCount": 4,
+          "embeddedEventCount": 4,
+          "embeddedEntityCount": 10,
+          "schemaVersion": 5,
+          "v2PendingReview": null
+        }
+      },
+      "memory": "<unchanged since the previous step>",
+      "vectorRows": [
+        [
+          "engram_vectors_prof_m_slot_m",
+          {
+            "eventVectors": {
+              "evt_muyrtkyo_4fzyo8": {
+                "dim": 384,
+                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+              },
+              "evt_muyruv9c_4fzyo8": {
+                "dim": 384,
+                "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
+              },
+              "evt_muyrw5k0_4fzyo8": {
+                "dim": 384,
+                "sha256": "1c9396c6e96a407266b3efe776c0bd39112a09da2393dc164e1b8c43171dcf38"
+              },
+              "evt_muyrxfuo_4fzyo8": {
+                "dim": 384,
+                "sha256": "c76ba08f2a19e25558de85acfbe457a8c82a9b80571ddc4f5274be3c306df173"
+              }
+            },
+            "entityVectors": {
+              "陆沉": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Lin Nuan": {
+                "dim": 384,
+                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+              },
+              "Guan Yu": {
+                "dim": 384,
+                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+              },
+              "青石镇": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Old Hermit": {
+                "dim": 384,
+                "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
+              },
+              "Old Well": {
+                "dim": 384,
+                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+              },
+              "Stranger One": {
+                "dim": 384,
+                "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
+              },
+              "Stranger Two": {
+                "dim": 384,
+                "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
+              },
+              "林月": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Extra Wang": {
+                "dim": 384,
+                "sha256": "aa00682e52c63382e51b103df87cfb21fe2384a8dfbb23235a01a32d57aeaf82"
+              }
+            },
+            "edgeVectors": {
+              "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "dim": 384,
+                "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
+              },
+              "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "dim": 384,
+                "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
+              },
+              "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "dim": 384,
+                "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
+              },
+              "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
+                "dim": 384,
+                "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
+              },
+              "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
+                "dim": 384,
+                "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
+              },
+              "林月|陆沉|林月是玩家的妹妹": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "guan yu|陆沉|guanyusparswithluchenonthemountainpathev": {
+                "dim": 384,
+                "sha256": "160b1a2528c19270fce2c01a3decfdb369f49a3be12710e36c68281a3ce0eee8"
+              }
+            },
+            "model": "unknown",
+            "dim": 384
+          }
+        ]
+      ],
+      "vectorCalls": [
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "set",
+          "key": "engram_vectors_prof_m_slot_m",
+          "value": {
+            "eventVectors": {
+              "evt_muyrtkyo_4fzyo8": {
+                "dim": 384,
+                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+              },
+              "evt_muyruv9c_4fzyo8": {
+                "dim": 384,
+                "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
+              },
+              "evt_muyrw5k0_4fzyo8": {
+                "dim": 384,
+                "sha256": "1c9396c6e96a407266b3efe776c0bd39112a09da2393dc164e1b8c43171dcf38"
+              },
+              "evt_muyrxfuo_4fzyo8": {
+                "dim": 384,
+                "sha256": "c76ba08f2a19e25558de85acfbe457a8c82a9b80571ddc4f5274be3c306df173"
+              }
+            },
+            "entityVectors": {
+              "陆沉": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Lin Nuan": {
+                "dim": 384,
+                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+              },
+              "Guan Yu": {
+                "dim": 384,
+                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+              },
+              "青石镇": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Old Hermit": {
+                "dim": 384,
+                "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
+              },
+              "Old Well": {
+                "dim": 384,
+                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+              },
+              "Stranger One": {
+                "dim": 384,
+                "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
+              },
+              "Stranger Two": {
+                "dim": 384,
+                "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
+              },
+              "林月": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              }
+            },
+            "edgeVectors": {
+              "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "dim": 384,
+                "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
+              },
+              "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "dim": 384,
+                "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
+              },
+              "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "dim": 384,
+                "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
+              },
+              "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
+                "dim": 384,
+                "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
+              },
+              "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
+                "dim": 384,
+                "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
+              },
+              "林月|陆沉|林月是玩家的妹妹": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              }
+            },
+            "model": "unknown",
+            "dim": 384
+          }
+        },
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "set",
+          "key": "engram_vectors_prof_m_slot_m",
+          "value": {
+            "eventVectors": {
+              "evt_muyrtkyo_4fzyo8": {
+                "dim": 384,
+                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+              },
+              "evt_muyruv9c_4fzyo8": {
+                "dim": 384,
+                "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
+              },
+              "evt_muyrw5k0_4fzyo8": {
+                "dim": 384,
+                "sha256": "1c9396c6e96a407266b3efe776c0bd39112a09da2393dc164e1b8c43171dcf38"
+              },
+              "evt_muyrxfuo_4fzyo8": {
+                "dim": 384,
+                "sha256": "c76ba08f2a19e25558de85acfbe457a8c82a9b80571ddc4f5274be3c306df173"
+              }
+            },
+            "entityVectors": {
+              "陆沉": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Lin Nuan": {
+                "dim": 384,
+                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+              },
+              "Guan Yu": {
+                "dim": 384,
+                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+              },
+              "青石镇": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Old Hermit": {
+                "dim": 384,
+                "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
+              },
+              "Old Well": {
+                "dim": 384,
+                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+              },
+              "Stranger One": {
+                "dim": 384,
+                "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
+              },
+              "Stranger Two": {
+                "dim": 384,
+                "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
+              },
+              "林月": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Extra Wang": {
+                "dim": 384,
+                "sha256": "aa00682e52c63382e51b103df87cfb21fe2384a8dfbb23235a01a32d57aeaf82"
+              }
+            },
+            "edgeVectors": {
+              "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "dim": 384,
+                "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
+              },
+              "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "dim": 384,
+                "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
+              },
+              "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "dim": 384,
+                "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
+              },
+              "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
+                "dim": 384,
+                "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
+              },
+              "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
+                "dim": 384,
+                "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
+              },
+              "林月|陆沉|林月是玩家的妹妹": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              }
+            },
+            "model": "unknown",
+            "dim": 384
+          }
+        },
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "set",
+          "key": "engram_vectors_prof_m_slot_m",
+          "value": {
+            "eventVectors": {
+              "evt_muyrtkyo_4fzyo8": {
+                "dim": 384,
+                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+              },
+              "evt_muyruv9c_4fzyo8": {
+                "dim": 384,
+                "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
+              },
+              "evt_muyrw5k0_4fzyo8": {
+                "dim": 384,
+                "sha256": "1c9396c6e96a407266b3efe776c0bd39112a09da2393dc164e1b8c43171dcf38"
+              },
+              "evt_muyrxfuo_4fzyo8": {
+                "dim": 384,
+                "sha256": "c76ba08f2a19e25558de85acfbe457a8c82a9b80571ddc4f5274be3c306df173"
+              }
+            },
+            "entityVectors": {
+              "陆沉": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Lin Nuan": {
+                "dim": 384,
+                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+              },
+              "Guan Yu": {
+                "dim": 384,
+                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+              },
+              "青石镇": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Old Hermit": {
+                "dim": 384,
+                "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
+              },
+              "Old Well": {
+                "dim": 384,
+                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+              },
+              "Stranger One": {
+                "dim": 384,
+                "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
+              },
+              "Stranger Two": {
+                "dim": 384,
+                "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
+              },
+              "林月": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Extra Wang": {
+                "dim": 384,
+                "sha256": "aa00682e52c63382e51b103df87cfb21fe2384a8dfbb23235a01a32d57aeaf82"
+              }
+            },
+            "edgeVectors": {
+              "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "dim": 384,
+                "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
+              },
+              "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "dim": 384,
+                "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
+              },
+              "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "dim": 384,
+                "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
+              },
+              "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
+                "dim": 384,
+                "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
+              },
+              "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
+                "dim": 384,
+                "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
+              },
+              "林月|陆沉|林月是玩家的妹妹": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "guan yu|陆沉|guanyusparswithluchenonthemountainpathev": {
+                "dim": 384,
+                "sha256": "160b1a2528c19270fce2c01a3decfdb369f49a3be12710e36c68281a3ce0eee8"
+              }
+            },
+            "model": "unknown",
+            "dim": 384
+          }
+        }
+      ],
+      "aiCalls": [],
+      "fetchCalls": [],
+      "emits": [
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "元数据.回合序号",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.events",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.meta.embeddedEventCount",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.entities",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.meta.embeddedEntityCount",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.v2Edges",
+            "action": "set",
+            "source": "system"
+          }
+        }
+      ]
+    },
+    {
+      "label": "default pruning with a user entity",
+      "returned": {
+        "roundNumber": 1,
+        "capturedAt": 1791417660000,
+        "totalDurationMs": "<ms>",
+        "event": {
+          "eventId": "evt_muyrtkyo_4fzyo8",
+          "title": "陆沉遇到一位隐士",
+          "roles": [],
+          "location": [
+            "青石镇"
+          ],
+          "timeAnchor": "1年3月5日 14:20"
+        },
+        "entities": {
+          "total": 5,
+          "deltas": [
+            {
+              "name": "陆沉",
+              "type": "player",
+              "isNew": true,
+              "descriptionUpdated": false,
+              "mentionCount": 2
+            },
+            {
+              "name": "Lin Nuan",
+              "type": "npc",
+              "isNew": true,
+              "descriptionUpdated": false,
+              "mentionCount": 1
+            },
+            {
+              "name": "Guan Yu",
+              "type": "npc",
+              "isNew": true,
+              "descriptionUpdated": false,
+              "mentionCount": 1
+            },
+            {
+              "name": "青石镇",
+              "type": "location",
+              "isNew": true,
+              "descriptionUpdated": false,
+              "mentionCount": 2
+            },
+            {
+              "name": "Old Well",
+              "type": "npc",
+              "isNew": true,
+              "descriptionUpdated": false,
+              "mentionCount": 1
+            }
+          ]
+        },
+        "relations": {
+          "total": 0,
+          "deltas": []
+        },
+        "snapshotVersion": 2,
+        "trimmed": {
+          "eventsBefore": 1,
+          "eventsAfter": 1,
+          "entitiesBefore": 5,
+          "entitiesAfter": 5
+        },
+        "vectorizeQueued": 6,
+        "edges": "__undefined__"
+      },
+      "engramMemory": {
+        "events": [
+          {
+            "id": "evt_muyrtkyo_4fzyo8",
+            "subject": "陆沉",
+            "action": "narrative",
+            "tags": [
+              "narrative"
+            ],
+            "text": "陆沉遇到一位隐士。",
+            "summary": "陆沉遇到一位隐士(承接):\n(1年3月5日 14:20 | 青石镇) 陆沉遇到一位隐士。",
+            "structured_kv": {
+              "event": "陆沉遇到一位隐士",
+              "role": [],
+              "location": [
+                "青石镇"
+              ],
+              "time_anchor": "1年3月5日 14:20",
+              "causality": "承接",
+              "logic": []
+            },
+            "is_embedded": true,
+            "time": "1年3月5日 14:20",
+            "location": "青石镇",
+            "roundNumber": 1,
+            "mentionedEntities": [
+              "陆沉"
+            ]
+          }
+        ],
+        "entities": [
+          {
+            "name": "陆沉",
+            "type": "player",
+            "attributes": {},
+            "firstSeen": 0,
+            "lastSeen": 1,
+            "mentionCount": 2,
+            "summary": "玩家角色",
+            "is_embedded": true
+          },
+          {
+            "name": "Lin Nuan",
+            "type": "npc",
+            "attributes": {
+              "relationToPlayer": "__undefined__",
+              "location": "青石镇",
+              "source": "relationship"
+            },
+            "firstSeen": 0,
+            "lastSeen": 0,
+            "mentionCount": 1,
+            "summary": "Runs the tavern in Qingshi town.；bright eyes, long black hair",
+            "is_embedded": true
+          },
+          {
+            "name": "Guan Yu",
+            "type": "npc",
+            "attributes": {
+              "relationToPlayer": "__undefined__",
+              "location": "__undefined__",
+              "source": "relationship"
+            },
+            "firstSeen": 0,
+            "lastSeen": 0,
+            "mentionCount": 1,
+            "summary": "A wandering swordsman.；sharp brows",
+            "is_embedded": true
+          },
+          {
+            "name": "青石镇",
+            "type": "location",
+            "attributes": {
+              "source": "event_location",
+              "lastEventId": "evt_muyrtkyo_4fzyo8"
+            },
+            "firstSeen": 1,
+            "lastSeen": 1,
+            "mentionCount": 2,
+            "summary": "",
+            "is_embedded": true
+          },
+          {
+            "name": "Old Well",
+            "type": "npc",
+            "summary": "",
+            "attributes": {},
+            "firstSeen": 1,
+            "lastSeen": 1,
+            "mentionCount": 1,
+            "is_embedded": true,
+            "_pendingEnrichment": true
+          }
+        ],
+        "relations": [],
+        "v2Edges": [],
+        "meta": {
+          "lastUpdated": 1791417660000,
+          "eventCount": 1,
+          "embeddedEventCount": 1,
+          "embeddedEntityCount": 5,
+          "schemaVersion": 5,
+          "v2PendingReview": null
+        }
+      },
+      "memory": {
+        "短期": [],
+        "中期": [],
+        "长期": [],
+        "隐式中期": []
+      },
+      "vectorRows": [
+        [
+          "engram_vectors_prof_m_slot_m",
+          {
+            "eventVectors": {
+              "evt_muyrtkyo_4fzyo8": {
+                "dim": 384,
+                "sha256": "1e84e5788bf5e989b3f4389c936254e6a2dddfc835b37bd03be1d627bc0e1d90"
+              }
+            },
+            "entityVectors": {
+              "陆沉": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Lin Nuan": {
+                "dim": 384,
+                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+              },
+              "Guan Yu": {
+                "dim": 384,
+                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+              },
+              "青石镇": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Old Well": {
+                "dim": 384,
+                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+              }
+            },
+            "edgeVectors": {},
+            "model": "unknown",
+            "dim": 384
+          }
+        ]
+      ],
+      "vectorCalls": [
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "set",
+          "key": "engram_vectors_prof_m_slot_m",
+          "value": {
+            "eventVectors": {
+              "evt_muyrtkyo_4fzyo8": {
+                "dim": 384,
+                "sha256": "1e84e5788bf5e989b3f4389c936254e6a2dddfc835b37bd03be1d627bc0e1d90"
+              }
+            },
+            "entityVectors": {},
+            "edgeVectors": {},
+            "model": "unknown",
+            "dim": 384
+          }
+        },
+        {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
+          "op": "set",
+          "key": "engram_vectors_prof_m_slot_m",
+          "value": {
+            "eventVectors": {
+              "evt_muyrtkyo_4fzyo8": {
+                "dim": 384,
+                "sha256": "1e84e5788bf5e989b3f4389c936254e6a2dddfc835b37bd03be1d627bc0e1d90"
+              }
+            },
+            "entityVectors": {
+              "陆沉": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Lin Nuan": {
+                "dim": 384,
+                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+              },
+              "Guan Yu": {
+                "dim": 384,
+                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+              },
+              "青石镇": {
+                "dim": 384,
+                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+              },
+              "Old Well": {
+                "dim": 384,
+                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+              }
+            },
+            "edgeVectors": {},
+            "model": "unknown",
+            "dim": 384
+          }
+        }
+      ],
+      "aiCalls": [],
+      "fetchCalls": [],
+      "emits": [
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "type": "load"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "元数据.回合序号",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.events",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.meta.embeddedEventCount",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.entities",
+            "action": "set",
+            "source": "system"
+          }
+        },
+        {
+          "event": "engine:state-changed",
+          "payload": {
+            "path": "系统.扩展.engramMemory.meta.embeddedEntityCount",
+            "action": "set",
+            "source": "system"
+          }
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:",
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:",
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:",
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:",
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:",
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:",
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:",
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:"
+  ]
+}

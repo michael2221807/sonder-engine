@@ -1,0 +1,1486 @@
+{
+  "normalReply": {
+    "label": "after run",
+    "result": {
+      "ok": {
+        "created": 2,
+        "skipped": 3,
+        "skippedDetails": [
+          {
+            "input": {
+              "source_entity": "Ghost",
+              "target_entity": "Lin Nuan",
+              "fact": "Ghost is not anywhere in the world data at all"
+            },
+            "reason": "endpoint_unknown"
+          },
+          {
+            "input": {
+              "source_entity": "Guan Yu",
+              "target_entity": "后山",
+              "fact": "too short"
+            },
+            "reason": "fact_too_short"
+          },
+          {
+            "input": {
+              "source_entity": "Guan Yu",
+              "target_entity": "Nowhere",
+              "fact": "Guan Yu hides a sword somewhere that is not a place"
+            },
+            "reason": "endpoint_unknown"
+          }
+        ],
+        "alreadyComplete": false
+      }
+    },
+    "progress": [
+      "scanning",
+      "generating",
+      "applying",
+      "done"
+    ],
+    "engramMemory": {
+      "events": [],
+      "entities": [
+        {
+          "name": "陆沉",
+          "type": "player",
+          "summary": "玩家角色",
+          "attributes": {},
+          "firstSeen": 0,
+          "lastSeen": 3,
+          "mentionCount": 1,
+          "is_embedded": true
+        },
+        {
+          "name": "Lin Nuan",
+          "type": "npc",
+          "summary": "bright eyes, long black hair",
+          "attributes": {},
+          "firstSeen": 1,
+          "lastSeen": 3,
+          "mentionCount": 2,
+          "is_embedded": true
+        },
+        {
+          "name": "Gone NPC",
+          "type": "npc",
+          "summary": "",
+          "attributes": {},
+          "firstSeen": 1,
+          "lastSeen": 2,
+          "mentionCount": 1,
+          "is_embedded": true,
+          "_pendingEnrichment": true
+        },
+        {
+          "name": "Guan Yu",
+          "type": "npc",
+          "summary": "sharp brows",
+          "attributes": {},
+          "firstSeen": 3,
+          "lastSeen": 3,
+          "mentionCount": 0,
+          "is_embedded": true,
+          "source": "user"
+        },
+        {
+          "name": "Silent Monk",
+          "type": "npc",
+          "summary": "A monk who has taken a vow of silence and lives in the temple.",
+          "attributes": {},
+          "firstSeen": 3,
+          "lastSeen": 3,
+          "mentionCount": 0,
+          "is_embedded": true,
+          "source": "user"
+        },
+        {
+          "name": "青石镇",
+          "type": "location",
+          "summary": "山脚下的小镇，酒肆与药铺并立。",
+          "attributes": {},
+          "firstSeen": 3,
+          "lastSeen": 3,
+          "mentionCount": 0,
+          "is_embedded": true,
+          "source": "user"
+        },
+        {
+          "name": "后山",
+          "type": "location",
+          "summary": "终年云雾的山林。",
+          "attributes": {},
+          "firstSeen": 3,
+          "lastSeen": 3,
+          "mentionCount": 0,
+          "is_embedded": true,
+          "source": "user"
+        }
+      ],
+      "relations": [],
+      "v2Edges": [
+        {
+          "id": "edge_gone",
+          "sourceEntity": "Gone NPC",
+          "targetEntity": "陆沉",
+          "fact": "Gone NPC once travelled with Lu Chen on the road",
+          "episodes": [],
+          "is_embedded": true,
+          "createdAtRound": 1,
+          "lastSeenRound": 2,
+          "invalidAtRound": 3,
+          "temporalStatus": "historical"
+        },
+        {
+          "id": "edge_ok",
+          "sourceEntity": "Lin Nuan",
+          "targetEntity": "陆沉",
+          "fact": "Lin Nuan serves tea to Lu Chen at the tavern",
+          "episodes": [],
+          "is_embedded": true,
+          "createdAtRound": 1,
+          "lastSeenRound": 3
+        },
+        {
+          "id": "silent monk|青石镇|silentmonkmeditatesintheqingshitowntempl",
+          "sourceEntity": "Silent Monk",
+          "targetEntity": "青石镇",
+          "fact": "Silent Monk meditates in the Qingshi town temple every dawn",
+          "episodes": [],
+          "is_embedded": true,
+          "createdAtRound": 3,
+          "lastSeenRound": 3,
+          "learnedAtRound": 3,
+          "core": false,
+          "source": "batch-sync"
+        },
+        {
+          "id": "guan yu|lin nuan|guanyudrinksatthetavernthatlinnuanruns",
+          "sourceEntity": "Guan Yu",
+          "targetEntity": "Lin Nuan",
+          "fact": "Guan Yu drinks at the tavern that Lin Nuan runs",
+          "episodes": [],
+          "is_embedded": true,
+          "createdAtRound": 3,
+          "lastSeenRound": 3,
+          "learnedAtRound": 3,
+          "core": false,
+          "source": "batch-sync"
+        }
+      ],
+      "meta": {
+        "lastUpdated": 1791417780000,
+        "eventCount": 0,
+        "embeddedEventCount": 0,
+        "embeddedEntityCount": 7,
+        "schemaVersion": 5,
+        "v2PendingReview": null
+      }
+    },
+    "memory": {
+      "短期": [
+        {
+          "round": 1,
+          "summary": "陆沉走进酒肆",
+          "timestamp": 1
+        },
+        {
+          "内容": "第二条短期记忆"
+        },
+        "第三条短期记忆"
+      ],
+      "中期": [],
+      "长期": [],
+      "隐式中期": []
+    },
+    "vectorRows": [
+      [
+        "engram_vectors_prof_m_slot_m",
+        {
+          "eventVectors": {},
+          "entityVectors": {
+            "Lin Nuan": {
+              "dim": 384,
+              "sha256": "48ec0d832af3536afcd51513cf6a2fbbc61dd97ed07408841faa0def74bc0808"
+            },
+            "Gone NPC": {
+              "dim": 384,
+              "sha256": "7dd081e8100715491ed5e26511950700afb1a82964a5c7329ab7367e5d9413a1"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "96b4e32f7bf3ea00abe308033e433bdccca4cd279e505ef82d300ee5fc2e8821"
+            },
+            "Silent Monk": {
+              "dim": 384,
+              "sha256": "7730853b4534638e971a6b7bb1f3aeacca369c2fd118a59a485be0ecec157e34"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "89980358675c91c7b753cee78f758267787408588b153f73d5bca4c43c8042f9"
+            },
+            "后山": {
+              "dim": 384,
+              "sha256": "a6007947a965c23982092317447370cd091d0014164e7727e1e26de85903a248"
+            }
+          },
+          "edgeVectors": {
+            "silent monk|青石镇|silentmonkmeditatesintheqingshitowntempl": {
+              "dim": 384,
+              "sha256": "f9edbedd951b7e674653effbef3eeaf8c7b74a1a9e02d7e589fc02c08a711b67"
+            },
+            "guan yu|lin nuan|guanyudrinksatthetavernthatlinnuanruns": {
+              "dim": 384,
+              "sha256": "2a51720c3be9ed047d8e68bbbe916dce8995cf48aae026efa5a3e72b8f4e4bf3"
+            }
+          },
+          "model": "unknown",
+          "dim": 384
+        }
+      ]
+    ],
+    "vectorCalls": [
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {},
+          "entityVectors": {
+            "Lin Nuan": {
+              "dim": 384,
+              "sha256": "48ec0d832af3536afcd51513cf6a2fbbc61dd97ed07408841faa0def74bc0808"
+            },
+            "Gone NPC": {
+              "dim": 384,
+              "sha256": "7dd081e8100715491ed5e26511950700afb1a82964a5c7329ab7367e5d9413a1"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "96b4e32f7bf3ea00abe308033e433bdccca4cd279e505ef82d300ee5fc2e8821"
+            },
+            "Silent Monk": {
+              "dim": 384,
+              "sha256": "7730853b4534638e971a6b7bb1f3aeacca369c2fd118a59a485be0ecec157e34"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "89980358675c91c7b753cee78f758267787408588b153f73d5bca4c43c8042f9"
+            },
+            "后山": {
+              "dim": 384,
+              "sha256": "a6007947a965c23982092317447370cd091d0014164e7727e1e26de85903a248"
+            }
+          },
+          "edgeVectors": {},
+          "model": "unknown",
+          "dim": 384
+        }
+      },
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {},
+          "entityVectors": {
+            "Lin Nuan": {
+              "dim": 384,
+              "sha256": "48ec0d832af3536afcd51513cf6a2fbbc61dd97ed07408841faa0def74bc0808"
+            },
+            "Gone NPC": {
+              "dim": 384,
+              "sha256": "7dd081e8100715491ed5e26511950700afb1a82964a5c7329ab7367e5d9413a1"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "96b4e32f7bf3ea00abe308033e433bdccca4cd279e505ef82d300ee5fc2e8821"
+            },
+            "Silent Monk": {
+              "dim": 384,
+              "sha256": "7730853b4534638e971a6b7bb1f3aeacca369c2fd118a59a485be0ecec157e34"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "89980358675c91c7b753cee78f758267787408588b153f73d5bca4c43c8042f9"
+            },
+            "后山": {
+              "dim": 384,
+              "sha256": "a6007947a965c23982092317447370cd091d0014164e7727e1e26de85903a248"
+            }
+          },
+          "edgeVectors": {
+            "silent monk|青石镇|silentmonkmeditatesintheqingshitowntempl": {
+              "dim": 384,
+              "sha256": "f9edbedd951b7e674653effbef3eeaf8c7b74a1a9e02d7e589fc02c08a711b67"
+            },
+            "guan yu|lin nuan|guanyudrinksatthetavernthatlinnuanruns": {
+              "dim": 384,
+              "sha256": "2a51720c3be9ed047d8e68bbbe916dce8995cf48aae026efa5a3e72b8f4e4bf3"
+            }
+          },
+          "model": "unknown",
+          "dim": 384
+        }
+      }
+    ],
+    "aiCalls": [
+      {
+        "messages": [
+          {
+            "role": "system",
+            "content": "JAILBREAK TEXT"
+          },
+          {
+            "role": "system",
+            "content": "## 当前游戏状态\n\n```json\n{\"元数据\":{\"回合序号\":3},\"角色\":{\"基础信息\":{\"姓名\":\"陆沉\",\"当前位置\":\"青石镇\"}},\"世界\":{\"时间\":{\"年\":1,\"月\":3,\"日\":5,\"小时\":14,\"分钟\":20},\"地点信息\":[{\"名称\":\"青石镇\",\"描述\":\"山脚下的小镇，酒肆与药铺并立。\",\"连接\":[\"后山\"],\"NPC\":[\"Lin Nuan\"]},{\"名称\":\"后山\",\"描述\":\"终年云雾的山林。\"}]},\"社交\":{\"关系\":[{\"名称\":\"Lin Nuan\",\"类型\":\"重点\",\"背景\":\"Runs the tavern in Qingshi town.\",\"外貌描述\":\"bright eyes, long black hair\",\"描述\":\"tavern owner\",\"位置\":\"青石镇\"},{\"名称\":\"Guan Yu\",\"类型\":\"重点\",\"背景\":\"A wandering swordsman.\",\"外貌描述\":\"sharp brows\",\"描述\":\"swordsman\"},{\"名称\":\"Extra Wang\",\"类型\":\"普通\",\"描述\":\"a passer-by\"},{\"名称\":\"Silent Monk\",\"类型\":\"重点\"}]},\"记忆\":{},\"系统\":{\"扩展\":{}}}\n```\n\n## 记忆摘要\n\n### 短期记忆（最近对话）\n1. 陆沉走进酒肆\n2. undefined\n3. undefined"
+          },
+          {
+            "role": "user",
+            "content": "<玩家输入>\n去酒肆看看\n</玩家输入>"
+          },
+          {
+            "role": "assistant",
+            "content": "<叙事正文>\n陆沉走进了酒肆。\n</叙事正文>"
+          },
+          {
+            "role": "user",
+            "content": "<玩家输入>\n和老板娘聊聊\n</玩家输入>"
+          },
+          {
+            "role": "assistant",
+            "content": "<叙事正文>\nLin Nuan 笑着迎了上来。\n</叙事正文>"
+          },
+          {
+            "role": "user",
+            "content": "<Engram补全任务>\n\n## 任务一：生成关系知识边\n\n以下实体缺少知识边。请根据上方 GAME_STATE_JSON 中的世界数据为它们生成关系事实。\n\n重点参考：\n- NPC 的「背景」字段中的家庭/师徒/出身地关系\n- NPC 的「关系网变量」字段中已声明的 NPC↔NPC 关系\n- NPC 的「关系状态」和「位置」\n- 地点的「连接」字段中的相邻/隶属关系\n- 地点的「NPC」字段中的常驻 NPC\n\n需要补全的实体：\n\nNPC：\n- Guan Yu\n- Silent Monk\n\n地点：\n- 青石镇\n- 后山\n\n## 已有知识边（不要生成重复或高度相似的）\n\nGone NPC → 陆沉: Gone NPC once travelled with Lu Chen on the road\nLin Nuan → 陆沉: Lin Nuan serves tea to Lu Chen at the tavern\n\n## 任务二：补全实体描述（必须完成，不可遗漏）\n\n以下 1 个实体在游戏数据中没有描述，需要你根据上下文推断并生成。\nentity_descriptions 数组必须包含恰好 1 项，每项对应下方一个实体。\n\n- Silent Monk\n\n## 输出格式\n\n仅输出一个 JSON 对象：\n{\n  \"knowledge_facts\": [{\"source_entity\": \"实体A\", \"target_entity\": \"实体B\", \"fact\": \"15-40字关系描述\"}],\n  \"entity_descriptions\": [{\"name\": \"实体名\", \"summary\": \"20-50字描述\"}]\n}\n\n## 约束\n\n1. source_entity 和 target_entity 必须是 GAME_STATE_JSON 中存在的名称\n2. 仅基于已有数据推导，不编造不在数据中的关系\n3. fact 必须是 15-40 字的自然语言句子\n4. 每个缺失 NPC 生成 1-3 条边（优先与玩家角色的关系）\n5. 每个缺失地点生成 0-2 条边（与常驻 NPC 或相邻地点的关联）\n6. entity_descriptions 必须包含 1 项，不可省略\n\n直接输出 JSON，不要解释。\n</Engram补全任务>"
+          }
+        ],
+        "stream": false,
+        "usageType": "engram_batch_solidify",
+        "temperature": 0.3
+      }
+    ],
+    "fetchCalls": [],
+    "emits": [
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "type": "load"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "元数据.回合序号",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.entities",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.meta.embeddedEntityCount",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.v2Edges",
+          "action": "set",
+          "source": "system"
+        }
+      }
+    ]
+  },
+  "normalReplyRunAgain": {
+    "label": "second run",
+    "result": {
+      "ok": {
+        "created": 0,
+        "skipped": 5,
+        "skippedDetails": [
+          {
+            "input": {
+              "source_entity": "Ghost",
+              "target_entity": "Lin Nuan",
+              "fact": "Ghost is not anywhere in the world data at all"
+            },
+            "reason": "endpoint_unknown"
+          },
+          {
+            "input": {
+              "source_entity": "Guan Yu",
+              "target_entity": "后山",
+              "fact": "too short"
+            },
+            "reason": "fact_too_short"
+          },
+          {
+            "input": {
+              "source_entity": "Guan Yu",
+              "target_entity": "Nowhere",
+              "fact": "Guan Yu hides a sword somewhere that is not a place"
+            },
+            "reason": "endpoint_unknown"
+          },
+          {
+            "input": {
+              "sourceEntity": "Silent Monk",
+              "targetEntity": "青石镇",
+              "fact": "Silent Monk meditates in the Qingshi town temple every dawn"
+            },
+            "reason": "edge_exists"
+          },
+          {
+            "input": {
+              "sourceEntity": "Guan Yu",
+              "targetEntity": "Lin Nuan",
+              "fact": "Guan Yu drinks at the tavern that Lin Nuan runs"
+            },
+            "reason": "edge_exists"
+          }
+        ],
+        "alreadyComplete": false
+      }
+    },
+    "progress": [
+      "scanning",
+      "generating",
+      "applying",
+      "done"
+    ],
+    "engramMemory": "<unchanged since the previous step>",
+    "memory": "<unchanged since the previous step>",
+    "vectorRows": "<unchanged since the previous step>",
+    "vectorCalls": [],
+    "aiCalls": [
+      {
+        "messages": [
+          {
+            "role": "system",
+            "content": "JAILBREAK TEXT"
+          },
+          {
+            "role": "system",
+            "content": "## 当前游戏状态\n\n```json\n{\"元数据\":{\"回合序号\":4},\"角色\":{\"基础信息\":{\"姓名\":\"陆沉\",\"当前位置\":\"青石镇\"}},\"世界\":{\"时间\":{\"年\":1,\"月\":3,\"日\":5,\"小时\":14,\"分钟\":20},\"地点信息\":[{\"名称\":\"青石镇\",\"描述\":\"山脚下的小镇，酒肆与药铺并立。\",\"连接\":[\"后山\"],\"NPC\":[\"Lin Nuan\"]},{\"名称\":\"后山\",\"描述\":\"终年云雾的山林。\"}]},\"社交\":{\"关系\":[{\"名称\":\"Lin Nuan\",\"类型\":\"重点\",\"背景\":\"Runs the tavern in Qingshi town.\",\"外貌描述\":\"bright eyes, long black hair\",\"描述\":\"tavern owner\",\"位置\":\"青石镇\"},{\"名称\":\"Guan Yu\",\"类型\":\"重点\",\"背景\":\"A wandering swordsman.\",\"外貌描述\":\"sharp brows\",\"描述\":\"swordsman\"},{\"名称\":\"Extra Wang\",\"类型\":\"普通\",\"描述\":\"a passer-by\"},{\"名称\":\"Silent Monk\",\"类型\":\"重点\"}]},\"记忆\":{},\"系统\":{\"扩展\":{}}}\n```\n\n## 记忆摘要\n\n### 短期记忆（最近对话）\n1. 陆沉走进酒肆\n2. undefined\n3. undefined"
+          },
+          {
+            "role": "user",
+            "content": "<玩家输入>\n去酒肆看看\n</玩家输入>"
+          },
+          {
+            "role": "assistant",
+            "content": "<叙事正文>\n陆沉走进了酒肆。\n</叙事正文>"
+          },
+          {
+            "role": "user",
+            "content": "<玩家输入>\n和老板娘聊聊\n</玩家输入>"
+          },
+          {
+            "role": "assistant",
+            "content": "<叙事正文>\nLin Nuan 笑着迎了上来。\n</叙事正文>"
+          },
+          {
+            "role": "user",
+            "content": "<Engram补全任务>\n\n## 任务一：生成关系知识边\n\n以下实体缺少知识边。请根据上方 GAME_STATE_JSON 中的世界数据为它们生成关系事实。\n\n重点参考：\n- NPC 的「背景」字段中的家庭/师徒/出身地关系\n- NPC 的「关系网变量」字段中已声明的 NPC↔NPC 关系\n- NPC 的「关系状态」和「位置」\n- 地点的「连接」字段中的相邻/隶属关系\n- 地点的「NPC」字段中的常驻 NPC\n\n需要补全的实体：\n\n地点：\n- 后山\n\n## 已有知识边（不要生成重复或高度相似的）\n\nGone NPC → 陆沉: Gone NPC once travelled with Lu Chen on the road\nLin Nuan → 陆沉: Lin Nuan serves tea to Lu Chen at the tavern\nSilent Monk → 青石镇: Silent Monk meditates in the Qingshi town temple every dawn\nGuan Yu → Lin Nuan: Guan Yu drinks at the tavern that Lin Nuan runs\n\n## 输出格式\n\n仅输出一个 JSON 对象：\n{\"knowledge_facts\": [{\"source_entity\": \"实体A\", \"target_entity\": \"实体B\", \"fact\": \"15-40字关系描述\"}]}\n\n## 约束\n\n1. source_entity 和 target_entity 必须是 GAME_STATE_JSON 中存在的名称\n2. 仅基于已有数据推导，不编造不在数据中的关系\n3. fact 必须是 15-40 字的自然语言句子\n4. 每个缺失 NPC 生成 1-3 条边（优先与玩家角色的关系）\n5. 每个缺失地点生成 0-2 条边（与常驻 NPC 或相邻地点的关联）\n6. 如果无法推导有意义的关系，knowledge_facts 可以为空数组\n\n直接输出 JSON，不要解释。\n</Engram补全任务>"
+          }
+        ],
+        "stream": false,
+        "usageType": "engram_batch_solidify",
+        "temperature": 0.3
+      }
+    ],
+    "fetchCalls": [],
+    "emits": [
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "元数据.回合序号",
+          "action": "set",
+          "source": "system"
+        }
+      }
+    ]
+  },
+  "unparseableReply": {
+    "label": "after run",
+    "result": {
+      "ok": {
+        "created": 0,
+        "skipped": 0,
+        "skippedDetails": [],
+        "alreadyComplete": false
+      }
+    },
+    "progress": [
+      "scanning",
+      "generating",
+      "done"
+    ],
+    "engramMemory": {
+      "events": [],
+      "entities": [
+        {
+          "name": "陆沉",
+          "type": "player",
+          "summary": "玩家角色",
+          "attributes": {},
+          "firstSeen": 0,
+          "lastSeen": 3,
+          "mentionCount": 1,
+          "is_embedded": true
+        },
+        {
+          "name": "Lin Nuan",
+          "type": "npc",
+          "summary": "bright eyes, long black hair",
+          "attributes": {},
+          "firstSeen": 1,
+          "lastSeen": 3,
+          "mentionCount": 2,
+          "is_embedded": false
+        },
+        {
+          "name": "Gone NPC",
+          "type": "npc",
+          "summary": "",
+          "attributes": {},
+          "firstSeen": 1,
+          "lastSeen": 2,
+          "mentionCount": 1,
+          "is_embedded": false,
+          "_pendingEnrichment": true
+        },
+        {
+          "name": "Guan Yu",
+          "type": "npc",
+          "summary": "sharp brows",
+          "attributes": {},
+          "firstSeen": 3,
+          "lastSeen": 3,
+          "mentionCount": 0,
+          "is_embedded": false,
+          "source": "user"
+        },
+        {
+          "name": "Silent Monk",
+          "type": "npc",
+          "summary": "Silent Monk",
+          "attributes": {},
+          "firstSeen": 3,
+          "lastSeen": 3,
+          "mentionCount": 0,
+          "is_embedded": false,
+          "source": "user"
+        },
+        {
+          "name": "青石镇",
+          "type": "location",
+          "summary": "山脚下的小镇，酒肆与药铺并立。",
+          "attributes": {},
+          "firstSeen": 3,
+          "lastSeen": 3,
+          "mentionCount": 0,
+          "is_embedded": false,
+          "source": "user"
+        },
+        {
+          "name": "后山",
+          "type": "location",
+          "summary": "终年云雾的山林。",
+          "attributes": {},
+          "firstSeen": 3,
+          "lastSeen": 3,
+          "mentionCount": 0,
+          "is_embedded": false,
+          "source": "user"
+        }
+      ],
+      "relations": [],
+      "v2Edges": [
+        {
+          "id": "edge_gone",
+          "sourceEntity": "Gone NPC",
+          "targetEntity": "陆沉",
+          "fact": "Gone NPC once travelled with Lu Chen on the road",
+          "episodes": [],
+          "is_embedded": true,
+          "createdAtRound": 1,
+          "lastSeenRound": 2,
+          "invalidAtRound": 3,
+          "temporalStatus": "historical"
+        },
+        {
+          "id": "edge_ok",
+          "sourceEntity": "Lin Nuan",
+          "targetEntity": "陆沉",
+          "fact": "Lin Nuan serves tea to Lu Chen at the tavern",
+          "episodes": [],
+          "is_embedded": true,
+          "createdAtRound": 1,
+          "lastSeenRound": 3
+        }
+      ],
+      "meta": {
+        "lastUpdated": 1791417780000,
+        "eventCount": 0,
+        "embeddedEventCount": 0,
+        "embeddedEntityCount": 3,
+        "schemaVersion": 5,
+        "v2PendingReview": null
+      }
+    },
+    "memory": {
+      "短期": [
+        {
+          "round": 1,
+          "summary": "陆沉走进酒肆",
+          "timestamp": 1
+        },
+        {
+          "内容": "第二条短期记忆"
+        },
+        "第三条短期记忆"
+      ],
+      "中期": [],
+      "长期": [],
+      "隐式中期": []
+    },
+    "vectorRows": [
+      [
+        "engram_vectors_prof_m_slot_m",
+        {
+          "eventVectors": {},
+          "entityVectors": {
+            "陆沉": {
+              "dim": 2,
+              "sha256": "5aaf1e183f1faf12c327dc2fb8c223022f04684c61fc34533bff62e7e572c776"
+            },
+            "Lin Nuan": {
+              "dim": 2,
+              "sha256": "463f2998327eb3a694145e6014444480b2235be84aa6cfd57871cc64f1cd816c"
+            },
+            "Gone NPC": {
+              "dim": 2,
+              "sha256": "e61b9f584dbe27741cef6e9ee440831d7d94470c0871b0871541f0308916efea"
+            }
+          },
+          "edgeVectors": {
+            "edge_gone": {
+              "dim": 2,
+              "sha256": "5aaf1e183f1faf12c327dc2fb8c223022f04684c61fc34533bff62e7e572c776"
+            },
+            "edge_ok": {
+              "dim": 2,
+              "sha256": "463f2998327eb3a694145e6014444480b2235be84aa6cfd57871cc64f1cd816c"
+            }
+          },
+          "model": "m",
+          "dim": 2
+        }
+      ]
+    ],
+    "vectorCalls": [],
+    "aiCalls": [
+      {
+        "messages": [
+          {
+            "role": "system",
+            "content": "## 当前游戏状态\n\n```json\n{\"元数据\":{\"回合序号\":3},\"角色\":{\"基础信息\":{\"姓名\":\"陆沉\",\"当前位置\":\"青石镇\"}},\"世界\":{\"时间\":{\"年\":1,\"月\":3,\"日\":5,\"小时\":14,\"分钟\":20},\"地点信息\":[{\"名称\":\"青石镇\",\"描述\":\"山脚下的小镇，酒肆与药铺并立。\",\"连接\":[\"后山\"],\"NPC\":[\"Lin Nuan\"]},{\"名称\":\"后山\",\"描述\":\"终年云雾的山林。\"}]},\"社交\":{\"关系\":[{\"名称\":\"Lin Nuan\",\"类型\":\"重点\",\"背景\":\"Runs the tavern in Qingshi town.\",\"外貌描述\":\"bright eyes, long black hair\",\"描述\":\"tavern owner\",\"位置\":\"青石镇\"},{\"名称\":\"Guan Yu\",\"类型\":\"重点\",\"背景\":\"A wandering swordsman.\",\"外貌描述\":\"sharp brows\",\"描述\":\"swordsman\"},{\"名称\":\"Extra Wang\",\"类型\":\"普通\",\"描述\":\"a passer-by\"},{\"名称\":\"Silent Monk\",\"类型\":\"重点\"}]},\"记忆\":{},\"系统\":{\"扩展\":{}}}\n```\n\n## 记忆摘要\n\n- 第二条短期记忆\n- 第三条短期记忆"
+          },
+          {
+            "role": "user",
+            "content": "<玩家输入>\n去酒肆看看\n</玩家输入>"
+          },
+          {
+            "role": "assistant",
+            "content": "<叙事正文>\n陆沉走进了酒肆。\n</叙事正文>"
+          },
+          {
+            "role": "user",
+            "content": "<玩家输入>\n和老板娘聊聊\n</玩家输入>"
+          },
+          {
+            "role": "assistant",
+            "content": "<叙事正文>\nLin Nuan 笑着迎了上来。\n</叙事正文>"
+          },
+          {
+            "role": "user",
+            "content": "<Engram补全任务>\n\n## 任务一：生成关系知识边\n\n以下实体缺少知识边。请根据上方 GAME_STATE_JSON 中的世界数据为它们生成关系事实。\n\n重点参考：\n- NPC 的「背景」字段中的家庭/师徒/出身地关系\n- NPC 的「关系网变量」字段中已声明的 NPC↔NPC 关系\n- NPC 的「关系状态」和「位置」\n- 地点的「连接」字段中的相邻/隶属关系\n- 地点的「NPC」字段中的常驻 NPC\n\n需要补全的实体：\n\nNPC：\n- Guan Yu\n- Silent Monk\n\n地点：\n- 青石镇\n- 后山\n\n## 已有知识边（不要生成重复或高度相似的）\n\nGone NPC → 陆沉: Gone NPC once travelled with Lu Chen on the road\nLin Nuan → 陆沉: Lin Nuan serves tea to Lu Chen at the tavern\n\n## 任务二：补全实体描述（必须完成，不可遗漏）\n\n以下 1 个实体在游戏数据中没有描述，需要你根据上下文推断并生成。\nentity_descriptions 数组必须包含恰好 1 项，每项对应下方一个实体。\n\n- Silent Monk\n\n## 输出格式\n\n仅输出一个 JSON 对象：\n{\n  \"knowledge_facts\": [{\"source_entity\": \"实体A\", \"target_entity\": \"实体B\", \"fact\": \"15-40字关系描述\"}],\n  \"entity_descriptions\": [{\"name\": \"实体名\", \"summary\": \"20-50字描述\"}]\n}\n\n## 约束\n\n1. source_entity 和 target_entity 必须是 GAME_STATE_JSON 中存在的名称\n2. 仅基于已有数据推导，不编造不在数据中的关系\n3. fact 必须是 15-40 字的自然语言句子\n4. 每个缺失 NPC 生成 1-3 条边（优先与玩家角色的关系）\n5. 每个缺失地点生成 0-2 条边（与常驻 NPC 或相邻地点的关联）\n6. entity_descriptions 必须包含 1 项，不可省略\n\n直接输出 JSON，不要解释。\n</Engram补全任务>"
+          }
+        ],
+        "stream": false,
+        "usageType": "engram_batch_solidify",
+        "temperature": 0.3
+      }
+    ],
+    "fetchCalls": [],
+    "emits": [
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "type": "load"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "元数据.回合序号",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      }
+    ]
+  },
+  "onlyInvalidFacts": {
+    "label": "after run",
+    "result": {
+      "ok": {
+        "created": 0,
+        "skipped": 1,
+        "skippedDetails": [
+          {
+            "input": {
+              "source_entity": "Nowhere",
+              "target_entity": "Ghost",
+              "fact": "Nowhere is next to Ghost for no reason at all"
+            },
+            "reason": "both_endpoints_unknown"
+          }
+        ],
+        "alreadyComplete": false
+      }
+    },
+    "progress": [
+      "scanning",
+      "generating",
+      "done"
+    ],
+    "engramMemory": {
+      "events": [],
+      "entities": [
+        {
+          "name": "陆沉",
+          "type": "player",
+          "summary": "玩家角色",
+          "attributes": {},
+          "firstSeen": 0,
+          "lastSeen": 3,
+          "mentionCount": 1,
+          "is_embedded": true
+        },
+        {
+          "name": "Lin Nuan",
+          "type": "npc",
+          "summary": "bright eyes, long black hair",
+          "attributes": {},
+          "firstSeen": 1,
+          "lastSeen": 3,
+          "mentionCount": 2,
+          "is_embedded": false
+        },
+        {
+          "name": "Gone NPC",
+          "type": "npc",
+          "summary": "",
+          "attributes": {},
+          "firstSeen": 1,
+          "lastSeen": 2,
+          "mentionCount": 1,
+          "is_embedded": false,
+          "_pendingEnrichment": true
+        },
+        {
+          "name": "Guan Yu",
+          "type": "npc",
+          "summary": "sharp brows",
+          "attributes": {},
+          "firstSeen": 3,
+          "lastSeen": 3,
+          "mentionCount": 0,
+          "is_embedded": false,
+          "source": "user"
+        },
+        {
+          "name": "Silent Monk",
+          "type": "npc",
+          "summary": "Silent Monk",
+          "attributes": {},
+          "firstSeen": 3,
+          "lastSeen": 3,
+          "mentionCount": 0,
+          "is_embedded": false,
+          "source": "user"
+        },
+        {
+          "name": "青石镇",
+          "type": "location",
+          "summary": "山脚下的小镇，酒肆与药铺并立。",
+          "attributes": {},
+          "firstSeen": 3,
+          "lastSeen": 3,
+          "mentionCount": 0,
+          "is_embedded": false,
+          "source": "user"
+        },
+        {
+          "name": "后山",
+          "type": "location",
+          "summary": "终年云雾的山林。",
+          "attributes": {},
+          "firstSeen": 3,
+          "lastSeen": 3,
+          "mentionCount": 0,
+          "is_embedded": false,
+          "source": "user"
+        }
+      ],
+      "relations": [],
+      "v2Edges": [
+        {
+          "id": "edge_gone",
+          "sourceEntity": "Gone NPC",
+          "targetEntity": "陆沉",
+          "fact": "Gone NPC once travelled with Lu Chen on the road",
+          "episodes": [],
+          "is_embedded": true,
+          "createdAtRound": 1,
+          "lastSeenRound": 2,
+          "invalidAtRound": 3,
+          "temporalStatus": "historical"
+        },
+        {
+          "id": "edge_ok",
+          "sourceEntity": "Lin Nuan",
+          "targetEntity": "陆沉",
+          "fact": "Lin Nuan serves tea to Lu Chen at the tavern",
+          "episodes": [],
+          "is_embedded": true,
+          "createdAtRound": 1,
+          "lastSeenRound": 3
+        }
+      ],
+      "meta": {
+        "lastUpdated": 1791417780000,
+        "eventCount": 0,
+        "embeddedEventCount": 0,
+        "embeddedEntityCount": 3,
+        "schemaVersion": 5,
+        "v2PendingReview": null
+      }
+    },
+    "memory": {
+      "短期": [
+        {
+          "round": 1,
+          "summary": "陆沉走进酒肆",
+          "timestamp": 1
+        },
+        {
+          "内容": "第二条短期记忆"
+        },
+        "第三条短期记忆"
+      ],
+      "中期": [],
+      "长期": [],
+      "隐式中期": []
+    },
+    "vectorRows": [
+      [
+        "engram_vectors_prof_m_slot_m",
+        {
+          "eventVectors": {},
+          "entityVectors": {
+            "陆沉": {
+              "dim": 2,
+              "sha256": "5aaf1e183f1faf12c327dc2fb8c223022f04684c61fc34533bff62e7e572c776"
+            },
+            "Lin Nuan": {
+              "dim": 2,
+              "sha256": "463f2998327eb3a694145e6014444480b2235be84aa6cfd57871cc64f1cd816c"
+            },
+            "Gone NPC": {
+              "dim": 2,
+              "sha256": "e61b9f584dbe27741cef6e9ee440831d7d94470c0871b0871541f0308916efea"
+            }
+          },
+          "edgeVectors": {
+            "edge_gone": {
+              "dim": 2,
+              "sha256": "5aaf1e183f1faf12c327dc2fb8c223022f04684c61fc34533bff62e7e572c776"
+            },
+            "edge_ok": {
+              "dim": 2,
+              "sha256": "463f2998327eb3a694145e6014444480b2235be84aa6cfd57871cc64f1cd816c"
+            }
+          },
+          "model": "m",
+          "dim": 2
+        }
+      ]
+    ],
+    "vectorCalls": [],
+    "aiCalls": [
+      {
+        "messages": [
+          {
+            "role": "system",
+            "content": "## 当前游戏状态\n\n```json\n{\"元数据\":{\"回合序号\":3},\"角色\":{\"基础信息\":{\"姓名\":\"陆沉\",\"当前位置\":\"青石镇\"}},\"世界\":{\"时间\":{\"年\":1,\"月\":3,\"日\":5,\"小时\":14,\"分钟\":20},\"地点信息\":[{\"名称\":\"青石镇\",\"描述\":\"山脚下的小镇，酒肆与药铺并立。\",\"连接\":[\"后山\"],\"NPC\":[\"Lin Nuan\"]},{\"名称\":\"后山\",\"描述\":\"终年云雾的山林。\"}]},\"社交\":{\"关系\":[{\"名称\":\"Lin Nuan\",\"类型\":\"重点\",\"背景\":\"Runs the tavern in Qingshi town.\",\"外貌描述\":\"bright eyes, long black hair\",\"描述\":\"tavern owner\",\"位置\":\"青石镇\"},{\"名称\":\"Guan Yu\",\"类型\":\"重点\",\"背景\":\"A wandering swordsman.\",\"外貌描述\":\"sharp brows\",\"描述\":\"swordsman\"},{\"名称\":\"Extra Wang\",\"类型\":\"普通\",\"描述\":\"a passer-by\"},{\"名称\":\"Silent Monk\",\"类型\":\"重点\"}]},\"记忆\":{},\"系统\":{\"扩展\":{}}}\n```\n\n## 记忆摘要\n\n- 第二条短期记忆\n- 第三条短期记忆"
+          },
+          {
+            "role": "user",
+            "content": "<玩家输入>\n去酒肆看看\n</玩家输入>"
+          },
+          {
+            "role": "assistant",
+            "content": "<叙事正文>\n陆沉走进了酒肆。\n</叙事正文>"
+          },
+          {
+            "role": "user",
+            "content": "<玩家输入>\n和老板娘聊聊\n</玩家输入>"
+          },
+          {
+            "role": "assistant",
+            "content": "<叙事正文>\nLin Nuan 笑着迎了上来。\n</叙事正文>"
+          },
+          {
+            "role": "user",
+            "content": "<Engram补全任务>\n\n## 任务一：生成关系知识边\n\n以下实体缺少知识边。请根据上方 GAME_STATE_JSON 中的世界数据为它们生成关系事实。\n\n重点参考：\n- NPC 的「背景」字段中的家庭/师徒/出身地关系\n- NPC 的「关系网变量」字段中已声明的 NPC↔NPC 关系\n- NPC 的「关系状态」和「位置」\n- 地点的「连接」字段中的相邻/隶属关系\n- 地点的「NPC」字段中的常驻 NPC\n\n需要补全的实体：\n\nNPC：\n- Guan Yu\n- Silent Monk\n\n地点：\n- 青石镇\n- 后山\n\n## 已有知识边（不要生成重复或高度相似的）\n\nGone NPC → 陆沉: Gone NPC once travelled with Lu Chen on the road\nLin Nuan → 陆沉: Lin Nuan serves tea to Lu Chen at the tavern\n\n## 任务二：补全实体描述（必须完成，不可遗漏）\n\n以下 1 个实体在游戏数据中没有描述，需要你根据上下文推断并生成。\nentity_descriptions 数组必须包含恰好 1 项，每项对应下方一个实体。\n\n- Silent Monk\n\n## 输出格式\n\n仅输出一个 JSON 对象：\n{\n  \"knowledge_facts\": [{\"source_entity\": \"实体A\", \"target_entity\": \"实体B\", \"fact\": \"15-40字关系描述\"}],\n  \"entity_descriptions\": [{\"name\": \"实体名\", \"summary\": \"20-50字描述\"}]\n}\n\n## 约束\n\n1. source_entity 和 target_entity 必须是 GAME_STATE_JSON 中存在的名称\n2. 仅基于已有数据推导，不编造不在数据中的关系\n3. fact 必须是 15-40 字的自然语言句子\n4. 每个缺失 NPC 生成 1-3 条边（优先与玩家角色的关系）\n5. 每个缺失地点生成 0-2 条边（与常驻 NPC 或相邻地点的关联）\n6. entity_descriptions 必须包含 1 项，不可省略\n\n直接输出 JSON，不要解释。\n</Engram补全任务>"
+          }
+        ],
+        "stream": false,
+        "usageType": "engram_batch_solidify",
+        "temperature": 0.3
+      }
+    ],
+    "fetchCalls": [],
+    "emits": [
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "type": "load"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "元数据.回合序号",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      }
+    ]
+  },
+  "alreadyComplete": {
+    "label": "after run",
+    "result": {
+      "ok": {
+        "created": 0,
+        "skipped": 0,
+        "skippedDetails": [],
+        "alreadyComplete": true
+      }
+    },
+    "progress": [
+      "scanning",
+      "done"
+    ],
+    "engramMemory": {
+      "events": [],
+      "entities": [
+        {
+          "name": "陆沉",
+          "type": "player",
+          "summary": "玩家角色",
+          "attributes": {},
+          "firstSeen": 0,
+          "lastSeen": 3,
+          "mentionCount": 1,
+          "is_embedded": true
+        },
+        {
+          "name": "Lin Nuan",
+          "type": "npc",
+          "summary": "bright eyes",
+          "attributes": {},
+          "firstSeen": 1,
+          "lastSeen": 3,
+          "mentionCount": 1,
+          "is_embedded": false
+        },
+        {
+          "name": "青石镇",
+          "type": "location",
+          "summary": "a small town",
+          "attributes": {},
+          "firstSeen": 1,
+          "lastSeen": 3,
+          "mentionCount": 1,
+          "is_embedded": true
+        }
+      ],
+      "relations": [],
+      "v2Edges": [
+        {
+          "id": "e1",
+          "sourceEntity": "Lin Nuan",
+          "targetEntity": "青石镇",
+          "fact": "Lin Nuan runs the tavern in Qingshi town",
+          "episodes": [],
+          "is_embedded": true,
+          "createdAtRound": 1,
+          "lastSeenRound": 3
+        }
+      ],
+      "meta": {
+        "lastUpdated": 3,
+        "eventCount": 0,
+        "embeddedEventCount": 0,
+        "embeddedEntityCount": 3,
+        "schemaVersion": 5
+      }
+    },
+    "memory": {
+      "短期": [],
+      "中期": [],
+      "长期": [],
+      "隐式中期": []
+    },
+    "vectorRows": [],
+    "vectorCalls": [],
+    "aiCalls": [],
+    "fetchCalls": [],
+    "emits": [
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "type": "load"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "元数据.回合序号",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      }
+    ]
+  },
+  "aiThrows": {
+    "label": "after run",
+    "result": {
+      "threw": {
+        "name": "Error",
+        "message": "ai boom"
+      }
+    },
+    "progress": [
+      "scanning",
+      "generating",
+      "error"
+    ],
+    "engramMemory": {
+      "events": [],
+      "entities": [
+        {
+          "name": "陆沉",
+          "type": "player",
+          "summary": "玩家角色",
+          "attributes": {},
+          "firstSeen": 0,
+          "lastSeen": 3,
+          "mentionCount": 1,
+          "is_embedded": true
+        },
+        {
+          "name": "Lin Nuan",
+          "type": "npc",
+          "summary": "bright eyes, long black hair",
+          "attributes": {},
+          "firstSeen": 1,
+          "lastSeen": 3,
+          "mentionCount": 2,
+          "is_embedded": false
+        },
+        {
+          "name": "Gone NPC",
+          "type": "npc",
+          "summary": "",
+          "attributes": {},
+          "firstSeen": 1,
+          "lastSeen": 2,
+          "mentionCount": 1,
+          "is_embedded": false,
+          "_pendingEnrichment": true
+        },
+        {
+          "name": "Guan Yu",
+          "type": "npc",
+          "summary": "sharp brows",
+          "attributes": {},
+          "firstSeen": 3,
+          "lastSeen": 3,
+          "mentionCount": 0,
+          "is_embedded": false,
+          "source": "user"
+        },
+        {
+          "name": "Silent Monk",
+          "type": "npc",
+          "summary": "Silent Monk",
+          "attributes": {},
+          "firstSeen": 3,
+          "lastSeen": 3,
+          "mentionCount": 0,
+          "is_embedded": false,
+          "source": "user"
+        },
+        {
+          "name": "青石镇",
+          "type": "location",
+          "summary": "山脚下的小镇，酒肆与药铺并立。",
+          "attributes": {},
+          "firstSeen": 3,
+          "lastSeen": 3,
+          "mentionCount": 0,
+          "is_embedded": false,
+          "source": "user"
+        },
+        {
+          "name": "后山",
+          "type": "location",
+          "summary": "终年云雾的山林。",
+          "attributes": {},
+          "firstSeen": 3,
+          "lastSeen": 3,
+          "mentionCount": 0,
+          "is_embedded": false,
+          "source": "user"
+        }
+      ],
+      "relations": [],
+      "v2Edges": [
+        {
+          "id": "edge_gone",
+          "sourceEntity": "Gone NPC",
+          "targetEntity": "陆沉",
+          "fact": "Gone NPC once travelled with Lu Chen on the road",
+          "episodes": [],
+          "is_embedded": true,
+          "createdAtRound": 1,
+          "lastSeenRound": 2,
+          "invalidAtRound": 3,
+          "temporalStatus": "historical"
+        },
+        {
+          "id": "edge_ok",
+          "sourceEntity": "Lin Nuan",
+          "targetEntity": "陆沉",
+          "fact": "Lin Nuan serves tea to Lu Chen at the tavern",
+          "episodes": [],
+          "is_embedded": true,
+          "createdAtRound": 1,
+          "lastSeenRound": 3
+        }
+      ],
+      "meta": {
+        "lastUpdated": 1791417780000,
+        "eventCount": 0,
+        "embeddedEventCount": 0,
+        "embeddedEntityCount": 3,
+        "schemaVersion": 5,
+        "v2PendingReview": null
+      }
+    },
+    "memory": {
+      "短期": [
+        {
+          "round": 1,
+          "summary": "陆沉走进酒肆",
+          "timestamp": 1
+        },
+        {
+          "内容": "第二条短期记忆"
+        },
+        "第三条短期记忆"
+      ],
+      "中期": [],
+      "长期": [],
+      "隐式中期": []
+    },
+    "vectorRows": [
+      [
+        "engram_vectors_prof_m_slot_m",
+        {
+          "eventVectors": {},
+          "entityVectors": {
+            "陆沉": {
+              "dim": 2,
+              "sha256": "5aaf1e183f1faf12c327dc2fb8c223022f04684c61fc34533bff62e7e572c776"
+            },
+            "Lin Nuan": {
+              "dim": 2,
+              "sha256": "463f2998327eb3a694145e6014444480b2235be84aa6cfd57871cc64f1cd816c"
+            },
+            "Gone NPC": {
+              "dim": 2,
+              "sha256": "e61b9f584dbe27741cef6e9ee440831d7d94470c0871b0871541f0308916efea"
+            }
+          },
+          "edgeVectors": {
+            "edge_gone": {
+              "dim": 2,
+              "sha256": "5aaf1e183f1faf12c327dc2fb8c223022f04684c61fc34533bff62e7e572c776"
+            },
+            "edge_ok": {
+              "dim": 2,
+              "sha256": "463f2998327eb3a694145e6014444480b2235be84aa6cfd57871cc64f1cd816c"
+            }
+          },
+          "model": "m",
+          "dim": 2
+        }
+      ]
+    ],
+    "vectorCalls": [],
+    "aiCalls": [
+      {
+        "messages": [
+          {
+            "role": "system",
+            "content": "## 当前游戏状态\n\n```json\n{\"元数据\":{\"回合序号\":3},\"角色\":{\"基础信息\":{\"姓名\":\"陆沉\",\"当前位置\":\"青石镇\"}},\"世界\":{\"时间\":{\"年\":1,\"月\":3,\"日\":5,\"小时\":14,\"分钟\":20},\"地点信息\":[{\"名称\":\"青石镇\",\"描述\":\"山脚下的小镇，酒肆与药铺并立。\",\"连接\":[\"后山\"],\"NPC\":[\"Lin Nuan\"]},{\"名称\":\"后山\",\"描述\":\"终年云雾的山林。\"}]},\"社交\":{\"关系\":[{\"名称\":\"Lin Nuan\",\"类型\":\"重点\",\"背景\":\"Runs the tavern in Qingshi town.\",\"外貌描述\":\"bright eyes, long black hair\",\"描述\":\"tavern owner\",\"位置\":\"青石镇\"},{\"名称\":\"Guan Yu\",\"类型\":\"重点\",\"背景\":\"A wandering swordsman.\",\"外貌描述\":\"sharp brows\",\"描述\":\"swordsman\"},{\"名称\":\"Extra Wang\",\"类型\":\"普通\",\"描述\":\"a passer-by\"},{\"名称\":\"Silent Monk\",\"类型\":\"重点\"}]},\"记忆\":{},\"系统\":{\"扩展\":{}}}\n```\n\n## 记忆摘要\n\n- 第二条短期记忆\n- 第三条短期记忆"
+          },
+          {
+            "role": "user",
+            "content": "<玩家输入>\n去酒肆看看\n</玩家输入>"
+          },
+          {
+            "role": "assistant",
+            "content": "<叙事正文>\n陆沉走进了酒肆。\n</叙事正文>"
+          },
+          {
+            "role": "user",
+            "content": "<玩家输入>\n和老板娘聊聊\n</玩家输入>"
+          },
+          {
+            "role": "assistant",
+            "content": "<叙事正文>\nLin Nuan 笑着迎了上来。\n</叙事正文>"
+          },
+          {
+            "role": "user",
+            "content": "<Engram补全任务>\n\n## 任务一：生成关系知识边\n\n以下实体缺少知识边。请根据上方 GAME_STATE_JSON 中的世界数据为它们生成关系事实。\n\n重点参考：\n- NPC 的「背景」字段中的家庭/师徒/出身地关系\n- NPC 的「关系网变量」字段中已声明的 NPC↔NPC 关系\n- NPC 的「关系状态」和「位置」\n- 地点的「连接」字段中的相邻/隶属关系\n- 地点的「NPC」字段中的常驻 NPC\n\n需要补全的实体：\n\nNPC：\n- Guan Yu\n- Silent Monk\n\n地点：\n- 青石镇\n- 后山\n\n## 已有知识边（不要生成重复或高度相似的）\n\nGone NPC → 陆沉: Gone NPC once travelled with Lu Chen on the road\nLin Nuan → 陆沉: Lin Nuan serves tea to Lu Chen at the tavern\n\n## 任务二：补全实体描述（必须完成，不可遗漏）\n\n以下 1 个实体在游戏数据中没有描述，需要你根据上下文推断并生成。\nentity_descriptions 数组必须包含恰好 1 项，每项对应下方一个实体。\n\n- Silent Monk\n\n## 输出格式\n\n仅输出一个 JSON 对象：\n{\n  \"knowledge_facts\": [{\"source_entity\": \"实体A\", \"target_entity\": \"实体B\", \"fact\": \"15-40字关系描述\"}],\n  \"entity_descriptions\": [{\"name\": \"实体名\", \"summary\": \"20-50字描述\"}]\n}\n\n## 约束\n\n1. source_entity 和 target_entity 必须是 GAME_STATE_JSON 中存在的名称\n2. 仅基于已有数据推导，不编造不在数据中的关系\n3. fact 必须是 15-40 字的自然语言句子\n4. 每个缺失 NPC 生成 1-3 条边（优先与玩家角色的关系）\n5. 每个缺失地点生成 0-2 条边（与常驻 NPC 或相邻地点的关联）\n6. entity_descriptions 必须包含 1 项，不可省略\n\n直接输出 JSON，不要解释。\n</Engram补全任务>"
+          }
+        ],
+        "stream": false,
+        "usageType": "engram_batch_solidify",
+        "temperature": 0.3
+      }
+    ],
+    "fetchCalls": [],
+    "emits": [
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "type": "load"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "元数据.回合序号",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      }
+    ]
+  },
+  "engramDisabled": {
+    "threw": {
+      "name": "Error",
+      "message": "Engram is not enabled"
+    }
+  },
+  "warnings": [
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:"
+  ]
+}

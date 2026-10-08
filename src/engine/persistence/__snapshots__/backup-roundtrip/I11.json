@@ -1,0 +1,96 @@
+{
+  "fullWithoutSection": {
+    "outcome": {
+      "ok": "__undefined__"
+    },
+    "emits": [
+      {
+        "event": "engine:save-replaced",
+        "payload": {
+          "phase": "begin"
+        }
+      },
+      {
+        "event": "ui:toast",
+        "payload": {
+          "type": "warning",
+          "i18nKey": "engine.toast.importPreservedWorldBooks",
+          "message": "导入的备份不含世界书数据，已保留本地现有的角色档案世界书以防丢失。",
+          "id": "import-preserved-worldbooks",
+          "duration": 9000
+        }
+      },
+      {
+        "event": "engine:save-replaced",
+        "payload": {
+          "phase": "end"
+        }
+      }
+    ],
+    "worldBookKeys": [
+      "prof_local:wb_local"
+    ]
+  },
+  "fullWithEmptyList": {
+    "outcome": {
+      "ok": "__undefined__"
+    },
+    "emits": [
+      {
+        "event": "engine:save-replaced",
+        "payload": {
+          "phase": "begin"
+        }
+      },
+      {
+        "event": "engine:save-replaced",
+        "payload": {
+          "phase": "end"
+        }
+      }
+    ],
+    "worldBookKeys": []
+  },
+  "profileWithoutSection": {
+    "outcome": {
+      "ok": "__undefined__"
+    },
+    "emits": [
+      {
+        "event": "engine:save-replaced",
+        "payload": {
+          "profileId": "prof_a",
+          "phase": "begin"
+        }
+      },
+      {
+        "event": "engine:save-replaced",
+        "payload": {
+          "profileId": "prof_a"
+        }
+      },
+      {
+        "event": "ui:toast",
+        "payload": {
+          "type": "warning",
+          "i18nKey": "engine.toast.importPreservedWorldBooks",
+          "message": "导入的备份不含世界书数据，已保留本地现有的角色档案世界书以防丢失。",
+          "id": "import-preserved-worldbooks",
+          "duration": 9000
+        }
+      },
+      {
+        "event": "engine:save-replaced",
+        "payload": {
+          "profileId": "prof_a",
+          "phase": "end"
+        }
+      }
+    ],
+    "worldBookKeys": [
+      "prof_a:wb_old",
+      "prof_b:wb_b_local",
+      "prof_local:wb_local"
+    ]
+  }
+}

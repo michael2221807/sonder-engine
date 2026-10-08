@@ -1,0 +1,69 @@
+{
+  "syncingWhileRunning": true,
+  "refused": {
+    "upload": {
+      "threw": {
+        "name": "SyncInProgressError",
+        "message": "sync-in-progress"
+      }
+    },
+    "download": {
+      "threw": {
+        "name": "SyncInProgressError",
+        "message": "sync-in-progress"
+      }
+    },
+    "uploadSlot": {
+      "threw": {
+        "name": "SyncInProgressError",
+        "message": "sync-in-progress"
+      }
+    },
+    "uploadGlobal": {
+      "threw": {
+        "name": "SyncInProgressError",
+        "message": "sync-in-progress"
+      }
+    },
+    "downloadSlot": {
+      "threw": {
+        "name": "SyncInProgressError",
+        "message": "sync-in-progress"
+      }
+    },
+    "downloadGlobal": {
+      "threw": {
+        "name": "SyncInProgressError",
+        "message": "sync-in-progress"
+      }
+    },
+    "deleteCloudSlot": {
+      "threw": {
+        "name": "SyncInProgressError",
+        "message": "sync-in-progress"
+      }
+    },
+    "migrateToSlots": {
+      "threw": {
+        "name": "SyncInProgressError",
+        "message": "sync-in-progress"
+      }
+    }
+  },
+  "requestsWhileBlocked": 1,
+  "firstOutcome": {
+    "ok": "__undefined__"
+  },
+  "afterSuccess": false,
+  "failing": {
+    "threw": {
+      "name": "Error",
+      "message": "更新云端索引失败：GitHub API 500: {\"message\":\"fake 500\"}"
+    }
+  },
+  "afterFailure": false,
+  "retried": {
+    "ok": "__undefined__"
+  },
+  "finalSyncing": false
+}

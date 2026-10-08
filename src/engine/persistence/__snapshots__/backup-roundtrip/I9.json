@@ -1,0 +1,141 @@
+{
+  "outcomes": [
+    {
+      "label": "importAll not json",
+      "outcome": {
+        "threw": {
+          "name": "SyntaxError",
+          "message": "<json parse message>"
+        }
+      }
+    },
+    {
+      "label": "importAll wrong shape",
+      "outcome": {
+        "threw": {
+          "name": "Error",
+          "message": "备份文件格式无效：缺少必需字段或结构不正确"
+        }
+      }
+    },
+    {
+      "label": "importAll future version",
+      "outcome": {
+        "threw": {
+          "name": "Error",
+          "message": "备份版本 2 高于当前支持的版本 1，请先升级引擎再导入"
+        }
+      }
+    },
+    {
+      "label": "importProfileReplace wrong shape",
+      "outcome": {
+        "threw": {
+          "name": "Error",
+          "message": "备份文件格式无效：缺少必需字段或结构不正确"
+        }
+      }
+    },
+    {
+      "label": "importProfileReplace future version",
+      "outcome": {
+        "threw": {
+          "name": "Error",
+          "message": "备份版本 9 高于当前支持的版本 1，请先升级引擎再导入"
+        }
+      }
+    },
+    {
+      "label": "importProfileReplace full bundle",
+      "outcome": {
+        "threw": {
+          "name": "Error",
+          "message": "档案级导入只接受 bundleType='profile' 的包，实际 'full'"
+        }
+      }
+    },
+    {
+      "label": "importProfileReplace no bundleType",
+      "outcome": {
+        "threw": {
+          "name": "Error",
+          "message": "档案级导入只接受 bundleType='profile' 的包，实际 '(无标记)'"
+        }
+      }
+    },
+    {
+      "label": "importProfileReplace two profiles",
+      "outcome": {
+        "threw": {
+          "name": "Error",
+          "message": "档案级导入要求包内恰好一个档案，实际 2 个"
+        }
+      }
+    },
+    {
+      "label": "importProfileReplace missing save",
+      "outcome": {
+        "threw": {
+          "name": "ProfileSaveIntegrityError",
+          "message": "档案“prof_a”的存档结构不完整（元数据有槽但存档数据缺失：slot_2）。已阻止导出/上传/导入，请先从健康备份恢复，勿覆盖现有数据。"
+        }
+      }
+    },
+    {
+      "label": "importProfileReplace orphan save",
+      "outcome": {
+        "threw": {
+          "name": "ProfileSaveIntegrityError",
+          "message": "档案“prof_a”的存档结构不完整（存档数据有槽但元数据缺失：slot_ghost）。已阻止导出/上传/导入，请先从健康备份恢复，勿覆盖现有数据。"
+        }
+      }
+    },
+    {
+      "label": "importGlobal full bundle",
+      "outcome": {
+        "threw": {
+          "name": "Error",
+          "message": "importGlobal 只接受 bundleType='global' 的包，实际 'full'"
+        }
+      }
+    },
+    {
+      "label": "importGlobal no bundleType",
+      "outcome": {
+        "threw": {
+          "name": "Error",
+          "message": "importGlobal 只接受 bundleType='global' 的包，实际 'undefined'"
+        }
+      }
+    }
+  ],
+  "nothingWrittenByRefusals": true,
+  "smuggle": {
+    "outcome": {
+      "ok": "__undefined__"
+    },
+    "intruderWritten": false
+  },
+  "emits": [
+    {
+      "event": "engine:save-replaced",
+      "payload": {
+        "profileId": "prof_a",
+        "phase": "begin"
+      }
+    },
+    {
+      "event": "engine:save-replaced",
+      "payload": {
+        "profileId": "prof_a"
+      }
+    },
+    {
+      "event": "engine:save-replaced",
+      "payload": {
+        "profileId": "prof_a",
+        "phase": "end"
+      }
+    }
+  ]
+}

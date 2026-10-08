@@ -1,0 +1,222 @@
+{
+  "syncBundleFile": {
+    "label": "sync bundle, imported as a file",
+    "outcome": {
+      "ok": "__undefined__"
+    },
+    "lsDiff": {
+      "added": {
+        "aga-ui-theme": "dark",
+        "aga_api_management": "{\"configs\":[{\"name\":\"main\"}]}",
+        "aga_engram_config": "{\"enabled\":true}",
+        "aga_github_sync_owner": "octo",
+        "aga_github_sync_repo": "aga-cloud-save",
+        "aga_github_sync_token": "ghp_FAKE0000",
+        "aga_pending_input": "draft text"
+      },
+      "removed": [
+        "aga-local-legacy",
+        "aga_local_setting"
+      ],
+      "changed": {}
+    },
+    "emits": [
+      {
+        "event": "engine:save-replaced",
+        "payload": {
+          "phase": "begin"
+        }
+      },
+      {
+        "event": "engine:save-replaced",
+        "payload": {
+          "phase": "end"
+        }
+      }
+    ]
+  },
+  "syncBundleOwn": {
+    "label": "sync bundle, own sync",
+    "outcome": {
+      "ok": "__undefined__"
+    },
+    "lsDiff": {
+      "added": {
+        "aga-ui-theme": "dark",
+        "aga_api_management": "{\"configs\":[{\"name\":\"main\"}]}",
+        "aga_engram_config": "{\"enabled\":true}",
+        "aga_github_sync_owner": "octo",
+        "aga_github_sync_repo": "aga-cloud-save",
+        "aga_github_sync_token": "ghp_FAKE0000",
+        "aga_pending_input": "draft text"
+      },
+      "removed": [
+        "aga-local-legacy",
+        "aga_local_setting"
+      ],
+      "changed": {
+        "aga_plot_vector_control": {
+          "from": "{\"enabled\":false}",
+          "to": "{\"enabled\":true}"
+        }
+      }
+    },
+    "emits": [
+      {
+        "event": "engine:save-replaced",
+        "payload": {
+          "phase": "begin"
+        }
+      },
+      {
+        "event": "engine:save-replaced",
+        "payload": {
+          "phase": "end"
+        }
+      }
+    ]
+  },
+  "syncBundleOwnFails": {
+    "label": "sync bundle, own sync, config import fails",
+    "outcome": {
+      "threw": {
+        "name": "Error",
+        "message": "导入失败，本地数据已回滚：config import boom"
+      }
+    },
+    "lsDiff": {
+      "added": {},
+      "removed": [],
+      "changed": {}
+    },
+    "emits": [
+      {
+        "event": "engine:save-replaced",
+        "payload": {
+          "phase": "begin"
+        }
+      },
+      {
+        "event": "engine:save-replaced",
+        "payload": {
+          "phase": "end"
+        }
+      }
+    ]
+  },
+  "syncBundleFileFails": {
+    "label": "sync bundle, file, config import fails",
+    "outcome": {
+      "threw": {
+        "name": "Error",
+        "message": "导入失败，本地数据已回滚：config import boom"
+      }
+    },
+    "lsDiff": {
+      "added": {},
+      "removed": [],
+      "changed": {}
+    },
+    "emits": [
+      {
+        "event": "engine:save-replaced",
+        "payload": {
+          "phase": "begin"
+        }
+      },
+      {
+        "event": "engine:save-replaced",
+        "payload": {
+          "phase": "end"
+        }
+      }
+    ]
+  },
+  "globalOwn": {
+    "label": "global bundle, own sync",
+    "outcome": {
+      "ok": "__undefined__"
+    },
+    "lsDiff": {
+      "added": {
+        "aga-ui-theme": "dark",
+        "aga_api_management": "{\"configs\":[{\"name\":\"main\"}]}",
+        "aga_engram_config": "{\"enabled\":true}",
+        "aga_github_sync_owner": "octo",
+        "aga_github_sync_repo": "aga-cloud-save",
+        "aga_github_sync_token": "ghp_FAKE0000",
+        "aga_pending_input": "draft text"
+      },
+      "removed": [
+        "aga-local-legacy",
+        "aga_local_setting"
+      ],
+      "changed": {
+        "aga_plot_vector_control": {
+          "from": "{\"enabled\":false}",
+          "to": "{\"enabled\":true}"
+        }
+      }
+    },
+    "emits": []
+  },
+  "globalFile": {
+    "label": "global bundle, file",
+    "outcome": {
+      "ok": "__undefined__"
+    },
+    "lsDiff": {
+      "added": {
+        "aga-ui-theme": "dark",
+        "aga_api_management": "{\"configs\":[{\"name\":\"main\"}]}",
+        "aga_engram_config": "{\"enabled\":true}",
+        "aga_github_sync_owner": "octo",
+        "aga_github_sync_repo": "aga-cloud-save",
+        "aga_github_sync_token": "ghp_FAKE0000",
+        "aga_pending_input": "draft text"
+      },
+      "removed": [
+        "aga-local-legacy",
+        "aga_local_setting"
+      ],
+      "changed": {}
+    },
+    "emits": []
+  },
+  "manualBackupOwn": {
+    "label": "manual backup (no own-sync key inside), own sync",
+    "outcome": {
+      "ok": "__undefined__"
+    },
+    "lsDiff": {
+      "added": {
+        "aga-ui-theme": "dark",
+        "aga_api_management": "{\"configs\":[{\"name\":\"main\"}]}",
+        "aga_engram_config": "{\"enabled\":true}",
+        "aga_github_sync_owner": "octo",
+        "aga_github_sync_repo": "aga-cloud-save",
+        "aga_github_sync_token": "ghp_FAKE0000",
+        "aga_pending_input": "draft text"
+      },
+      "removed": [
+        "aga-local-legacy",
+        "aga_local_setting"
+      ],
+      "changed": {}
+    },
+    "emits": [
+      {
+        "event": "engine:save-replaced",
+        "payload": {
+          "phase": "begin"
+        }
+      },
+      {
+        "event": "engine:save-replaced",
+        "payload": {
+          "phase": "end"
+        }
+      }
+    ]
+  }
+}

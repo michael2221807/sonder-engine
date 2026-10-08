@@ -1,0 +1,844 @@
+{
+  "outcome": {
+    "ok": "__undefined__"
+  },
+  "emits": [
+    {
+      "event": "engine:save-replaced",
+      "payload": {
+        "profileId": "prof_a",
+        "phase": "begin"
+      }
+    },
+    {
+      "event": "engine:save-replaced",
+      "payload": {
+        "profileId": "prof_a"
+      }
+    },
+    {
+      "event": "engine:save-replaced",
+      "payload": {
+        "profileId": "prof_a",
+        "phase": "end"
+      }
+    }
+  ],
+  "lsDiff": {
+    "added": {},
+    "removed": [],
+    "changed": {}
+  },
+  "changed": [
+    "aga-saves",
+    "aga-worldbook",
+    "aga_image_cache"
+  ],
+  "state": {
+    "idb": {
+      "aga-config": {
+        "overlays": [
+          [
+            "local_pack:ui",
+            {
+              "domainId": "ui",
+              "packId": "local_pack",
+              "patches": {
+                "theme": "light"
+              },
+              "version": 1,
+              "updatedAt": 20
+            }
+          ]
+        ]
+      },
+      "aga-prompts": {
+        "prompts": [
+          [
+            "local_pack:main_round",
+            {
+              "content": "local prompt",
+              "enabled": true,
+              "modified": true,
+              "updatedAt": 1791417600000
+            }
+          ]
+        ]
+      },
+      "aga-saves": {
+        "data": [
+          [
+            "custom_presets_local_pack",
+            {
+              "packId": "local_pack",
+              "schemaVersion": 1,
+              "presets": {
+                "worlds": [
+                  {
+                    "id": "user_lw",
+                    "source": "user",
+                    "createdAt": 5,
+                    "generatedBy": "manual",
+                    "name": "Local World"
+                  }
+                ]
+              },
+              "meta": {
+                "lastUpdated": 1791417600000
+              }
+            }
+          ],
+          [
+            "engram_vectors_prof_a_slot_1",
+            {
+              "eventVectors": {
+                "evt_a1": [
+                  0.1,
+                  0.2,
+                  0.3
+                ],
+                "evt_a2": [
+                  0.3,
+                  0.2,
+                  0.1
+                ]
+              },
+              "entityVectors": {
+                "Alice": [
+                  0.5,
+                  0.5,
+                  0.5
+                ]
+              },
+              "edgeVectors": {
+                "edge_a1": [
+                  0.9,
+                  0.1,
+                  0
+                ]
+              },
+              "model": "embed-test",
+              "dim": 3
+            }
+          ],
+          [
+            "save_prof_a_slot_1",
+            {
+              "元数据": {
+                "回合序号": 3
+              },
+              "角色": {
+                "基础信息": {
+                  "姓名": "Alice",
+                  "当前位置": "青石镇"
+                },
+                "图片档案": {
+                  "已选头像图片ID": "img_avatar_a",
+                  "已选立绘图片ID": "img_portrait_a",
+                  "已选背景图片ID": "",
+                  "生图历史": [
+                    {
+                      "id": "img_hist_a1"
+                    },
+                    {
+                      "id": "img_hist_a2"
+                    }
+                  ],
+                  "最近生图结果": "img_hist_a1",
+                  "香闺秘档": {
+                    "胸部": {
+                      "assetId": "img_secret_a"
+                    }
+                  }
+                }
+              },
+              "社交": {
+                "关系": [
+                  {
+                    "名称": "林暖",
+                    "图片档案": {
+                      "已选头像图片ID": "img_npc_1"
+                    }
+                  }
+                ]
+              },
+              "系统": {
+                "扩展": {
+                  "image": {
+                    "sceneArchive": {
+                      "当前壁纸图片ID": "img_wall_a",
+                      "生图历史": [
+                        {
+                          "id": "img_scene_1"
+                        }
+                      ]
+                    },
+                    "tasks": [
+                      {
+                        "providerMeta": {
+                          "reference": {
+                            "sourceAssetIds": [
+                              "img_ref_used",
+                              ""
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "providerMeta": {
+                          "reference": {
+                            "sourceAssetId": "img_legacy_ref"
+                          }
+                        }
+                      }
+                    ],
+                    "referenceLibrary": [
+                      {
+                        "assetId": "img_lib_1"
+                      },
+                      {
+                        "assetId": "img_lib_2"
+                      }
+                    ]
+                  },
+                  "storageHealth": {
+                    "schemaVersion": 1,
+                    "worldBookIds": [
+                      "wb_a1"
+                    ],
+                    "updatedRound": 3
+                  }
+                }
+              }
+            }
+          ],
+          [
+            "save_prof_a_slot_2",
+            {
+              "元数据": {
+                "回合序号": 1
+              },
+              "角色": {
+                "基础信息": {
+                  "姓名": "Alice"
+                },
+                "图片档案": {
+                  "已选头像图片ID": "img_avatar_a"
+                }
+              },
+              "社交": {
+                "关系": []
+              },
+              "系统": {
+                "扩展": {}
+              }
+            }
+          ],
+          [
+            "save_prof_b_slot_1",
+            {
+              "元数据": {
+                "回合序号": 3
+              },
+              "角色": {
+                "基础信息": {
+                  "姓名": "LocalBob"
+                },
+                "图片档案": {
+                  "已选头像图片ID": "img_shared"
+                }
+              },
+              "社交": {
+                "关系": []
+              },
+              "系统": {
+                "扩展": {}
+              }
+            }
+          ],
+          [
+            "save_prof_local_slot_1",
+            {
+              "元数据": {
+                "回合序号": 9
+              },
+              "角色": {
+                "基础信息": {
+                  "姓名": "Local"
+                },
+                "图片档案": {
+                  "已选头像图片ID": "img_local"
+                }
+              },
+              "社交": {
+                "关系": []
+              },
+              "系统": {
+                "扩展": {}
+              }
+            }
+          ],
+          [
+            "storage_root",
+            {
+              "activeProfile": {
+                "profileId": "prof_a",
+                "slotId": "slot_1"
+              },
+              "profiles": {
+                "prof_local": {
+                  "profileId": "prof_local",
+                  "createdAt": "2026-10-01T00:00:00.000Z",
+                  "packId": "tianming",
+                  "characterName": "Local",
+                  "slots": {
+                    "slot_1": {
+                      "slotId": "slot_1",
+                      "slotName": "Slot slot_1",
+                      "lastSavedAt": "2026-10-08T00:00:00.000Z",
+                      "packId": "tianming",
+                      "packVersion": "1.0.0",
+                      "saveSize": 109,
+                      "characterStatus": "__undefined__",
+                      "roundNumber": 9
+                    }
+                  },
+                  "activeSlotId": "slot_1"
+                },
+                "prof_a": {
+                  "profileId": "prof_a",
+                  "createdAt": "2026-10-01T00:00:00.000Z",
+                  "packId": "tianming",
+                  "characterName": "Alice",
+                  "slots": {
+                    "slot_1": {
+                      "slotId": "slot_1",
+                      "slotName": "Slot slot_1",
+                      "lastSavedAt": "2026-10-08T00:00:00.000Z",
+                      "packId": "tianming",
+                      "packVersion": "1.0.0",
+                      "saveSize": 698,
+                      "roundNumber": 3
+                    },
+                    "slot_2": {
+                      "slotId": "slot_2",
+                      "slotName": "Slot slot_2",
+                      "lastSavedAt": "2026-10-08T00:00:00.000Z",
+                      "packId": "tianming",
+                      "packVersion": "1.0.0",
+                      "saveSize": 112,
+                      "roundNumber": 1
+                    }
+                  },
+                  "activeSlotId": "slot_1"
+                },
+                "prof_b": {
+                  "profileId": "prof_b",
+                  "createdAt": "2026-10-01T00:00:00.000Z",
+                  "packId": "tianming",
+                  "characterName": "Bob (local)",
+                  "slots": {
+                    "slot_1": {
+                      "slotId": "slot_1",
+                      "slotName": "Slot slot_1",
+                      "lastSavedAt": "2026-10-08T00:00:00.000Z",
+                      "packId": "tianming",
+                      "packVersion": "1.0.0",
+                      "saveSize": 113,
+                      "characterStatus": "__undefined__",
+                      "roundNumber": 3
+                    }
+                  },
+                  "activeSlotId": "slot_1"
+                }
+              }
+            }
+          ]
+        ]
+      },
+      "aga-worldbook": {
+        "builtin-prompts": [
+          [
+            "local_pack:local_slot",
+            {
+              "id": "bo_local",
+              "slotId": "local_slot",
+              "title": "Local",
+              "category": "常驻",
+              "content": "c",
+              "enabled": true,
+              "createdAt": 1,
+              "updatedAt": 1
+            }
+          ]
+        ],
+        "preset-groups": [],
+        "worldbooks": [
+          [
+            "prof_a:wb_a1",
+            {
+              "id": "wb_a1",
+              "title": "Book wb_a1",
+              "enabled": true,
+              "entries": [
+                {
+                  "id": "wb_a1_e1",
+                  "title": "wb_a1 entry 1",
+                  "content": "content of wb_a1 entry 1",
+                  "type": "lore",
+                  "scope": [
+                    "main"
+                  ],
+                  "injectionMode": "always",
+                  "enabled": true,
+                  "createdAt": 1,
+                  "updatedAt": 1
+                },
+                {
+                  "id": "wb_a1_e2",
+                  "title": "wb_a1 entry 2",
+                  "content": "content of wb_a1 entry 2",
+                  "type": "lore",
+                  "scope": [
+                    "main"
+                  ],
+                  "injectionMode": "always",
+                  "enabled": true,
+                  "createdAt": 1,
+                  "updatedAt": 1
+                }
+              ],
+              "createdAt": 1,
+              "updatedAt": 1,
+              "_exportProfileId": "prof_a"
+            }
+          ],
+          [
+            "prof_b:wb_b_local",
+            {
+              "id": "wb_b_local",
+              "title": "Book wb_b_local",
+              "enabled": true,
+              "entries": [
+                {
+                  "id": "wb_b_local_e1",
+                  "title": "wb_b_local entry 1",
+                  "content": "content of wb_b_local entry 1",
+                  "type": "lore",
+                  "scope": [
+                    "main"
+                  ],
+                  "injectionMode": "always",
+                  "enabled": true,
+                  "createdAt": 1,
+                  "updatedAt": 1
+                }
+              ],
+              "createdAt": 1,
+              "updatedAt": 1
+            }
+          ],
+          [
+            "prof_local:wb_local",
+            {
+              "id": "wb_local",
+              "title": "Book wb_local",
+              "enabled": true,
+              "entries": [
+                {
+                  "id": "wb_local_e1",
+                  "title": "wb_local entry 1",
+                  "content": "content of wb_local entry 1",
+                  "type": "lore",
+                  "scope": [
+                    "main"
+                  ],
+                  "injectionMode": "always",
+                  "enabled": true,
+                  "createdAt": 1,
+                  "updatedAt": 1
+                }
+              ],
+              "createdAt": 1,
+              "updatedAt": 1
+            }
+          ]
+        ]
+      },
+      "aga_image_cache": {
+        "image-assets": [
+          [
+            "img_avatar_a",
+            {
+              "id": "img_avatar_a",
+              "blob": {
+                "blob": true,
+                "type": "image/png",
+                "size": 18,
+                "sha256": "e72e4f8300702e6cd182348204a54f3f131cb8b9f187830ffd475efdb2308250"
+              },
+              "metadata": {
+                "id": "img_avatar_a",
+                "taskId": "task_img_avatar_a",
+                "storageKey": "img_avatar_a",
+                "mimeType": "image/png",
+                "width": 8,
+                "height": 8,
+                "sizeBytes": 18,
+                "backend": "novelai",
+                "createdAt": 1,
+                "origin": "generated"
+              }
+            }
+          ],
+          [
+            "img_hist_a1",
+            {
+              "id": "img_hist_a1",
+              "blob": {
+                "blob": true,
+                "type": "image/png",
+                "size": 17,
+                "sha256": "31feb6248c6148ebeeab0cc79a164716bb368b5bc397707b165027be6f651344"
+              },
+              "metadata": {
+                "id": "img_hist_a1",
+                "taskId": "task_img_hist_a1",
+                "storageKey": "img_hist_a1",
+                "mimeType": "image/png",
+                "width": 8,
+                "height": 8,
+                "sizeBytes": 17,
+                "backend": "novelai",
+                "createdAt": 1,
+                "origin": "generated"
+              }
+            }
+          ],
+          [
+            "img_hist_a2",
+            {
+              "id": "img_hist_a2",
+              "blob": {
+                "blob": true,
+                "type": "image/png",
+                "size": 17,
+                "sha256": "87f389c7cc34e73dd3d41297d91d764df620e33867a43d5e908b7187a64ace69"
+              },
+              "metadata": {
+                "id": "img_hist_a2",
+                "taskId": "task_img_hist_a2",
+                "storageKey": "img_hist_a2",
+                "mimeType": "image/png",
+                "width": 8,
+                "height": 8,
+                "sizeBytes": 17,
+                "backend": "novelai",
+                "createdAt": 1,
+                "origin": "generated"
+              }
+            }
+          ],
+          [
+            "img_legacy_ref",
+            {
+              "id": "img_legacy_ref",
+              "blob": {
+                "blob": true,
+                "type": "image/png",
+                "size": 20,
+                "sha256": "d81dffee3206d1acef7c4a3f4cbf06e04962178d20045a4b0984aa0d316108bd"
+              },
+              "metadata": {
+                "id": "img_legacy_ref",
+                "taskId": "task_img_legacy_ref",
+                "storageKey": "img_legacy_ref",
+                "mimeType": "image/png",
+                "width": 8,
+                "height": 8,
+                "sizeBytes": 20,
+                "backend": "novelai",
+                "createdAt": 1,
+                "origin": "generated"
+              }
+            }
+          ],
+          [
+            "img_lib_1",
+            {
+              "id": "img_lib_1",
+              "blob": {
+                "blob": true,
+                "type": "image/png",
+                "size": 15,
+                "sha256": "023d0fc2a7163bb3d857c1fbfce9034618a035e1b0d28047079b921c3b993501"
+              },
+              "metadata": {
+                "id": "img_lib_1",
+                "taskId": "task_img_lib_1",
+                "storageKey": "img_lib_1",
+                "mimeType": "image/png",
+                "width": 8,
+                "height": 8,
+                "sizeBytes": 15,
+                "backend": "novelai",
+                "createdAt": 1,
+                "origin": "generated"
+              }
+            }
+          ],
+          [
+            "img_lib_2",
+            {
+              "id": "img_lib_2",
+              "blob": {
+                "blob": true,
+                "type": "image/png",
+                "size": 15,
+                "sha256": "bc79c9e98b54427c74caf45b4c6ab1412f0ddd6f58ff6e977798a525b029fd87"
+              },
+              "metadata": {
+                "id": "img_lib_2",
+                "taskId": "task_img_lib_2",
+                "storageKey": "img_lib_2",
+                "mimeType": "image/png",
+                "width": 8,
+                "height": 8,
+                "sizeBytes": 15,
+                "backend": "novelai",
+                "createdAt": 1,
+                "origin": "generated"
+              }
+            }
+          ],
+          [
+            "img_local",
+            {
+              "id": "img_local",
+              "blob": {
+                "blob": true,
+                "type": "image/png",
+                "size": 15,
+                "sha256": "c82ab357abd77995eaa83fb77882b6ea0f0a77aacfa629cc453b6bb49a26a3b0"
+              },
+              "metadata": {
+                "id": "img_local",
+                "taskId": "task_img_local",
+                "storageKey": "img_local",
+                "mimeType": "image/png",
+                "width": 8,
+                "height": 8,
+                "sizeBytes": 15,
+                "backend": "novelai",
+                "createdAt": 1,
+                "origin": "generated"
+              }
+            }
+          ],
+          [
+            "img_npc_1",
+            {
+              "id": "img_npc_1",
+              "blob": {
+                "blob": true,
+                "type": "image/png",
+                "size": 15,
+                "sha256": "217737361a562ae205f0c417f44b14429bd9fca0352b08624cbd8837544f05d5"
+              },
+              "metadata": {
+                "id": "img_npc_1",
+                "taskId": "task_img_npc_1",
+                "storageKey": "img_npc_1",
+                "mimeType": "image/png",
+                "width": 8,
+                "height": 8,
+                "sizeBytes": 15,
+                "backend": "novelai",
+                "createdAt": 1,
+                "origin": "generated"
+              }
+            }
+          ],
+          [
+            "img_orphan_local",
+            {
+              "id": "img_orphan_local",
+              "blob": {
+                "blob": true,
+                "type": "image/png",
+                "size": 22,
+                "sha256": "5b57643e630adbe5e5adae308d037b7d2a6f2714d8de6130288b6c60fb5de85c"
+              },
+              "metadata": {
+                "id": "img_orphan_local",
+                "taskId": "task_img_orphan_local",
+                "storageKey": "img_orphan_local",
+                "mimeType": "image/png",
+                "width": 8,
+                "height": 8,
+                "sizeBytes": 22,
+                "backend": "novelai",
+                "createdAt": 1,
+                "origin": "generated"
+              }
+            }
+          ],
+          [
+            "img_portrait_a",
+            {
+              "id": "img_portrait_a",
+              "blob": {
+                "blob": true,
+                "type": "image/png",
+                "size": 20,
+                "sha256": "936e406ceefdf31e89b6c0a90261426596ebca51fc5cd6616205948bb2feeb0a"
+              },
+              "metadata": {
+                "id": "img_portrait_a",
+                "taskId": "task_img_portrait_a",
+                "storageKey": "img_portrait_a",
+                "mimeType": "image/png",
+                "width": 8,
+                "height": 8,
+                "sizeBytes": 20,
+                "backend": "novelai",
+                "createdAt": 1,
+                "origin": "generated"
+              }
+            }
+          ],
+          [
+            "img_ref_used",
+            {
+              "id": "img_ref_used",
+              "blob": {
+                "blob": true,
+                "type": "image/png",
+                "size": 18,
+                "sha256": "2884e7069d4e124ce7fff788fa78606fe0faf2d630e605f003031c9e926be8a3"
+              },
+              "metadata": {
+                "id": "img_ref_used",
+                "taskId": "task_img_ref_used",
+                "storageKey": "img_ref_used",
+                "mimeType": "image/png",
+                "width": 8,
+                "height": 8,
+                "sizeBytes": 18,
+                "backend": "novelai",
+                "createdAt": 1,
+                "origin": "generated"
+              }
+            }
+          ],
+          [
+            "img_scene_1",
+            {
+              "id": "img_scene_1",
+              "blob": {
+                "blob": true,
+                "type": "image/png",
+                "size": 17,
+                "sha256": "55348e5ede5b7046998cbe255a2f468954f3ce3c4d71285dad9cceab52d05806"
+              },
+              "metadata": {
+                "id": "img_scene_1",
+                "taskId": "task_img_scene_1",
+                "storageKey": "img_scene_1",
+                "mimeType": "image/png",
+                "width": 8,
+                "height": 8,
+                "sizeBytes": 17,
+                "backend": "novelai",
+                "createdAt": 1,
+                "origin": "generated"
+              }
+            }
+          ],
+          [
+            "img_secret_a",
+            {
+              "id": "img_secret_a",
+              "blob": {
+                "blob": true,
+                "type": "image/png",
+                "size": 18,
+                "sha256": "bdc1b6f575527316305d14cd45ba9d847f015205aff06644926eb37b2ab1b7b0"
+              },
+              "metadata": {
+                "id": "img_secret_a",
+                "taskId": "task_img_secret_a",
+                "storageKey": "img_secret_a",
+                "mimeType": "image/png",
+                "width": 8,
+                "height": 8,
+                "sizeBytes": 18,
+                "backend": "novelai",
+                "createdAt": 1,
+                "origin": "generated"
+              }
+            }
+          ],
+          [
+            "img_shared",
+            {
+              "id": "img_shared",
+              "blob": {
+                "blob": true,
+                "type": "image/png",
+                "size": 16,
+                "sha256": "fdb3bdbfa5580dc0825acb50a1977e949fee4183f1e1c8c8c05fce88ffa41444"
+              },
+              "metadata": {
+                "id": "img_shared",
+                "taskId": "task_img_shared",
+                "storageKey": "img_shared",
+                "mimeType": "image/png",
+                "width": 8,
+                "height": 8,
+                "sizeBytes": 16,
+                "backend": "novelai",
+                "createdAt": 1,
+                "origin": "generated"
+              }
+            }
+          ],
+          [
+            "img_wall_a",
+            {
+              "id": "img_wall_a",
+              "blob": {
+                "blob": true,
+                "type": "image/png",
+                "size": 16,
+                "sha256": "613488ec298447b465d4763be2ebbaa816ea84f0890bec5bd2dfff5ede0b70c2"
+              },
+              "metadata": {
+                "id": "img_wall_a",
+                "taskId": "task_img_wall_a",
+                "storageKey": "img_wall_a",
+                "mimeType": "image/png",
+                "width": 8,
+                "height": 8,
+                "sizeBytes": 16,
+                "backend": "novelai",
+                "createdAt": 1,
+                "origin": "generated"
+              }
+            }
+          ]
+        ]
+      }
+    },
+    "ls": {
+      "aga-local-legacy": "legacy",
+      "aga_device_id": "dev_0a0b0c0d",
+      "aga_github_sync_baseline": "LOCAL-BASELINE",
+      "aga_github_sync_pending_map": "{\"prof_local\":true}",
+      "aga_local_setting": "keep me?",
+      "aga_plot_vector_control": "{\"enabled\":false}",
+      "other_app_key": "local foreign"
+    }
+  },
+  "warnings": []
+}

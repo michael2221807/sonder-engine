@@ -1,0 +1,1116 @@
+{
+  "setup": {
+    "label": "after the canon round",
+    "engramMemory": {
+      "events": [
+        {
+          "id": "evt_muyrtkyo_4fzyo8",
+          "subject": "陆沉",
+          "action": "narrative",
+          "tags": [
+            "narrative"
+          ],
+          "text": "陆沉与 Guan Yu 结为兄弟。",
+          "summary": "陆沉与 Guan Yu 结为兄弟(承接):\n(1年3月5日 14:20 | 青石镇) 陆沉与 Guan Yu 结为兄弟。",
+          "structured_kv": {
+            "event": "陆沉与 Guan Yu 结为兄弟",
+            "role": [],
+            "location": [
+              "青石镇"
+            ],
+            "time_anchor": "1年3月5日 14:20",
+            "causality": "承接",
+            "logic": []
+          },
+          "is_embedded": true,
+          "time": "1年3月5日 14:20",
+          "location": "青石镇",
+          "roundNumber": 1,
+          "mentionedEntities": [
+            "陆沉"
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "陆沉",
+          "type": "player",
+          "attributes": {},
+          "firstSeen": 0,
+          "lastSeen": 1,
+          "mentionCount": 2,
+          "summary": "玩家角色",
+          "is_embedded": true
+        },
+        {
+          "name": "Lin Nuan",
+          "type": "npc",
+          "attributes": {
+            "relationToPlayer": "__undefined__",
+            "location": "青石镇",
+            "source": "relationship"
+          },
+          "firstSeen": 0,
+          "lastSeen": 0,
+          "mentionCount": 1,
+          "summary": "Runs the tavern in Qingshi town.；bright eyes, long black hair",
+          "is_embedded": true
+        },
+        {
+          "name": "Guan Yu",
+          "type": "npc",
+          "attributes": {
+            "relationToPlayer": "__undefined__",
+            "location": "__undefined__",
+            "source": "relationship"
+          },
+          "firstSeen": 0,
+          "lastSeen": 0,
+          "mentionCount": 1,
+          "summary": "A wandering swordsman.；sharp brows",
+          "is_embedded": true
+        },
+        {
+          "name": "青石镇",
+          "type": "location",
+          "attributes": {
+            "source": "event_location",
+            "lastEventId": "evt_muyrtkyo_4fzyo8"
+          },
+          "firstSeen": 1,
+          "lastSeen": 1,
+          "mentionCount": 2,
+          "summary": "",
+          "is_embedded": true
+        }
+      ],
+      "relations": [],
+      "v2Edges": [
+        {
+          "id": "guan yu|陆沉|guanyuistheswornbrotherofluchen",
+          "sourceEntity": "Guan Yu",
+          "targetEntity": "陆沉",
+          "fact": "Guan Yu is the sworn brother of Lu Chen",
+          "episodes": [
+            "evt_muyrtkyo_4fzyo8"
+          ],
+          "is_embedded": true,
+          "createdAtRound": 1,
+          "lastSeenRound": 1,
+          "learnedAtRound": 1,
+          "core": true,
+          "source": "user-canon",
+          "canonEntryId": "canon_a"
+        },
+        {
+          "id": "lin nuan|陆沉|linnuanisthelandladyofthetavernluchenliv",
+          "sourceEntity": "Lin Nuan",
+          "targetEntity": "陆沉",
+          "fact": "Lin Nuan is the landlady of the tavern Lu Chen lives in",
+          "episodes": [
+            "evt_muyrtkyo_4fzyo8"
+          ],
+          "is_embedded": true,
+          "createdAtRound": 1,
+          "lastSeenRound": 1,
+          "learnedAtRound": 1,
+          "core": true,
+          "source": "user-canon",
+          "canonEntryId": "canon_b"
+        }
+      ],
+      "meta": {
+        "lastUpdated": 1791417660000,
+        "eventCount": 1,
+        "embeddedEventCount": 1,
+        "embeddedEntityCount": 4,
+        "schemaVersion": 5,
+        "v2PendingReview": null
+      }
+    },
+    "memory": {
+      "短期": [],
+      "中期": [],
+      "长期": [],
+      "隐式中期": []
+    },
+    "vectorRows": [
+      [
+        "engram_vectors_prof_m_slot_m",
+        {
+          "eventVectors": {
+            "evt_muyrtkyo_4fzyo8": {
+              "dim": 384,
+              "sha256": "c76ba08f2a19e25558de85acfbe457a8c82a9b80571ddc4f5274be3c306df173"
+            }
+          },
+          "entityVectors": {
+            "陆沉": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            },
+            "Lin Nuan": {
+              "dim": 384,
+              "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            }
+          },
+          "edgeVectors": {
+            "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
+              "dim": 384,
+              "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
+            },
+            "lin nuan|陆沉|linnuanisthelandladyofthetavernluchenliv": {
+              "dim": 384,
+              "sha256": "d050442219a0d83d77481edfe6df9f62e98520769e4bc6fe9de3eb8782e74c6e"
+            }
+          },
+          "model": "unknown",
+          "dim": 384
+        }
+      ]
+    ],
+    "vectorCalls": [
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {
+            "evt_muyrtkyo_4fzyo8": {
+              "dim": 384,
+              "sha256": "c76ba08f2a19e25558de85acfbe457a8c82a9b80571ddc4f5274be3c306df173"
+            }
+          },
+          "entityVectors": {},
+          "edgeVectors": {},
+          "model": "unknown",
+          "dim": 384
+        }
+      },
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {
+            "evt_muyrtkyo_4fzyo8": {
+              "dim": 384,
+              "sha256": "c76ba08f2a19e25558de85acfbe457a8c82a9b80571ddc4f5274be3c306df173"
+            }
+          },
+          "entityVectors": {
+            "陆沉": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            },
+            "Lin Nuan": {
+              "dim": 384,
+              "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            }
+          },
+          "edgeVectors": {},
+          "model": "unknown",
+          "dim": 384
+        }
+      },
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {
+            "evt_muyrtkyo_4fzyo8": {
+              "dim": 384,
+              "sha256": "c76ba08f2a19e25558de85acfbe457a8c82a9b80571ddc4f5274be3c306df173"
+            }
+          },
+          "entityVectors": {
+            "陆沉": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            },
+            "Lin Nuan": {
+              "dim": 384,
+              "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            }
+          },
+          "edgeVectors": {
+            "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
+              "dim": 384,
+              "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
+            },
+            "lin nuan|陆沉|linnuanisthelandladyofthetavernluchenliv": {
+              "dim": 384,
+              "sha256": "d050442219a0d83d77481edfe6df9f62e98520769e4bc6fe9de3eb8782e74c6e"
+            }
+          },
+          "model": "unknown",
+          "dim": 384
+        }
+      }
+    ],
+    "aiCalls": [],
+    "fetchCalls": [],
+    "emits": [
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "type": "load"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "元数据.回合序号",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.events",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.meta.embeddedEventCount",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.entities",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.meta.embeddedEntityCount",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.v2Edges",
+          "action": "set",
+          "source": "system"
+        }
+      }
+    ]
+  },
+  "invalidateNothing": {
+    "ok": {
+      "invalidated": 0
+    }
+  },
+  "invalidateNotAnArray": {
+    "ok": {
+      "invalidated": 0
+    }
+  },
+  "invalidateUnknown": {
+    "ok": {
+      "invalidated": 0
+    }
+  },
+  "invalidateOne": {
+    "ok": {
+      "invalidated": 1
+    }
+  },
+  "invalidateAgain": {
+    "ok": {
+      "invalidated": 0
+    }
+  },
+  "afterInvalidate": {
+    "label": "after invalidation",
+    "engramMemory": {
+      "events": [
+        {
+          "id": "evt_muyrtkyo_4fzyo8",
+          "subject": "陆沉",
+          "action": "narrative",
+          "tags": [
+            "narrative"
+          ],
+          "text": "陆沉与 Guan Yu 结为兄弟。",
+          "summary": "陆沉与 Guan Yu 结为兄弟(承接):\n(1年3月5日 14:20 | 青石镇) 陆沉与 Guan Yu 结为兄弟。",
+          "structured_kv": {
+            "event": "陆沉与 Guan Yu 结为兄弟",
+            "role": [],
+            "location": [
+              "青石镇"
+            ],
+            "time_anchor": "1年3月5日 14:20",
+            "causality": "承接",
+            "logic": []
+          },
+          "is_embedded": true,
+          "time": "1年3月5日 14:20",
+          "location": "青石镇",
+          "roundNumber": 1,
+          "mentionedEntities": [
+            "陆沉"
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "陆沉",
+          "type": "player",
+          "attributes": {},
+          "firstSeen": 0,
+          "lastSeen": 1,
+          "mentionCount": 2,
+          "summary": "玩家角色",
+          "is_embedded": true
+        },
+        {
+          "name": "Lin Nuan",
+          "type": "npc",
+          "attributes": {
+            "relationToPlayer": "__undefined__",
+            "location": "青石镇",
+            "source": "relationship"
+          },
+          "firstSeen": 0,
+          "lastSeen": 0,
+          "mentionCount": 1,
+          "summary": "Runs the tavern in Qingshi town.；bright eyes, long black hair",
+          "is_embedded": true
+        },
+        {
+          "name": "Guan Yu",
+          "type": "npc",
+          "attributes": {
+            "relationToPlayer": "__undefined__",
+            "location": "__undefined__",
+            "source": "relationship"
+          },
+          "firstSeen": 0,
+          "lastSeen": 0,
+          "mentionCount": 1,
+          "summary": "A wandering swordsman.；sharp brows",
+          "is_embedded": true
+        },
+        {
+          "name": "青石镇",
+          "type": "location",
+          "attributes": {
+            "source": "event_location",
+            "lastEventId": "evt_muyrtkyo_4fzyo8"
+          },
+          "firstSeen": 1,
+          "lastSeen": 1,
+          "mentionCount": 2,
+          "summary": "",
+          "is_embedded": true
+        }
+      ],
+      "relations": [],
+      "v2Edges": [
+        {
+          "id": "guan yu|陆沉|guanyuistheswornbrotherofluchen",
+          "sourceEntity": "Guan Yu",
+          "targetEntity": "陆沉",
+          "fact": "Guan Yu is the sworn brother of Lu Chen",
+          "episodes": [
+            "evt_muyrtkyo_4fzyo8"
+          ],
+          "is_embedded": true,
+          "createdAtRound": 1,
+          "lastSeenRound": 1,
+          "learnedAtRound": 1,
+          "core": true,
+          "source": "user-canon",
+          "canonEntryId": "canon_a",
+          "invalidAtRound": 2,
+          "temporalStatus": "superseded"
+        },
+        {
+          "id": "lin nuan|陆沉|linnuanisthelandladyofthetavernluchenliv",
+          "sourceEntity": "Lin Nuan",
+          "targetEntity": "陆沉",
+          "fact": "Lin Nuan is the landlady of the tavern Lu Chen lives in",
+          "episodes": [
+            "evt_muyrtkyo_4fzyo8"
+          ],
+          "is_embedded": true,
+          "createdAtRound": 1,
+          "lastSeenRound": 1,
+          "learnedAtRound": 1,
+          "core": true,
+          "source": "user-canon",
+          "canonEntryId": "canon_b"
+        }
+      ],
+      "meta": {
+        "lastUpdated": 1791417660000,
+        "eventCount": 1,
+        "embeddedEventCount": 1,
+        "embeddedEntityCount": 4,
+        "schemaVersion": 5,
+        "v2PendingReview": null
+      }
+    },
+    "memory": "<unchanged since the previous step>",
+    "vectorRows": "<unchanged since the previous step>",
+    "vectorCalls": [],
+    "aiCalls": [],
+    "fetchCalls": [],
+    "emits": [
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "元数据.回合序号",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      }
+    ]
+  },
+  "restore": {
+    "ok": {
+      "projected": true
+    }
+  },
+  "edit": {
+    "ok": {
+      "projected": true
+    }
+  },
+  "newEntityStub": {
+    "ok": {
+      "projected": true
+    }
+  },
+  "sentenceLikeName": {
+    "ok": {
+      "projected": false
+    }
+  },
+  "becomesTrait": {
+    "ok": {
+      "projected": false
+    }
+  },
+  "retractOp": {
+    "ok": {
+      "projected": false
+    }
+  },
+  "afterReproject": {
+    "label": "after re-projection",
+    "engramMemory": {
+      "events": [
+        {
+          "id": "evt_muyrtkyo_4fzyo8",
+          "subject": "陆沉",
+          "action": "narrative",
+          "tags": [
+            "narrative"
+          ],
+          "text": "陆沉与 Guan Yu 结为兄弟。",
+          "summary": "陆沉与 Guan Yu 结为兄弟(承接):\n(1年3月5日 14:20 | 青石镇) 陆沉与 Guan Yu 结为兄弟。",
+          "structured_kv": {
+            "event": "陆沉与 Guan Yu 结为兄弟",
+            "role": [],
+            "location": [
+              "青石镇"
+            ],
+            "time_anchor": "1年3月5日 14:20",
+            "causality": "承接",
+            "logic": []
+          },
+          "is_embedded": true,
+          "time": "1年3月5日 14:20",
+          "location": "青石镇",
+          "roundNumber": 1,
+          "mentionedEntities": [
+            "陆沉"
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "陆沉",
+          "type": "player",
+          "attributes": {},
+          "firstSeen": 0,
+          "lastSeen": 1,
+          "mentionCount": 2,
+          "summary": "玩家角色",
+          "is_embedded": true
+        },
+        {
+          "name": "Lin Nuan",
+          "type": "npc",
+          "attributes": {
+            "relationToPlayer": "__undefined__",
+            "location": "青石镇",
+            "source": "relationship"
+          },
+          "firstSeen": 0,
+          "lastSeen": 0,
+          "mentionCount": 1,
+          "summary": "Runs the tavern in Qingshi town.；bright eyes, long black hair",
+          "is_embedded": true
+        },
+        {
+          "name": "Guan Yu",
+          "type": "npc",
+          "attributes": {
+            "relationToPlayer": "__undefined__",
+            "location": "__undefined__",
+            "source": "relationship"
+          },
+          "firstSeen": 0,
+          "lastSeen": 0,
+          "mentionCount": 1,
+          "summary": "A wandering swordsman.；sharp brows",
+          "is_embedded": true
+        },
+        {
+          "name": "青石镇",
+          "type": "location",
+          "attributes": {
+            "source": "event_location",
+            "lastEventId": "evt_muyrtkyo_4fzyo8"
+          },
+          "firstSeen": 1,
+          "lastSeen": 1,
+          "mentionCount": 2,
+          "summary": "",
+          "is_embedded": true
+        },
+        {
+          "name": "林月",
+          "type": "location",
+          "summary": "",
+          "attributes": {},
+          "firstSeen": 3,
+          "lastSeen": 3,
+          "mentionCount": 1,
+          "is_embedded": false,
+          "_pendingEnrichment": true
+        }
+      ],
+      "relations": [],
+      "v2Edges": [
+        {
+          "id": "guan yu|陆沉|guanyuistheswornbrotherofluchen",
+          "sourceEntity": "Guan Yu",
+          "targetEntity": "陆沉",
+          "fact": "Guan Yu is the sworn brother of Lu Chen",
+          "episodes": [
+            "evt_muyrtkyo_4fzyo8"
+          ],
+          "is_embedded": true,
+          "createdAtRound": 1,
+          "lastSeenRound": 3,
+          "learnedAtRound": 1,
+          "core": true,
+          "source": "user-canon",
+          "canonEntryId": "canon_a",
+          "invalidAtRound": 3,
+          "temporalStatus": "superseded",
+          "invalidatedAtRound": "__undefined__"
+        },
+        {
+          "id": "lin nuan|陆沉|linnuanisthelandladyofthetavernluchenliv",
+          "sourceEntity": "Lin Nuan",
+          "targetEntity": "陆沉",
+          "fact": "Lin Nuan is the landlady of the tavern Lu Chen lives in",
+          "episodes": [
+            "evt_muyrtkyo_4fzyo8"
+          ],
+          "is_embedded": true,
+          "createdAtRound": 1,
+          "lastSeenRound": 1,
+          "learnedAtRound": 1,
+          "core": true,
+          "source": "user-canon",
+          "canonEntryId": "canon_b",
+          "invalidAtRound": 3,
+          "temporalStatus": "superseded"
+        },
+        {
+          "id": "lin nuan|陆沉|linnuanisthecousinofluchenandlivesnextdo",
+          "sourceEntity": "Lin Nuan",
+          "targetEntity": "陆沉",
+          "fact": "Lin Nuan is the cousin of Lu Chen and lives next door",
+          "episodes": [],
+          "is_embedded": false,
+          "createdAtRound": 3,
+          "lastSeenRound": 3,
+          "learnedAtRound": 3,
+          "core": true,
+          "source": "user-canon",
+          "canonEntryId": "canon_b",
+          "invalidAtRound": 3,
+          "temporalStatus": "superseded"
+        },
+        {
+          "id": "林月|陆沉|林月是玩家的妹妹",
+          "sourceEntity": "林月",
+          "targetEntity": "陆沉",
+          "fact": "林月是玩家的妹妹",
+          "episodes": [],
+          "is_embedded": true,
+          "createdAtRound": 3,
+          "lastSeenRound": 3,
+          "learnedAtRound": 3,
+          "core": true,
+          "source": "user-canon",
+          "canonEntryId": "canon_c"
+        }
+      ],
+      "meta": {
+        "lastUpdated": 1791417660000,
+        "eventCount": 1,
+        "embeddedEventCount": 1,
+        "embeddedEntityCount": 4,
+        "schemaVersion": 5,
+        "v2PendingReview": null
+      }
+    },
+    "memory": "<unchanged since the previous step>",
+    "vectorRows": [
+      [
+        "engram_vectors_prof_m_slot_m",
+        {
+          "eventVectors": {
+            "evt_muyrtkyo_4fzyo8": {
+              "dim": 384,
+              "sha256": "c76ba08f2a19e25558de85acfbe457a8c82a9b80571ddc4f5274be3c306df173"
+            }
+          },
+          "entityVectors": {
+            "陆沉": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            },
+            "Lin Nuan": {
+              "dim": 384,
+              "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            }
+          },
+          "edgeVectors": {
+            "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
+              "dim": 384,
+              "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
+            },
+            "lin nuan|陆沉|linnuanisthelandladyofthetavernluchenliv": {
+              "dim": 384,
+              "sha256": "d050442219a0d83d77481edfe6df9f62e98520769e4bc6fe9de3eb8782e74c6e"
+            },
+            "林月|陆沉|林月是玩家的妹妹": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            }
+          },
+          "model": "unknown",
+          "dim": 384
+        }
+      ]
+    ],
+    "vectorCalls": [
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {
+            "evt_muyrtkyo_4fzyo8": {
+              "dim": 384,
+              "sha256": "c76ba08f2a19e25558de85acfbe457a8c82a9b80571ddc4f5274be3c306df173"
+            }
+          },
+          "entityVectors": {
+            "陆沉": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            },
+            "Lin Nuan": {
+              "dim": 384,
+              "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            }
+          },
+          "edgeVectors": {
+            "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
+              "dim": 384,
+              "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
+            },
+            "lin nuan|陆沉|linnuanisthelandladyofthetavernluchenliv": {
+              "dim": 384,
+              "sha256": "d050442219a0d83d77481edfe6df9f62e98520769e4bc6fe9de3eb8782e74c6e"
+            },
+            "lin nuan|陆沉|linnuanisthecousinofluchenandlivesnextdo": {
+              "dim": 384,
+              "sha256": "df649124de4d61d0f8ae80cbfeeb5a3f3ee6fdbe1ee16f5ab60bd0304a362cc6"
+            }
+          },
+          "model": "unknown",
+          "dim": 384
+        }
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {
+            "evt_muyrtkyo_4fzyo8": {
+              "dim": 384,
+              "sha256": "c76ba08f2a19e25558de85acfbe457a8c82a9b80571ddc4f5274be3c306df173"
+            }
+          },
+          "entityVectors": {
+            "陆沉": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            },
+            "Lin Nuan": {
+              "dim": 384,
+              "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            }
+          },
+          "edgeVectors": {
+            "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
+              "dim": 384,
+              "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
+            },
+            "lin nuan|陆沉|linnuanisthelandladyofthetavernluchenliv": {
+              "dim": 384,
+              "sha256": "d050442219a0d83d77481edfe6df9f62e98520769e4bc6fe9de3eb8782e74c6e"
+            },
+            "林月|陆沉|林月是玩家的妹妹": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            }
+          },
+          "model": "unknown",
+          "dim": 384
+        }
+      }
+    ],
+    "aiCalls": [],
+    "fetchCalls": [],
+    "emits": [
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "元数据.回合序号",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.v2Edges",
+          "action": "set",
+          "source": "system"
+        }
+      }
+    ]
+  },
+  "edgesOff": {
+    "ok": {
+      "projected": false
+    }
+  },
+  "engineDisabled": {
+    "ok": {
+      "projected": false
+    }
+  },
+  "emptyEngramInvalidate": {
+    "result": {
+      "ok": {
+        "invalidated": 0
+      }
+    },
+    "engramKeyWritten": false
+  },
+  "emptyEngramReproject": {
+    "result": {
+      "ok": {
+        "projected": true
+      }
+    }
+  },
+  "emptyEngramState": {
+    "label": "empty engram after both",
+    "engramMemory": {
+      "events": [],
+      "entities": [
+        {
+          "name": "Guan Yu",
+          "type": "npc",
+          "summary": "",
+          "attributes": {},
+          "firstSeen": 0,
+          "lastSeen": 0,
+          "mentionCount": 1,
+          "is_embedded": false,
+          "_pendingEnrichment": true
+        },
+        {
+          "name": "陆沉",
+          "type": "location",
+          "summary": "",
+          "attributes": {},
+          "firstSeen": 0,
+          "lastSeen": 0,
+          "mentionCount": 1,
+          "is_embedded": false,
+          "_pendingEnrichment": true
+        }
+      ],
+      "relations": [],
+      "v2Edges": [
+        {
+          "id": "guan yu|陆沉|guanyuistheswornbrotherofluchen",
+          "sourceEntity": "Guan Yu",
+          "targetEntity": "陆沉",
+          "fact": "Guan Yu is the sworn brother of Lu Chen",
+          "episodes": [],
+          "is_embedded": true,
+          "createdAtRound": 0,
+          "lastSeenRound": 0,
+          "learnedAtRound": 0,
+          "core": true,
+          "source": "user-canon",
+          "canonEntryId": "canon_a"
+        }
+      ],
+      "meta": {
+        "lastUpdated": 0,
+        "eventCount": 0,
+        "embeddedEventCount": 0,
+        "embeddedEntityCount": 0,
+        "schemaVersion": 5
+      }
+    },
+    "memory": {
+      "短期": [],
+      "中期": [],
+      "长期": [],
+      "隐式中期": []
+    },
+    "vectorRows": [
+      [
+        "engram_vectors_prof_m_slot_m",
+        {
+          "eventVectors": {},
+          "entityVectors": {},
+          "edgeVectors": {
+            "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
+              "dim": 384,
+              "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
+            }
+          },
+          "model": "unknown",
+          "dim": 384
+        }
+      ]
+    ],
+    "vectorCalls": [
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {},
+          "entityVectors": {},
+          "edgeVectors": {
+            "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
+              "dim": 384,
+              "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
+            }
+          },
+          "model": "unknown",
+          "dim": 384
+        }
+      }
+    ],
+    "aiCalls": [],
+    "fetchCalls": [],
+    "emits": [
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "type": "load"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.v2Edges",
+          "action": "set",
+          "source": "system"
+        }
+      }
+    ]
+  },
+  "warnings": [
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:",
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:",
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:",
+    "[Embedder] Embedding API failed, falling back to pseudoEmbed:"
+  ]
+}

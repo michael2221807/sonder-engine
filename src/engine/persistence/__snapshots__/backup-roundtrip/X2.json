@@ -1,0 +1,86 @@
+{
+  "imageIntegrity": {
+    "referencedAssets": 12,
+    "exportedAssets": 12
+  },
+  "worldBookIntegrity": {
+    "expectedBooks": 1,
+    "exportedBooks": 3,
+    "degradedProfiles": []
+  },
+  "bundleSha256": "0286802b9e6894376572efa48317b5f301eeb6e409dccc1f31748af5c5156540",
+  "bundleLength": 15322,
+  "topLevelKeys": [
+    "version",
+    "exportedAt",
+    "engineVersion",
+    "bundleType",
+    "activeProfile",
+    "profiles",
+    "saves",
+    "vectors",
+    "configs",
+    "prompts",
+    "engineSettings",
+    "customPresets",
+    "imageAssets",
+    "worldBooks"
+  ],
+  "engineSettings": {
+    "aga_api_management": "{\"configs\":[{\"name\":\"main\"}]}",
+    "aga_engram_config": "{\"enabled\":true}",
+    "aga-ui-theme": "dark",
+    "aga_pending_input": "draft text",
+    "aga_github_sync_token": "ghp_FAKE0000",
+    "aga_github_sync_owner": "octo",
+    "aga_github_sync_repo": "aga-cloud-save",
+    "aga_plot_vector_control": "{\"enabled\":true}"
+  },
+  "exportAllEngineSettingsKeys": [
+    "aga_api_management",
+    "aga_engram_config",
+    "aga-ui-theme",
+    "aga_pending_input",
+    "aga_github_sync_token",
+    "aga_github_sync_owner",
+    "aga_github_sync_repo"
+  ],
+  "imageAssetIds": [
+    "img_avatar_a",
+    "img_avatar_b",
+    "img_hist_a1",
+    "img_hist_a2",
+    "img_legacy_ref",
+    "img_npc_1",
+    "img_portrait_a",
+    "img_ref_used",
+    "img_scene_1",
+    "img_secret_a",
+    "img_shared",
+    "img_wall_a"
+  ],
+  "withReferenceAssets": {
+    "imageIntegrity": {
+      "referencedAssets": 14,
+      "exportedAssets": 14
+    },
+    "bundleSha256": "8aa5a6a5dddc52d2ebc9f832d268bda01b125116861c8b32472eedcb98d1e636",
+    "imageAssetIds": [
+      "img_avatar_a",
+      "img_avatar_b",
+      "img_hist_a1",
+      "img_hist_a2",
+      "img_legacy_ref",
+      "img_lib_1",
+      "img_lib_2",
+      "img_npc_1",
+      "img_portrait_a",
+      "img_ref_used",
+      "img_scene_1",
+      "img_secret_a",
+      "img_shared",
+      "img_wall_a"
+    ]
+  },
+  "emits": []
+}

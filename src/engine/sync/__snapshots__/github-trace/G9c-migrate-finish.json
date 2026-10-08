@@ -1,0 +1,801 @@
+{
+  "retire500": {
+    "outcome": {
+      "ok": {
+        "slots": [
+          {
+            "slotKey": "prof_a",
+            "verified": true
+          },
+          {
+            "slotKey": "prof_b",
+            "verified": true
+          },
+          {
+            "slotKey": "global",
+            "verified": true
+          }
+        ],
+        "v2Cleaned": false
+      }
+    },
+    "status": [
+      {
+        "stage": "uploading",
+        "message": "正在迁移档案 1/2…"
+      },
+      {
+        "stage": "uploading",
+        "message": "正在迁移档案 2/2…"
+      },
+      {
+        "stage": "uploading",
+        "message": "正在迁移全局设置…"
+      },
+      {
+        "stage": "checking",
+        "message": "正在验证插槽 prof_a…"
+      },
+      {
+        "stage": "checking",
+        "message": "正在验证插槽 prof_a 分块 1/2…"
+      },
+      {
+        "stage": "checking",
+        "message": "正在验证插槽 prof_a 分块 2/2…"
+      },
+      {
+        "stage": "checking",
+        "message": "正在验证插槽 prof_b…"
+      },
+      {
+        "stage": "checking",
+        "message": "正在验证插槽 prof_b 分块 1/2…"
+      },
+      {
+        "stage": "checking",
+        "message": "正在验证插槽 prof_b 分块 2/2…"
+      },
+      {
+        "stage": "checking",
+        "message": "正在验证插槽 global…"
+      },
+      {
+        "stage": "checking",
+        "message": "正在验证插槽 global 分块 1/1…"
+      },
+      {
+        "stage": "uploading",
+        "message": "正在下线旧格式索引…"
+      },
+      {
+        "stage": "done",
+        "message": "迁移完成（旧索引未删净，可重试）"
+      }
+    ],
+    "trace": [
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a"
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a/state.muyrtkyo1f9a.gz",
+        "body": {
+          "message": "sync 2026-10-08T00:01:00",
+          "chunk": {
+            "plainLength": 2288,
+            "plainSha256": "99b83a7368ee49b5bb519b34a7e13cb5361715c9a9bfebbb98512d8a29c16581"
+          }
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a/img-0.muyrtkyo1f9a.gz",
+        "body": {
+          "message": "sync 2026-10-08T00:01:00",
+          "chunk": {
+            "plainLength": 2839,
+            "plainSha256": "939bf8612299c4215d898fecd50f304ca604898ac7f2f4708226026bdd49d877"
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a/manifest.json"
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a/manifest.json",
+        "body": {
+          "message": "sync 2026-10-08T00:01:00",
+          "manifest": {
+            "manifestVersion": 2,
+            "createdAt": "2026-10-08T00:01:00.000Z",
+            "engineVersion": "0.1.0",
+            "totalSizeBytes": 9060,
+            "bundleChecksum": "2cefeaa8a3855d9b95dc8a2984a28a76fbc4c27eb35935447c578bded6b1c557",
+            "chunks": [
+              {
+                "name": "state",
+                "path": "slots/prof_a/state.muyrtkyo1f9a.gz",
+                "compressedSize": "<gz>",
+                "originalSize": 2288,
+                "checksum": "<gz>"
+              },
+              {
+                "name": "img-0",
+                "path": "slots/prof_a/img-0.muyrtkyo1f9a.gz",
+                "compressedSize": "<gz>",
+                "originalSize": 2839,
+                "checksum": "<gz>"
+              }
+            ],
+            "uploadedBy": {
+              "deviceId": "dev_0a0b0c0d",
+              "deviceLabel": "Windows · Chrome"
+            },
+            "slotMeta": {
+              "profileId": "prof_a",
+              "profileName": "Alice",
+              "packId": "tianming",
+              "slotCount": 2,
+              "lastPlayedAt": "2026-10-08T00:00:00.000Z",
+              "lastRound": 3
+            }
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_b"
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_b/state.muyrtkyo1f9a.gz",
+        "body": {
+          "message": "sync 2026-10-08T00:01:00",
+          "chunk": {
+            "plainLength": 2131,
+            "plainSha256": "6c8121b3b2c409a892eda2a9df5c6d775aec2193e4bab47fa2f647aa78c65337"
+          }
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_b/img-0.muyrtkyo1f9a.gz",
+        "body": {
+          "message": "sync 2026-10-08T00:01:00",
+          "chunk": {
+            "plainLength": 563,
+            "plainSha256": "bfed4bb2d979e4d0cc8e97cb683998c3c79ec3edbf1ab7bc7d72cf9c39e9f8cb"
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_b/manifest.json"
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_b/manifest.json",
+        "body": {
+          "message": "sync 2026-10-08T00:01:00",
+          "manifest": {
+            "manifestVersion": 2,
+            "createdAt": "2026-10-08T00:01:00.000Z",
+            "engineVersion": "0.1.0",
+            "totalSizeBytes": 4744,
+            "bundleChecksum": "209db2f48f47a6b3b240c5e486e8f6f3227201c992bb705e3cef5439f8c6f91f",
+            "chunks": [
+              {
+                "name": "state",
+                "path": "slots/prof_b/state.muyrtkyo1f9a.gz",
+                "compressedSize": "<gz>",
+                "originalSize": 2131,
+                "checksum": "<gz>"
+              },
+              {
+                "name": "img-0",
+                "path": "slots/prof_b/img-0.muyrtkyo1f9a.gz",
+                "compressedSize": "<gz>",
+                "originalSize": 563,
+                "checksum": "<gz>"
+              }
+            ],
+            "uploadedBy": {
+              "deviceId": "dev_0a0b0c0d",
+              "deviceLabel": "Windows · Chrome"
+            },
+            "slotMeta": {
+              "profileId": "prof_b",
+              "profileName": "Bob",
+              "packId": "tianming",
+              "slotCount": 2,
+              "lastPlayedAt": "2026-10-08T00:00:00.000Z",
+              "lastRound": 5
+            }
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/global/manifest.json"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/global"
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/global/state.muyrtkyo1f9a.gz",
+        "body": {
+          "message": "sync 2026-10-08T00:01:00",
+          "chunk": {
+            "plainLength": 1321,
+            "plainSha256": "a976dd6e70569475988ee8d0b745ef2cbb729d91d4b3043e3abe4d82501b426e"
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/global/manifest.json"
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/global/manifest.json",
+        "body": {
+          "message": "sync 2026-10-08T00:01:00",
+          "manifest": {
+            "manifestVersion": 2,
+            "createdAt": "2026-10-08T00:01:00.000Z",
+            "engineVersion": "0.1.0",
+            "totalSizeBytes": 2105,
+            "bundleChecksum": "199b5f2c5860a7812ef56363b24d221de7eb6a3171c00c3c1e7713cc2760cb88",
+            "chunks": [
+              {
+                "name": "state",
+                "path": "global/state.muyrtkyo1f9a.gz",
+                "compressedSize": "<gz>",
+                "originalSize": 1321,
+                "checksum": "<gz>"
+              }
+            ],
+            "uploadedBy": {
+              "deviceId": "dev_0a0b0c0d",
+              "deviceLabel": "Windows · Chrome"
+            },
+            "contentChecksum": "c777909c3d8c8322bfe27d6ba31cf55bc90cc49a7dcef3f0b4011b64002bbe91"
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a/manifest.json"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha6"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a/state.muyrtkyo1f9a.gz"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha4"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a/img-0.muyrtkyo1f9a.gz"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha5"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_b/manifest.json"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha9"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_b/state.muyrtkyo1f9a.gz"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha7"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_b/img-0.muyrtkyo1f9a.gz"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha8"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/global/manifest.json"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha11"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/global/state.muyrtkyo1f9a.gz"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha10"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/v2/manifest.json"
+      },
+      {
+        "method": "DELETE",
+        "path": "/repos/octo/aga-cloud-save/contents/v2/manifest.json",
+        "body": {
+          "message": "migrate to v3 slots: retire v2 manifest",
+          "sha": "sha3"
+        }
+      }
+    ],
+    "backupCalls": [
+      {
+        "method": "exportForSync",
+        "args": []
+      },
+      {
+        "method": "listProfileIds",
+        "args": []
+      },
+      {
+        "method": "exportProfileForSync",
+        "args": [
+          "prof_a"
+        ]
+      },
+      {
+        "method": "exportProfileForSync",
+        "args": [
+          "prof_b"
+        ]
+      },
+      {
+        "method": "exportGlobalForSync",
+        "args": []
+      }
+    ],
+    "lsDiff": {
+      "added": {},
+      "removed": [
+        "aga_github_sync_baseline",
+        "aga_github_sync_pending"
+      ],
+      "changed": {
+        "aga_github_sync_baselines": {
+          "from": "{\"prof_a\":\"SRC-SLOT-BASELINE\"}",
+          "to": "{\"prof_a\":\"2026-10-08T00:01:00.000Z\",\"prof_b\":\"2026-10-08T00:01:00.000Z\",\"global\":\"2026-10-08T00:01:00.000Z\"}"
+        }
+      }
+    },
+    "headers": [
+      "[[\"Accept\",\"application/vnd.github+json\"],[\"Authorization\",\"Bearer ghp_FAKE0000\"],[\"X-GitHub-Api-Version\",\"2022-11-28\"]]"
+    ],
+    "repoAfter": [
+      "global/manifest.json",
+      "global/state.muyrtkyo1f9a.gz",
+      "slots/prof_a/img-0.muyrtkyo1f9a.gz",
+      "slots/prof_a/manifest.json",
+      "slots/prof_a/state.muyrtkyo1f9a.gz",
+      "slots/prof_b/img-0.muyrtkyo1f9a.gz",
+      "slots/prof_b/manifest.json",
+      "slots/prof_b/state.muyrtkyo1f9a.gz",
+      "v2/img-0.muyrsao01f9a.gz",
+      "v2/manifest.json",
+      "v2/state.muyrsao01f9a.gz"
+    ],
+    "warnings": [
+      "[GitHubSync] v2 manifest retire failed (retryable):"
+    ],
+    "v2ManifestStillThere": true,
+    "scalarBaselineAfter": ""
+  },
+  "noV2Manifest": {
+    "outcome": {
+      "ok": {
+        "slots": [
+          {
+            "slotKey": "prof_a",
+            "verified": true
+          },
+          {
+            "slotKey": "prof_b",
+            "verified": true
+          },
+          {
+            "slotKey": "global",
+            "verified": true
+          }
+        ],
+        "v2Cleaned": true
+      }
+    },
+    "status": [
+      {
+        "stage": "uploading",
+        "message": "正在迁移档案 1/2…"
+      },
+      {
+        "stage": "uploading",
+        "message": "正在迁移档案 2/2…"
+      },
+      {
+        "stage": "uploading",
+        "message": "正在迁移全局设置…"
+      },
+      {
+        "stage": "checking",
+        "message": "正在验证插槽 prof_a…"
+      },
+      {
+        "stage": "checking",
+        "message": "正在验证插槽 prof_a 分块 1/2…"
+      },
+      {
+        "stage": "checking",
+        "message": "正在验证插槽 prof_a 分块 2/2…"
+      },
+      {
+        "stage": "checking",
+        "message": "正在验证插槽 prof_b…"
+      },
+      {
+        "stage": "checking",
+        "message": "正在验证插槽 prof_b 分块 1/2…"
+      },
+      {
+        "stage": "checking",
+        "message": "正在验证插槽 prof_b 分块 2/2…"
+      },
+      {
+        "stage": "checking",
+        "message": "正在验证插槽 global…"
+      },
+      {
+        "stage": "checking",
+        "message": "正在验证插槽 global 分块 1/1…"
+      },
+      {
+        "stage": "uploading",
+        "message": "正在下线旧格式索引…"
+      },
+      {
+        "stage": "done",
+        "message": "迁移完成"
+      }
+    ],
+    "trace": [
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a"
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a/state.muyrtkyo1f9a.gz",
+        "body": {
+          "message": "sync 2026-10-08T00:01:00",
+          "chunk": {
+            "plainLength": 2288,
+            "plainSha256": "99b83a7368ee49b5bb519b34a7e13cb5361715c9a9bfebbb98512d8a29c16581"
+          }
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a/img-0.muyrtkyo1f9a.gz",
+        "body": {
+          "message": "sync 2026-10-08T00:01:00",
+          "chunk": {
+            "plainLength": 2839,
+            "plainSha256": "939bf8612299c4215d898fecd50f304ca604898ac7f2f4708226026bdd49d877"
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a/manifest.json"
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a/manifest.json",
+        "body": {
+          "message": "sync 2026-10-08T00:01:00",
+          "manifest": {
+            "manifestVersion": 2,
+            "createdAt": "2026-10-08T00:01:00.000Z",
+            "engineVersion": "0.1.0",
+            "totalSizeBytes": 9060,
+            "bundleChecksum": "2cefeaa8a3855d9b95dc8a2984a28a76fbc4c27eb35935447c578bded6b1c557",
+            "chunks": [
+              {
+                "name": "state",
+                "path": "slots/prof_a/state.muyrtkyo1f9a.gz",
+                "compressedSize": "<gz>",
+                "originalSize": 2288,
+                "checksum": "<gz>"
+              },
+              {
+                "name": "img-0",
+                "path": "slots/prof_a/img-0.muyrtkyo1f9a.gz",
+                "compressedSize": "<gz>",
+                "originalSize": 2839,
+                "checksum": "<gz>"
+              }
+            ],
+            "uploadedBy": {
+              "deviceId": "dev_0a0b0c0d",
+              "deviceLabel": "Windows · Chrome"
+            },
+            "slotMeta": {
+              "profileId": "prof_a",
+              "profileName": "Alice",
+              "packId": "tianming",
+              "slotCount": 2,
+              "lastPlayedAt": "2026-10-08T00:00:00.000Z",
+              "lastRound": 3
+            }
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_b"
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_b/state.muyrtkyo1f9a.gz",
+        "body": {
+          "message": "sync 2026-10-08T00:01:00",
+          "chunk": {
+            "plainLength": 2131,
+            "plainSha256": "6c8121b3b2c409a892eda2a9df5c6d775aec2193e4bab47fa2f647aa78c65337"
+          }
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_b/img-0.muyrtkyo1f9a.gz",
+        "body": {
+          "message": "sync 2026-10-08T00:01:00",
+          "chunk": {
+            "plainLength": 563,
+            "plainSha256": "bfed4bb2d979e4d0cc8e97cb683998c3c79ec3edbf1ab7bc7d72cf9c39e9f8cb"
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_b/manifest.json"
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_b/manifest.json",
+        "body": {
+          "message": "sync 2026-10-08T00:01:00",
+          "manifest": {
+            "manifestVersion": 2,
+            "createdAt": "2026-10-08T00:01:00.000Z",
+            "engineVersion": "0.1.0",
+            "totalSizeBytes": 4744,
+            "bundleChecksum": "209db2f48f47a6b3b240c5e486e8f6f3227201c992bb705e3cef5439f8c6f91f",
+            "chunks": [
+              {
+                "name": "state",
+                "path": "slots/prof_b/state.muyrtkyo1f9a.gz",
+                "compressedSize": "<gz>",
+                "originalSize": 2131,
+                "checksum": "<gz>"
+              },
+              {
+                "name": "img-0",
+                "path": "slots/prof_b/img-0.muyrtkyo1f9a.gz",
+                "compressedSize": "<gz>",
+                "originalSize": 563,
+                "checksum": "<gz>"
+              }
+            ],
+            "uploadedBy": {
+              "deviceId": "dev_0a0b0c0d",
+              "deviceLabel": "Windows · Chrome"
+            },
+            "slotMeta": {
+              "profileId": "prof_b",
+              "profileName": "Bob",
+              "packId": "tianming",
+              "slotCount": 2,
+              "lastPlayedAt": "2026-10-08T00:00:00.000Z",
+              "lastRound": 5
+            }
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/global/manifest.json"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/global"
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/global/state.muyrtkyo1f9a.gz",
+        "body": {
+          "message": "sync 2026-10-08T00:01:00",
+          "chunk": {
+            "plainLength": 1321,
+            "plainSha256": "a976dd6e70569475988ee8d0b745ef2cbb729d91d4b3043e3abe4d82501b426e"
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/global/manifest.json"
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/global/manifest.json",
+        "body": {
+          "message": "sync 2026-10-08T00:01:00",
+          "manifest": {
+            "manifestVersion": 2,
+            "createdAt": "2026-10-08T00:01:00.000Z",
+            "engineVersion": "0.1.0",
+            "totalSizeBytes": 2105,
+            "bundleChecksum": "199b5f2c5860a7812ef56363b24d221de7eb6a3171c00c3c1e7713cc2760cb88",
+            "chunks": [
+              {
+                "name": "state",
+                "path": "global/state.muyrtkyo1f9a.gz",
+                "compressedSize": "<gz>",
+                "originalSize": 1321,
+                "checksum": "<gz>"
+              }
+            ],
+            "uploadedBy": {
+              "deviceId": "dev_0a0b0c0d",
+              "deviceLabel": "Windows · Chrome"
+            },
+            "contentChecksum": "c777909c3d8c8322bfe27d6ba31cf55bc90cc49a7dcef3f0b4011b64002bbe91"
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a/manifest.json"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha3"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a/state.muyrtkyo1f9a.gz"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha1"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_a/img-0.muyrtkyo1f9a.gz"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha2"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_b/manifest.json"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha6"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_b/state.muyrtkyo1f9a.gz"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha4"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/slots/prof_b/img-0.muyrtkyo1f9a.gz"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha5"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/global/manifest.json"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha8"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/global/state.muyrtkyo1f9a.gz"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/git/blobs/sha7"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/v2/manifest.json"
+      }
+    ],
+    "backupCalls": [
+      {
+        "method": "listProfileIds",
+        "args": []
+      },
+      {
+        "method": "exportProfileForSync",
+        "args": [
+          "prof_a"
+        ]
+      },
+      {
+        "method": "exportProfileForSync",
+        "args": [
+          "prof_b"
+        ]
+      },
+      {
+        "method": "exportGlobalForSync",
+        "args": []
+      }
+    ],
+    "lsDiff": {
+      "added": {},
+      "removed": [
+        "aga_github_sync_baseline",
+        "aga_github_sync_pending"
+      ],
+      "changed": {
+        "aga_github_sync_baselines": {
+          "from": "{\"prof_a\":\"SRC-SLOT-BASELINE\"}",
+          "to": "{\"prof_a\":\"2026-10-08T00:01:00.000Z\",\"prof_b\":\"2026-10-08T00:01:00.000Z\",\"global\":\"2026-10-08T00:01:00.000Z\"}"
+        }
+      }
+    },
+    "headers": [
+      "[[\"Accept\",\"application/vnd.github+json\"],[\"Authorization\",\"Bearer ghp_FAKE0000\"],[\"X-GitHub-Api-Version\",\"2022-11-28\"]]"
+    ],
+    "repoAfter": [
+      "global/manifest.json",
+      "global/state.muyrtkyo1f9a.gz",
+      "slots/prof_a/img-0.muyrtkyo1f9a.gz",
+      "slots/prof_a/manifest.json",
+      "slots/prof_a/state.muyrtkyo1f9a.gz",
+      "slots/prof_b/img-0.muyrtkyo1f9a.gz",
+      "slots/prof_b/manifest.json",
+      "slots/prof_b/state.muyrtkyo1f9a.gz"
+    ],
+    "warnings": [
+      "[GitHubSync] v2 manifest retire failed (retryable):"
+    ]
+  }
+}

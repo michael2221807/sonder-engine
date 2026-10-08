@@ -1,0 +1,3781 @@
+{
+  "withoutOverride": {
+    "steps": [
+      {
+        "label": "effective config",
+        "result": {
+          "shortTermCapacity": 5,
+          "midTermRefineThreshold": 25,
+          "longTermSummaryThreshold": 50,
+          "longTermSummarizeCount": 50,
+          "midTermKeep": 0,
+          "longTermCap": 30
+        },
+        "memory": {
+          "counts": {
+            "短期": 0,
+            "中期": 0,
+            "长期": 0,
+            "隐式中期": 0
+          }
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "type": "load"
+            }
+          }
+        ]
+      },
+      {
+        "label": "six short-term entries",
+        "result": {
+          "full": true,
+          "entries": 6
+        },
+        "memory": {
+          "counts": {
+            "短期": 6,
+            "中期": 0,
+            "长期": 0,
+            "隐式中期": 0
+          }
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "implicit entries appended (blank and non-object ones refused)",
+        "result": [
+          {
+            "相关角色": [
+              "陆沉",
+              "Lin Nuan"
+            ],
+            "事件时间": "1年3月5日",
+            "记忆主体": "陆沉与 Lin Nuan 聊起茶。"
+          },
+          {
+            "相关角色": [],
+            "事件时间": "",
+            "记忆主体": "a plain string entry"
+          },
+          {
+            "相关角色": [
+              "Guan Yu"
+            ],
+            "事件时间": "1年4月1日",
+            "记忆主体": "english keys"
+          },
+          {
+            "相关角色": [],
+            "事件时间": "",
+            "记忆主体": "[占位 · round 4]",
+            "_占位": true
+          }
+        ],
+        "memory": {
+          "counts": {
+            "短期": 6,
+            "中期": 0,
+            "长期": 0,
+            "隐式中期": 4
+          }
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "promotion with mismatched lengths warns",
+        "result": "__undefined__",
+        "memory": {
+          "短期": [
+            {
+              "round": 2,
+              "summary": "第2回合的叙事。",
+              "timestamp": 1791417602000
+            },
+            {
+              "round": 3,
+              "summary": "第3回合的叙事。",
+              "timestamp": 1791417603000
+            },
+            {
+              "round": 4,
+              "summary": "第4回合的叙事。",
+              "timestamp": 1791417604000
+            },
+            {
+              "round": 5,
+              "summary": "第5回合的叙事。",
+              "timestamp": 1791417605000
+            },
+            {
+              "round": 6,
+              "summary": "第6回合的叙事。",
+              "timestamp": 1791417606000
+            }
+          ],
+          "中期": [
+            {
+              "相关角色": [
+                "陆沉",
+                "Lin Nuan"
+              ],
+              "事件时间": "1年3月5日",
+              "记忆主体": "陆沉与 Lin Nuan 聊起茶。"
+            }
+          ],
+          "长期": [],
+          "隐式中期": [
+            {
+              "相关角色": [],
+              "事件时间": "",
+              "记忆主体": "a plain string entry"
+            },
+            {
+              "相关角色": [
+                "Guan Yu"
+              ],
+              "事件时间": "1年4月1日",
+              "记忆主体": "english keys"
+            },
+            {
+              "相关角色": [],
+              "事件时间": "",
+              "记忆主体": "[占位 · round 4]",
+              "_占位": true
+            }
+          ]
+        },
+        "emits": [
+          {
+            "event": "ui:toast",
+            "payload": {
+              "type": "warning",
+              "i18nKey": "engine.toast.memoryPairMismatch",
+              "i18nParams": {
+                "short": 6,
+                "implicit": 4
+              },
+              "message": "短期/隐式中期记忆配对异常 (6 vs 4)，可能丢失回合对齐",
+              "duration": 4000
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "seven paired entries (the implicit list overflows its buffer and is trimmed)",
+        "result": "__undefined__",
+        "memory": {
+          "短期": [
+            {
+              "round": 1,
+              "summary": "补齐1",
+              "timestamp": 1791417606000
+            },
+            {
+              "round": 2,
+              "summary": "补齐2",
+              "timestamp": 1791417606000
+            },
+            {
+              "round": 3,
+              "summary": "补齐3",
+              "timestamp": 1791417606000
+            },
+            {
+              "round": 4,
+              "summary": "补齐4",
+              "timestamp": 1791417606000
+            },
+            {
+              "round": 5,
+              "summary": "补齐5",
+              "timestamp": 1791417606000
+            },
+            {
+              "round": 6,
+              "summary": "补齐6",
+              "timestamp": 1791417606000
+            },
+            {
+              "round": 7,
+              "summary": "补齐7",
+              "timestamp": 1791417606000
+            }
+          ],
+          "中期": [],
+          "长期": [],
+          "隐式中期": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "1年3月5日",
+              "记忆主体": "隐式记忆 1"
+            },
+            {
+              "相关角色": [
+                "Guan Yu"
+              ],
+              "事件时间": "1年3月5日",
+              "记忆主体": "隐式记忆 2"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "1年3月5日",
+              "记忆主体": "隐式记忆 3"
+            },
+            {
+              "相关角色": [
+                "Guan Yu"
+              ],
+              "事件时间": "1年3月5日",
+              "记忆主体": "隐式记忆 4"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "1年3月5日",
+              "记忆主体": "隐式记忆 5"
+            },
+            {
+              "相关角色": [
+                "Guan Yu"
+              ],
+              "事件时间": "1年3月5日",
+              "记忆主体": "隐式记忆 6"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "1年3月5日",
+              "记忆主体": "隐式记忆 7"
+            }
+          ]
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "paired entries pushed directly",
+        "result": {
+          "promoted": 1,
+          "mid": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t1",
+              "记忆主体": "隐式 1"
+            }
+          ]
+        },
+        "memory": {
+          "短期": [
+            {
+              "round": 3,
+              "summary": "短期 3",
+              "timestamp": 3
+            },
+            {
+              "round": 4,
+              "summary": "短期 4",
+              "timestamp": 4
+            },
+            {
+              "round": 5,
+              "summary": "短期 5",
+              "timestamp": 5
+            },
+            {
+              "round": 6,
+              "summary": "短期 6",
+              "timestamp": 6
+            },
+            {
+              "round": 7,
+              "summary": "短期 7",
+              "timestamp": 7
+            }
+          ],
+          "中期": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t1",
+              "记忆主体": "隐式 1"
+            }
+          ],
+          "长期": [],
+          "隐式中期": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t3",
+              "记忆主体": "隐式 3"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t4",
+              "记忆主体": "隐式 4"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t5",
+              "记忆主体": "隐式 5"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t6",
+              "记忆主体": "隐式 6"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t7",
+              "记忆主体": "隐式 7"
+            }
+          ]
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "thirty mid-term entries",
+        "result": {
+          "shouldRefine": true,
+          "shouldSummarize": false,
+          "refined": false
+        },
+        "memory": {
+          "counts": {
+            "短期": 5,
+            "中期": 31,
+            "长期": 0,
+            "隐式中期": 5
+          }
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "commitSummaryResult",
+        "result": {
+          "ok": "__undefined__"
+        },
+        "memory": {
+          "短期": [
+            {
+              "round": 3,
+              "summary": "短期 3",
+              "timestamp": 3
+            },
+            {
+              "round": 4,
+              "summary": "短期 4",
+              "timestamp": 4
+            },
+            {
+              "round": 5,
+              "summary": "短期 5",
+              "timestamp": 5
+            },
+            {
+              "round": 6,
+              "summary": "短期 6",
+              "timestamp": 6
+            },
+            {
+              "round": 7,
+              "summary": "短期 7",
+              "timestamp": 7
+            }
+          ],
+          "中期": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "m28",
+              "记忆主体": "中期 28"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "m29",
+              "记忆主体": "中期 29"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "m30",
+              "记忆主体": "中期 30",
+              "已精炼": true
+            }
+          ],
+          "长期": [
+            {
+              "content": "长期一",
+              "category": "主线",
+              "createdAt": 1
+            }
+          ],
+          "隐式中期": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t3",
+              "记忆主体": "隐式 3"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t4",
+              "记忆主体": "隐式 4"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t5",
+              "记忆主体": "隐式 5"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t6",
+              "记忆主体": "隐式 6"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t7",
+              "记忆主体": "隐式 7"
+            }
+          ]
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "commitSummaryResult with a failing mid-term write rolls the long-term write back",
+        "result": {
+          "threw": {
+            "name": "Error",
+            "message": "mid-term write boom"
+          }
+        },
+        "memory": {
+          "短期": [
+            {
+              "round": 3,
+              "summary": "短期 3",
+              "timestamp": 3
+            },
+            {
+              "round": 4,
+              "summary": "短期 4",
+              "timestamp": 4
+            },
+            {
+              "round": 5,
+              "summary": "短期 5",
+              "timestamp": 5
+            },
+            {
+              "round": 6,
+              "summary": "短期 6",
+              "timestamp": 6
+            },
+            {
+              "round": 7,
+              "summary": "短期 7",
+              "timestamp": 7
+            }
+          ],
+          "中期": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "m28",
+              "记忆主体": "中期 28"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "m29",
+              "记忆主体": "中期 29"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "m30",
+              "记忆主体": "中期 30",
+              "已精炼": true
+            }
+          ],
+          "长期": [
+            {
+              "content": "长期一",
+              "category": "主线",
+              "createdAt": 1
+            }
+          ],
+          "隐式中期": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t3",
+              "记忆主体": "隐式 3"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t4",
+              "记忆主体": "隐式 4"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t5",
+              "记忆主体": "隐式 5"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t6",
+              "记忆主体": "隐式 6"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t7",
+              "记忆主体": "隐式 7"
+            }
+          ]
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "forty long-term entries",
+        "result": {
+          "shouldCompact": true
+        },
+        "memory": {
+          "counts": {
+            "短期": 5,
+            "中期": 3,
+            "长期": 39,
+            "隐式中期": 5
+          }
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "fallbackTrimLongTerm",
+        "result": {
+          "trimmed": 9,
+          "left": 30
+        },
+        "memory": {
+          "短期": [
+            {
+              "round": 3,
+              "summary": "短期 3",
+              "timestamp": 3
+            },
+            {
+              "round": 4,
+              "summary": "短期 4",
+              "timestamp": 4
+            },
+            {
+              "round": 5,
+              "summary": "短期 5",
+              "timestamp": 5
+            },
+            {
+              "round": 6,
+              "summary": "短期 6",
+              "timestamp": 6
+            },
+            {
+              "round": 7,
+              "summary": "短期 7",
+              "timestamp": 7
+            }
+          ],
+          "中期": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "m28",
+              "记忆主体": "中期 28"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "m29",
+              "记忆主体": "中期 29"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "m30",
+              "记忆主体": "中期 30",
+              "已精炼": true
+            }
+          ],
+          "长期": [
+            {
+              "content": "长期 11",
+              "category": "主线",
+              "createdAt": 11
+            },
+            {
+              "content": "长期 12",
+              "category": "世界观",
+              "createdAt": 12
+            },
+            {
+              "content": "长期 13",
+              "category": "主线",
+              "createdAt": 13
+            },
+            {
+              "content": "长期 14",
+              "category": "世界观",
+              "createdAt": 14
+            },
+            {
+              "content": "长期 15",
+              "category": "主线",
+              "createdAt": 15
+            },
+            {
+              "content": "长期 16",
+              "category": "世界观",
+              "createdAt": 16
+            },
+            {
+              "content": "长期 17",
+              "category": "主线",
+              "createdAt": 17
+            },
+            {
+              "content": "长期 18",
+              "category": "世界观",
+              "createdAt": 18
+            },
+            {
+              "content": "长期 19",
+              "category": "主线",
+              "createdAt": 19
+            },
+            {
+              "content": "长期 20",
+              "category": "世界观",
+              "createdAt": 20
+            },
+            {
+              "content": "长期 21",
+              "category": "主线",
+              "createdAt": 21
+            },
+            {
+              "content": "长期 22",
+              "category": "世界观",
+              "createdAt": 22
+            },
+            {
+              "content": "长期 23",
+              "category": "主线",
+              "createdAt": 23
+            },
+            {
+              "content": "长期 24",
+              "category": "世界观",
+              "createdAt": 24
+            },
+            {
+              "content": "长期 25",
+              "category": "主线",
+              "createdAt": 25
+            },
+            {
+              "content": "长期 26",
+              "category": "世界观",
+              "createdAt": 26
+            },
+            {
+              "content": "长期 27",
+              "category": "主线",
+              "createdAt": 27
+            },
+            {
+              "content": "长期 28",
+              "category": "世界观",
+              "createdAt": 28
+            },
+            {
+              "content": "长期 29",
+              "category": "主线",
+              "createdAt": 29
+            },
+            {
+              "content": "长期 30",
+              "category": "世界观",
+              "createdAt": 30
+            },
+            {
+              "content": "长期 31",
+              "category": "主线",
+              "createdAt": 31
+            },
+            {
+              "content": "长期 32",
+              "category": "世界观",
+              "createdAt": 32
+            },
+            {
+              "content": "长期 33",
+              "category": "主线",
+              "createdAt": 33
+            },
+            {
+              "content": "长期 34",
+              "category": "世界观",
+              "createdAt": 34
+            },
+            {
+              "content": "长期 35",
+              "category": "主线",
+              "createdAt": 35
+            },
+            {
+              "content": "长期 36",
+              "category": "世界观",
+              "createdAt": 36
+            },
+            {
+              "content": "长期 37",
+              "category": "主线",
+              "createdAt": 37
+            },
+            {
+              "content": "长期 38",
+              "category": "世界观",
+              "createdAt": 38
+            },
+            {
+              "content": "长期 39",
+              "category": "主线",
+              "createdAt": 39
+            },
+            {
+              "content": "长期 40",
+              "category": "世界观",
+              "createdAt": 40
+            }
+          ],
+          "隐式中期": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t3",
+              "记忆主体": "隐式 3"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t4",
+              "记忆主体": "隐式 4"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t5",
+              "记忆主体": "隐式 5"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t6",
+              "记忆主体": "隐式 6"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t7",
+              "记忆主体": "隐式 7"
+            }
+          ]
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "settings override read after the cache expires",
+        "result": {
+          "cached": {
+            "shortTermCapacity": 5,
+            "midTermRefineThreshold": 25,
+            "longTermSummaryThreshold": 50,
+            "longTermSummarizeCount": 50,
+            "midTermKeep": 0,
+            "longTermCap": 30
+          },
+          "refreshed": {
+            "shortTermCapacity": 2,
+            "midTermRefineThreshold": 25,
+            "longTermSummaryThreshold": 50,
+            "longTermSummarizeCount": 50,
+            "midTermKeep": 200,
+            "longTermCap": 7
+          },
+          "afterClear": {
+            "shortTermCapacity": 2,
+            "midTermRefineThreshold": 25,
+            "longTermSummaryThreshold": 50,
+            "longTermSummarizeCount": 50,
+            "midTermKeep": 200,
+            "longTermCap": 7
+          }
+        },
+        "memory": {
+          "counts": {
+            "短期": 5,
+            "中期": 3,
+            "长期": 30,
+            "隐式中期": 5
+          }
+        },
+        "emits": []
+      },
+      {
+        "label": "broken settings fall back to the path defaults",
+        "result": {
+          "shortTermCapacity": 5,
+          "midTermRefineThreshold": 25,
+          "longTermSummaryThreshold": 50,
+          "longTermSummarizeCount": 50,
+          "midTermKeep": 0,
+          "longTermCap": 30
+        },
+        "memory": {
+          "counts": {
+            "短期": 5,
+            "中期": 3,
+            "长期": 30,
+            "隐式中期": 5
+          }
+        },
+        "emits": []
+      },
+      {
+        "label": "filterImplicitByRelevantChars",
+        "result": {
+          "player": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t3",
+              "记忆主体": "隐式 3"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t4",
+              "记忆主体": "隐式 4"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t5",
+              "记忆主体": "隐式 5"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t6",
+              "记忆主体": "隐式 6"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t7",
+              "记忆主体": "隐式 7"
+            }
+          ],
+          "npc": [],
+          "shortName": [],
+          "none": []
+        },
+        "memory": {
+          "counts": {
+            "短期": 5,
+            "中期": 3,
+            "长期": 30,
+            "隐式中期": 5
+          }
+        },
+        "emits": []
+      },
+      {
+        "label": "retriever output",
+        "withContext": "### 长期记忆（世界观与故事主线）\n1. [主线] 长期 11\n2. [世界观] 长期 12\n3. [主线] 长期 13\n4. [世界观] 长期 14\n5. [主线] 长期 15\n6. [世界观] 长期 16\n7. [主线] 长期 17\n8. [世界观] 长期 18\n9. [主线] 长期 19\n10. [世界观] 长期 20\n11. [主线] 长期 21\n12. [世界观] 长期 22\n13. [主线] 长期 23\n14. [世界观] 长期 24\n15. [主线] 长期 25\n16. [世界观] 长期 26\n17. [主线] 长期 27\n18. [世界观] 长期 28\n19. [主线] 长期 29\n20. [世界观] 长期 30\n21. [主线] 长期 31\n22. [世界观] 长期 32\n23. [主线] 长期 33\n24. [世界观] 长期 34\n25. [主线] 长期 35\n26. [世界观] 长期 36\n27. [主线] 长期 37\n28. [世界观] 长期 38\n29. [主线] 长期 39\n30. [世界观] 长期 40\n\n### 中期记忆（近期事件摘要）\n1. 【相关角色: 陆沉】【m28】中期 28\n2. 【相关角色: 陆沉】【m29】中期 29\n3. [已精炼] 【相关角色: 陆沉】【m30】中期 30\n\n### 隐式记忆（AI 标记的重要信息，按相关角色过滤）\n1. [t3] 隐式 3\n2. [t4] 隐式 4\n3. [t5] 隐式 5\n4. [t6] 隐式 6\n5. [t7] 隐式 7\n\n### 短期记忆（最近对话）\n1. 短期 3\n2. 短期 4\n3. 短期 5\n4. 短期 6\n5. 短期 7",
+        "withContextSkippingShortTerm": "### 长期记忆（世界观与故事主线）\n1. [主线] 长期 11\n2. [世界观] 长期 12\n3. [主线] 长期 13\n4. [世界观] 长期 14\n5. [主线] 长期 15\n6. [世界观] 长期 16\n7. [主线] 长期 17\n8. [世界观] 长期 18\n9. [主线] 长期 19\n10. [世界观] 长期 20\n11. [主线] 长期 21\n12. [世界观] 长期 22\n13. [主线] 长期 23\n14. [世界观] 长期 24\n15. [主线] 长期 25\n16. [世界观] 长期 26\n17. [主线] 长期 27\n18. [世界观] 长期 28\n19. [主线] 长期 29\n20. [世界观] 长期 30\n21. [主线] 长期 31\n22. [世界观] 长期 32\n23. [主线] 长期 33\n24. [世界观] 长期 34\n25. [主线] 长期 35\n26. [世界观] 长期 36\n27. [主线] 长期 37\n28. [世界观] 长期 38\n29. [主线] 长期 39\n30. [世界观] 长期 40\n\n### 中期记忆（近期事件摘要）\n1. 【相关角色: 陆沉】【m28】中期 28\n2. 【相关角色: 陆沉】【m29】中期 29\n3. [已精炼] 【相关角色: 陆沉】【m30】中期 30\n\n### 隐式记忆（AI 标记的重要信息，按相关角色过滤）\n1. [t3] 隐式 3\n2. [t4] 隐式 4\n3. [t5] 隐式 5\n4. [t6] 隐式 6\n5. [t7] 隐式 7",
+        "noContext": "### 长期记忆（世界观与故事主线）\n1. [主线] 长期 11\n2. [世界观] 长期 12\n3. [主线] 长期 13\n4. [世界观] 长期 14\n5. [主线] 长期 15\n6. [世界观] 长期 16\n7. [主线] 长期 17\n8. [世界观] 长期 18\n9. [主线] 长期 19\n10. [世界观] 长期 20\n11. [主线] 长期 21\n12. [世界观] 长期 22\n13. [主线] 长期 23\n14. [世界观] 长期 24\n15. [主线] 长期 25\n16. [世界观] 长期 26\n17. [主线] 长期 27\n18. [世界观] 长期 28\n19. [主线] 长期 29\n20. [世界观] 长期 30\n21. [主线] 长期 31\n22. [世界观] 长期 32\n23. [主线] 长期 33\n24. [世界观] 长期 34\n25. [主线] 长期 35\n26. [世界观] 长期 36\n27. [主线] 长期 37\n28. [世界观] 长期 38\n29. [主线] 长期 39\n30. [世界观] 长期 40\n\n### 中期记忆（近期事件摘要）\n1. 【相关角色: 陆沉】【m28】中期 28\n2. 【相关角色: 陆沉】【m29】中期 29\n3. [已精炼] 【相关角色: 陆沉】【m30】中期 30\n\n### 隐式记忆（AI 标记的重要信息，按相关角色过滤）\n1. [t3] 隐式 3\n2. [t4] 隐式 4\n3. [t5] 隐式 5\n4. [t6] 隐式 6\n5. [t7] 隐式 7\n\n### 短期记忆（最近对话）\n1. 短期 3\n2. 短期 4\n3. 短期 5\n4. 短期 6\n5. 短期 7",
+        "withoutManager": "### 长期记忆（世界观与故事主线）\n1. [主线] 长期 11\n2. [世界观] 长期 12\n3. [主线] 长期 13\n4. [世界观] 长期 14\n5. [主线] 长期 15\n6. [世界观] 长期 16\n7. [主线] 长期 17\n8. [世界观] 长期 18\n9. [主线] 长期 19\n10. [世界观] 长期 20\n11. [主线] 长期 21\n12. [世界观] 长期 22\n13. [主线] 长期 23\n14. [世界观] 长期 24\n15. [主线] 长期 25\n16. [世界观] 长期 26\n17. [主线] 长期 27\n18. [世界观] 长期 28\n19. [主线] 长期 29\n20. [世界观] 长期 30\n21. [主线] 长期 31\n22. [世界观] 长期 32\n23. [主线] 长期 33\n24. [世界观] 长期 34\n25. [主线] 长期 35\n26. [世界观] 长期 36\n27. [主线] 长期 37\n28. [世界观] 长期 38\n29. [主线] 长期 39\n30. [世界观] 长期 40\n\n### 中期记忆（近期事件摘要）\n1. 【相关角色: 陆沉】【m28】中期 28\n2. 【相关角色: 陆沉】【m29】中期 29\n3. [已精炼] 【相关角色: 陆沉】【m30】中期 30\n\n### 隐式记忆（AI 标记的重要信息，按相关角色过滤）\n1. 隐式 3\n2. 隐式 4\n3. 隐式 5\n4. 隐式 6\n5. 隐式 7\n\n### 短期记忆（最近对话）\n1. 短期 3\n2. 短期 4\n3. 短期 5\n4. 短期 6\n5. 短期 7",
+        "withoutManagerWithContext": "### 长期记忆（世界观与故事主线）\n1. [主线] 长期 11\n2. [世界观] 长期 12\n3. [主线] 长期 13\n4. [世界观] 长期 14\n5. [主线] 长期 15\n6. [世界观] 长期 16\n7. [主线] 长期 17\n8. [世界观] 长期 18\n9. [主线] 长期 19\n10. [世界观] 长期 20\n11. [主线] 长期 21\n12. [世界观] 长期 22\n13. [主线] 长期 23\n14. [世界观] 长期 24\n15. [主线] 长期 25\n16. [世界观] 长期 26\n17. [主线] 长期 27\n18. [世界观] 长期 28\n19. [主线] 长期 29\n20. [世界观] 长期 30\n21. [主线] 长期 31\n22. [世界观] 长期 32\n23. [主线] 长期 33\n24. [世界观] 长期 34\n25. [主线] 长期 35\n26. [世界观] 长期 36\n27. [主线] 长期 37\n28. [世界观] 长期 38\n29. [主线] 长期 39\n30. [世界观] 长期 40\n\n### 中期记忆（近期事件摘要）\n1. 【相关角色: 陆沉】【m28】中期 28\n2. 【相关角色: 陆沉】【m29】中期 29\n3. [已精炼] 【相关角色: 陆沉】【m30】中期 30\n\n### 隐式记忆（AI 标记的重要信息，按相关角色过滤）\n1. 隐式 3\n2. 隐式 4\n3. 隐式 5\n4. 隐式 6\n5. 隐式 7\n\n### 短期记忆（最近对话）\n1. 短期 3\n2. 短期 4\n3. 短期 5\n4. 短期 6\n5. 短期 7"
+      },
+      {
+        "label": "retriever output on empty memory",
+        "empty": "",
+        "bare": ""
+      }
+    ],
+    "pathConfig": {
+      "shortTermPath": "记忆.短期",
+      "midTermPath": "记忆.中期",
+      "longTermPath": "记忆.长期",
+      "implicitMidTermPath": "记忆.隐式中期",
+      "shortTermCapacity": 5,
+      "midTermRefineThreshold": 25,
+      "longTermSummaryThreshold": 50,
+      "longTermSummarizeCount": 50,
+      "midTermKeep": 0,
+      "longTermCap": 30
+    }
+  },
+  "withOverride": {
+    "steps": [
+      {
+        "label": "effective config",
+        "result": {
+          "shortTermCapacity": 3,
+          "midTermRefineThreshold": 10,
+          "longTermSummaryThreshold": 20,
+          "longTermSummarizeCount": 5,
+          "midTermKeep": 2,
+          "longTermCap": 12
+        },
+        "memory": {
+          "counts": {
+            "短期": 0,
+            "中期": 0,
+            "长期": 0,
+            "隐式中期": 0
+          }
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "type": "load"
+            }
+          }
+        ]
+      },
+      {
+        "label": "six short-term entries",
+        "result": {
+          "full": true,
+          "entries": 6
+        },
+        "memory": {
+          "counts": {
+            "短期": 6,
+            "中期": 0,
+            "长期": 0,
+            "隐式中期": 0
+          }
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "implicit entries appended (blank and non-object ones refused)",
+        "result": [
+          {
+            "相关角色": [
+              "陆沉",
+              "Lin Nuan"
+            ],
+            "事件时间": "1年3月5日",
+            "记忆主体": "陆沉与 Lin Nuan 聊起茶。"
+          },
+          {
+            "相关角色": [],
+            "事件时间": "",
+            "记忆主体": "a plain string entry"
+          },
+          {
+            "相关角色": [
+              "Guan Yu"
+            ],
+            "事件时间": "1年4月1日",
+            "记忆主体": "english keys"
+          },
+          {
+            "相关角色": [],
+            "事件时间": "",
+            "记忆主体": "[占位 · round 4]",
+            "_占位": true
+          }
+        ],
+        "memory": {
+          "counts": {
+            "短期": 6,
+            "中期": 0,
+            "长期": 0,
+            "隐式中期": 4
+          }
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "promotion with mismatched lengths warns",
+        "result": "__undefined__",
+        "memory": {
+          "短期": [
+            {
+              "round": 4,
+              "summary": "第4回合的叙事。",
+              "timestamp": 1791417604000
+            },
+            {
+              "round": 5,
+              "summary": "第5回合的叙事。",
+              "timestamp": 1791417605000
+            },
+            {
+              "round": 6,
+              "summary": "第6回合的叙事。",
+              "timestamp": 1791417606000
+            }
+          ],
+          "中期": [
+            {
+              "相关角色": [
+                "陆沉",
+                "Lin Nuan"
+              ],
+              "事件时间": "1年3月5日",
+              "记忆主体": "陆沉与 Lin Nuan 聊起茶。"
+            },
+            {
+              "相关角色": [],
+              "事件时间": "",
+              "记忆主体": "a plain string entry"
+            },
+            {
+              "相关角色": [
+                "Guan Yu"
+              ],
+              "事件时间": "1年4月1日",
+              "记忆主体": "english keys"
+            }
+          ],
+          "长期": [],
+          "隐式中期": [
+            {
+              "相关角色": [],
+              "事件时间": "",
+              "记忆主体": "[占位 · round 4]",
+              "_占位": true
+            }
+          ]
+        },
+        "emits": [
+          {
+            "event": "ui:toast",
+            "payload": {
+              "type": "warning",
+              "i18nKey": "engine.toast.memoryPairMismatch",
+              "i18nParams": {
+                "short": 6,
+                "implicit": 4
+              },
+              "message": "短期/隐式中期记忆配对异常 (6 vs 4)，可能丢失回合对齐",
+              "duration": 4000
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "seven paired entries (the implicit list overflows its buffer and is trimmed)",
+        "result": "__undefined__",
+        "memory": {
+          "短期": [
+            {
+              "round": 1,
+              "summary": "补齐1",
+              "timestamp": 1791417606000
+            },
+            {
+              "round": 2,
+              "summary": "补齐2",
+              "timestamp": 1791417606000
+            },
+            {
+              "round": 3,
+              "summary": "补齐3",
+              "timestamp": 1791417606000
+            },
+            {
+              "round": 4,
+              "summary": "补齐4",
+              "timestamp": 1791417606000
+            },
+            {
+              "round": 5,
+              "summary": "补齐5",
+              "timestamp": 1791417606000
+            },
+            {
+              "round": 6,
+              "summary": "补齐6",
+              "timestamp": 1791417606000
+            },
+            {
+              "round": 7,
+              "summary": "补齐7",
+              "timestamp": 1791417606000
+            }
+          ],
+          "中期": [],
+          "长期": [],
+          "隐式中期": [
+            {
+              "相关角色": [
+                "Guan Yu"
+              ],
+              "事件时间": "1年3月5日",
+              "记忆主体": "隐式记忆 4"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "1年3月5日",
+              "记忆主体": "隐式记忆 5"
+            },
+            {
+              "相关角色": [
+                "Guan Yu"
+              ],
+              "事件时间": "1年3月5日",
+              "记忆主体": "隐式记忆 6"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "1年3月5日",
+              "记忆主体": "隐式记忆 7"
+            }
+          ]
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "ui:toast",
+            "payload": {
+              "type": "warning",
+              "i18nKey": "engine.toast.implicitMemoryOverflow",
+              "i18nParams": {
+                "before": 6,
+                "after": 3
+              },
+              "message": "隐式中期记忆异常溢出，已自动清理 (6 → 3)",
+              "duration": 4500
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "paired entries pushed directly",
+        "result": {
+          "promoted": 3,
+          "mid": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t1",
+              "记忆主体": "隐式 1"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t3",
+              "记忆主体": "隐式 3"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t4",
+              "记忆主体": "隐式 4"
+            }
+          ]
+        },
+        "memory": {
+          "短期": [
+            {
+              "round": 5,
+              "summary": "短期 5",
+              "timestamp": 5
+            },
+            {
+              "round": 6,
+              "summary": "短期 6",
+              "timestamp": 6
+            },
+            {
+              "round": 7,
+              "summary": "短期 7",
+              "timestamp": 7
+            }
+          ],
+          "中期": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t1",
+              "记忆主体": "隐式 1"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t3",
+              "记忆主体": "隐式 3"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t4",
+              "记忆主体": "隐式 4"
+            }
+          ],
+          "长期": [],
+          "隐式中期": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t5",
+              "记忆主体": "隐式 5"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t6",
+              "记忆主体": "隐式 6"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t7",
+              "记忆主体": "隐式 7"
+            }
+          ]
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.短期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.隐式中期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "thirty mid-term entries",
+        "result": {
+          "shouldRefine": true,
+          "shouldSummarize": true,
+          "refined": false
+        },
+        "memory": {
+          "counts": {
+            "短期": 3,
+            "中期": 33,
+            "长期": 0,
+            "隐式中期": 3
+          }
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "push",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "commitSummaryResult",
+        "result": {
+          "ok": "__undefined__"
+        },
+        "memory": {
+          "短期": [
+            {
+              "round": 5,
+              "summary": "短期 5",
+              "timestamp": 5
+            },
+            {
+              "round": 6,
+              "summary": "短期 6",
+              "timestamp": 6
+            },
+            {
+              "round": 7,
+              "summary": "短期 7",
+              "timestamp": 7
+            }
+          ],
+          "中期": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "m28",
+              "记忆主体": "中期 28"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "m29",
+              "记忆主体": "中期 29"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "m30",
+              "记忆主体": "中期 30",
+              "已精炼": true
+            }
+          ],
+          "长期": [
+            {
+              "content": "长期一",
+              "category": "主线",
+              "createdAt": 1
+            }
+          ],
+          "隐式中期": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t5",
+              "记忆主体": "隐式 5"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t6",
+              "记忆主体": "隐式 6"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t7",
+              "记忆主体": "隐式 7"
+            }
+          ]
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.中期",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "commitSummaryResult with a failing mid-term write rolls the long-term write back",
+        "result": {
+          "threw": {
+            "name": "Error",
+            "message": "mid-term write boom"
+          }
+        },
+        "memory": {
+          "短期": [
+            {
+              "round": 5,
+              "summary": "短期 5",
+              "timestamp": 5
+            },
+            {
+              "round": 6,
+              "summary": "短期 6",
+              "timestamp": 6
+            },
+            {
+              "round": 7,
+              "summary": "短期 7",
+              "timestamp": 7
+            }
+          ],
+          "中期": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "m28",
+              "记忆主体": "中期 28"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "m29",
+              "记忆主体": "中期 29"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "m30",
+              "记忆主体": "中期 30",
+              "已精炼": true
+            }
+          ],
+          "长期": [
+            {
+              "content": "长期一",
+              "category": "主线",
+              "createdAt": 1
+            }
+          ],
+          "隐式中期": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t5",
+              "记忆主体": "隐式 5"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t6",
+              "记忆主体": "隐式 6"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t7",
+              "记忆主体": "隐式 7"
+            }
+          ]
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "forty long-term entries",
+        "result": {
+          "shouldCompact": true
+        },
+        "memory": {
+          "counts": {
+            "短期": 3,
+            "中期": 3,
+            "长期": 39,
+            "隐式中期": 3
+          }
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "push",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "fallbackTrimLongTerm",
+        "result": {
+          "trimmed": 27,
+          "left": 12
+        },
+        "memory": {
+          "短期": [
+            {
+              "round": 5,
+              "summary": "短期 5",
+              "timestamp": 5
+            },
+            {
+              "round": 6,
+              "summary": "短期 6",
+              "timestamp": 6
+            },
+            {
+              "round": 7,
+              "summary": "短期 7",
+              "timestamp": 7
+            }
+          ],
+          "中期": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "m28",
+              "记忆主体": "中期 28"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "m29",
+              "记忆主体": "中期 29"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "m30",
+              "记忆主体": "中期 30",
+              "已精炼": true
+            }
+          ],
+          "长期": [
+            {
+              "content": "长期 29",
+              "category": "主线",
+              "createdAt": 29
+            },
+            {
+              "content": "长期 30",
+              "category": "世界观",
+              "createdAt": 30
+            },
+            {
+              "content": "长期 31",
+              "category": "主线",
+              "createdAt": 31
+            },
+            {
+              "content": "长期 32",
+              "category": "世界观",
+              "createdAt": 32
+            },
+            {
+              "content": "长期 33",
+              "category": "主线",
+              "createdAt": 33
+            },
+            {
+              "content": "长期 34",
+              "category": "世界观",
+              "createdAt": 34
+            },
+            {
+              "content": "长期 35",
+              "category": "主线",
+              "createdAt": 35
+            },
+            {
+              "content": "长期 36",
+              "category": "世界观",
+              "createdAt": 36
+            },
+            {
+              "content": "长期 37",
+              "category": "主线",
+              "createdAt": 37
+            },
+            {
+              "content": "长期 38",
+              "category": "世界观",
+              "createdAt": 38
+            },
+            {
+              "content": "长期 39",
+              "category": "主线",
+              "createdAt": 39
+            },
+            {
+              "content": "长期 40",
+              "category": "世界观",
+              "createdAt": 40
+            }
+          ],
+          "隐式中期": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t5",
+              "记忆主体": "隐式 5"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t6",
+              "记忆主体": "隐式 6"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t7",
+              "记忆主体": "隐式 7"
+            }
+          ]
+        },
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "记忆.长期",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      },
+      {
+        "label": "settings override read after the cache expires",
+        "result": {
+          "cached": {
+            "shortTermCapacity": 3,
+            "midTermRefineThreshold": 10,
+            "longTermSummaryThreshold": 20,
+            "longTermSummarizeCount": 5,
+            "midTermKeep": 2,
+            "longTermCap": 12
+          },
+          "refreshed": {
+            "shortTermCapacity": 2,
+            "midTermRefineThreshold": 25,
+            "longTermSummaryThreshold": 50,
+            "longTermSummarizeCount": 50,
+            "midTermKeep": 200,
+            "longTermCap": 7
+          },
+          "afterClear": {
+            "shortTermCapacity": 2,
+            "midTermRefineThreshold": 25,
+            "longTermSummaryThreshold": 50,
+            "longTermSummarizeCount": 50,
+            "midTermKeep": 200,
+            "longTermCap": 7
+          }
+        },
+        "memory": {
+          "counts": {
+            "短期": 3,
+            "中期": 3,
+            "长期": 12,
+            "隐式中期": 3
+          }
+        },
+        "emits": []
+      },
+      {
+        "label": "broken settings fall back to the path defaults",
+        "result": {
+          "shortTermCapacity": 5,
+          "midTermRefineThreshold": 25,
+          "longTermSummaryThreshold": 50,
+          "longTermSummarizeCount": 50,
+          "midTermKeep": 0,
+          "longTermCap": 30
+        },
+        "memory": {
+          "counts": {
+            "短期": 3,
+            "中期": 3,
+            "长期": 12,
+            "隐式中期": 3
+          }
+        },
+        "emits": []
+      },
+      {
+        "label": "filterImplicitByRelevantChars",
+        "result": {
+          "player": [
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t5",
+              "记忆主体": "隐式 5"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t6",
+              "记忆主体": "隐式 6"
+            },
+            {
+              "相关角色": [
+                "陆沉"
+              ],
+              "事件时间": "t7",
+              "记忆主体": "隐式 7"
+            }
+          ],
+          "npc": [],
+          "shortName": [],
+          "none": []
+        },
+        "memory": {
+          "counts": {
+            "短期": 3,
+            "中期": 3,
+            "长期": 12,
+            "隐式中期": 3
+          }
+        },
+        "emits": []
+      },
+      {
+        "label": "retriever output",
+        "withContext": "### 长期记忆（世界观与故事主线）\n1. [主线] 长期 29\n2. [世界观] 长期 30\n3. [主线] 长期 31\n4. [世界观] 长期 32\n5. [主线] 长期 33\n6. [世界观] 长期 34\n7. [主线] 长期 35\n8. [世界观] 长期 36\n9. [主线] 长期 37\n10. [世界观] 长期 38\n11. [主线] 长期 39\n12. [世界观] 长期 40\n\n### 中期记忆（近期事件摘要）\n1. 【相关角色: 陆沉】【m28】中期 28\n2. 【相关角色: 陆沉】【m29】中期 29\n3. [已精炼] 【相关角色: 陆沉】【m30】中期 30\n\n### 隐式记忆（AI 标记的重要信息，按相关角色过滤）\n1. [t5] 隐式 5\n2. [t6] 隐式 6\n3. [t7] 隐式 7\n\n### 短期记忆（最近对话）\n1. 短期 5\n2. 短期 6\n3. 短期 7",
+        "withContextSkippingShortTerm": "### 长期记忆（世界观与故事主线）\n1. [主线] 长期 29\n2. [世界观] 长期 30\n3. [主线] 长期 31\n4. [世界观] 长期 32\n5. [主线] 长期 33\n6. [世界观] 长期 34\n7. [主线] 长期 35\n8. [世界观] 长期 36\n9. [主线] 长期 37\n10. [世界观] 长期 38\n11. [主线] 长期 39\n12. [世界观] 长期 40\n\n### 中期记忆（近期事件摘要）\n1. 【相关角色: 陆沉】【m28】中期 28\n2. 【相关角色: 陆沉】【m29】中期 29\n3. [已精炼] 【相关角色: 陆沉】【m30】中期 30\n\n### 隐式记忆（AI 标记的重要信息，按相关角色过滤）\n1. [t5] 隐式 5\n2. [t6] 隐式 6\n3. [t7] 隐式 7",
+        "noContext": "### 长期记忆（世界观与故事主线）\n1. [主线] 长期 29\n2. [世界观] 长期 30\n3. [主线] 长期 31\n4. [世界观] 长期 32\n5. [主线] 长期 33\n6. [世界观] 长期 34\n7. [主线] 长期 35\n8. [世界观] 长期 36\n9. [主线] 长期 37\n10. [世界观] 长期 38\n11. [主线] 长期 39\n12. [世界观] 长期 40\n\n### 中期记忆（近期事件摘要）\n1. 【相关角色: 陆沉】【m28】中期 28\n2. 【相关角色: 陆沉】【m29】中期 29\n3. [已精炼] 【相关角色: 陆沉】【m30】中期 30\n\n### 隐式记忆（AI 标记的重要信息，按相关角色过滤）\n1. [t5] 隐式 5\n2. [t6] 隐式 6\n3. [t7] 隐式 7\n\n### 短期记忆（最近对话）\n1. 短期 5\n2. 短期 6\n3. 短期 7",
+        "withoutManager": "### 长期记忆（世界观与故事主线）\n1. [主线] 长期 29\n2. [世界观] 长期 30\n3. [主线] 长期 31\n4. [世界观] 长期 32\n5. [主线] 长期 33\n6. [世界观] 长期 34\n7. [主线] 长期 35\n8. [世界观] 长期 36\n9. [主线] 长期 37\n10. [世界观] 长期 38\n11. [主线] 长期 39\n12. [世界观] 长期 40\n\n### 中期记忆（近期事件摘要）\n1. 【相关角色: 陆沉】【m28】中期 28\n2. 【相关角色: 陆沉】【m29】中期 29\n3. [已精炼] 【相关角色: 陆沉】【m30】中期 30\n\n### 隐式记忆（AI 标记的重要信息，按相关角色过滤）\n1. 隐式 5\n2. 隐式 6\n3. 隐式 7\n\n### 短期记忆（最近对话）\n1. 短期 5\n2. 短期 6\n3. 短期 7",
+        "withoutManagerWithContext": "### 长期记忆（世界观与故事主线）\n1. [主线] 长期 29\n2. [世界观] 长期 30\n3. [主线] 长期 31\n4. [世界观] 长期 32\n5. [主线] 长期 33\n6. [世界观] 长期 34\n7. [主线] 长期 35\n8. [世界观] 长期 36\n9. [主线] 长期 37\n10. [世界观] 长期 38\n11. [主线] 长期 39\n12. [世界观] 长期 40\n\n### 中期记忆（近期事件摘要）\n1. 【相关角色: 陆沉】【m28】中期 28\n2. 【相关角色: 陆沉】【m29】中期 29\n3. [已精炼] 【相关角色: 陆沉】【m30】中期 30\n\n### 隐式记忆（AI 标记的重要信息，按相关角色过滤）\n1. 隐式 5\n2. 隐式 6\n3. 隐式 7\n\n### 短期记忆（最近对话）\n1. 短期 5\n2. 短期 6\n3. 短期 7"
+      },
+      {
+        "label": "retriever output on empty memory",
+        "empty": "",
+        "bare": ""
+      }
+    ],
+    "pathConfig": {
+      "shortTermPath": "记忆.短期",
+      "midTermPath": "记忆.中期",
+      "longTermPath": "记忆.长期",
+      "implicitMidTermPath": "记忆.隐式中期",
+      "shortTermCapacity": 5,
+      "midTermRefineThreshold": 25,
+      "longTermSummaryThreshold": 50,
+      "longTermSummarizeCount": 50,
+      "midTermKeep": 0,
+      "longTermCap": 30
+    }
+  },
+  "warnings": [
+    "[MemoryManager] 1:1 配对不变量被破坏: short=6, implicit=4. PostProcessStage 占位逻辑应保证等长，请检查 AI 响应解析链路。",
+    "[MemoryManager] 1:1 配对不变量被破坏: short=6, implicit=4. PostProcessStage 占位逻辑应保证等长，请检查 AI 响应解析链路。",
+    "[MemoryManager] 隐式中期溢出 (6 > 5)，已 trim 到 3（保留最新 3 条）"
+  ]
+}

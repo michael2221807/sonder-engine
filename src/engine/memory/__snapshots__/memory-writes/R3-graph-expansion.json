@@ -1,0 +1,1140 @@
+{
+  "cases": [
+    {
+      "label": "seeds are the player",
+      "query": "where is the river",
+      "text": "相关事实：\n1. [陆沉→Alpha] Lu Chen walks with Alpha along the river bank（第8轮）\n2. [Alpha→Beta] Alpha trades goods with Beta every market day（第8轮）\n3. [Gamma→Delta] Gamma hides Delta in the old cellar（第8轮）\n4. [Beta→Gamma] Beta owes Gamma a great debt of silver（第8轮）\n5. [Delta→Epsilon] Delta sends letters to Epsilon at midnight（第8轮）\n\n相关事件：\n- Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match（第2轮）\n- The village elder warns everyone about a storm coming over the back mountain（第3轮）\n- Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea（第1轮）",
+      "readSnapshot": {
+        "query": "where is the river",
+        "capturedAt": 1791418320000,
+        "totalDurationMs": "<ms>",
+        "candidates": [
+          {
+            "text": "[陆沉→Alpha] Lu Chen walks with Alpha along the river bank",
+            "finalScore": 0.5,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边BM25",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Alpha→Beta] Alpha trades goods with Beta every market day",
+            "finalScore": 0.5,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边图展开",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "purple"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Gamma→Delta] Gamma hides Delta in the old cellar",
+            "finalScore": 0.3333333333333333,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边BM25",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Beta→Gamma] Beta owes Gamma a great debt of silver",
+            "finalScore": 0.3333333333333333,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边图展开",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "purple"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Delta→Epsilon] Delta sends letters to Epsilon at midnight",
+            "finalScore": 0.25,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边图展开",
+                "rawValue": 0.25,
+                "weight": 1,
+                "contribution": 0.25,
+                "color": "purple"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "Alpha: Alpha the villager",
+            "finalScore": 0.5,
+            "source": "entity",
+            "components": [
+              {
+                "label": "实体BM25",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "green"
+              }
+            ],
+            "outcome": "filtered-as-redundant",
+            "entityName": "Alpha"
+          },
+          {
+            "text": "Beta: Beta the villager",
+            "finalScore": 0.3333333333333333,
+            "source": "entity",
+            "components": [
+              {
+                "label": "实体BM25",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "green"
+              }
+            ],
+            "outcome": "filtered-as-redundant",
+            "entityName": "Beta"
+          },
+          {
+            "text": "Gamma: Gamma the villager",
+            "finalScore": 0.25,
+            "source": "entity",
+            "components": [
+              {
+                "label": "实体BM25",
+                "rawValue": 0.25,
+                "weight": 1,
+                "contribution": 0.25,
+                "color": "green"
+              }
+            ],
+            "outcome": "filtered-as-redundant",
+            "entityName": "Gamma"
+          },
+          {
+            "text": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+            "finalScore": 0.5,
+            "source": "event",
+            "components": [
+              {
+                "label": "事件BM25",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "eventId": "evt_r2",
+            "roundNumber": 2
+          },
+          {
+            "text": "The village elder warns everyone about a storm coming over the back mountain",
+            "finalScore": 0.3333333333333333,
+            "source": "event",
+            "components": [
+              {
+                "label": "事件BM25",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "eventId": "evt_r3",
+            "roundNumber": 3
+          },
+          {
+            "text": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+            "finalScore": 0.25,
+            "source": "event",
+            "components": [
+              {
+                "label": "事件BM25",
+                "rawValue": 0.25,
+                "weight": 1,
+                "contribution": 0.25,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "eventId": "evt_r1",
+            "roundNumber": 1
+          }
+        ],
+        "pipeline": {
+          "vectorEventCount": 0,
+          "vectorEntityCount": 0,
+          "graphCount": 2,
+          "afterMerge": 11,
+          "afterRerank": 11,
+          "injectedCount": 8
+        },
+        "config": {
+          "minScore": 0.05,
+          "topK": 3,
+          "rerankEnabled": false,
+          "rerankTopN": 0,
+          "embeddingEnabled": false,
+          "shortTermWindow": 3,
+          "maxCandidates": 20,
+          "edgeBudget": 10,
+          "entityBudget": 5,
+          "eventBudget": 5
+        }
+      },
+      "recorder": [
+        {
+          "recordReadSnapshot": {
+            "query": "where is the river",
+            "capturedAt": 1791418320000,
+            "totalDurationMs": "<ms>",
+            "candidates": [
+              {
+                "text": "[陆沉→Alpha] Lu Chen walks with Alpha along the river bank",
+                "finalScore": 0.5,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Alpha→Beta] Alpha trades goods with Beta every market day",
+                "finalScore": 0.5,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边图展开",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "purple"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Gamma→Delta] Gamma hides Delta in the old cellar",
+                "finalScore": 0.3333333333333333,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Beta→Gamma] Beta owes Gamma a great debt of silver",
+                "finalScore": 0.3333333333333333,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边图展开",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "purple"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Delta→Epsilon] Delta sends letters to Epsilon at midnight",
+                "finalScore": 0.25,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边图展开",
+                    "rawValue": 0.25,
+                    "weight": 1,
+                    "contribution": 0.25,
+                    "color": "purple"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "Alpha: Alpha the villager",
+                "finalScore": 0.5,
+                "source": "entity",
+                "components": [
+                  {
+                    "label": "实体BM25",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "filtered-as-redundant",
+                "entityName": "Alpha"
+              },
+              {
+                "text": "Beta: Beta the villager",
+                "finalScore": 0.3333333333333333,
+                "source": "entity",
+                "components": [
+                  {
+                    "label": "实体BM25",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "filtered-as-redundant",
+                "entityName": "Beta"
+              },
+              {
+                "text": "Gamma: Gamma the villager",
+                "finalScore": 0.25,
+                "source": "entity",
+                "components": [
+                  {
+                    "label": "实体BM25",
+                    "rawValue": 0.25,
+                    "weight": 1,
+                    "contribution": 0.25,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "filtered-as-redundant",
+                "entityName": "Gamma"
+              },
+              {
+                "text": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+                "finalScore": 0.5,
+                "source": "event",
+                "components": [
+                  {
+                    "label": "事件BM25",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "eventId": "evt_r2",
+                "roundNumber": 2
+              },
+              {
+                "text": "The village elder warns everyone about a storm coming over the back mountain",
+                "finalScore": 0.3333333333333333,
+                "source": "event",
+                "components": [
+                  {
+                    "label": "事件BM25",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "eventId": "evt_r3",
+                "roundNumber": 3
+              },
+              {
+                "text": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+                "finalScore": 0.25,
+                "source": "event",
+                "components": [
+                  {
+                    "label": "事件BM25",
+                    "rawValue": 0.25,
+                    "weight": 1,
+                    "contribution": 0.25,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "eventId": "evt_r1",
+                "roundNumber": 1
+              }
+            ],
+            "pipeline": {
+              "vectorEventCount": 0,
+              "vectorEntityCount": 0,
+              "graphCount": 2,
+              "afterMerge": 11,
+              "afterRerank": 11,
+              "injectedCount": 8
+            },
+            "config": {
+              "minScore": 0.05,
+              "topK": 3,
+              "rerankEnabled": false,
+              "rerankTopN": 0,
+              "embeddingEnabled": false,
+              "shortTermWindow": 3,
+              "maxCandidates": 20,
+              "edgeBudget": 10,
+              "entityBudget": 5,
+              "eventBudget": 5
+            }
+          }
+        },
+        {
+          "recordRetrieve": {
+            "vectorCandidateCount": 0,
+            "graphCandidateCount": 5,
+            "afterMergeCount": 11,
+            "afterRerankCount": 11,
+            "rerankUsed": false,
+            "embeddingFallback": false,
+            "topScores": [
+              {
+                "text": "Lu Chen walks with Alpha along the river bank",
+                "score": 0.5,
+                "source": "edge"
+              },
+              {
+                "text": "Alpha trades goods with Beta every market day",
+                "score": 0.5,
+                "source": "edge"
+              },
+              {
+                "text": "Gamma hides Delta in the old cellar",
+                "score": 0.3333333333333333,
+                "source": "edge"
+              },
+              {
+                "text": "Beta owes Gamma a great debt of silver",
+                "score": 0.3333333333333333,
+                "source": "edge"
+              },
+              {
+                "text": "Delta sends letters to Epsilon at midnight",
+                "score": 0.25,
+                "source": "edge"
+              }
+            ]
+          }
+        }
+      ],
+      "step": {
+        "label": "seeds are the player",
+        "engramMemory": {
+          "events": [
+            {
+              "id": "evt_r1",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+              "summary": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+              "structured_kv": {
+                "event": "Lu Chen arrives at the Qingshi tavern and meets Lin Nuan, who serves hot tea",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 1
+            },
+            {
+              "id": "evt_r2",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+              "summary": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+              "structured_kv": {
+                "event": "Guan Yu fights Lu Chen in the tavern backyard and loses the sparring match",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 2
+            },
+            {
+              "id": "evt_r3",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "The village elder warns everyone about a storm coming over the back mountain",
+              "summary": "The village elder warns everyone about a storm coming over the back mountain",
+              "structured_kv": {
+                "event": "The village elder warns everyone about a storm coming over the back mountain",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 3
+            },
+            {
+              "id": "evt_r4",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Lin Nuan tells Lu Chen that Guan Yu is an old friend she has not seen for years",
+              "summary": "Lin Nuan tells Lu Chen that Guan Yu is an old friend she has not seen for years",
+              "structured_kv": {
+                "event": "Lin Nuan tells Lu Chen that Guan Yu is an old friend she has not seen for years",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 8,
+              "midTermSummary": "Lin Nuan names Guan Yu as an old friend."
+            },
+            {
+              "id": "evt_r5",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+              "summary": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+              "structured_kv": {
+                "event": "A merchant caravan stops at Qingshi town to sell silk and iron tools",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 9
+            },
+            {
+              "id": "evt_r6",
+              "subject": "陆沉",
+              "action": "narrative",
+              "tags": [
+                "narrative"
+              ],
+              "text": "Lu Chen walks the back mountain path at night under heavy fog",
+              "summary": "Lu Chen walks the back mountain path at night under heavy fog",
+              "structured_kv": {
+                "event": "Lu Chen walks the back mountain path at night under heavy fog",
+                "role": [],
+                "location": [],
+                "time_anchor": "",
+                "causality": "承接",
+                "logic": []
+              },
+              "is_embedded": true,
+              "roundNumber": 10
+            }
+          ],
+          "entities": [
+            {
+              "name": "陆沉",
+              "type": "player",
+              "summary": "玩家",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "Alpha",
+              "type": "npc",
+              "summary": "Alpha the villager",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "Beta",
+              "type": "npc",
+              "summary": "Beta the villager",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "Gamma",
+              "type": "npc",
+              "summary": "Gamma the villager",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "Delta",
+              "type": "npc",
+              "summary": "Delta the villager",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            },
+            {
+              "name": "Epsilon",
+              "type": "npc",
+              "summary": "Epsilon the villager",
+              "attributes": {},
+              "firstSeen": 1,
+              "lastSeen": 10,
+              "mentionCount": 2,
+              "is_embedded": true
+            }
+          ],
+          "relations": [],
+          "v2Edges": [
+            {
+              "id": "c1",
+              "sourceEntity": "陆沉",
+              "targetEntity": "Alpha",
+              "fact": "Lu Chen walks with Alpha along the river bank",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "c2",
+              "sourceEntity": "Alpha",
+              "targetEntity": "Beta",
+              "fact": "Alpha trades goods with Beta every market day",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "c3",
+              "sourceEntity": "Beta",
+              "targetEntity": "Gamma",
+              "fact": "Beta owes Gamma a great debt of silver",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "c4",
+              "sourceEntity": "Gamma",
+              "targetEntity": "Delta",
+              "fact": "Gamma hides Delta in the old cellar",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            },
+            {
+              "id": "c5",
+              "sourceEntity": "Delta",
+              "targetEntity": "Epsilon",
+              "fact": "Delta sends letters to Epsilon at midnight",
+              "episodes": [
+                "evt_r1"
+              ],
+              "is_embedded": true,
+              "createdAtRound": 1,
+              "lastSeenRound": 8
+            }
+          ],
+          "meta": {
+            "lastUpdated": 1,
+            "eventCount": 6,
+            "embeddedEventCount": 0,
+            "embeddedEntityCount": 0,
+            "schemaVersion": 5
+          }
+        },
+        "memory": {
+          "短期": [],
+          "中期": [],
+          "长期": [],
+          "隐式中期": []
+        },
+        "vectorRows": [
+          [
+            "engram_vectors_prof_m_slot_m",
+            {
+              "eventVectors": {
+                "evt_r1": {
+                  "dim": 384,
+                  "sha256": "e37ad3460944fd3a37adb2c2bc48e7890c4b52f23285f6cee5850e56968c4f83"
+                },
+                "evt_r2": {
+                  "dim": 384,
+                  "sha256": "bd99b0376b37152048480847b86c7db752be1a18dc6228c8f6b64eb136a20be1"
+                },
+                "evt_r3": {
+                  "dim": 384,
+                  "sha256": "f5ae5a16f71149e5cb45a29d90d22b4f931f386f4af5347dbfef689b7a01565e"
+                },
+                "evt_r4": {
+                  "dim": 384,
+                  "sha256": "5cf9747c7e93b84cccc3fced12a6787b8c14774d81076a99717f43de36be28e5"
+                },
+                "evt_r5": {
+                  "dim": 384,
+                  "sha256": "444f3f067541d709bda821e2d242282f2b66f6723a10b824bb7b6be1a8291050"
+                },
+                "evt_r6": {
+                  "dim": 384,
+                  "sha256": "a8793e7598de50b26a582ca40ec3c591515e2b2e535604f64b31d0bc46947325"
+                }
+              },
+              "entityVectors": {
+                "陆沉": {
+                  "dim": 384,
+                  "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                },
+                "Alpha": {
+                  "dim": 384,
+                  "sha256": "c3cea348a0530d2310c7e118a92d3b475a7c4aa153630920e53c8280451f16e7"
+                },
+                "Beta": {
+                  "dim": 384,
+                  "sha256": "c57e75ec4aa131bb1dc5a86e59da67cfede8daa2696e9bc87b14642faf3aef0a"
+                },
+                "Gamma": {
+                  "dim": 384,
+                  "sha256": "17eaebfd01add92c8eb54e983657cf4a77353cdf58a1d0bf221386fa98cd98eb"
+                },
+                "Delta": {
+                  "dim": 384,
+                  "sha256": "32c8146f1d4148d02a8c211707280e508ff1fda94712ab6161a18ecad5d9d1aa"
+                },
+                "Epsilon": {
+                  "dim": 384,
+                  "sha256": "0a78ae5d7f63ca470937cc35fc592c8dd636bcaff4cdd99bf3c2ccbef5054d90"
+                }
+              },
+              "edgeVectors": {
+                "c1": {
+                  "dim": 384,
+                  "sha256": "5ce608064dc2497416ae0808cd0421a591051e5c0e890b73770794b4513daeda"
+                },
+                "c2": {
+                  "dim": 384,
+                  "sha256": "b046c493016eb471300ba3286e0d0945e2b76b51323d9902f74c6c01357c1b05"
+                },
+                "c3": {
+                  "dim": 384,
+                  "sha256": "7b4684c6e19544316dedba75d8f29d4b231abed34117ee1244e3d9dcb4e153cf"
+                },
+                "c4": {
+                  "dim": 384,
+                  "sha256": "b01061baed355a24c52e70295392e32ada5278bf0b9fee7facba3b4f023368f7"
+                },
+                "c5": {
+                  "dim": 384,
+                  "sha256": "c42185399013101410d048ad8ec9118b5a0d791939c0421cef68a0af81ac5720"
+                }
+              },
+              "model": "corpus",
+              "dim": 384
+            }
+          ]
+        ],
+        "vectorCalls": [],
+        "aiCalls": [],
+        "fetchCalls": [],
+        "emits": [
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "type": "load"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "元数据.回合序号",
+              "action": "set",
+              "source": "system"
+            }
+          },
+          {
+            "event": "engine:state-changed",
+            "payload": {
+              "path": "系统.扩展.engramMemory",
+              "action": "set",
+              "source": "system"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "label": "seeds are player and Gamma",
+      "query": "Gamma cellar",
+      "text": "相关事实：\n1. [Gamma→Delta] Gamma hides Delta in the old cellar（第8轮）\n2. [Delta→Epsilon] Delta sends letters to Epsilon at midnight（第8轮）\n3. [Beta→Gamma] Beta owes Gamma a great debt of silver（第8轮）\n4. [Alpha→Beta] Alpha trades goods with Beta every market day（第8轮）\n5. [陆沉→Alpha] Lu Chen walks with Alpha along the river bank（第8轮）",
+      "readSnapshot": {
+        "query": "Gamma cellar",
+        "capturedAt": 1791418320000,
+        "totalDurationMs": "<ms>",
+        "candidates": [
+          {
+            "text": "[Gamma→Delta] Gamma hides Delta in the old cellar",
+            "finalScore": 0.5,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边BM25",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Delta→Epsilon] Delta sends letters to Epsilon at midnight",
+            "finalScore": 0.5,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边图展开",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "purple"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Beta→Gamma] Beta owes Gamma a great debt of silver",
+            "finalScore": 0.3333333333333333,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边BM25",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "green"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[Alpha→Beta] Alpha trades goods with Beta every market day",
+            "finalScore": 0.3333333333333333,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边图展开",
+                "rawValue": 0.3333333333333333,
+                "weight": 1,
+                "contribution": 0.3333333333333333,
+                "color": "purple"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "[陆沉→Alpha] Lu Chen walks with Alpha along the river bank",
+            "finalScore": 0.25,
+            "source": "edge",
+            "components": [
+              {
+                "label": "边图展开",
+                "rawValue": 0.25,
+                "weight": 1,
+                "contribution": 0.25,
+                "color": "purple"
+              }
+            ],
+            "outcome": "injected",
+            "roundNumber": 8
+          },
+          {
+            "text": "Gamma: Gamma the villager",
+            "finalScore": 0.5,
+            "source": "entity",
+            "components": [
+              {
+                "label": "实体BM25",
+                "rawValue": 0.5,
+                "weight": 1,
+                "contribution": 0.5,
+                "color": "green"
+              }
+            ],
+            "outcome": "filtered-as-redundant",
+            "entityName": "Gamma"
+          }
+        ],
+        "pipeline": {
+          "vectorEventCount": 0,
+          "vectorEntityCount": 0,
+          "graphCount": 2,
+          "afterMerge": 6,
+          "afterRerank": 6,
+          "injectedCount": 5
+        },
+        "config": {
+          "minScore": 0.05,
+          "topK": 3,
+          "rerankEnabled": false,
+          "rerankTopN": 0,
+          "embeddingEnabled": false,
+          "shortTermWindow": 3,
+          "maxCandidates": 20,
+          "edgeBudget": 10,
+          "entityBudget": 5,
+          "eventBudget": 5
+        }
+      },
+      "recorder": [
+        {
+          "recordReadSnapshot": {
+            "query": "Gamma cellar",
+            "capturedAt": 1791418320000,
+            "totalDurationMs": "<ms>",
+            "candidates": [
+              {
+                "text": "[Gamma→Delta] Gamma hides Delta in the old cellar",
+                "finalScore": 0.5,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Delta→Epsilon] Delta sends letters to Epsilon at midnight",
+                "finalScore": 0.5,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边图展开",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "purple"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Beta→Gamma] Beta owes Gamma a great debt of silver",
+                "finalScore": 0.3333333333333333,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边BM25",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[Alpha→Beta] Alpha trades goods with Beta every market day",
+                "finalScore": 0.3333333333333333,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边图展开",
+                    "rawValue": 0.3333333333333333,
+                    "weight": 1,
+                    "contribution": 0.3333333333333333,
+                    "color": "purple"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "[陆沉→Alpha] Lu Chen walks with Alpha along the river bank",
+                "finalScore": 0.25,
+                "source": "edge",
+                "components": [
+                  {
+                    "label": "边图展开",
+                    "rawValue": 0.25,
+                    "weight": 1,
+                    "contribution": 0.25,
+                    "color": "purple"
+                  }
+                ],
+                "outcome": "injected",
+                "roundNumber": 8
+              },
+              {
+                "text": "Gamma: Gamma the villager",
+                "finalScore": 0.5,
+                "source": "entity",
+                "components": [
+                  {
+                    "label": "实体BM25",
+                    "rawValue": 0.5,
+                    "weight": 1,
+                    "contribution": 0.5,
+                    "color": "green"
+                  }
+                ],
+                "outcome": "filtered-as-redundant",
+                "entityName": "Gamma"
+              }
+            ],
+            "pipeline": {
+              "vectorEventCount": 0,
+              "vectorEntityCount": 0,
+              "graphCount": 2,
+              "afterMerge": 6,
+              "afterRerank": 6,
+              "injectedCount": 5
+            },
+            "config": {
+              "minScore": 0.05,
+              "topK": 3,
+              "rerankEnabled": false,
+              "rerankTopN": 0,
+              "embeddingEnabled": false,
+              "shortTermWindow": 3,
+              "maxCandidates": 20,
+              "edgeBudget": 10,
+              "entityBudget": 5,
+              "eventBudget": 5
+            }
+          }
+        },
+        {
+          "recordRetrieve": {
+            "vectorCandidateCount": 0,
+            "graphCandidateCount": 5,
+            "afterMergeCount": 6,
+            "afterRerankCount": 6,
+            "rerankUsed": false,
+            "embeddingFallback": false,
+            "topScores": [
+              {
+                "text": "Gamma hides Delta in the old cellar",
+                "score": 0.5,
+                "source": "edge"
+              },
+              {
+                "text": "Delta sends letters to Epsilon at midnight",
+                "score": 0.5,
+                "source": "edge"
+              },
+              {
+                "text": "Beta owes Gamma a great debt of silver",
+                "score": 0.3333333333333333,
+                "source": "edge"
+              },
+              {
+                "text": "Alpha trades goods with Beta every market day",
+                "score": 0.3333333333333333,
+                "source": "edge"
+              },
+              {
+                "text": "Lu Chen walks with Alpha along the river bank",
+                "score": 0.25,
+                "source": "edge"
+              }
+            ]
+          }
+        }
+      ],
+      "step": {
+        "label": "seeds are player and Gamma",
+        "engramMemory": "<unchanged since the previous step>",
+        "memory": "<unchanged since the previous step>",
+        "vectorRows": "<unchanged since the previous step>",
+        "vectorCalls": [],
+        "aiCalls": [],
+        "fetchCalls": [],
+        "emits": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,1620 @@
+{
+  "legacyEventsWithoutSummary": {
+    "label": "round 5",
+    "returned": {
+      "roundNumber": 5,
+      "capturedAt": 1791417900000,
+      "totalDurationMs": "<ms>",
+      "event": {
+        "eventId": "evt_muyryq5c_4fzyo8",
+        "title": "陆沉来到青石镇的酒肆，遇见了老板娘林暖",
+        "roles": [
+          "陆沉",
+          "Lin Nuan"
+        ],
+        "location": [
+          "青石镇"
+        ],
+        "timeAnchor": "1年3月5日 14:20"
+      },
+      "entities": {
+        "total": 4,
+        "deltas": [
+          {
+            "name": "陆沉",
+            "type": "player",
+            "isNew": true,
+            "descriptionUpdated": false,
+            "mentionCount": 3
+          },
+          {
+            "name": "Lin Nuan",
+            "type": "npc",
+            "isNew": true,
+            "descriptionUpdated": false,
+            "mentionCount": 2
+          },
+          {
+            "name": "Guan Yu",
+            "type": "npc",
+            "isNew": true,
+            "descriptionUpdated": false,
+            "mentionCount": 1
+          },
+          {
+            "name": "青石镇",
+            "type": "location",
+            "isNew": true,
+            "descriptionUpdated": false,
+            "mentionCount": 2
+          }
+        ]
+      },
+      "relations": {
+        "total": 0,
+        "deltas": []
+      },
+      "snapshotVersion": 2,
+      "trimmed": {
+        "eventsBefore": 1,
+        "eventsAfter": 1,
+        "entitiesBefore": 4,
+        "entitiesAfter": 4
+      },
+      "vectorizeQueued": 7,
+      "edges": {
+        "total": 2,
+        "newCount": 2,
+        "reinforcedCount": 0,
+        "prunedCount": 0,
+        "topNew": [
+          {
+            "sourceEntity": "Lin Nuan",
+            "targetEntity": "陆沉",
+            "fact": "Lin Nuan runs the tavern in Qingshi town where Lu Chen first met her",
+            "episodeCount": 1,
+            "isNew": true
+          },
+          {
+            "sourceEntity": "Lin Nuan",
+            "targetEntity": "青石镇",
+            "fact": "Lin Nuan keeps the tavern in Qingshi town",
+            "episodeCount": 1,
+            "isNew": true
+          }
+        ]
+      }
+    },
+    "engramMemory": {
+      "events": [
+        {
+          "id": "evt_muyryq5c_4fzyo8",
+          "subject": "陆沉",
+          "action": "narrative",
+          "tags": [
+            "narrative"
+          ],
+          "text": "陆沉来到青石镇的酒肆，遇见了老板娘林暖。林暖笑着递上一碗热茶。",
+          "summary": "陆沉来到青石镇的酒肆，遇见了老板娘林暖(承接):\n(1年3月5日 14:20 | 青石镇 | 陆沉, Lin Nuan) 陆沉来到青石镇的酒肆，遇见了老板娘林暖。林暖笑着递上一碗热茶。",
+          "structured_kv": {
+            "event": "陆沉来到青石镇的酒肆，遇见了老板娘林暖",
+            "role": [
+              "陆沉",
+              "Lin Nuan"
+            ],
+            "location": [
+              "青石镇"
+            ],
+            "time_anchor": "1年3月5日 14:20",
+            "causality": "承接",
+            "logic": []
+          },
+          "is_embedded": true,
+          "time": "1年3月5日 14:20",
+          "location": "青石镇",
+          "roundNumber": 5,
+          "mentionedEntities": [
+            "陆沉",
+            "Lin Nuan"
+          ],
+          "midTermSummary": "陆沉在酒肆遇见 Lin Nuan，她递来热茶。"
+        }
+      ],
+      "entities": [
+        {
+          "name": "陆沉",
+          "type": "player",
+          "attributes": {
+            "source": "event_role",
+            "lastEventId": "evt_muyryq5c_4fzyo8"
+          },
+          "firstSeen": 0,
+          "lastSeen": 5,
+          "mentionCount": 3,
+          "summary": "玩家角色",
+          "is_embedded": true
+        },
+        {
+          "name": "Lin Nuan",
+          "type": "npc",
+          "attributes": {
+            "relationToPlayer": "__undefined__",
+            "location": "青石镇",
+            "source": "event_role",
+            "lastEventId": "evt_muyryq5c_4fzyo8"
+          },
+          "firstSeen": 5,
+          "lastSeen": 5,
+          "mentionCount": 2,
+          "summary": "Runs the tavern in Qingshi town.；bright eyes, long black hair",
+          "is_embedded": true
+        },
+        {
+          "name": "Guan Yu",
+          "type": "npc",
+          "attributes": {
+            "relationToPlayer": "__undefined__",
+            "location": "__undefined__",
+            "source": "relationship"
+          },
+          "firstSeen": 0,
+          "lastSeen": 0,
+          "mentionCount": 1,
+          "summary": "A wandering swordsman.；sharp brows",
+          "is_embedded": true
+        },
+        {
+          "name": "青石镇",
+          "type": "location",
+          "attributes": {
+            "source": "event_location",
+            "lastEventId": "evt_muyryq5c_4fzyo8"
+          },
+          "firstSeen": 5,
+          "lastSeen": 5,
+          "mentionCount": 2,
+          "summary": "",
+          "is_embedded": true
+        }
+      ],
+      "relations": [],
+      "v2Edges": [
+        {
+          "id": "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu",
+          "sourceEntity": "Lin Nuan",
+          "targetEntity": "陆沉",
+          "fact": "Lin Nuan runs the tavern in Qingshi town where Lu Chen first met her",
+          "episodes": [
+            "evt_muyryq5c_4fzyo8"
+          ],
+          "is_embedded": true,
+          "createdAtRound": 5,
+          "lastSeenRound": 5,
+          "learnedAtRound": 5,
+          "core": "__undefined__",
+          "source": "__undefined__",
+          "canonEntryId": "__undefined__"
+        },
+        {
+          "id": "lin nuan|青石镇|linnuankeepsthetaverninqingshitown",
+          "sourceEntity": "Lin Nuan",
+          "targetEntity": "青石镇",
+          "fact": "Lin Nuan keeps the tavern in Qingshi town",
+          "episodes": [
+            "evt_muyryq5c_4fzyo8"
+          ],
+          "is_embedded": true,
+          "createdAtRound": 5,
+          "lastSeenRound": 5,
+          "learnedAtRound": 5,
+          "core": "__undefined__",
+          "source": "__undefined__",
+          "canonEntryId": "__undefined__"
+        }
+      ],
+      "meta": {
+        "lastUpdated": 1791417900000,
+        "eventCount": 1,
+        "embeddedEventCount": 1,
+        "embeddedEntityCount": 4,
+        "schemaVersion": 5,
+        "v2PendingReview": null
+      }
+    },
+    "memory": {
+      "短期": [],
+      "中期": [],
+      "长期": [],
+      "隐式中期": []
+    },
+    "vectorRows": [
+      [
+        "engram_vectors_prof_m_slot_m",
+        {
+          "eventVectors": {
+            "evt_muyryq5c_4fzyo8": {
+              "dim": 384,
+              "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+            }
+          },
+          "entityVectors": {
+            "陆沉": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            },
+            "Lin Nuan": {
+              "dim": 384,
+              "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            }
+          },
+          "edgeVectors": {
+            "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+              "dim": 384,
+              "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
+            },
+            "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+              "dim": 384,
+              "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+            }
+          },
+          "model": "unknown",
+          "dim": 384
+        }
+      ]
+    ],
+    "vectorCalls": [
+      {
+        "op": "delete",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {
+            "evt_muyryq5c_4fzyo8": {
+              "dim": 384,
+              "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+            }
+          },
+          "entityVectors": {},
+          "edgeVectors": {},
+          "model": "unknown",
+          "dim": 384
+        }
+      },
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {
+            "evt_muyryq5c_4fzyo8": {
+              "dim": 384,
+              "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+            }
+          },
+          "entityVectors": {
+            "陆沉": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            },
+            "Lin Nuan": {
+              "dim": 384,
+              "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            }
+          },
+          "edgeVectors": {},
+          "model": "unknown",
+          "dim": 384
+        }
+      },
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {
+            "evt_muyryq5c_4fzyo8": {
+              "dim": 384,
+              "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+            }
+          },
+          "entityVectors": {
+            "陆沉": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            },
+            "Lin Nuan": {
+              "dim": 384,
+              "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            }
+          },
+          "edgeVectors": {
+            "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+              "dim": 384,
+              "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
+            },
+            "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+              "dim": 384,
+              "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+            }
+          },
+          "model": "unknown",
+          "dim": 384
+        }
+      }
+    ],
+    "aiCalls": [],
+    "fetchCalls": [],
+    "emits": [
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "type": "load"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "元数据.回合序号",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.events",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.meta.embeddedEventCount",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.entities",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.meta.embeddedEntityCount",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.v2Edges",
+          "action": "set",
+          "source": "system"
+        }
+      }
+    ]
+  },
+  "v3ToV5": {
+    "label": "round 5",
+    "returned": {
+      "roundNumber": 5,
+      "capturedAt": 1791417900000,
+      "totalDurationMs": "<ms>",
+      "event": {
+        "eventId": "evt_muyryq5c_4fzyo8",
+        "title": "陆沉在酒肆喝茶",
+        "roles": [],
+        "location": [
+          "青石镇"
+        ],
+        "timeAnchor": "1年3月5日 14:20"
+      },
+      "entities": {
+        "total": 4,
+        "deltas": [
+          {
+            "name": "陆沉",
+            "type": "player",
+            "isNew": true,
+            "descriptionUpdated": false,
+            "mentionCount": 4
+          },
+          {
+            "name": "Lin Nuan",
+            "type": "npc",
+            "isNew": false,
+            "descriptionUpdated": true,
+            "mentionCount": 1
+          },
+          {
+            "name": "Guan Yu",
+            "type": "npc",
+            "isNew": true,
+            "descriptionUpdated": false,
+            "mentionCount": 1
+          },
+          {
+            "name": "青石镇",
+            "type": "location",
+            "isNew": true,
+            "descriptionUpdated": false,
+            "mentionCount": 3
+          }
+        ]
+      },
+      "relations": {
+        "total": 0,
+        "deltas": []
+      },
+      "snapshotVersion": 2,
+      "trimmed": {
+        "eventsBefore": 2,
+        "eventsAfter": 2,
+        "entitiesBefore": 4,
+        "entitiesAfter": 4
+      },
+      "vectorizeQueued": 5,
+      "edges": {
+        "total": 2,
+        "newCount": 0,
+        "reinforcedCount": 0,
+        "prunedCount": 0,
+        "topNew": []
+      }
+    },
+    "engramMemory": {
+      "events": [
+        {
+          "id": "evt_v3",
+          "subject": "陆沉",
+          "action": "narrative",
+          "tags": [
+            "narrative"
+          ],
+          "text": "old event evt_v3",
+          "summary": "old event evt_v3",
+          "structured_kv": {
+            "event": "evt_v3",
+            "role": [
+              "陆沉"
+            ],
+            "location": [
+              "青石镇"
+            ],
+            "time_anchor": "",
+            "causality": "承接",
+            "logic": []
+          },
+          "is_embedded": true,
+          "roundNumber": 1
+        },
+        {
+          "id": "evt_muyryq5c_4fzyo8",
+          "subject": "陆沉",
+          "action": "narrative",
+          "tags": [
+            "narrative"
+          ],
+          "text": "陆沉在酒肆喝茶。",
+          "summary": "陆沉在酒肆喝茶(承接):\n(1年3月5日 14:20 | 青石镇) 陆沉在酒肆喝茶。",
+          "structured_kv": {
+            "event": "陆沉在酒肆喝茶",
+            "role": [],
+            "location": [
+              "青石镇"
+            ],
+            "time_anchor": "1年3月5日 14:20",
+            "causality": "承接",
+            "logic": []
+          },
+          "is_embedded": true,
+          "time": "1年3月5日 14:20",
+          "location": "青石镇",
+          "roundNumber": 5,
+          "mentionedEntities": [
+            "陆沉"
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "陆沉",
+          "type": "player",
+          "attributes": {
+            "source": "event_role",
+            "lastEventId": "evt_v3"
+          },
+          "firstSeen": 0,
+          "lastSeen": 5,
+          "mentionCount": 4,
+          "summary": "玩家角色",
+          "is_embedded": true
+        },
+        {
+          "name": "Lin Nuan",
+          "type": "npc",
+          "attributes": {
+            "relationToPlayer": "__undefined__",
+            "location": "青石镇",
+            "source": "relationship"
+          },
+          "firstSeen": 0,
+          "lastSeen": 0,
+          "mentionCount": 1,
+          "summary": "Runs the tavern in Qingshi town.；bright eyes, long black hair",
+          "is_embedded": true
+        },
+        {
+          "name": "Guan Yu",
+          "type": "npc",
+          "attributes": {
+            "relationToPlayer": "__undefined__",
+            "location": "__undefined__",
+            "source": "relationship"
+          },
+          "firstSeen": 0,
+          "lastSeen": 0,
+          "mentionCount": 1,
+          "summary": "A wandering swordsman.；sharp brows",
+          "is_embedded": true
+        },
+        {
+          "name": "青石镇",
+          "type": "location",
+          "attributes": {
+            "source": "event_location",
+            "lastEventId": "evt_muyryq5c_4fzyo8"
+          },
+          "firstSeen": 1,
+          "lastSeen": 5,
+          "mentionCount": 3,
+          "summary": "",
+          "is_embedded": true
+        }
+      ],
+      "relations": [],
+      "v2Edges": [
+        {
+          "id": "edge_v3_a",
+          "sourceEntity": "Lin Nuan",
+          "targetEntity": "陆沉",
+          "fact": "Lin Nuan serves tea to Lu Chen at the tavern",
+          "episodes": [
+            "evt_v3"
+          ],
+          "is_embedded": true,
+          "createdAtRound": 1,
+          "lastSeenRound": 1,
+          "invalidatedAtRound": 2,
+          "temporalStatus": "historical",
+          "learnedAtRound": 1,
+          "invalidAtRound": 2
+        },
+        {
+          "id": "edge_v3_b",
+          "sourceEntity": "Lin Nuan",
+          "targetEntity": "Guan Yu",
+          "fact": "Lin Nuan and Guan Yu grew up in the same town",
+          "episodes": [],
+          "is_embedded": true,
+          "createdAtRound": 1,
+          "lastSeenRound": 1,
+          "learnedAtRound": 1
+        }
+      ],
+      "meta": {
+        "lastUpdated": 1791417900000,
+        "eventCount": 2,
+        "embeddedEventCount": 2,
+        "embeddedEntityCount": 4,
+        "schemaVersion": 5,
+        "v2PendingReview": null
+      }
+    },
+    "memory": {
+      "短期": [],
+      "中期": [],
+      "长期": [],
+      "隐式中期": []
+    },
+    "vectorRows": [
+      [
+        "engram_vectors_prof_m_slot_m",
+        {
+          "eventVectors": {
+            "evt_muyryq5c_4fzyo8": {
+              "dim": 384,
+              "sha256": "1e84e5788bf5e989b3f4389c936254e6a2dddfc835b37bd03be1d627bc0e1d90"
+            }
+          },
+          "entityVectors": {
+            "陆沉": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            }
+          },
+          "edgeVectors": {
+            "edge_v3_b": {
+              "dim": 384,
+              "sha256": "56dceb9777d48aaabbb10aa80a537438e1889f28a82178a197a8d6f73b4afdc8"
+            }
+          },
+          "model": "unknown",
+          "dim": 384
+        }
+      ]
+    ],
+    "vectorCalls": [
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {},
+          "entityVectors": {},
+          "edgeVectors": {
+            "edge_old": {
+              "dim": 2,
+              "sha256": "7771d6b9c8f345de3daf53a3e1096756805d835cf8cddb9a6ca40cc0498de608"
+            }
+          },
+          "model": "old-model",
+          "dim": 2
+        }
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {
+            "evt_muyryq5c_4fzyo8": {
+              "dim": 384,
+              "sha256": "1e84e5788bf5e989b3f4389c936254e6a2dddfc835b37bd03be1d627bc0e1d90"
+            }
+          },
+          "entityVectors": {},
+          "edgeVectors": {},
+          "model": "unknown",
+          "dim": 384
+        }
+      },
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {
+            "evt_muyryq5c_4fzyo8": {
+              "dim": 384,
+              "sha256": "1e84e5788bf5e989b3f4389c936254e6a2dddfc835b37bd03be1d627bc0e1d90"
+            }
+          },
+          "entityVectors": {
+            "陆沉": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            }
+          },
+          "edgeVectors": {},
+          "model": "unknown",
+          "dim": 384
+        }
+      },
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {
+            "evt_muyryq5c_4fzyo8": {
+              "dim": 384,
+              "sha256": "1e84e5788bf5e989b3f4389c936254e6a2dddfc835b37bd03be1d627bc0e1d90"
+            }
+          },
+          "entityVectors": {
+            "陆沉": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            }
+          },
+          "edgeVectors": {
+            "edge_v3_b": {
+              "dim": 384,
+              "sha256": "56dceb9777d48aaabbb10aa80a537438e1889f28a82178a197a8d6f73b4afdc8"
+            }
+          },
+          "model": "unknown",
+          "dim": 384
+        }
+      }
+    ],
+    "aiCalls": [],
+    "fetchCalls": [],
+    "emits": [
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "type": "load"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "元数据.回合序号",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.events",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.meta.embeddedEventCount",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.entities",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.meta.embeddedEntityCount",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.v2Edges",
+          "action": "set",
+          "source": "system"
+        }
+      }
+    ]
+  },
+  "v4ToV5": {
+    "label": "round 5",
+    "returned": {
+      "roundNumber": 5,
+      "capturedAt": 1791417900000,
+      "totalDurationMs": "<ms>",
+      "event": {
+        "eventId": "evt_muyryq5c_4fzyo8",
+        "title": "陆沉离开了酒肆",
+        "roles": [],
+        "location": [
+          "青石镇"
+        ],
+        "timeAnchor": "1年3月5日 14:20"
+      },
+      "entities": {
+        "total": 4,
+        "deltas": [
+          {
+            "name": "陆沉",
+            "type": "player",
+            "isNew": true,
+            "descriptionUpdated": false,
+            "mentionCount": 4
+          },
+          {
+            "name": "Lin Nuan",
+            "type": "npc",
+            "isNew": true,
+            "descriptionUpdated": false,
+            "mentionCount": 1
+          },
+          {
+            "name": "Guan Yu",
+            "type": "npc",
+            "isNew": true,
+            "descriptionUpdated": false,
+            "mentionCount": 1
+          },
+          {
+            "name": "青石镇",
+            "type": "location",
+            "isNew": true,
+            "descriptionUpdated": false,
+            "mentionCount": 3
+          }
+        ]
+      },
+      "relations": {
+        "total": 0,
+        "deltas": []
+      },
+      "snapshotVersion": 2,
+      "trimmed": {
+        "eventsBefore": 2,
+        "eventsAfter": 2,
+        "entitiesBefore": 4,
+        "entitiesAfter": 4
+      },
+      "vectorizeQueued": 5,
+      "edges": {
+        "total": 1,
+        "newCount": 0,
+        "reinforcedCount": 0,
+        "prunedCount": 0,
+        "topNew": []
+      }
+    },
+    "engramMemory": {
+      "events": [
+        {
+          "id": "evt_v4",
+          "subject": "陆沉",
+          "action": "narrative",
+          "tags": [
+            "narrative"
+          ],
+          "text": "old event evt_v4",
+          "summary": "old event evt_v4",
+          "structured_kv": {
+            "event": "evt_v4",
+            "role": [
+              "陆沉"
+            ],
+            "location": [
+              "青石镇"
+            ],
+            "time_anchor": "",
+            "causality": "承接",
+            "logic": []
+          },
+          "is_embedded": true,
+          "roundNumber": 1
+        },
+        {
+          "id": "evt_muyryq5c_4fzyo8",
+          "subject": "陆沉",
+          "action": "narrative",
+          "tags": [
+            "narrative"
+          ],
+          "text": "陆沉离开了酒肆。",
+          "summary": "陆沉离开了酒肆(承接):\n(1年3月5日 14:20 | 青石镇) 陆沉离开了酒肆。",
+          "structured_kv": {
+            "event": "陆沉离开了酒肆",
+            "role": [],
+            "location": [
+              "青石镇"
+            ],
+            "time_anchor": "1年3月5日 14:20",
+            "causality": "承接",
+            "logic": []
+          },
+          "is_embedded": true,
+          "time": "1年3月5日 14:20",
+          "location": "青石镇",
+          "roundNumber": 5,
+          "mentionedEntities": [
+            "陆沉"
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "陆沉",
+          "type": "player",
+          "attributes": {
+            "source": "event_role",
+            "lastEventId": "evt_v4"
+          },
+          "firstSeen": 0,
+          "lastSeen": 5,
+          "mentionCount": 4,
+          "summary": "玩家角色",
+          "is_embedded": true
+        },
+        {
+          "name": "Lin Nuan",
+          "type": "npc",
+          "attributes": {
+            "relationToPlayer": "__undefined__",
+            "location": "青石镇",
+            "source": "relationship"
+          },
+          "firstSeen": 0,
+          "lastSeen": 0,
+          "mentionCount": 1,
+          "summary": "Runs the tavern in Qingshi town.；bright eyes, long black hair",
+          "is_embedded": true
+        },
+        {
+          "name": "Guan Yu",
+          "type": "npc",
+          "attributes": {
+            "relationToPlayer": "__undefined__",
+            "location": "__undefined__",
+            "source": "relationship"
+          },
+          "firstSeen": 0,
+          "lastSeen": 0,
+          "mentionCount": 1,
+          "summary": "A wandering swordsman.；sharp brows",
+          "is_embedded": true
+        },
+        {
+          "name": "青石镇",
+          "type": "location",
+          "attributes": {
+            "source": "event_location",
+            "lastEventId": "evt_muyryq5c_4fzyo8"
+          },
+          "firstSeen": 1,
+          "lastSeen": 5,
+          "mentionCount": 3,
+          "summary": "",
+          "is_embedded": true
+        }
+      ],
+      "relations": [],
+      "v2Edges": [
+        {
+          "id": "edge_v4",
+          "sourceEntity": "Lin Nuan",
+          "targetEntity": "陆沉",
+          "fact": "Lin Nuan serves tea to Lu Chen at the tavern",
+          "episodes": [],
+          "is_embedded": true,
+          "createdAtRound": 2,
+          "lastSeenRound": 3,
+          "invalidatedAtRound": 4,
+          "learnedAtRound": 2,
+          "invalidAtRound": 4
+        }
+      ],
+      "meta": {
+        "lastUpdated": 1791417900000,
+        "eventCount": 2,
+        "embeddedEventCount": 2,
+        "embeddedEntityCount": 4,
+        "schemaVersion": 5,
+        "v2PendingReview": [
+          {
+            "newFact": "x",
+            "oldEdgeId": "edge_v4",
+            "similarity": 0.7
+          }
+        ]
+      }
+    },
+    "memory": {
+      "短期": [],
+      "中期": [],
+      "长期": [],
+      "隐式中期": []
+    },
+    "vectorRows": [
+      [
+        "engram_vectors_prof_m_slot_m",
+        {
+          "eventVectors": {
+            "evt_muyryq5c_4fzyo8": {
+              "dim": 384,
+              "sha256": "1e84e5788bf5e989b3f4389c936254e6a2dddfc835b37bd03be1d627bc0e1d90"
+            }
+          },
+          "entityVectors": {
+            "陆沉": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            },
+            "Lin Nuan": {
+              "dim": 384,
+              "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            }
+          },
+          "edgeVectors": {},
+          "model": "unknown",
+          "dim": 384
+        }
+      ]
+    ],
+    "vectorCalls": [
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {
+            "evt_muyryq5c_4fzyo8": {
+              "dim": 384,
+              "sha256": "1e84e5788bf5e989b3f4389c936254e6a2dddfc835b37bd03be1d627bc0e1d90"
+            }
+          },
+          "entityVectors": {},
+          "edgeVectors": {},
+          "model": "unknown",
+          "dim": 384
+        }
+      },
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {
+            "evt_muyryq5c_4fzyo8": {
+              "dim": 384,
+              "sha256": "1e84e5788bf5e989b3f4389c936254e6a2dddfc835b37bd03be1d627bc0e1d90"
+            }
+          },
+          "entityVectors": {
+            "陆沉": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            },
+            "Lin Nuan": {
+              "dim": 384,
+              "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            }
+          },
+          "edgeVectors": {},
+          "model": "unknown",
+          "dim": 384
+        }
+      }
+    ],
+    "aiCalls": [],
+    "fetchCalls": [],
+    "emits": [
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "type": "load"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "元数据.回合序号",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.events",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.meta.embeddedEventCount",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.entities",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.meta.embeddedEntityCount",
+          "action": "set",
+          "source": "system"
+        }
+      }
+    ]
+  },
+  "eventsOnlyNoMeta": {
+    "label": "round 1",
+    "returned": {
+      "roundNumber": 1,
+      "capturedAt": 1791417660000,
+      "totalDurationMs": "<ms>",
+      "event": {
+        "eventId": "evt_muyrtkyo_4fzyo8",
+        "title": "陆沉第一次来到青石镇",
+        "roles": [],
+        "location": [
+          "青石镇"
+        ],
+        "timeAnchor": "1年3月5日 14:20"
+      },
+      "entities": {
+        "total": 4,
+        "deltas": [
+          {
+            "name": "陆沉",
+            "type": "player",
+            "isNew": true,
+            "descriptionUpdated": false,
+            "mentionCount": 2
+          },
+          {
+            "name": "Lin Nuan",
+            "type": "npc",
+            "isNew": true,
+            "descriptionUpdated": false,
+            "mentionCount": 1
+          },
+          {
+            "name": "Guan Yu",
+            "type": "npc",
+            "isNew": true,
+            "descriptionUpdated": false,
+            "mentionCount": 1
+          },
+          {
+            "name": "青石镇",
+            "type": "location",
+            "isNew": true,
+            "descriptionUpdated": false,
+            "mentionCount": 2
+          }
+        ]
+      },
+      "relations": {
+        "total": 0,
+        "deltas": []
+      },
+      "snapshotVersion": 2,
+      "trimmed": {
+        "eventsBefore": 1,
+        "eventsAfter": 1,
+        "entitiesBefore": 4,
+        "entitiesAfter": 4
+      },
+      "vectorizeQueued": 5,
+      "edges": "__undefined__"
+    },
+    "engramMemory": {
+      "events": [
+        {
+          "id": "evt_muyrtkyo_4fzyo8",
+          "subject": "陆沉",
+          "action": "narrative",
+          "tags": [
+            "narrative"
+          ],
+          "text": "陆沉第一次来到青石镇。",
+          "summary": "陆沉第一次来到青石镇(承接):\n(1年3月5日 14:20 | 青石镇) 陆沉第一次来到青石镇。",
+          "structured_kv": {
+            "event": "陆沉第一次来到青石镇",
+            "role": [],
+            "location": [
+              "青石镇"
+            ],
+            "time_anchor": "1年3月5日 14:20",
+            "causality": "承接",
+            "logic": []
+          },
+          "is_embedded": true,
+          "time": "1年3月5日 14:20",
+          "location": "青石镇",
+          "roundNumber": 1,
+          "mentionedEntities": [
+            "陆沉"
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "name": "陆沉",
+          "type": "player",
+          "attributes": {},
+          "firstSeen": 0,
+          "lastSeen": 1,
+          "mentionCount": 2,
+          "summary": "玩家角色",
+          "is_embedded": true
+        },
+        {
+          "name": "Lin Nuan",
+          "type": "npc",
+          "attributes": {
+            "relationToPlayer": "__undefined__",
+            "location": "青石镇",
+            "source": "relationship"
+          },
+          "firstSeen": 0,
+          "lastSeen": 0,
+          "mentionCount": 1,
+          "summary": "Runs the tavern in Qingshi town.；bright eyes, long black hair",
+          "is_embedded": true
+        },
+        {
+          "name": "Guan Yu",
+          "type": "npc",
+          "attributes": {
+            "relationToPlayer": "__undefined__",
+            "location": "__undefined__",
+            "source": "relationship"
+          },
+          "firstSeen": 0,
+          "lastSeen": 0,
+          "mentionCount": 1,
+          "summary": "A wandering swordsman.；sharp brows",
+          "is_embedded": true
+        },
+        {
+          "name": "青石镇",
+          "type": "location",
+          "attributes": {
+            "source": "event_location",
+            "lastEventId": "evt_muyrtkyo_4fzyo8"
+          },
+          "firstSeen": 1,
+          "lastSeen": 1,
+          "mentionCount": 2,
+          "summary": "",
+          "is_embedded": true
+        }
+      ],
+      "relations": [],
+      "v2Edges": [],
+      "meta": {
+        "lastUpdated": 1791417660000,
+        "eventCount": 1,
+        "embeddedEventCount": 1,
+        "embeddedEntityCount": 4,
+        "schemaVersion": 5,
+        "v2PendingReview": null
+      }
+    },
+    "memory": {
+      "短期": [],
+      "中期": [],
+      "长期": [],
+      "隐式中期": []
+    },
+    "vectorRows": [
+      [
+        "engram_vectors_prof_m_slot_m",
+        {
+          "eventVectors": {
+            "evt_muyrtkyo_4fzyo8": {
+              "dim": 384,
+              "sha256": "1e84e5788bf5e989b3f4389c936254e6a2dddfc835b37bd03be1d627bc0e1d90"
+            }
+          },
+          "entityVectors": {
+            "陆沉": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            },
+            "Lin Nuan": {
+              "dim": 384,
+              "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            }
+          },
+          "edgeVectors": {},
+          "model": "unknown",
+          "dim": 384
+        }
+      ]
+    ],
+    "vectorCalls": [
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {
+            "evt_muyrtkyo_4fzyo8": {
+              "dim": 384,
+              "sha256": "1e84e5788bf5e989b3f4389c936254e6a2dddfc835b37bd03be1d627bc0e1d90"
+            }
+          },
+          "entityVectors": {},
+          "edgeVectors": {},
+          "model": "unknown",
+          "dim": 384
+        }
+      },
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
+        "op": "set",
+        "key": "engram_vectors_prof_m_slot_m",
+        "value": {
+          "eventVectors": {
+            "evt_muyrtkyo_4fzyo8": {
+              "dim": 384,
+              "sha256": "1e84e5788bf5e989b3f4389c936254e6a2dddfc835b37bd03be1d627bc0e1d90"
+            }
+          },
+          "entityVectors": {
+            "陆沉": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            },
+            "Lin Nuan": {
+              "dim": 384,
+              "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+            },
+            "Guan Yu": {
+              "dim": 384,
+              "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+            },
+            "青石镇": {
+              "dim": 384,
+              "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+            }
+          },
+          "edgeVectors": {},
+          "model": "unknown",
+          "dim": 384
+        }
+      }
+    ],
+    "aiCalls": [],
+    "fetchCalls": [],
+    "emits": [
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "type": "load"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "元数据.回合序号",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.events",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.meta.embeddedEventCount",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.entities",
+          "action": "set",
+          "source": "system"
+        }
+      },
+      {
+        "event": "engine:state-changed",
+        "payload": {
+          "path": "系统.扩展.engramMemory.meta.embeddedEntityCount",
+          "action": "set",
+          "source": "system"
+        }
+      }
+    ]
+  }
+}

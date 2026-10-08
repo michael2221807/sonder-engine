@@ -1,0 +1,14 @@
+{
+  "noToken": {
+    "threw": {
+      "name": "Error",
+      "message": "请填写 GitHub 用户名"
+    }
+  },
+  "noOwner": {
+    "threw": {
+      "name": "Error",
+      "message": "请填写 GitHub 用户名"
+    }
+  }
+}

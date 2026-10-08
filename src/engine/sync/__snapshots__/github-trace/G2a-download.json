@@ -1,0 +1,107 @@
+{
+  "outcome": {
+    "ok": "__undefined__"
+  },
+  "status": [
+    {
+      "stage": "downloading",
+      "message": "正在获取云端索引…"
+    },
+    {
+      "stage": "downloading",
+      "message": "正在下载分块 1/2…"
+    },
+    {
+      "stage": "downloading",
+      "message": "正在下载分块 2/2…"
+    },
+    {
+      "stage": "downloading",
+      "message": "正在校验并恢复…"
+    },
+    {
+      "stage": "done",
+      "message": "下载并恢复完成"
+    }
+  ],
+  "trace": [
+    {
+      "method": "GET",
+      "path": "/repos/octo/aga-cloud-save/contents/v2/manifest.json"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/octo/aga-cloud-save/git/blobs/sha3"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/octo/aga-cloud-save/contents/v2/state.muyrsao01f9a.gz"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/octo/aga-cloud-save/git/blobs/sha1"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/octo/aga-cloud-save/contents/v2/img-0.muyrsao01f9a.gz"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/octo/aga-cloud-save/git/blobs/sha2"
+    }
+  ],
+  "backupCalls": [
+    {
+      "method": "importAll",
+      "args": [
+        {
+          "blob": true,
+          "size": 15712,
+          "sha256": "0286802b9e6894376572efa48317b5f301eeb6e409dccc1f31748af5c5156540"
+        },
+        {
+          "fromOwnSync": true
+        }
+      ]
+    }
+  ],
+  "lsDiff": {
+    "added": {
+      "aga-ui-theme": "dark",
+      "aga_api_management": "{\"configs\":[{\"name\":\"main\"}]}",
+      "aga_engram_config": "{\"enabled\":true}",
+      "aga_pending_input": "draft text"
+    },
+    "removed": [
+      "aga-local-legacy",
+      "aga_local_setting"
+    ],
+    "changed": {
+      "aga_github_sync_baseline": {
+        "from": "LOCAL-BASELINE",
+        "to": "2026-10-08T00:00:00.000Z"
+      },
+      "aga_plot_vector_control": {
+        "from": "{\"enabled\":false}",
+        "to": "{\"enabled\":true}"
+      }
+    }
+  },
+  "headers": [
+    "[[\"Accept\",\"application/vnd.github+json\"],[\"Authorization\",\"Bearer ghp_FAKE0000\"],[\"X-GitHub-Api-Version\",\"2022-11-28\"]]"
+  ],
+  "repoAfter": [
+    "v2/img-0.muyrsao01f9a.gz",
+    "v2/manifest.json",
+    "v2/state.muyrsao01f9a.gz"
+  ],
+  "warnings": [],
+  "baselineIsManifestCreatedAt": true,
+  "databases": [
+    "aga-config",
+    "aga-prompts",
+    "aga-saves",
+    "aga-worldbook",
+    "aga_image_cache"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "imageIntegrity": {
+    "referencedAssets": 12,
+    "exportedAssets": 9
+  },
+  "bundleSha256": "31c34911404711083c3a2aef818f418f7bf39c9a90499c08a7e4274ddcc48b49",
+  "exportedIds": [
+    "img_avatar_b",
+    "img_hist_a2",
+    "img_legacy_ref",
+    "img_npc_1",
+    "img_portrait_a",
+    "img_ref_used",
+    "img_scene_1",
+    "img_secret_a",
+    "img_shared"
+  ],
+  "emits": [
+    {
+      "event": "ui:toast",
+      "payload": {
+        "type": "warning",
+        "i18nKey": "engine.toast.imageAssetsMissingOnExport",
+        "i18nParams": {
+          "missing": 3,
+          "total": 12
+        },
+        "message": "本次备份有 3/12 张已引用图片在本地缓存中找不到（可能被浏览器清除），备份将缺图。请勿用它覆盖含图的云端/旧备份。",
+        "id": "image-assets-missing-on-export",
+        "duration": 10000
+      }
+    }
+  ]
+}

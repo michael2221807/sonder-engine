@@ -1,0 +1,21 @@
+{
+  "exportProfile": {
+    "name": "ProfileSaveIntegrityError",
+    "message": "档案“prof_a”的存档结构不完整（元数据有槽但存档数据缺失：slot_2）。已阻止导出/上传/导入，请先从健康备份恢复，勿覆盖现有数据。",
+    "profileId": "prof_a",
+    "missingSlotIds": [
+      "slot_2"
+    ],
+    "orphanSaveSlotIds": []
+  },
+  "exportProfileForSync": {
+    "name": "ProfileSaveIntegrityError",
+    "message": "档案“prof_a”的存档结构不完整（元数据有槽但存档数据缺失：slot_2）。已阻止导出/上传/导入，请先从健康备份恢复，勿覆盖现有数据。"
+  },
+  "exportAllSaveKeys": [
+    "prof_a/slot_1",
+    "prof_b/slot_1",
+    "prof_b/slot_2"
+  ],
+  "emits": []
+}

@@ -1,0 +1,703 @@
+{
+  "version": 1,
+  "exportedAt": "2026-10-08T00:00:00.000Z",
+  "engineVersion": "0.1.0",
+  "bundleType": "full",
+  "activeProfile": {
+    "profileId": "prof_a",
+    "slotId": "slot_1"
+  },
+  "profiles": {
+    "prof_a": {
+      "profileId": "prof_a",
+      "createdAt": "2026-10-01T00:00:00.000Z",
+      "packId": "tianming",
+      "characterName": "Alice",
+      "slots": {
+        "slot_1": {
+          "slotId": "slot_1",
+          "slotName": "Slot slot_1",
+          "lastSavedAt": "2026-10-08T00:00:00.000Z",
+          "packId": "tianming",
+          "packVersion": "1.0.0",
+          "saveSize": 698,
+          "roundNumber": 3
+        },
+        "slot_2": {
+          "slotId": "slot_2",
+          "slotName": "Slot slot_2",
+          "lastSavedAt": "2026-10-08T00:00:00.000Z",
+          "packId": "tianming",
+          "packVersion": "1.0.0",
+          "saveSize": 112,
+          "roundNumber": 1
+        }
+      },
+      "activeSlotId": "slot_1"
+    },
+    "prof_b": {
+      "profileId": "prof_b",
+      "createdAt": "2026-10-01T00:00:00.000Z",
+      "packId": "tianming",
+      "characterName": "Bob",
+      "slots": {
+        "slot_1": {
+          "slotId": "slot_1",
+          "slotName": "Slot slot_1",
+          "lastSavedAt": "2026-10-08T00:00:00.000Z",
+          "packId": "tianming",
+          "packVersion": "1.0.0",
+          "saveSize": 139,
+          "roundNumber": 5
+        },
+        "slot_2": {
+          "slotId": "slot_2",
+          "slotName": "Slot slot_2",
+          "lastSavedAt": "2026-10-08T00:00:00.000Z",
+          "packId": "tianming",
+          "packVersion": "1.0.0",
+          "saveSize": 106,
+          "roundNumber": 2
+        }
+      },
+      "activeSlotId": "slot_1"
+    }
+  },
+  "saves": {
+    "prof_a/slot_1": {
+      "元数据": {
+        "回合序号": 3
+      },
+      "角色": {
+        "基础信息": {
+          "姓名": "Alice",
+          "当前位置": "青石镇"
+        },
+        "图片档案": {
+          "已选头像图片ID": "img_avatar_a",
+          "已选立绘图片ID": "img_portrait_a",
+          "已选背景图片ID": "",
+          "生图历史": [
+            {
+              "id": "img_hist_a1"
+            },
+            {
+              "id": "img_hist_a2"
+            }
+          ],
+          "最近生图结果": "img_hist_a1",
+          "香闺秘档": {
+            "胸部": {
+              "assetId": "img_secret_a"
+            }
+          }
+        }
+      },
+      "社交": {
+        "关系": [
+          {
+            "名称": "林暖",
+            "图片档案": {
+              "已选头像图片ID": "img_npc_1"
+            }
+          }
+        ]
+      },
+      "系统": {
+        "扩展": {
+          "image": {
+            "sceneArchive": {
+              "当前壁纸图片ID": "img_wall_a",
+              "生图历史": [
+                {
+                  "id": "img_scene_1"
+                }
+              ]
+            },
+            "tasks": [
+              {
+                "providerMeta": {
+                  "reference": {
+                    "sourceAssetIds": [
+                      "img_ref_used",
+                      ""
+                    ]
+                  }
+                }
+              },
+              {
+                "providerMeta": {
+                  "reference": {
+                    "sourceAssetId": "img_legacy_ref"
+                  }
+                }
+              }
+            ],
+            "referenceLibrary": [
+              {
+                "assetId": "img_lib_1"
+              },
+              {
+                "assetId": "img_lib_2"
+              }
+            ]
+          },
+          "storageHealth": {
+            "schemaVersion": 1,
+            "worldBookIds": [
+              "wb_a1"
+            ],
+            "updatedRound": 3
+          }
+        }
+      }
+    },
+    "prof_a/slot_2": {
+      "元数据": {
+        "回合序号": 1
+      },
+      "角色": {
+        "基础信息": {
+          "姓名": "Alice"
+        },
+        "图片档案": {
+          "已选头像图片ID": "img_avatar_a"
+        }
+      },
+      "社交": {
+        "关系": []
+      },
+      "系统": {
+        "扩展": {}
+      }
+    },
+    "prof_b/slot_1": {
+      "元数据": {
+        "回合序号": 5
+      },
+      "角色": {
+        "基础信息": {
+          "姓名": "Bob"
+        },
+        "图片档案": {
+          "已选头像图片ID": "img_avatar_b",
+          "生图历史": [
+            {
+              "id": "img_shared"
+            }
+          ]
+        }
+      },
+      "社交": {
+        "关系": []
+      },
+      "系统": {
+        "扩展": {}
+      }
+    },
+    "prof_b/slot_2": {
+      "元数据": {
+        "回合序号": 2
+      },
+      "角色": {
+        "基础信息": {
+          "姓名": "Bob"
+        },
+        "图片档案": {
+          "最近生图结果": "img_shared"
+        }
+      },
+      "社交": {
+        "关系": []
+      },
+      "系统": {
+        "扩展": {}
+      }
+    }
+  },
+  "vectors": {
+    "prof_a/slot_1": {
+      "eventVectors": {
+        "evt_a1": [
+          0.1,
+          0.2,
+          0.3
+        ],
+        "evt_a2": [
+          0.3,
+          0.2,
+          0.1
+        ]
+      },
+      "entityVectors": {
+        "Alice": [
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      "edgeVectors": {
+        "edge_a1": [
+          0.9,
+          0.1,
+          0
+        ]
+      },
+      "model": "embed-test",
+      "dim": 3
+    },
+    "prof_b/slot_2": {
+      "eventVectors": {
+        "evt_b1": [
+          0.7,
+          0.1,
+          0.2
+        ]
+      },
+      "entityVectors": {},
+      "edgeVectors": {},
+      "model": "embed-test",
+      "dim": 3
+    }
+  },
+  "configs": {
+    "overlays": [
+      {
+        "domainId": "ai",
+        "packId": "tianming",
+        "patches": {
+          "temperature": 0.7
+        },
+        "version": 1,
+        "updatedAt": 11
+      },
+      {
+        "domainId": "ui",
+        "packId": "tianming",
+        "patches": {
+          "theme": "dark"
+        },
+        "version": 1,
+        "updatedAt": 10
+      }
+    ]
+  },
+  "prompts": {
+    "entries": [
+      {
+        "key": "tianming:main_round",
+        "value": {
+          "content": "custom prompt text",
+          "enabled": true,
+          "modified": true,
+          "updatedAt": 1791417600000
+        }
+      },
+      {
+        "key": "tianming:opening",
+        "value": {
+          "content": "custom opening",
+          "enabled": false,
+          "modified": true,
+          "updatedAt": 1791417600000
+        }
+      }
+    ]
+  },
+  "engineSettings": {
+    "aga_api_management": "{\"configs\":[{\"name\":\"main\"}]}",
+    "aga_engram_config": "{\"enabled\":true}",
+    "aga-ui-theme": "dark",
+    "aga_pending_input": "draft text",
+    "aga_github_sync_token": "ghp_FAKE0000",
+    "aga_github_sync_owner": "octo",
+    "aga_github_sync_repo": "aga-cloud-save"
+  },
+  "customPresets": {
+    "other_pack": {
+      "worlds": [
+        {
+          "id": "user_w9",
+          "source": "user",
+          "createdAt": 3,
+          "generatedBy": "manual",
+          "name": "Other World"
+        }
+      ]
+    },
+    "tianming": {
+      "worlds": [
+        {
+          "id": "user_w1",
+          "source": "user",
+          "createdAt": 1,
+          "generatedBy": "manual",
+          "name": "World One"
+        }
+      ],
+      "origins": [
+        {
+          "id": "user_o1",
+          "source": "user",
+          "createdAt": 2,
+          "generatedBy": "ai",
+          "name": "Origin One"
+        }
+      ]
+    }
+  },
+  "imageAssets": [
+    {
+      "id": "img_avatar_a",
+      "metadata": {
+        "id": "img_avatar_a",
+        "taskId": "task_img_avatar_a",
+        "storageKey": "img_avatar_a",
+        "mimeType": "image/png",
+        "width": 8,
+        "height": 8,
+        "sizeBytes": 18,
+        "backend": "novelai",
+        "createdAt": 1,
+        "origin": "generated"
+      },
+      "base64": "Ynl0ZXM6aW1nX2F2YXRhcl9h",
+      "mimeType": "image/png"
+    },
+    {
+      "id": "img_avatar_b",
+      "metadata": {
+        "id": "img_avatar_b",
+        "taskId": "task_img_avatar_b",
+        "storageKey": "img_avatar_b",
+        "mimeType": "image/png",
+        "width": 8,
+        "height": 8,
+        "sizeBytes": 18,
+        "backend": "novelai",
+        "createdAt": 1,
+        "origin": "generated"
+      },
+      "base64": "Ynl0ZXM6aW1nX2F2YXRhcl9i",
+      "mimeType": "image/png"
+    },
+    {
+      "id": "img_hist_a1",
+      "metadata": {
+        "id": "img_hist_a1",
+        "taskId": "task_img_hist_a1",
+        "storageKey": "img_hist_a1",
+        "mimeType": "image/png",
+        "width": 8,
+        "height": 8,
+        "sizeBytes": 17,
+        "backend": "novelai",
+        "createdAt": 1,
+        "origin": "generated"
+      },
+      "base64": "Ynl0ZXM6aW1nX2hpc3RfYTE=",
+      "mimeType": "image/png"
+    },
+    {
+      "id": "img_hist_a2",
+      "metadata": {
+        "id": "img_hist_a2",
+        "taskId": "task_img_hist_a2",
+        "storageKey": "img_hist_a2",
+        "mimeType": "image/png",
+        "width": 8,
+        "height": 8,
+        "sizeBytes": 17,
+        "backend": "novelai",
+        "createdAt": 1,
+        "origin": "generated"
+      },
+      "base64": "Ynl0ZXM6aW1nX2hpc3RfYTI=",
+      "mimeType": "image/png"
+    },
+    {
+      "id": "img_legacy_ref",
+      "metadata": {
+        "id": "img_legacy_ref",
+        "taskId": "task_img_legacy_ref",
+        "storageKey": "img_legacy_ref",
+        "mimeType": "image/png",
+        "width": 8,
+        "height": 8,
+        "sizeBytes": 20,
+        "backend": "novelai",
+        "createdAt": 1,
+        "origin": "generated"
+      },
+      "base64": "Ynl0ZXM6aW1nX2xlZ2FjeV9yZWY=",
+      "mimeType": "image/png"
+    },
+    {
+      "id": "img_lib_1",
+      "metadata": {
+        "id": "img_lib_1",
+        "taskId": "task_img_lib_1",
+        "storageKey": "img_lib_1",
+        "mimeType": "image/png",
+        "width": 8,
+        "height": 8,
+        "sizeBytes": 15,
+        "backend": "novelai",
+        "createdAt": 1,
+        "origin": "generated"
+      },
+      "base64": "Ynl0ZXM6aW1nX2xpYl8x",
+      "mimeType": "image/png"
+    },
+    {
+      "id": "img_lib_2",
+      "metadata": {
+        "id": "img_lib_2",
+        "taskId": "task_img_lib_2",
+        "storageKey": "img_lib_2",
+        "mimeType": "image/png",
+        "width": 8,
+        "height": 8,
+        "sizeBytes": 15,
+        "backend": "novelai",
+        "createdAt": 1,
+        "origin": "generated"
+      },
+      "base64": "Ynl0ZXM6aW1nX2xpYl8y",
+      "mimeType": "image/png"
+    },
+    {
+      "id": "img_npc_1",
+      "metadata": {
+        "id": "img_npc_1",
+        "taskId": "task_img_npc_1",
+        "storageKey": "img_npc_1",
+        "mimeType": "image/png",
+        "width": 8,
+        "height": 8,
+        "sizeBytes": 15,
+        "backend": "novelai",
+        "createdAt": 1,
+        "origin": "generated"
+      },
+      "base64": "Ynl0ZXM6aW1nX25wY18x",
+      "mimeType": "image/png"
+    },
+    {
+      "id": "img_portrait_a",
+      "metadata": {
+        "id": "img_portrait_a",
+        "taskId": "task_img_portrait_a",
+        "storageKey": "img_portrait_a",
+        "mimeType": "image/png",
+        "width": 8,
+        "height": 8,
+        "sizeBytes": 20,
+        "backend": "novelai",
+        "createdAt": 1,
+        "origin": "generated"
+      },
+      "base64": "Ynl0ZXM6aW1nX3BvcnRyYWl0X2E=",
+      "mimeType": "image/png"
+    },
+    {
+      "id": "img_ref_used",
+      "metadata": {
+        "id": "img_ref_used",
+        "taskId": "task_img_ref_used",
+        "storageKey": "img_ref_used",
+        "mimeType": "image/png",
+        "width": 8,
+        "height": 8,
+        "sizeBytes": 18,
+        "backend": "novelai",
+        "createdAt": 1,
+        "origin": "generated"
+      },
+      "base64": "Ynl0ZXM6aW1nX3JlZl91c2Vk",
+      "mimeType": "image/png"
+    },
+    {
+      "id": "img_scene_1",
+      "metadata": {
+        "id": "img_scene_1",
+        "taskId": "task_img_scene_1",
+        "storageKey": "img_scene_1",
+        "mimeType": "image/png",
+        "width": 8,
+        "height": 8,
+        "sizeBytes": 17,
+        "backend": "novelai",
+        "createdAt": 1,
+        "origin": "generated"
+      },
+      "base64": "Ynl0ZXM6aW1nX3NjZW5lXzE=",
+      "mimeType": "image/png"
+    },
+    {
+      "id": "img_secret_a",
+      "metadata": {
+        "id": "img_secret_a",
+        "taskId": "task_img_secret_a",
+        "storageKey": "img_secret_a",
+        "mimeType": "image/png",
+        "width": 8,
+        "height": 8,
+        "sizeBytes": 18,
+        "backend": "novelai",
+        "createdAt": 1,
+        "origin": "generated"
+      },
+      "base64": "Ynl0ZXM6aW1nX3NlY3JldF9h",
+      "mimeType": "image/png"
+    },
+    {
+      "id": "img_shared",
+      "metadata": {
+        "id": "img_shared",
+        "taskId": "task_img_shared",
+        "storageKey": "img_shared",
+        "mimeType": "image/png",
+        "width": 8,
+        "height": 8,
+        "sizeBytes": 16,
+        "backend": "novelai",
+        "createdAt": 1,
+        "origin": "generated"
+      },
+      "base64": "Ynl0ZXM6aW1nX3NoYXJlZA==",
+      "mimeType": "image/png"
+    },
+    {
+      "id": "img_wall_a",
+      "metadata": {
+        "id": "img_wall_a",
+        "taskId": "task_img_wall_a",
+        "storageKey": "img_wall_a",
+        "mimeType": "image/png",
+        "width": 8,
+        "height": 8,
+        "sizeBytes": 16,
+        "backend": "novelai",
+        "createdAt": 1,
+        "origin": "generated"
+      },
+      "base64": "Ynl0ZXM6aW1nX3dhbGxfYQ==",
+      "mimeType": "image/png"
+    }
+  ],
+  "worldBooks": {
+    "version": 1,
+    "exportedAt": "2026-10-08T00:00:00.000Z",
+    "books": [
+      {
+        "id": "wb_a1",
+        "title": "Book wb_a1",
+        "enabled": true,
+        "entries": [
+          {
+            "id": "wb_a1_e1",
+            "title": "wb_a1 entry 1",
+            "content": "content of wb_a1 entry 1",
+            "type": "lore",
+            "scope": [
+              "main"
+            ],
+            "injectionMode": "always",
+            "enabled": true,
+            "createdAt": 1,
+            "updatedAt": 1
+          },
+          {
+            "id": "wb_a1_e2",
+            "title": "wb_a1 entry 2",
+            "content": "content of wb_a1 entry 2",
+            "type": "lore",
+            "scope": [
+              "main"
+            ],
+            "injectionMode": "always",
+            "enabled": true,
+            "createdAt": 1,
+            "updatedAt": 1
+          }
+        ],
+        "createdAt": 1,
+        "updatedAt": 1,
+        "_exportProfileId": "prof_a"
+      },
+      {
+        "id": "wb_b1",
+        "title": "Book wb_b1",
+        "enabled": true,
+        "entries": [
+          {
+            "id": "wb_b1_e1",
+            "title": "wb_b1 entry 1",
+            "content": "content of wb_b1 entry 1",
+            "type": "lore",
+            "scope": [
+              "main"
+            ],
+            "injectionMode": "always",
+            "enabled": true,
+            "createdAt": 1,
+            "updatedAt": 1
+          }
+        ],
+        "createdAt": 1,
+        "updatedAt": 1,
+        "_exportProfileId": "prof_b"
+      },
+      {
+        "id": "wb_b2",
+        "title": "Book wb_b2",
+        "enabled": true,
+        "entries": [
+          {
+            "id": "wb_b2_e1",
+            "title": "wb_b2 entry 1",
+            "content": "content of wb_b2 entry 1",
+            "type": "lore",
+            "scope": [
+              "main"
+            ],
+            "injectionMode": "always",
+            "enabled": true,
+            "createdAt": 1,
+            "updatedAt": 1
+          },
+          {
+            "id": "wb_b2_e2",
+            "title": "wb_b2 entry 2",
+            "content": "content of wb_b2 entry 2",
+            "type": "lore",
+            "scope": [
+              "main"
+            ],
+            "injectionMode": "always",
+            "enabled": true,
+            "createdAt": 1,
+            "updatedAt": 1
+          },
+          {
+            "id": "wb_b2_e3",
+            "title": "wb_b2 entry 3",
+            "content": "content of wb_b2 entry 3",
+            "type": "lore",
+            "scope": [
+              "main"
+            ],
+            "injectionMode": "always",
+            "enabled": true,
+            "createdAt": 1,
+            "updatedAt": 1
+          }
+        ],
+        "createdAt": 1,
+        "updatedAt": 1,
+        "_exportProfileId": "prof_b"
+      }
+    ]
+  }
+}

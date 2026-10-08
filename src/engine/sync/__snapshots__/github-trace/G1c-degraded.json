@@ -1,0 +1,125 @@
+{
+  "blocked": {
+    "outcome": {
+      "threw": {
+        "name": "DegradedUploadError",
+        "message": "degraded-upload-blocked",
+        "detail": {
+          "referencedAssets": 12,
+          "exportedAssets": 10,
+          "missingAssets": 2
+        }
+      }
+    },
+    "status": [
+      {
+        "stage": "uploading",
+        "message": "正在导出存档…"
+      }
+    ],
+    "requests": 0
+  },
+  "forced": {
+    "outcome": {
+      "ok": "__undefined__"
+    },
+    "status": [
+      {
+        "stage": "uploading",
+        "message": "正在导出存档…"
+      },
+      {
+        "stage": "uploading",
+        "message": "正在压缩并上传…"
+      },
+      {
+        "stage": "uploading",
+        "message": "正在压缩并上传分块 1…"
+      },
+      {
+        "stage": "uploading",
+        "message": "正在压缩并上传分块 2…"
+      },
+      {
+        "stage": "uploading",
+        "message": "正在更新索引…"
+      },
+      {
+        "stage": "uploading",
+        "message": "正在清理旧分块…"
+      },
+      {
+        "stage": "done",
+        "message": "上传完成"
+      }
+    ],
+    "trace": [
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/v2"
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/v2/state.muyrsao01f9a.gz",
+        "body": {
+          "message": "sync 2026-10-08T00:00:00",
+          "chunk": {
+            "plainLength": 5273,
+            "plainSha256": "289b392acdc00cae726f112182ac78184be12163860cec33b3d6b2ecf0cffe69"
+          }
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/v2/img-0.muyrsao01f9a.gz",
+        "body": {
+          "message": "sync 2026-10-08T00:00:00",
+          "chunk": {
+            "plainLength": 2835,
+            "plainSha256": "7d2f4e04414a68dc6284ab6afee8395d17ba39958a7ea517ec0719d0c5a6b042"
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save/contents/v2/manifest.json"
+      },
+      {
+        "method": "PUT",
+        "path": "/repos/octo/aga-cloud-save/contents/v2/manifest.json",
+        "body": {
+          "message": "sync 2026-10-08T00:00:00",
+          "manifest": {
+            "manifestVersion": 2,
+            "createdAt": "2026-10-08T00:00:00.000Z",
+            "engineVersion": "0.1.0",
+            "totalSizeBytes": 14458,
+            "bundleChecksum": "d4d97e34125ba0e073da6fac1ec7edb8db5ffb0a0b0c1c1b0db8f04888b11fc9",
+            "chunks": [
+              {
+                "name": "state",
+                "path": "v2/state.muyrsao01f9a.gz",
+                "compressedSize": "<gz>",
+                "originalSize": 5273,
+                "checksum": "<gz>"
+              },
+              {
+                "name": "img-0",
+                "path": "v2/img-0.muyrsao01f9a.gz",
+                "compressedSize": "<gz>",
+                "originalSize": 2835,
+                "checksum": "<gz>"
+              }
+            ],
+            "uploadedBy": {
+              "deviceId": "dev_0a0b0c0d",
+              "deviceLabel": "Windows · Chrome"
+            }
+          }
+        }
+      }
+    ],
+    "baseline": "2026-10-08T00:00:00.000Z"
+  },
+  "warnings": []
+}

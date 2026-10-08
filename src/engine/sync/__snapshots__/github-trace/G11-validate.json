@@ -1,0 +1,72 @@
+{
+  "noToken": {
+    "outcome": {
+      "ok": {
+        "ok": false,
+        "error": "请填写 Token"
+      }
+    },
+    "requests": 0
+  },
+  "userLookupSetsOwner": {
+    "outcome": {
+      "ok": {
+        "ok": true
+      }
+    },
+    "owner": "octo",
+    "trace": [
+      {
+        "method": "GET",
+        "path": "/user"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save"
+      }
+    ]
+  },
+  "user403NoOwner": {
+    "outcome": {
+      "ok": {
+        "ok": false,
+        "error": "无法自动获取用户名，请手动填写 GitHub 用户名"
+      }
+    },
+    "trace": [
+      {
+        "method": "GET",
+        "path": "/user"
+      }
+    ]
+  },
+  "user403WithOwner": {
+    "outcome": {
+      "ok": {
+        "ok": true
+      }
+    },
+    "trace": [
+      {
+        "method": "GET",
+        "path": "/user"
+      },
+      {
+        "method": "GET",
+        "path": "/repos/octo/aga-cloud-save"
+      }
+    ]
+  },
+  "repo404": {
+    "ok": {
+      "ok": false,
+      "error": "仓库 octo/aga-cloud-save 不存在。请先在 GitHub 上手动创建该私有仓库。"
+    }
+  },
+  "repo500": {
+    "ok": {
+      "ok": false,
+      "error": "GitHub API 500: {\"message\":\"fake 500\"}"
+    }
+  }
+}
