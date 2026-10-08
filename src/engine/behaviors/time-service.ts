@@ -73,7 +73,7 @@ export class TimeService implements BehaviorModule {
     this.config = config;
     /*
      * timeFieldFormat 的 key 按照从大到小的约定排列（年、月、日、时、分），
-     * 我们需要反转为从小到大以便做进位。
+     * 这里按下标 0–4 依次取为 year / month / day / hour / minute（不反转）。
      * 典型配置示例：{ "年": "number", "月": "number", "日": "number", "时": "number", "分": "number" }
      */
     const keys = Object.keys(config.timeFieldFormat);
@@ -213,9 +213,8 @@ export class TimeService implements BehaviorModule {
   /**
    * 年龄同步更新
    *
-   * 在状态树中查找常见的年龄路径（Game Pack 约定），
-   * 找到后加上年份变化量。
-   * 路径搜索顺序：角色.年龄 → 角色.属性.年龄（覆盖中文 Game Pack 常用布局）
+   * 读取构造时注入的单一年龄路径（characterAgePath，默认 DEFAULT_ENGINE_PATHS.characterAge），
+   * 是数字则加上年份变化量。
    */
   private updateAge(stateManager: StateManager, yearDelta: number): void {
     const currentAge = stateManager.get<number>(this.characterAgePath);

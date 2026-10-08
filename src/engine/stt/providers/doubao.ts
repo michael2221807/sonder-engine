@@ -12,15 +12,11 @@
  *   replies with full-response frames whose payload carries result.text — for
  *   bigmodel_nostream only the terminal frame holds the transcript.
  *
- * Live findings that shaped this implementation (2026-08-27, plan key):
- * - The Agent Plan gateway has NO flash (file-recognition) HTTP endpoint —
- *   `/api/v3/plan/auc/...` 404s; sauc WebSocket is the only plan ASR surface,
- *   which is why this provider is WS despite design D6 deferring streaming
- *   dictation UX (the recorded-blob flow below is still non-streaming UX).
- * - `?api_key=` + `?api_resource_id=` query auth live-verified (browser
- *   WebSocket cannot set headers; WS needs no CORS preflight → browser-safe).
- * - Round-trip verified: plan TTS audio fed back through this protocol
- *   returned the exact source text.
+ * Why this shape (live-verified on the Agent Plan, 2026-08-27):
+ * - The gateway has NO flash (file-recognition) HTTP endpoint (`/api/v3/plan/auc/...`
+ *   404s); the sauc WebSocket is the only plan ASR surface, so this provider is WS.
+ * - `?api_key=` + `?api_resource_id=` query auth: a browser WebSocket cannot set headers,
+ *   and WS needs no CORS preflight.
  *
  * MediaRecorder emits webm/opus; blobToWav16kMono decodes + resamples to the
  * 16 kHz mono WAV the request declares. WAV input passes through untouched.

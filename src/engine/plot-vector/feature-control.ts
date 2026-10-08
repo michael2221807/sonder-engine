@@ -24,7 +24,7 @@ export function readPlotVectorControl(): PlotVectorControl {
   } catch { return { enabled: false, epoch: 'off' }; }
 }
 /**
- * 128 random bits as an identifier (epochs, request owners, Worker job ids, CSP nonces).
+ * 128 random bits as an identifier (epochs).
  * LAN HTTP pages may expose getRandomValues without the secure-context randomUUID API;
  * there is no weaker fallback: without getRandomValues this throws.
  */

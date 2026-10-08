@@ -3,17 +3,11 @@
 /**
  * AssistantService — Assistant utility 顶层编排
  *
- * **本文件 Phase 1 只是骨架**，仅定义 API surface + 内部依赖装配。
- * 真正的逻辑（attachment 构造、AI 调用、payload 解析/校验/注入）在
- * Phase 2-4 逐步填充。
+ * 职责：依赖装配、clear、appendSystemMessage、conversation read；
+ * send（AttachmentBuilder → MessageBuilder → AIService 流式调用 → PayloadParser / PayloadValidator）；
+ * applyPayload + rollbackLastInject（注入 + 撤销）。
  *
- * Phase 完成进度：
- * - [x] Phase 1：构造、clear、appendSystemMessage、conversation read
- * - [ ] Phase 2：send 中的 AttachmentBuilder + PayloadParser + PayloadValidator
- * - [ ] Phase 3：applyPayload + rollback（注入 + 撤销）
- * - [ ] Phase 4：MessageBuilder（system prompt 装配） + AIService 调用
- *
- * 对应 docs/status/plan-assistant-utility-2026-04-14.md §4 + Phase 1。
+ * 对应 docs/status/plan-assistant-utility-2026-04-14.md §4。
  */
 import type { AIService } from '../../ai/ai-service';
 import type { PromptTextSource } from '../../prompt/prompt-assembler';
@@ -268,9 +262,8 @@ export class AssistantService {
     };
     appendMessageWithFifoTrim(session, userMessage, this.settings.maxHistoryTurns);
 
-    // ── 3. MessageBuilder 装配 messages（用 trim 后的历史 —— 不含刚加的 userMessage 是错的，
-    //     因为 builder 把当前 turn 单独拼 —— 所以传 history = trim 后的全部，但末尾的 user 跟当前 turn 重复）
-    //    → 解决：传 history = session.messages.slice(0, -1)，跳过刚 push 的 user
+    // ── 3. MessageBuilder 装配 messages ──
+    // builder 把当前 turn 单独拼，所以 history 要去掉刚 push 的 user（否则重复）。
     const history = session.messages.slice(0, -1);
     const messages = this.messageBuilder.build({
       history,

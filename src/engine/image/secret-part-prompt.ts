@@ -6,16 +6,6 @@
  * private/NSFW image generation (胸部/小穴/屁穴).
  *
  * Wuxia terms generalized: "武侠/仙侠" removed from system prompts.
- *
- * ┌─────────────────────────────────────────────────────────────────┐
- * │ FRONTEND TODO (Phase 3-4: Manual Tab Secret Part Panel)        │
- * │                                                                 │
- * │ This is NOT user-accessible until the Manual tab adds the      │
- * │ fuchsia-themed secret part panel.                              │
- * │ Needs: art style grid, resolution, artist preset, per-part     │
- * │ generate buttons, "全部生成" button.                            │
- * │ See original design doc §F                                    │
- * └─────────────────────────────────────────────────────────────────┘
  */
 import type { SecretPartType } from './types';
 import { cleanPromptOutput } from './output-processor';

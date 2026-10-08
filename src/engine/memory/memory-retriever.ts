@@ -47,7 +47,7 @@ export class MemoryRetriever {
    *
    * @param stateManager 状态管理器
    * @param ctx 可选的检索上下文 —— 影响隐式中期的相关角色过滤。
-   *            未提供时隐式中期按"最近 15 条" fallback（兼容旧行为）
+   *            未提供时隐式中期全量输出
    */
   retrieve(stateManager: StateManager, ctx?: RetrievalContext): string {
     const sections: string[] = [];
@@ -160,10 +160,7 @@ export class MemoryRetriever {
   }
 
   /**
-   * Fallback 归一化：没有 MemoryManager 依赖时的轻量版（保持兼容）
-   */
-  /**
-   * Fallback 归一化 — 2026-04-11 CR S-02 修复：委托 MemoryManager 消除重复逻辑
+   * Fallback 归一化：委托 MemoryManager 消除重复逻辑（CR S-02）
    *
    * 只在无 MemoryManager 依赖时（兼容旧调用路径）使用极简版。
    * 有 MemoryManager 时不会走这条路径。

@@ -12,24 +12,7 @@
  * NovelAI gets English tags + gender + composition keywords.
  * Other backends get Chinese description text.
  *
- * ┌─────────────────────────────────────────────────────────────────┐
- * │ FRONTEND TODO (Phase 7: Settings Tab)                          │
- * │                                                                 │
- * │ This function is NOT user-accessible until the Settings tab     │
- * │ adds a "使用词组转化器" toggle (ImageGenerationSettings          │
- * │ Tab 1 基础). That toggle controls `useTransformer` in           │
- * │ image-service.generateCharacterImage.                           │
- * │                                                                 │
- * │ See original design doc §K "Tab 1: 基础"                       │
- * │   - "NPC生图使用词组转化器" toggle                                │
- * │   - Forced ON for NovelAI backend                               │
- * │   - Default ON for other backends                               │
- * │                                                                 │
- * │ AGA integration point:                                          │
- * │   image-service.ts:generateCharacterImage params.useTransformer │
- * │   → if false, call buildDirectCharacterPrompt instead of        │
- * │     tokenizer.tokenizeCharacter                                 │
- * └─────────────────────────────────────────────────────────────────┘
+ * Used by image-service.generateCharacterImage when `useTransformer` is false (forced on for NovelAI).
  */
 import { normalizeNaiWeightSyntax } from './output-processor';
 

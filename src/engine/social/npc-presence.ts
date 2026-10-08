@@ -4,7 +4,7 @@
  * Partitions the NPC list into "present" (in current scene with player) and
  * "absent" (elsewhere) groups. Reads `paths.npcFieldNames.isPresent` boolean.
  *
- * Pure utility — no state mutation, no pipeline dependency. Used by:
+ * partition() is read-only; setPresence() / clearAllPresence() write the isPresent flag. Used by:
  * - `NpcContextRenderer` (prompt partition)
  * - Future `RelationshipPanel.vue` (UI grouping in Social-3)
  */

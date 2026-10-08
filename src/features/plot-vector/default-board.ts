@@ -56,7 +56,7 @@ export function buildSixCellBoard(opts: SixCellOptions = {}): BoardDef {
   const topology: SixCellTopology = opts.topology ?? 'line';
   return {
     id: topology === 'ring' ? SIX_CELL_RING_ID : SIX_CELL_ID,
-    // Same cells, same cards: one layout serves both topologies (kernel plan K1).
+    // Same cells, same cards: one layout serves both topologies.
     layoutKey: SIX_CELL_ID,
     label:
       topology === 'ring'
@@ -154,7 +154,7 @@ export function buildSixCellBoard(opts: SixCellOptions = {}): BoardDef {
         label: { zh: '效果格（空槽不产出）', en: 'Effect slot (empty produces nothing)' },
       },
       {
-        // D89: the run now ends when the trip length is used up, so this cell carries no
+        // The run now ends when the trip length is used up, so this cell carries no
         // ending job any more. It is an ordinary slot like any other.
         id: '06',
         kind: 'plain',
@@ -169,7 +169,7 @@ export function buildSixCellBoard(opts: SixCellOptions = {}): BoardDef {
     ],
     edges: [
       // Forward chain. On a ring the last forward edge wraps back to 01; on a line it is
-      // absent, which is what makes 06 an endpoint the shuttle folds at (D89).
+      // absent, which is what makes 06 an endpoint the shuttle folds at.
       ...FORWARD.map((e) => ({ ...e })),
       ...(topology === 'ring'
         ? [{ id: '06>01', kind: 'forward' as const, from: { cell: '06', port: 'R' as const }, to: { cell: '01', port: 'L' as const }, label: { zh: '06 → 01（完成一圈）', en: '06 → 01 (one lap)' } }]
@@ -183,7 +183,7 @@ export function buildSixCellBoard(opts: SixCellOptions = {}): BoardDef {
     ],
     adjacency: [['01', '02']],
     start: { cell: '01', entryPort: 'L' },
-    // The run ends when the trip length is used up (D89); at an end of the line the shuttle folds.
+    // The run ends when the trip length is used up; at an end of the line the shuttle folds.
     budget: { maxVisits: 60, maxEvents: 800 },
     traversal: { nMax: 24, nDefault: opts.tripLength ?? 6 },
     cards: [],

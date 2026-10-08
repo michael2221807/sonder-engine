@@ -182,8 +182,7 @@ export interface ImageAsset {
 /**
  * Image provider interface — each backend implements this.
  *
- * Implementations live in `providers/{backend}.ts`. Sprint Image-1 provides
- * stubs that throw; real implementations land in Sprint Image-5.
+ * Implementations live in `providers/{backend}.ts` (all extend BaseImageProvider).
  */
 export interface ImageProvider {
   /** Backend identifier */

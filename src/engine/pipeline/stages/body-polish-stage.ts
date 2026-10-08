@@ -93,8 +93,7 @@ export class BodyPolishStage implements PipelineStage {
     ctx.onProgress?.({ i18nKey: 'engine.progress.bodyPolish', message: '[BodyPolish:润色中]' });
 
     try {
-      // Prefer pack / worldbook-overridden prompt content (so users can customize
-      // via worldbook entry with `builtinSlotId: 'body_polish'`). Fallback to TS
+      // Prefer the pack prompt as the player left it (renderSingle). Fallback to TS
       // constants when the pack prompt isn't present.
       const overridden = this.promptAssembler.renderSingle('bodyPolish', {});
       const systemContent =

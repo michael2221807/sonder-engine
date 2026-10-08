@@ -9,15 +9,6 @@
  * 1. Parses AGA location paths into hierarchical layers (innermost 3 levels)
  * 2. Builds scene context combining location + time + present NPCs
  * 3. Extracts character snapshot data for scene prompts
- *
- * ┌─────────────────────────────────────────────────────────────────┐
- * │ FRONTEND TODO (Phase 4: Scene/Wallpaper Tab)                   │
- * │                                                                 │
- * │ Scene context is currently auto-built from game state. The      │
- * │ Scene Tab will let users manually trigger scene generation      │
- * │ with composition choice (纯场景/故事快照) and extra requirements.│
- * │ See original design doc §E "Scene/Wallpaper"                   │
- * └─────────────────────────────────────────────────────────────────┘
  */
 
 // ═══════════════════════════════════════════════════════════

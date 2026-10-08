@@ -99,7 +99,7 @@ export class EffectLifecycleModule implements BehaviorModule {
 
   /**
    * onGameLoad 钩子 — 读档后也做一次清理
-   * 玩家可能存档后过了很久再读档，期间效果应该已经过期
+   * 游戏时钟是虚拟的、不随现实时间走；读档时清理的真实作用是治旧存档与手改存档里的重复/过期效果
    */
   onGameLoad(stateManager: StateManager): void {
     this.deduplicateEffects(stateManager);

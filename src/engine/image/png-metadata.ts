@@ -2,22 +2,13 @@
  * PNG Metadata Extractor — ported (full feature set)
  *
  * Extracts image generation parameters from PNG files via multiple strategies:
- * 1. Standard tEXt/zTXt/iTXt chunks (SD-WebUI, ComfyUI, etc.)
+ * 1. Standard tEXt/zTXt/iTXt chunks (SD-WebUI `parameters`; ComfyUI workflow JSON is not parsed)
  * 2. EXIF metadata (eXIf chunks — ImageDescription, UserComment, XPComment)
  * 3. NovelAI JSON comment parsing (Comment chunk with JSON payload)
  * 4. NovelAI stealth alpha channel (bit-level LSB extraction from alpha channel)
  * 5. NovelAI raw byte search (fallback: scan raw bytes for known JSON markers)
  * 6. SD-WebUI parameter text parsing (Steps/CFG/Sampler/etc.)
  * 7. LoRA reference extraction from prompt text
- *
- * ┌─────────────────────────────────────────────────────────────────┐
- * │ FRONTEND TODO (Phase 5-6: Presets Tab)                         │
- * │                                                                 │
- * │ PNG metadata extraction is consumed by the PNG style preset     │
- * │ import flow. User uploads a PNG → metadata extracted → AI      │
- * │ refines style → preset saved. Needs Presets tab UI.             │
- * │ See original design doc §M "PNG Style Import Flow"             │
- * └─────────────────────────────────────────────────────────────────┘
  */
 import { inflateSync } from 'fflate';
 

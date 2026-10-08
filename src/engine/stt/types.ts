@@ -4,14 +4,15 @@
  *
  * 架构镜像 TTS 子系统(src/engine/tts/types.ts):provider 接口 + backend 类型 +
  * registry 工厂 + 独立 fetch(非 LLM 类别,apiCategory='stt')。但**更瘦**:单一
- * 方法 transcribe、无流式、无播放态、无自动触发——玩家录音 → 一次性转写 → 回填输入框。
+ * 方法 transcribe(另有实时流式听写协议,见下方 streaming 段)、无播放态、无自动触发——
+ * 玩家录音 → 转写 → 回填输入框。
  *
  * 引擎铁律:本文件不 import vue-i18n、不含游戏特定内容。端点/参数由用户配置传入。
  *
  * 设计文档:docs/design/stt-voice-input-handoff.md
  */
 
-/** STT 后端类型 — CosyVoice(SenseVoiceSmall, 本地) / 豆包录音识别(火山 flash, epic P3)。 */
+/** STT 后端类型 — CosyVoice(SenseVoiceSmall, 本地) / 豆包(火山 sauc WebSocket 识别;Agent Plan 没有 flash 端点)。 */
 export type SttBackendType = 'cosyvoice' | 'doubao';
 
 /** 单次转写选项 */

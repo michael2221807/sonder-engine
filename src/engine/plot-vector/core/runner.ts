@@ -45,7 +45,7 @@ export function accountDefsOf(board: CompiledBoard): AccountDef[] {
 }
 
 /**
- * The trip length for one run (D89): the raw figure is floored, so a part-paid step never buys a whole
+ * The trip length for one run: the raw figure is floored, so a part-paid step never buys a whole
  * one, then clamped into [0, nMax]. `nMax` limits the initial input only; the safety ceiling
  * (`budget.maxVisits`) is separate and cannot be lifted by anything in the run.
  */
@@ -67,7 +67,7 @@ export function run(board: CompiledBoard, settlement: Settlement, services: RunS
 
 function validateBoard(board: CompiledBoard): void {
   if (!board.cells.some((c) => c.id === board.start.cell)) throw new Error(`start cell ${board.start.cell} does not exist`);
-  // The rule ceiling must stay inside the safety ceiling: nothing a card does to the trip may lift it (D89).
+  // The rule ceiling must stay inside the safety ceiling: nothing a card does to the trip may lift it.
   const { nMax, nDefault } = board.traversal;
   if (!Number.isInteger(nMax) || nMax < 0) throw new Error(`traversal.nMax must be a non-negative integer, got ${nMax}`);
   if (!Number.isInteger(nDefault) || nDefault < 0) throw new Error(`traversal.nDefault must be a non-negative integer, got ${nDefault}`);
@@ -114,7 +114,7 @@ class RunContext {
   private readonly triggered = new Set<string>();
   private eventSeq = 0;
   private visits = 0;
-  /** Initial budget plus traceable step effects; consumed in visits (D105). */
+  /** Initial budget plus traceable step effects; consumed in visits. */
   private tripLength: number;
   /** Set by a turn during this visit; consumed when the next hop is chosen. */
   private turnPending = false;
@@ -167,7 +167,7 @@ class RunContext {
       if (cardId && this.board.cards.some((c) => c.id === cardId)) this.runCard(visit, cardId, active, view);
       this.runEffects(visit, cell.effects.filter((e) => e.event === 'afterCard'), active, view);
 
-      // The trip is counted in visits, so the last cell is settled where it stands (D89).
+      // The trip is counted in visits, so the last cell is settled where it stands.
       if (this.visits >= this.tripLength) {
         this.runEffects(visit, cell.effects.filter((e) => e.event === 'onExit'), active, view);
         this.visitComplete(visit);
@@ -362,7 +362,7 @@ class RunContext {
 
   /**
    * One ladder decides the port, so a turn and an endpoint can never both turn the shuttle and cancel
-   * each other out (D89): ask for the natural port, let a turn swap it for the way back, and only then
+   * each other out: ask for the natural port, let a turn swap it for the way back, and only then
    * fold if that way is closed.
    */
   private selectExit(visit: Visit): { kind: 'edge'; edge: EdgeDef; reasonCode?: ReasonCode; reason?: string } | { kind: 'failed'; reason: string } {

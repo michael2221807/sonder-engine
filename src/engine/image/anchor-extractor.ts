@@ -7,16 +7,6 @@
  * - features: 10 structured feature categories (appearance/figure/bust/etc.)
  *
  * Per PRINCIPLES §3.16: anchor.entityRef references Engram entity (unidirectional).
- *
- * ┌─────────────────────────────────────────────────────────────────┐
- * │ FRONTEND TODO (Phase 5-6: Presets Tab — Anchor Management)     │
- * │                                                                 │
- * │ Anchor extraction is triggered from the Presets tab's anchor   │
- * │ management section. Needs: "AI提取锚点" button, NPC dropdown,  │
- * │ anchor editor (positive/negative textareas, structured feature │
- * │ display, 3 toggles: 启用/默认附加/场景联动).                     │
- * │ See original design doc §D + §J                               │
- * └─────────────────────────────────────────────────────────────────┘
  */
 import type { AnchorStructuredFeatures } from './types';
 import type { AIService } from '../ai/ai-service';

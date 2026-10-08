@@ -13,8 +13,7 @@
  *
  * Two entry points:
  * - normalizeSingleCharacterOutput — for NPC portraits + secret parts
- * - processTransformerOutput — for multi-character/scene (core only; full
- *   multi-character serialization deferred to Phase 1.6)
+ * - processTransformerOutput — for multi-character/scene (routes by serialization strategy)
  */
 import { splitByComma, dedupTokens, replaceUntilStable } from './prompt-tokens';
 
@@ -35,7 +34,7 @@ export type SerializationStrategy = 'flat' | 'nai_character_segments' | 'gemini_
 // §2 — Leaf utilities (no internal dependencies)
 // ═══════════════════════════════════════════════════════════
 
-/** Strip <thinking> and <think> blocks — ported */
+/** Strip <thinking> and <think> blocks */
 export function stripThinkingBlocks(rawText: string): string {
   let text = rawText || '';
   // Pass 1: paired <thinking>...</thinking> / <think>...</think>
@@ -81,7 +80,7 @@ export function stripThinkingBlocks(rawText: string): string {
   return text.trim();
 }
 
-/** Strip code fences + label prefixes — ported */
+/** Strip code fences + label prefixes */
 export function cleanPromptOutput(rawText: string): string {
   return (rawText || '')
     .replace(/^```(?:text|markdown|json)?\s*/i, '')
@@ -90,12 +89,12 @@ export function cleanPromptOutput(rawText: string): string {
     .trim();
 }
 
-/** Normalize "Artist:" → "artist:" — ported */
+/** Normalize "Artist:" → "artist:" */
 export function normalizeArtistCase(rawText: string): string {
   return (rawText || '').replace(/\bArtist\s*:/g, 'artist:');
 }
 
-/** Strip all XML-like structural tags — ported */
+/** Strip all XML-like structural tags */
 export function stripAllStructuralTags(rawText: string): string {
   return (rawText || '')
     .replace(/<[^>]+>/g, ' ')
@@ -104,7 +103,7 @@ export function stripAllStructuralTags(rawText: string): string {
     .trim();
 }
 
-/** Remove [1] Name | prefix lines — ported */
+/** Remove [1] Name | prefix lines */
 export function removeRolePrefixes(rawText: string): string {
   return (rawText || '')
     .replace(/(^|\n)\s*\[\d+\]\s*[^|\n<>]{1,80}\|/g, '$1')
@@ -115,7 +114,7 @@ export function removeRolePrefixes(rawText: string): string {
 // §3 — Tag extraction
 // ═══════════════════════════════════════════════════════════
 
-/** Extract last occurrence of <tagName>...</tagName> — ported */
+/** Extract last occurrence of <tagName>...</tagName> */
 export function extractLastTagBlock(rawText: string, tagName: string): string {
   const source = (rawText || '').trim();
   if (!source) return '';
@@ -126,7 +125,7 @@ export function extractLastTagBlock(rawText: string, tagName: string): string {
   return Array.isArray(matches) && matches.length > 0 ? (matches[matches.length - 1] || '').trim() : '';
 }
 
-/** Extract text inside the last <tagName> block — ported */
+/** Extract text inside the last <tagName> block */
 export function extractLastTagContent(rawText: string, tagName: string): string {
   const block = extractLastTagBlock(rawText, tagName);
   if (!block) return '';
@@ -136,7 +135,7 @@ export function extractLastTagContent(rawText: string, tagName: string): string 
     .trim();
 }
 
-/** Try multiple tag names, return first match — ported.
+/** Try multiple tag names, return first match.
  *
  *  Candidates that resolve to placeholder-only content (e.g. `...`, `…`,
  *  whitespace, or Chinese/English template markers) are skipped. This matters
@@ -178,7 +177,7 @@ function isPlaceholderContent(text: string): boolean {
   return false;
 }
 
-/** Parse XML-like attributes from tag opening — ported */
+/** Parse XML-like attributes from tag opening */
 function parseTagAttributes(raw: string): Record<string, string> {
   const attrs: Record<string, string> = {};
   const regex = /([^\s=]+)\s*=\s*["']([^"']+)["']/g;
@@ -296,7 +295,7 @@ export function parseStructuredOutput(rawText: string): StructuredOutput | null 
 /**
  * Convert SD-style (content:weight) → NAI weight::content:: syntax.
  * Iterates up to 8 times for nested groups.
- * Convert SD-style bracket weight to NAI syntax — ported
+ * Convert SD-style bracket weight to NAI syntax
  */
 function convertBracketWeightSyntax(rawText: string): string {
   let output = rawText || '';
@@ -319,7 +318,7 @@ function convertBracketWeightSyntax(rawText: string): string {
 
 /**
  * Fix malformed NAI weight groups (stray commas inside groups, etc.)
- * Fix malformed NAI weight groups — ported
+ * Fix malformed NAI weight groups
  */
 function cleanDirtyWeightSyntax(rawText: string): string {
   let output = rawText || '';
@@ -386,7 +385,7 @@ function cleanDirtyWeightSyntax(rawText: string): string {
 
 /**
  * Full NAI weight syntax normalization pipeline.
- * Full NAI weight syntax normalization pipeline — ported
+ * Full NAI weight syntax normalization pipeline
  */
 export function normalizeNaiWeightSyntax(rawText: string): string {
   const cleaned = cleanPromptOutput(
@@ -406,7 +405,7 @@ export function normalizeNaiWeightSyntax(rawText: string): string {
 /**
  * Clean the final subject prompt from raw AI output.
  * Tries structured extraction first, then falls back to tag-based extraction.
- * Clean final subject prompt — ported
+ * Clean final subject prompt
  */
 export function cleanSubjectPrompt(rawText: string, options?: { isNovelAI?: boolean }): string {
   const withoutThinking = stripThinkingBlocks(rawText);
@@ -456,7 +455,7 @@ export function cleanSubjectPrompt(rawText: string, options?: { isNovelAI?: bool
 
 /**
  * Strip role placeholder prefixes from NAI character segment text.
- * Strip NAI role placeholder prefixes — ported
+ * Strip NAI role placeholder prefixes
  */
 function stripRolePlaceholders(text: string): string {
   const source = cleanPromptOutput(text)
@@ -481,7 +480,7 @@ function mergeAndDedup(...parts: Array<string | undefined>): string {
 /**
  * Normalize single-character transformer output.
  * Used for NPC portraits and secret parts (single subject, no multi-character segments).
- * Normalize single-character transformer output — ported
+ * Normalize single-character transformer output
  */
 export function normalizeSingleCharacterOutput(
   rawText: string,
@@ -509,10 +508,7 @@ export function normalizeSingleCharacterOutput(
 
 /**
  * Process multi-character transformer output with serialization strategy.
- * Core path: parses structured output → routes by strategy.
- * Full scene-specific serialization (anchor matching, NAI segment helpers)
- * will be completed in Phase 1.6.
- * Serialize transformer output — ported
+ * Parses structured output → routes by strategy.
  */
 export function processTransformerOutput(
   rawText: string,

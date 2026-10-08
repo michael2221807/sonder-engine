@@ -12,16 +12,6 @@
  *
  * Prompt text is verbatim from the original codebase with wuxia-specific terms generalized:
  *   境界 → 等级, 武侠/仙侠 → 特定风格/奇幻, 气机 → 能量效果
- *
- * ┌─────────────────────────────────────────────────────────────────┐
- * │ FRONTEND TODO (Phase 6: Rules Center + Phase 7: Settings Tab)  │
- * │                                                                 │
- * │ These defaults ship with the engine. User customization needs:  │
- * │ - Settings Tab 4 "转化器": edit/add/delete presets + bundles    │
- * │ - Rules Center: select active model ruleset, edit rule fields   │
- * │ - State persistence: save customized presets to state tree      │
- * │ See original design doc §J-2 + §K Tab 4                       │
- * └─────────────────────────────────────────────────────────────────┘
  */
 import type { SerializationStrategy } from './output-processor';
 

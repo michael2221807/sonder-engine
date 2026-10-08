@@ -2,9 +2,10 @@
 /**
  * World Book + Built-in Prompt persistence — IndexedDB storage
  *
- * Manages two stores:
+ * Manages three stores:
  * - `worldbooks`: User-created world book collections with entries
  * - `builtin-prompts`: User overrides of built-in prompt slots
+ * - `preset-groups`: World book preset groups
  *
  * Key design: world books are per-profile (keyed by profileId),
  * built-in prompt overrides are per-pack (keyed by packId:slotId).

@@ -12,21 +12,9 @@
  * - 仅在发送给 AI 的"那一次"序列化中剥离
  * - UI 面板可以继续显示（GameVariablePanel 全程可见所有字段）
  *
- * 实现选择 — JSON.stringify replacer vs 深拷贝：
- * ------------------------------------------------
- * 我们用 replacer 而非深拷贝剥离，原因：
- * 1. 零额外内存 — replacer 在序列化流程中直接 return undefined 过滤 key
- * 2. 性能 — 长游戏状态树可能几十 MB，深拷贝再遍历删字段会显著变慢
- * 3. 简洁 — 代码只有几行，无需递归遍历 NPC 数组
- *
- * replacer 局限：
- * 它按 `(key, value)` 回调，没有完整的"路径上下文"。所以我们只能按 key 名称匹配：
- * - `私密信息` 唯一出现在 NPC 对象下，按 key 名过滤安全
- * - `身体` 唯一出现在 `角色` 下（NPC 用的是 `身体部位` 复数），按 key 名过滤安全
- *
- * ⚠️ 未来扩展警告：
- * 如果 schema 新增其他地方使用 `身体` 或 `私密信息` 作为 key，
- * 这个 replacer 会误伤。届时需要改成"带路径上下文"版本（WeakMap 追踪节点父链）。
+ * 实现：路径感知的深拷贝（sanitizeDeep）。按**完整路径**匹配 NSFW_STRIP_PATHS /
+ * PROMPT_ALWAYS_STRIP_PATHS，命中的节点不写入副本，原状态树不受影响。
+ * Changelog: 2026-04-11 CR-R6，由按 key 名过滤的 JSON.stringify replacer 改来。
  *
  * 对应 GAP_AUDIT §11.2 C（保留数据 + 不发送给 AI + UI 可见）。
  */
@@ -37,11 +25,8 @@ import { SYSTEM_PATHS } from '../pipeline/system-paths';
 /**
  * 需要被剥离的 NSFW 路径前缀（绝对路径，从根开始）
  *
- * CR-R6 修复（2026-04-11）：从 key-only 匹配升级为 path-aware 匹配。
- *
- * 旧实现用 JSON.stringify replacer 按 key 名剥离（`私密信息` / `身体`），
- * 风险：如果未来 schema 在非 NSFW 位置添加同名 key（如 `世界.地点信息[].身体特征描述`），
- * 会被意外剥离。新实现按**完整路径前缀**匹配，零误伤。
+ * 按**完整路径前缀**匹配，不按 key 名匹配：schema 在别处出现同名 key
+ *（如 `世界.地点信息[].身体特征描述`）不会被误伤。
  *
  * 新的 NSFW 字段必须添加到此数组。
  */
@@ -54,66 +39,27 @@ const NSFW_STRIP_PATHS: readonly string[] = [
 ];
 
 /**
- * 2026-04-11 Token 节省 —— 发给 AI 的 JSON 快照里总是需要剥离的路径。
+ * 发给 AI 的 JSON 快照里总是需要剥离的路径（Token 节省 + 隐私）。
  *
- * 这些路径的内容在 prompt 里通过**其他更紧凑的渠道**单独注入，所以在
- * `GAME_STATE_JSON` 里留着就是纯粹的重复。用户报告单轮 prompt 里含有
- * "巨量重复内容"，绝大多数来自这几项：
+ * 这些路径的内容要么已经通过**其他更紧凑的渠道**单独注入 prompt，留在
+ * `GAME_STATE_JSON` 里就是纯粹的重复；要么是纯 UI / 引擎内部状态：
  *
- * 1. **`元数据.叙事历史`**
- *    已经通过 `chatHistory` 变成真正的 `user/assistant` 消息追加到消息列表。
- *    如果再序列化进 `GAME_STATE_JSON`，完整的历史被复制一份，而且是
- *    JSON 形式（对 AI 更难读）。200 条历史上限 × 含元数据的完整 dump
- *    可能占到 30%+ 的 prompt 体积。
+ * 1. `元数据.叙事历史` — 已经通过 `chatHistory` 变成 user/assistant 消息。
+ * 2. `记忆.短期 / 中期 / 长期 / 隐式中期` — 已编译进结构化的 `MEMORY_BLOCK`。
+ * 3. `系统.扩展.engramMemory` — Engram 的事件/实体/关系/向量元数据；AI 只读 UnifiedRetriever
+ *    检索出的少量片段（已并入 `MEMORY_BLOCK`）。
+ * 4. `元数据.上次对话前快照` — Rollback 用的整棵状态树克隆；不剥等于 prompt 里有两份状态树。
+ * 5. `系统.扩展.image` / `角色.图片档案` / `社交.关系.*.图片档案` — 生图子系统的配置、任务队列和
+ *    资产 ID。`image.config.transformer` 含 apiKey / endpoint，整棵子树被剥离所以不会泄漏。
+ * 6. `系统.设置` / `系统.actionOptions` / `元数据.当前行动选项` / `世界.状态.心跳` — 运行时设置、
+ *    UI 恢复状态和心跳日志，不是叙事世界事实。
+ * 7. `社交.关系.*.私聊历史` — 私聊原文由私聊 UI 独立保存；主线 AI 需要的摘要在 NPC 的 `记忆` 里。
+ * 8. `系统.扩展.语义记忆` — **不剥离**：旧存档可能带有语义三元组（TripleBuilder 已删除，现在没有代码写入它），
+ *    保持原样以免旧存档内容静默消失。
+ * 9. `系统.探索记录` — 也**不强制剥离**（保持向后兼容）；若变成瓶颈再加。
  *
- * 2. **`记忆.短期 / 中期 / 长期 / 隐式中期`**
- *    已经通过 `MemoryRetriever.retrieve()` 编译为结构化的 `MEMORY_BLOCK`
- *    （按层级分组 + 编号列表），这是 AI 专用的人类可读形态。再把相同数据
- *    以 JSON 形式塞进 `GAME_STATE_JSON` 完全是浪费。
- *
- * 3. **`系统.扩展.engramMemory`**
- *    这是 Engram 子系统内部的**事件/实体/关系/向量元数据**存储，单条
- *    EngramEventNode 可能有 text/summary/embedding/timestamp/relations 等
- *    多个字段，数百条事件展开后动辄数万字。AI 消费的是 `UnifiedRetriever`
- *    根据 query 检索出的少量相关片段（已并入 `MEMORY_BLOCK`），从不直接
- *    读 engramMemory 节点。所以这段应该完全从 GAME_STATE_JSON 剥离。
- *
- * 4. **`元数据.上次对话前快照`**
- *    用于 Rollback 功能 —— 整个上一回合前的完整状态树克隆。
- *    **最致命的重复**：如果不剥，每次 prompt 里实际包含两份完整状态树
- *    （本回合 + 上回合）。纯内部机制，AI 绝对不应看到。
- *
- * 5. **`系统.扩展.image` / `角色.图片档案` / `社交.关系.*.图片档案`**
- *    图像生成子系统的全部配置 / presets / anchors / rules / task queue /
- *    sceneArchive / persistentWallpaper，以及玩家和每个 NPC 的生图历史
- *    和资产 ID。纯 UI/引擎内部状态，AI 不需要。
- *    注意：`image.config.transformer` 子树含 apiKey / endpoint（独立转化器模型配置，
- *    由 ImagePanel 写入状态树），另外 additionalNetworksJson 等可能含用户本地路径。
- *    整棵 `系统.扩展.image` 被 strip 覆盖，敏感字段不会泄漏。
- *
- * 6. **子系统运行时设置 / UI 状态 / 日志**
- *    `系统.设置` / `系统.actionOptions` 由 ContextAssembly 读取后以专门变量
- *    或开关影响 prompt；`元数据.当前行动选项` 只用于刷新后恢复 UI；
- *    `世界.状态.心跳` 是心跳配置和执行日志。这些都不是叙事世界事实。
- *
- * 7. **`社交.关系.*.私聊历史`**
- *    私聊原文由 NPC 私聊 UI 独立保存。主线 AI 需要知道的摘要会写入 NPC
- *    的 `记忆` 字段，因此原始私聊明细不应随 NPC 对象整段进入 GAME_STATE_JSON。
- *
- * 8. **`系统.扩展.语义记忆`** — **暂不 strip**
- *    语义三元组（TripleBuilder 写入）。当前无检索链路消费此路径（UnifiedRetriever
- *    读的是 engramMemory，不是语义记忆）。strip 会导致旧存档 triples 静默消失。
- *    待补 retrieval 注入后再启用 strip。数组无 maxItems 限制，长期可能增长较大。
- *
- * 9. **`系统.探索记录`**
- *    每回合后 post-process 自动写入当前位置的数组，某些 pack 可能会
- *    写大量条目。考虑到它已经隐含在 `地点信息` 的 `已探索` 标志里，
- *    重复放进 JSON 对 AI 没价值。先不强制剥离以保持向后兼容 —
- *    若未来变成瓶颈再加。
- *
- * **注意**：`元数据.女主规划` 不在此列表。legacy flow 依赖它在 GAME_STATE_JSON
- * 中出现；new builder 虽然会通过 heroine_plan 单独注入（导致重复），但 strip
- * 会破坏 legacy 回退路径。等 legacy 完全移除后再考虑剥离。
+ * `元数据.女主规划` 也不在此列表：SystemPromptBuilder 另有 heroine_plan 片段，它与 GAME_STATE_JSON 里
+ * 的副本重复，但 flow 路径依赖后者。
  *
  * 加入此数组的路径**无条件**从发给 AI 的快照中剥离（与 NSFW 开关无关）。
  */
@@ -152,8 +98,7 @@ const PROMPT_ALWAYS_STRIP_PATHS: readonly string[] = [
   // Character Vectors (R2 second half): projected per turn into their own block; the raw
   // list would leak every NPC's hidden truth into GAME_STATE_JSON.
   DEFAULT_ENGINE_PATHS.characterVectors,
-  // '系统.扩展.语义记忆' — 暂不 strip：当前无检索链路消费该路径，
-  // strip 会导致旧存档 triples 静默消失。待补 retrieval 注入后再启用。
+  // '系统.扩展.语义记忆' — 不 strip：旧存档可能带有语义三元组，保持原样（见上方第 8 条）。
   SYSTEM_PATHS.settings,
   SYSTEM_PATHS.actionOptions,
   DEFAULT_ENGINE_PATHS.heartbeatRoot,

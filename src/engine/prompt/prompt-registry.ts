@@ -1,7 +1,7 @@
 /**
  * Prompt 模块注册表 — 管理所有 prompt 模块的内容和启用状态
  *
- * 每个 prompt 模块（如 "coreOutputRules", "businessRules"）在此注册：
+ * 每个 prompt 模块（pack 清单里登记的 prompt id）在此注册：
  * - 包含 Game Pack 提供的默认内容
  * - 支持用户覆盖内容（getEffectiveContent 返回用户版本 > 默认版本）
  * - 支持启用/禁用

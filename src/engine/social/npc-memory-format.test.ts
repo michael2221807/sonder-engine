@@ -47,7 +47,7 @@ describe('parseMemoryEntry', () => {
 
   it('array input → falls through to String stringification', () => {
     // 数组视为异常形态（不是 string 也不是 plain object），走兜底分支。
-    // 当前实现对数组会走 `typeof === 'object'` 分支但 Array.isArray 检测后返回异常空值。
+    // 实现对数组走兜底分支：String(['a','b']) === 'a,b'，时间为空。
     expect(parseMemoryEntry(['a', 'b'])).toEqual({ content: 'a,b', time: '' });
   });
 

@@ -430,8 +430,7 @@ export class ImageService {
     extraNegative?: string;
     npcDataJson?: string;
     /** When false, bypass AI transformer and build prompt directly from NPC data.
-     *  Default: true. Forced true for NovelAI backend.
-     *  FRONTEND TODO: Settings tab "使用词组转化器" toggle (Phase 7) */
+     *  Default: true. Forced true for NovelAI backend. */
     useTransformer?: boolean;
     /** 参考图**有序**列表（多图参考重绘 epic S2）。顺序=提示词里的「图N」。 */
     references?: ImageReferenceInput[];

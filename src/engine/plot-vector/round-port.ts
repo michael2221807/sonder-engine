@@ -1,6 +1,6 @@
 import type { PipelineContext } from '../pipeline/types';
 
-/** Injected component: engine pipeline never imports the lab or a game-specific board. */
+/** Injected component: engine pipeline never imports a game-specific board. */
 export interface PlotVectorRoundPort {
   promptTransform?(ctx: PipelineContext): import('../prompt/raw-prompt-transform').RawPromptTransform | undefined;
   prepare(ctx: PipelineContext): Promise<PipelineContext>;

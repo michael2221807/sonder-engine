@@ -85,7 +85,7 @@ import type {
   EngramWriteEntityDelta,
 } from './engram-types';
 
-/** 当前 engramMemory schema 版本 —— v3 = KnowledgeEdge, v4 = EngramEdge (V2 Graphiti) */
+/** 当前 engramMemory schema 版本（取自 engram-types.ts 的 ENGRAM_SCHEMA_VERSION） */
 const CURRENT_SCHEMA_VERSION = ENGRAM_SCHEMA_VERSION;
 
 export class EngramManager {

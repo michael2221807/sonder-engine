@@ -6,7 +6,6 @@
  * - COMMON_SIZE_OPTIONS: 7 common sizes (512x512 to 832x1216)
  * - SCENE_PORTRAIT_SIZE_OPTIONS: 9 portrait scene presets
  * - SCENE_LANDSCAPE_SIZE_OPTIONS: 10 landscape scene presets
- * - Per-composition defaults used by prompt-composer
  */
 
 type SizeOrientation = 'square' | 'portrait' | 'landscape';

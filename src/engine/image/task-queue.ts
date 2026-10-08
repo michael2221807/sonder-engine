@@ -2,8 +2,8 @@
 /**
  * Image Task Queue — Sprint Image-4
  *
- * Manages pending image generation tasks. Serial execution by default;
- * parallelism classification per PRINCIPLES §3.14 deferred to Image-5.
+ * A registry of image generation tasks (create / status / persist). It does not schedule
+ * or run anything itself; callers start the generation and report status back here.
  *
  * Supports optional persistence callback: when provided, every mutation
  * triggers onPersist with the full task list, allowing the caller

@@ -111,7 +111,7 @@ export type OperationDef =
       /** Extra gain on top of the principal actually delivered; default 0. */
       gainAsExtra?: number;
     }
-  /** Ask that the next hop leave by the port the shuttle came in by (the turn card, D89). */
+  /** Ask that the next hop leave by the port the shuttle came in by (the turn card). */
   | { op: 'turnShuttle' };
 
 export type OperationKind = OperationDef['op'];
@@ -137,7 +137,7 @@ export interface EffectDef {
   provenance?: Provenance;
   event: EffectEvent;
   order: number;
-  /** Entry-port condition (direction mechanism, D25). */
+  /** Entry-port condition (direction mechanism). */
   entryPort?: PortId;
   operations: OperationDef[];
   /** Only for `modifyOperation` effects. */
@@ -228,7 +228,7 @@ export interface BoardDef {
   /** `maxVisits` is the safety ceiling of a trip; `maxEvents` a hard execution guard. */
   budget: { maxVisits: number; maxEvents: number };
   /**
-   * How far the shuttle travels (D89): the trip is counted in visits and ends when used up. `nMax`
+   * How far the shuttle travels: the trip is counted in visits and ends when used up. `nMax`
    * limits the initial trip and stays within `budget.maxVisits`; at an endpoint the shuttle folds.
    */
   traversal: { nMax: number; nDefault: number };

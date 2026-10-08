@@ -1,15 +1,13 @@
 // App doc: docs/user-guide/pages/game-main.md §3.15.3（世界书注入与配额）· game-prompt-assembly.md §5.2（builder 片段）
 /**
- * SystemPromptBuilder — replaces PromptAssembler with context-piece architecture.
+ * SystemPromptBuilder — context-piece architecture for the story request.
  *
  * Builds named context pieces from game state + prompts + world book,
  * then assembles them into ordered message entries for the API call.
+ * It does not replace PromptAssembler: that still serves step 2 and the other flows.
  *
  * Ported from the original systemPromptBuilder (1598 lines)
  * and mainStoryRequest (message assembly).
- *
- * Phase 1: Skeleton with piece definitions and build interface.
- * Phase 2 (Sprint 2): Full implementation of all formatters.
  */
 import type { StateManager } from '../core/state-manager';
 import type {
@@ -192,10 +190,6 @@ function renderTemplateVars(content: string, vars: Record<string, string>): stri
 }
 
 /**
- * Estimate token count for a string.
- * Rough: Chinese chars / 2, English chars / 4, average to chars / 3.
- */
-/**
  * Step 3: Apply writing settings — inject word count into write_req prompts.
  * Applies writing settings (word count injection).
  */
@@ -253,12 +247,11 @@ function filterByFeatureToggles(content: string, settings: PromptSettings): stri
 }
 
 /**
- * Full rendering pipeline for a prompt — 5-step chain:
- * 1. Slot content resolution (done by resolveSlotContent: the prompt as the player left it)
+ * Rendering pipeline for a prompt:
+ * 1. (Slot content is resolved by the caller, resolveSlotContent: the prompt as the player left it)
  * 2. Template variable replacement
  * 3. Writing settings application (word count)
- * 4. (Realm block replacement — N/A in AGA)
- * 5. Feature toggle filtering
+ * 4. Feature toggle filtering
  */
 function renderPromptPipeline(
   slotId: string,

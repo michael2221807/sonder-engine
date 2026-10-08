@@ -12,8 +12,8 @@ export const ACCOUNT_CEILING = 1e12;
 
 /**
  * Account store: every quantity the runner touches lives in an account
- * (shuttle channels, card stores, cell buffers). Entries are round-stamped so
- * `lifetimeRounds` and `cap` apply uniformly to any `acrossRounds` account (D67).
+ * (shuttle channels and card stores). Entries are round-stamped so
+ * `lifetimeRounds` and `cap` apply uniformly to any `acrossRounds` account.
  */
 export class AccountStore {
   private readonly defs = new Map<AccountId, AccountDef>();

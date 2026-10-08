@@ -4,7 +4,7 @@
  *
  * When loading a save that predates the image subsystem, this helper
  * initializes the missing `系统.扩展.image` subtree with sensible defaults.
- * Called during save load (by persistence layer).
+ * Called at boot against the current state tree (bootstrap/media-services.ts).
  *
  * Idempotent: if the subtree already exists, does nothing.
  */

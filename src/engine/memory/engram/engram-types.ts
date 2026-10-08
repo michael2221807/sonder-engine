@@ -73,7 +73,7 @@ export interface EngramConfig {
   enabled: boolean;
   /**
    * 检索模式
-   * - 'legacy'：仅使用传统关键词+时间衰减检索（memory-retriever）
+   * - 'legacy'：仅使用 memory-retriever（四层记忆的全量转储，不做检索打分）
    * - 'hybrid'：向量检索 + 图遍历 + 语义三元组 + NPC 位置规则（unified-retriever）
    */
   retrievalMode: EngramRetrievalMode;
@@ -123,12 +123,6 @@ export interface EngramConfig {
   npcRelevanceFilter?: import('../../social/npc-relevance-types').NpcRelevanceConfig & { enabled: boolean };
 }
 
-/**
- * Engram 默认配置
- *
- * 生产环境建议从此对象出发，通过 normalizeEngramConfig() 合并用户设置。
- * enabled 默认关闭，需要用户在 Settings → Engram 中显式开启。
- */
 // ═══════════════════════════════════════════════════════════════
 //  Per-round Engram visualization snapshots
 // ═══════════════════════════════════════════════════════════════
@@ -291,6 +285,12 @@ export interface EngramReadSnapshot {
   };
 }
 
+/**
+ * Engram 默认配置
+ *
+ * 生产环境建议从此对象出发，通过 normalizeEngramConfig() 合并用户设置。
+ * enabled 默认关闭，需要用户在 Settings → Engram 中显式开启。
+ */
 export const DEFAULT_ENGRAM_CONFIG: EngramConfig = {
   enabled: false,
   retrievalMode: 'hybrid',

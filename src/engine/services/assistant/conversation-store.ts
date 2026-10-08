@@ -7,8 +7,8 @@
  *
  * FIFO trim 在 `appendMessage(sessionId, msg, maxTurns)` 内执行：
  * - 单位是 **turn**（1 turn = 连续的 user + assistant 对）
- * - 算法：从尾部数 maxTurns × 2 条 user/assistant 消息，保留它们 + 所有 system 消息
- * - 这意味着 system 消息（inject-success 等）不计入 turn 上限，因为它们是引擎内部插入的提示
+ * - 算法：从尾部倒序找第 maxTurns 个 user 消息，保留它和之后的所有消息；之前的消息
+ *   （包括其间的 system 消息）一并丢弃，见 appendMessageWithFifoTrim
  *
  * 对应 docs/status/plan-assistant-utility-2026-04-14.md §3.2 + Phase 1。
  */
@@ -24,7 +24,8 @@ export class InMemoryConversationStore implements ConversationStore {
   async load(sessionId: string): Promise<AssistantSession> {
     const existing = this.sessions.get(sessionId);
     if (existing) {
-      // 防御：返回结构化拷贝，避免外部 mutation 污染存储
+      // 防御：返回浅拷贝（消息数组与每条消息本身是新的，payloadDraft / attachments 仍与存储共享引用），
+      // 避免外部对消息列表的 mutation 污染存储
       return cloneSession(existing);
     }
     const fresh: AssistantSession = {
@@ -128,7 +129,7 @@ export function trimToFifoLimit(session: AssistantSession, maxTurns: number): vo
   session.messages = messages.slice(keepFromIndex);
 }
 
-/** Deep clone session（避免外部 mutate 污染 store） */
+/** Shallow-clone session: new messages array and message objects; payloadDraft / attachments stay shared with the store */
 function cloneSession(session: AssistantSession): AssistantSession {
   return {
     sessionId: session.sessionId,

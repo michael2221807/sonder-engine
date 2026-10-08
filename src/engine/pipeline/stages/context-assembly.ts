@@ -2,10 +2,11 @@
 /**
  * 上下文组装阶段 — 将游戏状态、记忆、行为模块输出组装为 AI 消息列表
  *
- * E.2 升级：
- * - 接收 engramManager 和 unifiedRetriever 依赖
- * - 当 engram.enabled && retrievalMode='hybrid' 时用 UnifiedRetriever 替换 legacy memoryRetriever
- * - legacy 路径：memoryRetriever.retrieve(stateManager)（传统关键词检索）
+ * execute() 分两段：先读本回合的输入（context-assembly-inputs.ts：存档、设置、记忆检索），
+ * 再按路径构造请求（context-assembly-requests.ts：context-piece builder 路径或 flow 路径）。
+ *
+ * 记忆检索：engram.enabled && retrievalMode='hybrid' 时用 UnifiedRetriever；
+ * 否则用 memoryRetriever（四层记忆的全量转储，没有关键词或时间衰减打分）。
  *
  * 对应 STEP-03B M3.4 ContextAssemblyStage。
  */

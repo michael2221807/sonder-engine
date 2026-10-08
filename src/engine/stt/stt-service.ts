@@ -4,12 +4,12 @@
  *
  * 职责:
  *   - 从 AIService 取 stt 类 APIConfig(getSttConfigForBackend),经 registry 解析出
- *     CosyVoiceSttProvider。
+ *     对应的 STT provider(CosyVoice / 豆包)。
  *   - transcribe(blob):一次性把录音转成文字;失败抛 Error(调用方 UI 负责 toast/复位)。
  *   - isReady():是否具备可用 stt 配置(UI 用于显隐麦克风键)。
  *
- * 与 TtsService 的差异:无流式、无播放态广播、无自动触发、无缓存——玩家手动录音后
- * 同步转写、回填输入框即结束。故不注入 player、不发 eventBus 事件。
+ * 与 TtsService 的差异:无播放态广播、无自动触发、无缓存——玩家手动录音后转写、回填输入框
+ * 即结束(实时听写走 getStreamUrl / startStream)。故不注入 player、不发 eventBus 事件。
  *
  * 引擎铁律:不 import vue-i18n;错误以 Error 上抛,由 UI 侧翻译成 toast。
  */
@@ -76,7 +76,7 @@ export class SttService {
    * 从 stt 配置的 base URL 派生流式 WS 地址(http→ws / https→wss + /v1/audio/stream)。
    * 无可用配置返回 null。后端确认 WS 路径固定,故无需单独配置字段。
    * 能力门(epic P0 §3.7):仅描述符声明 sttStreaming 的 backend 才有流式地址——
-   * 不支持流式的后端(如 epic P3 的豆包 flash)自动隐藏实时听写入口,无用户开关。
+   * 不支持流式的后端自动隐藏实时听写入口,无用户开关。
    */
   getStreamUrl(): string | null {
     const backend = activeSttBackend();

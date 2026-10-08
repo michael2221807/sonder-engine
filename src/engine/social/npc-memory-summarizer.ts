@@ -4,7 +4,7 @@
  * When an NPC's `记忆` array reaches the threshold (from `rules/npc-memory.json`),
  * summarizes the oldest entries into a `总结记忆` entry and trims the array.
  *
- * Per PRINCIPLES §3.9: additive plugin. Gated by `rules.npcMemory.autoSummarize`.
+ * Per PRINCIPLES §3.9: additive plugin (runs only when an NPC reaches the threshold).
  * Per PRINCIPLES §3.11: uses existing `UsageType.memory_summary` for the LLM call.
  */
 import type { AIService } from '../ai/ai-service';

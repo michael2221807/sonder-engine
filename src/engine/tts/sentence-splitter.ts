@@ -170,7 +170,7 @@ export function splitSentences(text: string): string[] {
   return result;
 }
 
-/** 分段设置的安全边界(与 tts-settings normalize 保持一致) */
+/** 分段设置的安全边界(tts-settings 的 normalize 直接引用这几个常量) */
 export const SEGMENT_TARGET_CHARS_MIN = 20;
 export const SEGMENT_TARGET_CHARS_MAX = 1000;
 export const SEGMENT_MAX_SENTENCES_MIN = 1;

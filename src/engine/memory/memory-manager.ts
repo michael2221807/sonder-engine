@@ -216,8 +216,8 @@ export class MemoryManager {
   /**
    * 读取 localStorage `aga_memory_settings` 的用户覆盖
    *
-   * 每次调用都**实时读取**localStorage（不缓存），这样用户在 SettingsPanel 改
-   * 阈值后下一回合立即生效，无需重启游戏。read 失败（localStorage 不可用 /
+   * 每次调用都**实时读取**localStorage（getEffectiveConfig 在其上另加 5 秒 TTL 缓存），
+   * 这样用户在 SettingsPanel 改阈值后很快生效，无需重启游戏。read 失败（localStorage 不可用 /
    * JSON 破损）时返回空对象，使用 pathConfig 默认值。
    */
   private readSettingsOverride(): MemorySettingsOverride {
@@ -452,13 +452,11 @@ export class MemoryManager {
 
   // ─── 长期记忆 ───
   //
-  // 长期记忆是 tier 系统的终点。pushLongTermEntry 时自动 FIFO trim 到
-  // `getEffectiveConfig().longTermCap`（默认 30）。
-  //
-  // 2026-04-11 强化：当长期记忆达到 cap 且新条目被 push 时，**不再直接 FIFO
-  // 丢弃最旧的**，而是触发**二级精炼机制**（见 LongTermCompactPipeline / design
-  // note "长期记忆二级精炼"）。本类只暴露 `shouldCompactLongTerm()` 判定，具体
-  // 触发由 orchestrator 负责。若没有触发到二级精炼，退化为 FIFO 丢弃。
+  // 长期记忆是 tier 系统的终点。pushLongTermEntry 不 trim：超过
+  // `getEffectiveConfig().longTermCap`（默认 30）时触发**二级精炼**（见
+  // LongTermCompactPipeline / design note "长期记忆二级精炼"）。本类只暴露
+  // `shouldCompactLongTerm()` 判定，具体触发由 orchestrator 负责；精炼不可用或失败时
+  // 退化为 `fallbackTrimLongTerm()` 的 FIFO 丢弃。
 
   /** 获取所有长期记忆条目 */
   getLongTermEntries(): LongTermEntry[] {
@@ -477,8 +475,9 @@ export class MemoryManager {
     this.stateManager.push(this.pathConfig.longTermPath, entry, 'system');
   }
 
-  /** 长期记忆是否达到（或超过）cap —— orchestrator 据此触发 LongTermCompact 或 FIFO */
   /**
+   * 长期记忆是否超过 cap —— orchestrator 据此触发 LongTermCompact 或 FIFO。
+   *
    * S-05: 有意使用严格大于 `>`（而非 `>=`），与 shouldRefineMidTerm/shouldSummarizeLongTerm
    * 的 `>=` 不同。原因：long-term compact 是"溢出后再压缩"（cap+1 触发），
    * 而 mid-term refine/summary 是"达到阈值即触发"。这与 LongTermCompactPipeline

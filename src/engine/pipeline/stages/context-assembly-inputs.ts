@@ -594,7 +594,7 @@ export function buildFlowVariables(deps: FlowVariableDeps, ctx: PipelineContext,
  * 根据 Engram 配置选择检索路径（E.2 新增）
  *
  * - engram.enabled && retrievalMode='hybrid' → UnifiedRetriever（向量+图+三元组+NPC规则）
- * - 其他情况 → legacy MemoryRetriever（传统关键词+时间衰减）
+ * - 其他情况 → MemoryRetriever（四层记忆的全量转储，没有关键词或时间衰减打分）
  */
 async function retrieveMemory(deps: RoundInputDeps, userInput: string, ctx?: PipelineContext): Promise<string> {
   const engramConfig = deps.engramManager?.getConfig();

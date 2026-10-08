@@ -9,17 +9,6 @@
  * - Concurrent generation lock
  *
  * All mutations write to the state tree via StateManager and trigger auto-save.
- *
- * ┌─────────────────────────────────────────────────────────────────┐
- * │ FRONTEND TODO (Phase 3-8: All Image UI tabs)                   │
- * │                                                                 │
- * │ These methods are consumed by every image UI feature:           │
- * │ - Gallery: set/clear avatar/portrait/background, delete image   │
- * │ - Scene: set/clear wallpaper, persistent wallpaper              │
- * │ - Manual: concurrent lock, task management                      │
- * │ - Presets: anchor save, preset CRUD                             │
- * │ See original design doc §B §E §F §G                           │
- * └─────────────────────────────────────────────────────────────────┘
  */
 import type { StateManager } from '../core/state-manager';
 import type { EnginePathConfig } from '../pipeline/types';

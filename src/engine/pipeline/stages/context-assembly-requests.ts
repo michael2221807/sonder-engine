@@ -70,8 +70,7 @@ function renderPlotTemplate(template: string, variables: Record<string, string>)
  * Append the current-round input as a `user` turn WITHOUT ever stacking two
  * consecutive `user` messages.
  *
- * When `chatHistory` is empty (round 1, or the `single_assistant_block`
- * short-term injection style) and every flow module is `system`, the
+ * When `chatHistory` is empty (e.g. round 1) and every flow module is `system`, the
  * assembler's safety guard has already appended a placeholder user turn
  * ("请根据以上设定开始。", source `placeholder`). A blind push after it produces
  * user→user, which the Anthropic-native provider rejects with a 400 (strict

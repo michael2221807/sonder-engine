@@ -6,7 +6,7 @@
  * 2. system: assistantInjectionContract（仅当当前 turn 含 target attachment）
  * 3. 历史消息（FIFO 已 trim 后的 user/assistant/system 序列）
  *    - user：渲染时仅展示 attachment label，不重发完整 snapshot（5.1-B 决策）
- *    - assistant：原文（含可能的 fenced JSON 也保留 —— AI 看历史 JSON 不影响新回合）
+ *    - assistant：原文；含 patches 的 JSON 会被 stripPayloadJson 替换成占位语
  *    - system (synthetic)：转成 system role 注入
  * 4. user (current turn): 包含完整 attachment payload（snapshot + schema fragment）+ user prompt
  *

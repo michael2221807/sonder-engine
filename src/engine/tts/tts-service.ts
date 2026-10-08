@@ -19,7 +19,7 @@
  *   - 播放态经 eventBus 'tts:state' 广播给 UI(播放键/状态栏 chip)。
  *   - 失败逐级回落,永远有声音或明确 toast;不抛给调用方(fire-and-forget 安全)。
  *
- * 镜像 ImageService,但音频瞬时播放不落盘(设计文档 §5)。
+ * 镜像 ImageService,但音频默认瞬时播放不落盘;本回合的字节可缓存供下载(见 tts:cache 事件)。
  * 引擎铁律:不 import vue-i18n;toast 走 i18nKey + message 兜底。
  */
 import { eventBus } from '../core/event-bus';

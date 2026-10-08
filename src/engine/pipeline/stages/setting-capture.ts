@@ -167,16 +167,6 @@ function asStringArray(value: unknown): string[] | null {
 }
 
 /**
- * Locate `needle` inside exactly ONE segment and return the ORIGINAL text spanning it.
- *
- * Cross-segment matching is forbidden: with `<设定>林月</设定>…<设定>怕水</设定>`, a
- * concatenated haystack makes "林月怕水" a valid substring even though the player never
- * wrote it — which is precisely the fabrication the evidence gate exists to stop.
- *
- * The stored evidence is sliced from the player's ORIGINAL text (not the model's
- * normalized echo), because the panel promises to show "the player's own words".
- */
-/**
  * Punctuation-insensitive normalization — the SECOND matching tier.
  *
  * Why it exists (2026-08-25, the structural fix): the strict tier demands a verbatim
@@ -218,6 +208,16 @@ function sliceOriginalForLooseRange(
   return sliced || null;
 }
 
+/**
+ * Locate `needle` inside exactly ONE segment and return the ORIGINAL text spanning it.
+ *
+ * Cross-segment matching is forbidden: with `<设定>林月</设定>…<设定>怕水</设定>`, a
+ * concatenated haystack makes "林月怕水" a valid substring even though the player never
+ * wrote it — which is precisely the fabrication the evidence gate exists to stop.
+ *
+ * The stored evidence is sliced from the player's ORIGINAL text (not the model's
+ * normalized echo), because the panel promises to show "the player's own words".
+ */
 export function matchEvidenceInSegments(
   evidence: string,
   segments: readonly SettingTagSegment[],

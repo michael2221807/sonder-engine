@@ -95,7 +95,7 @@ export interface TtsSettings {
   prewarmSeconds: number;
   /**
    * 分句流式的「每段目标字数」(主控) — splitSentences 细分后按此拼段,平衡断点、
-   * 允许略超。越大段落越长越连贯、卡顿越少;越小越碎但停止/跳过更细。仅 stream 模式生效。
+   * 允许略超。越大段落越长越连贯、卡顿越少;越小越碎但停止/跳过更细。stream 与 pseudo 模式生效。
    */
   segmentTargetChars: number;
   /**

@@ -61,10 +61,10 @@ export interface CapturedMutationResult {
 /**
  * Engram side of a captured relationship.
  *
- * Deliberately a narrow port rather than a direct `EngramManager` dependency: P2 ships
- * the world-book half, P3 wires the graph half, and the panel must not need to know
- * which of those has landed. An absent bridge simply means "no projection" — the
- * world book keeps working, which is the whole point of Engram being optional.
+ * Deliberately a narrow port rather than a direct `EngramManager` dependency: the panel
+ * must not need to know whether the graph half is present. An absent bridge simply means
+ * "no projection" — the world book keeps working, which is the whole point of Engram
+ * being optional.
  */
 export interface CapturedEngramBridge {
   /** Invalidate every edge produced by this captured entry. */
@@ -94,7 +94,7 @@ export interface CapturedSettingCoordinatorDeps {
   paths: EnginePathConfig;
   /** Persist the state tree. Usually an `engine:request-save` emit. */
   persist: () => void | Promise<void>;
-  /** Optional — absent until P3 wires the graph. */
+  /** Optional — absent when Engram is off or not wired. */
   engram?: CapturedEngramBridge;
   /** Display labels + current round, needed only for manual adds. */
   getLabels?: () => CapturedSettingLabels;

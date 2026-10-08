@@ -8,8 +8,8 @@
  * focus thread, scheduling via triggers, hot-swap operations, gauge management,
  * and the evaluation log ring buffer.
  *
- * Persistent state lives in the game state tree (元数据.剧情导向).
- * Evaluation logs are in-memory only (non-persisted).
+ * Persistent state lives in the game state tree (元数据.剧情导向). The evaluation log kept
+ * here is an in-memory mirror; the evaluation pipeline also writes it into the state tree (_evalLog).
  */
 import { defineStore } from 'pinia';
 import { ref, computed, onScopeDispose } from 'vue';
@@ -247,11 +247,8 @@ export const usePlotStore = defineStore('plot-direction', () => {
     return true;
   }
 
-  // NOTE (2026-08-24, plot-arc-revise-extend §9): the old `completeArc` and
-  // `reviseArc` store methods were removed as unconsumed dead code — thread
-  // completion is the evaluation pipeline's job (activateNextPending), and
-  // "progress rollback" was never a shipped feature. Re-add deliberately if a
-  // future epic needs them; do not resurrect by copy-paste.
+  // No completeArc / reviseArc here: thread completion is the evaluation pipeline's job
+  // (activateNextPending). Changelog: 2026-08-24 plot-arc-revise-extend §9.
 
   function updateArc(
     arcId: string,
@@ -528,15 +525,12 @@ export const usePlotStore = defineStore('plot-direction', () => {
   // ─── Save-load boundary cleanup ───
 
   /**
-   * The evaluation log is in-memory (this Pinia singleton outlives save
-   * switches) and is deliberately NOT cleared by loadFromState — that runs on
-   * every persist() round-trip and must not wipe logs mid-game. Without a
-   * dedicated boundary hook, logs from save A stayed visible after loading
-   * save B whose state tree has no `_evalLog` (PlotPanel's sync watcher skips
-   * undefined). StateManager.loadTree emits `engine:state-changed {type:'load'}`
-   * on every real save load (load game / import / new game), which is exactly
-   * the boundary where cross-save state must die. Queued mutex ops are dropped,
-   * not flushed — they reference the previous save's arcs.
+   * Clear cross-save state at every real save load. This Pinia singleton outlives save
+   * switches, and loadFromState (which runs on every persist() round-trip) must not wipe
+   * the evaluation log mid-game, so the boundary is StateManager.loadTree's
+   * `engine:state-changed {type:'load'}` (load game / import / new game).
+   * Queued mutex ops are dropped, not flushed — they reference the previous save's arcs.
+   * Changelog: logs from save A stayed visible after loading save B.
    */
   const unsubscribeLoadListener = eventBus.on<{ type?: string }>('engine:state-changed', (payload) => {
     if (payload?.type !== 'load') return;
