@@ -48,6 +48,37 @@ import type { SceneCompositionMode, GameTime } from './scene-context';
 import { buildSceneContext } from './scene-context';
 import { eventBus } from '../core/event-bus';
 
+type ComposedImagePrompt = { positive: string; negative: string; width: number; height: number };
+type ReferenceMeta = { reference?: NonNullable<ImageTask['providerMeta']>['reference'] };
+
+/**
+ * One image-generation run. The public flows keep their own enabled check,
+ * argument validation and lock acquisition (all before `runGeneration`), and
+ * hand over only what differs between them.
+ */
+interface GenerationJob {
+  /** Literal for `queue.create`; key order is part of the persisted task shape. */
+  create: Parameters<ImageTaskQueue['create']>[0];
+  /** Generation lock to release in `finally`; undefined = the flow holds no lock. */
+  lockKey?: string;
+  /** Whether the flow passes through (and announces) the `tokenizing` phase. */
+  tokenize: boolean;
+  backend: ImageBackendType;
+  civitai: { subjectType: ImageSubjectType; target?: string };
+  references?: ImageReferenceInput[];
+  styleParamOverrides?: Record<string, unknown>;
+  /** Builds the prompt pair; runs inside the try so failures mark the task failed. */
+  compose: () => Promise<ComposedImagePrompt>;
+  /** Writes the archive entries after the task is complete; runs inside the try. */
+  archive: (ctx: {
+    task: ImageTask;
+    asset: ImageAsset;
+    composed: ComposedImagePrompt;
+    loraSnapshot: CivitaiLoraSnapshot | undefined;
+    refMeta: ReferenceMeta;
+  }) => void;
+}
+
 export class ImageService {
   private tokenizer: ImageTokenizer;
   private composer: ImagePromptComposer;
@@ -299,83 +330,73 @@ export class ImageService {
   }): Promise<ImageTask> {
     if (!this.enabled) throw new Error('[ImageService] Image generation is disabled');
 
-    const task = this.queue.create({
-      subjectType: 'scene',
-      width: params.preset?.width ?? 1024,
-      height: params.preset?.height ?? 576,
+    return this.runGeneration({
+      create: {
+        subjectType: 'scene',
+        width: params.preset?.width ?? 1024,
+        height: params.preset?.height ?? 576,
+        backend: params.backend,
+        presetId: params.preset?.id,
+      },
+      tokenize: true,
       backend: params.backend,
-      presetId: params.preset?.id,
+      civitai: { subjectType: 'scene' },
+      references: params.references,
+      styleParamOverrides: params.styleParamOverrides,
+      compose: async () => {
+        const isNovelAI = params.backend === 'novelai';
+        const hasAnchors = (params.roleAnchors?.length ?? 0) > 0;
+        const presetContext = getTransformerPresetContext(
+          'scene',
+          hasAnchors ? 'anchor' : 'default',
+          this.getCustomPresetOptions(),
+        );
+
+        const sceneContext = buildSceneContext({
+          narrativeText: params.sceneDescription,
+          locationPath: params.location ?? '',
+          gameTime: params.gameTime,
+          weather: params.weather,
+          festival: params.festival,
+          environment: params.environment,
+          presentNpcs: params.presentNpcs,
+          npcDetails: params.npcDetails,
+          compositionMode: params.compositionMode,
+          extraRequirements: params.extraRequirements,
+        });
+
+        const tokenResult = await this.tokenizer.tokenizeScene({
+          sceneContext,
+          presetContext,
+          roleAnchors: params.roleAnchors,
+          isNovelAI,
+        });
+
+        // Process through output processor with serialization strategy
+        const processedPositive = processTransformerOutput(tokenResult.rawResponse, {
+          strategy: presetContext.serializationStrategy,
+          isNovelAI,
+        });
+
+        const composedRaw = this.composer.compose({
+          subjectTokens: processedPositive ? [processedPositive] : tokenResult.tokens,
+          subjectNegative: tokenResult.negative,
+          composition: 'scene',
+          artistPrefix: joinPromptFragments([
+            params.preset?.positivePrefix,
+            params.artistPrefix,
+            params.preset?.positiveSuffix,
+          ]),
+          extraNegative: joinPromptFragments([params.preset?.negative, params.extraNegative]),
+          width: params.preset?.width,
+          height: params.preset?.height,
+        });
+        return composedRaw;
+      },
+      archive: ({ task, asset }) => {
+        this.writeToSceneArchive(asset.id, this.queue.get(task.id)!);
+      },
     });
-
-    try {
-      this.queue.updateStatus(task.id, 'tokenizing');
-      eventBus.emit('image:task-update', { taskId: task.id, status: 'tokenizing' });
-
-      const isNovelAI = params.backend === 'novelai';
-      const hasAnchors = (params.roleAnchors?.length ?? 0) > 0;
-      const presetContext = getTransformerPresetContext(
-        'scene',
-        hasAnchors ? 'anchor' : 'default',
-        this.getCustomPresetOptions(),
-      );
-
-      const sceneContext = buildSceneContext({
-        narrativeText: params.sceneDescription,
-        locationPath: params.location ?? '',
-        gameTime: params.gameTime,
-        weather: params.weather,
-        festival: params.festival,
-        environment: params.environment,
-        presentNpcs: params.presentNpcs,
-        npcDetails: params.npcDetails,
-        compositionMode: params.compositionMode,
-        extraRequirements: params.extraRequirements,
-      });
-
-      const tokenResult = await this.tokenizer.tokenizeScene({
-        sceneContext,
-        presetContext,
-        roleAnchors: params.roleAnchors,
-        isNovelAI,
-      });
-
-      // Process through output processor with serialization strategy
-      const processedPositive = processTransformerOutput(tokenResult.rawResponse, {
-        strategy: presetContext.serializationStrategy,
-        isNovelAI,
-      });
-
-      const composedRaw = this.composer.compose({
-        subjectTokens: processedPositive ? [processedPositive] : tokenResult.tokens,
-        subjectNegative: tokenResult.negative,
-        composition: 'scene',
-        artistPrefix: joinPromptFragments([
-          params.preset?.positivePrefix,
-          params.artistPrefix,
-          params.preset?.positiveSuffix,
-        ]),
-        extraNegative: joinPromptFragments([params.preset?.negative, params.extraNegative]),
-        width: params.preset?.width,
-        height: params.preset?.height,
-      });
-
-      // Civitai LoRA preparation (no-op for non-civitai)
-      const { composed, civitaiProviderParams, loraSnapshot } = this.applyCivitai(params.backend, composedRaw, 'scene');
-
-      const refMeta = this.buildReferenceMeta(params.references, params.backend);
-      this.markGenerating(task.id, composed, loraSnapshot, refMeta);
-
-      const blob = await this.callProvider(params.backend, composed, civitaiProviderParams, params.references, params.styleParamOverrides);
-      const asset = await this.storeAsset(task, blob, params.backend);
-
-      this.completeTask(task.id, asset.id);
-
-      this.writeToSceneArchive(asset.id, this.queue.get(task.id)!);
-
-      return this.queue.get(task.id)!;
-    } catch (err) {
-      return this.failTask(task.id, err);
-    }
   }
 
   /**
@@ -419,124 +440,113 @@ export class ImageService {
     }
     this.state.lockGeneration(lockKey);
 
-    const task = this.queue.create({
-      subjectType: 'character',
-      targetCharacter: params.characterName,
-      anchorId: params.anchor?.id,
-      width: params.preset?.width ?? 832,
-      height: params.preset?.height ?? 1216,
+    return this.runGeneration({
+      create: {
+        subjectType: 'character',
+        targetCharacter: params.characterName,
+        anchorId: params.anchor?.id,
+        width: params.preset?.width ?? 832,
+        height: params.preset?.height ?? 1216,
+        backend: params.backend,
+        presetId: params.preset?.id,
+      },
+      lockKey,
+      tokenize: true,
       backend: params.backend,
-      presetId: params.preset?.id,
-    });
+      civitai: { subjectType: 'character', target: params.characterName },
+      references: params.references,
+      styleParamOverrides: params.styleParamOverrides,
+      compose: async () => {
+        const isNovelAI = params.backend === 'novelai';
+        // NovelAI always uses transformer (forced ON)
+        const shouldUseTransformer = isNovelAI || params.useTransformer !== false;
+        const npcDataJson = params.npcDataJson ?? JSON.stringify({
+          姓名: params.characterName,
+          描述: params.description,
+          外貌描述: params.appearance,
+          身材描写: params.bodyDescription,
+          衣着风格: params.outfitStyle ?? params.outfit,
+          // Field aliases — direct-prompt-builder reads '外貌' / '身材' / '衣着'; duplicate keys ensure both direct and transformer mode see full data.
+          外貌: params.appearance,
+          身材: params.bodyDescription,
+          衣着: params.outfitStyle ?? params.outfit,
+        }, null, 2);
 
-    try {
-      this.queue.updateStatus(task.id, 'tokenizing');
-      eventBus.emit('image:task-update', { taskId: task.id, status: 'tokenizing' });
+        let processedPositive: string;
+        let negativeTokens: string[] | undefined;
 
-      const isNovelAI = params.backend === 'novelai';
-      // NovelAI always uses transformer (forced ON)
-      const shouldUseTransformer = isNovelAI || params.useTransformer !== false;
-      const npcDataJson = params.npcDataJson ?? JSON.stringify({
-        姓名: params.characterName,
-        描述: params.description,
-        外貌描述: params.appearance,
-        身材描写: params.bodyDescription,
-        衣着风格: params.outfitStyle ?? params.outfit,
-        // Field aliases — direct-prompt-builder reads '外貌' / '身材' / '衣着'; duplicate keys ensure both direct and transformer mode see full data.
-        外貌: params.appearance,
-        身材: params.bodyDescription,
-        衣着: params.outfitStyle ?? params.outfit,
-      }, null, 2);
+        if (shouldUseTransformer) {
+          // Resolve transformer preset based on scope + anchor mode
+          const hasAnchor = Boolean(params.anchorPositive?.trim());
+          const presetContext = getTransformerPresetContext('npc', hasAnchor ? 'anchor' : 'default', this.getCustomPresetOptions());
 
-      let processedPositive: string;
-      let negativeTokens: string[] | undefined;
+          const tokenResult = await this.tokenizer.tokenizeCharacter({
+            characterName: params.characterName,
+            npcDataJson,
+            composition: params.composition,
+            customComposition: params.customComposition,
+            artStyle: params.artStyle,
+            anchor: params.anchorPositive
+              ? { positive: params.anchorPositive, negative: params.anchorNegative, structuredFeatures: params.anchorStructuredFeatures }
+              : undefined,
+            extraRequirements: params.extraPrompt,
+            presetContext,
+          });
+          processedPositive = normalizeSingleCharacterOutput(tokenResult.rawResponse, { isNovelAI });
+          negativeTokens = tokenResult.negative;
+        } else {
+          // Direct mode: bypass AI, build prompt from NPC data fields
+          const directResult = buildDirectCharacterPrompt(npcDataJson, {
+            composition: params.composition,
+            artStyle: params.artStyle,
+            extraRequirements: params.extraPrompt,
+            isNovelAI,
+          });
+          processedPositive = directResult.prompt;
+          negativeTokens = undefined;
+        }
 
-      if (shouldUseTransformer) {
-        // Resolve transformer preset based on scope + anchor mode
-        const hasAnchor = Boolean(params.anchorPositive?.trim());
-        const presetContext = getTransformerPresetContext('npc', hasAnchor ? 'anchor' : 'default', this.getCustomPresetOptions());
-
-        const tokenResult = await this.tokenizer.tokenizeCharacter({
-          characterName: params.characterName,
-          npcDataJson,
-          composition: params.composition,
-          customComposition: params.customComposition,
-          artStyle: params.artStyle,
-          anchor: params.anchorPositive
-            ? { positive: params.anchorPositive, negative: params.anchorNegative, structuredFeatures: params.anchorStructuredFeatures }
-            : undefined,
-          extraRequirements: params.extraPrompt,
-          presetContext,
-        });
-        processedPositive = normalizeSingleCharacterOutput(tokenResult.rawResponse, { isNovelAI });
-        negativeTokens = tokenResult.negative;
-      } else {
-        // Direct mode: bypass AI, build prompt from NPC data fields
-        const directResult = buildDirectCharacterPrompt(npcDataJson, {
-          composition: params.composition,
-          artStyle: params.artStyle,
-          extraRequirements: params.extraPrompt,
-          isNovelAI,
-        });
-        processedPositive = directResult.prompt;
-        negativeTokens = undefined;
-      }
-
-      const composedRaw = this.composer.compose({
-        subjectTokens: processedPositive ? [processedPositive] : [],
-        subjectNegative: negativeTokens,
-        composition: params.composition ?? 'portrait',
-        artistPrefix: joinPromptFragments([
-          params.preset?.positivePrefix,
-          params.artistPrefix,
-          params.preset?.positiveSuffix,
-        ]),
-        width: params.preset?.width,
-        height: params.preset?.height,
-        extraNegative: joinPromptFragments([
-          params.preset?.negative,
-          params.anchorNegative,
-          params.extraNegative,
-        ]),
-      });
-
-      // Civitai LoRA preparation (no-op for non-civitai)
-      const { composed, civitaiProviderParams, loraSnapshot } = this.applyCivitai(params.backend, composedRaw, 'character', params.characterName);
-
-      const refMeta = this.buildReferenceMeta(params.references, params.backend);
-      this.markGenerating(task.id, composed, loraSnapshot, refMeta);
-
-      const blob = await this.callProvider(params.backend, composed, civitaiProviderParams, params.references, params.styleParamOverrides);
-      const asset = await this.storeAsset(task, blob, params.backend);
-
-      this.completeTask(task.id, asset.id);
-
-      if (params.characterName) {
-        const trimmed = this.state.writeNpcImageRecord(params.characterName, {
-          id: asset.id,
-          taskId: task.id,
+        const composedRaw = this.composer.compose({
+          subjectTokens: processedPositive ? [processedPositive] : [],
+          subjectNegative: negativeTokens,
           composition: params.composition ?? 'portrait',
-          status: 'complete',
-          positivePrompt: composed.positive,
-          negativePrompt: composed.negative,
-          width: composed.width,
-          height: composed.height,
-          backend: params.backend,
-          model: this.getCurrentModelName(params.backend),
-          apiConfigName: this.getCurrentApiConfigName(params.backend),
-          artStyle: params.artStyle,
-          createdAt: Date.now(),
-          providerMeta: { ...(loraSnapshot ? { civitai: loraSnapshot } : {}), ...refMeta },
+          artistPrefix: joinPromptFragments([
+            params.preset?.positivePrefix,
+            params.artistPrefix,
+            params.preset?.positiveSuffix,
+          ]),
+          width: params.preset?.width,
+          height: params.preset?.height,
+          extraNegative: joinPromptFragments([
+            params.preset?.negative,
+            params.anchorNegative,
+            params.extraNegative,
+          ]),
         });
-        this.deleteTrimmedAssets(trimmed);
-      }
-
-      return this.queue.get(task.id)!;
-    } catch (err) {
-      return this.failTask(task.id, err);
-    } finally {
-      this.state.unlockGeneration(lockKey);
-    }
+        return composedRaw;
+      },
+      archive: ({ task, asset, composed, loraSnapshot, refMeta }) => {
+        if (params.characterName) {
+          const trimmed = this.state.writeNpcImageRecord(params.characterName, {
+            id: asset.id,
+            taskId: task.id,
+            composition: params.composition ?? 'portrait',
+            status: 'complete',
+            positivePrompt: composed.positive,
+            negativePrompt: composed.negative,
+            width: composed.width,
+            height: composed.height,
+            backend: params.backend,
+            model: this.getCurrentModelName(params.backend),
+            apiConfigName: this.getCurrentApiConfigName(params.backend),
+            artStyle: params.artStyle,
+            createdAt: Date.now(),
+            providerMeta: { ...(loraSnapshot ? { civitai: loraSnapshot } : {}), ...refMeta },
+          });
+          this.deleteTrimmedAssets(trimmed);
+        }
+      },
+    });
   }
 
   /**
@@ -576,143 +586,132 @@ export class ImageService {
     }
     this.state.lockGeneration(lockKey);
 
-    const task = this.queue.create({
-      subjectType: 'secret_part',
-      targetCharacter: params.characterName,
-      part: params.part,
-      width: params.preset?.width ?? 1024,
-      height: params.preset?.height ?? 1024,
-      backend: params.backend,
-      presetId: params.preset?.id,
-    });
-
-    try {
-      this.queue.updateStatus(task.id, 'tokenizing');
-      eventBus.emit('image:task-update', { taskId: task.id, status: 'tokenizing' });
-
-      const isNovelAI = params.backend === 'novelai';
-
-      const resolvedEntry = this.resolveSecretPartEntry(params.characterName, params.part);
-      const resolvedDescription = params.partDescription
-        ?? (resolvedEntry ? (String(resolvedEntry['特征描述'] ?? '') || '') : '');
-
-      const resolvedBodyDesc = this.resolveBodyDescription(params.characterName, params.part);
-
-      // Secret-part flow historically runs WITHOUT the model-bundle system
-      // prompt — preserved byte-identical for every legacy strategy. Only the
-      // Doubao narrative ruleset wires the preset context through, so its
-      // Chinese-narrative doctrine reaches this flow too (review Important
-      // 2026-08-27: the hardcoded English mandates here escaped the ruleset).
-      const secretPresetContext = getTransformerPresetContext(
-        'npc',
-        params.anchorPositive ? 'anchor' : 'default',
-        this.getCustomPresetOptions(),
-      );
-
-      const tokenResult = await this.tokenizer.tokenizeSecretPart({
-        characterName: params.characterName,
+    return this.runGeneration({
+      create: {
+        subjectType: 'secret_part',
+        targetCharacter: params.characterName,
         part: params.part,
-        partDescription: resolvedDescription,
-        bodyPartEntry: resolvedEntry,
-        bodyDescription: resolvedBodyDesc,
-        npcDataJson: params.npcDataJson,
-        anchor: params.anchorPositive
-          ? { positive: params.anchorPositive, negative: params.anchorNegative, structuredFeatures: params.anchorStructuredFeatures }
-          : undefined,
-        isNovelAI,
-        extraRequirements: params.extraPrompt,
-        artStyle: params.artStyle,
-        presetContext: secretPresetContext.serializationStrategy === 'seedream_narrative'
-          ? secretPresetContext
-          : undefined,
-      });
+        width: params.preset?.width ?? 1024,
+        height: params.preset?.height ?? 1024,
+        backend: params.backend,
+        presetId: params.preset?.id,
+      },
+      lockKey,
+      tokenize: true,
+      backend: params.backend,
+      civitai: { subjectType: 'secret_part', target: params.characterName },
+      references: params.references,
+      styleParamOverrides: params.styleParamOverrides,
+      compose: async () => {
+        const isNovelAI = params.backend === 'novelai';
 
-      const processedPositive = normalizeSingleCharacterOutput(tokenResult.rawResponse, { isNovelAI });
+        const resolvedEntry = this.resolveSecretPartEntry(params.characterName, params.part);
+        const resolvedDescription = params.partDescription
+          ?? (resolvedEntry ? (String(resolvedEntry['特征描述'] ?? '') || '') : '');
 
-      const composedRaw = this.composer.compose({
-        subjectTokens: processedPositive ? [processedPositive] : tokenResult.tokens,
-        subjectNegative: tokenResult.negative,
-        composition: 'secret_part',
-        artistPrefix: joinPromptFragments([
-          params.preset?.positivePrefix,
-          params.artistPrefix,
-          params.preset?.positiveSuffix,
-        ]),
-        extraNegative: joinPromptFragments([
-          params.preset?.negative,
-          params.anchorNegative,
-          params.extraNegative,
-        ]),
-        width: params.preset?.width,
-        height: params.preset?.height,
-      });
+        const resolvedBodyDesc = this.resolveBodyDescription(params.characterName, params.part);
 
-      // Civitai LoRA preparation (no-op for non-civitai)
-      const { composed, civitaiProviderParams, loraSnapshot } = this.applyCivitai(params.backend, composedRaw, 'secret_part', params.characterName);
+        // Secret-part flow historically runs WITHOUT the model-bundle system
+        // prompt — preserved byte-identical for every legacy strategy. Only the
+        // Doubao narrative ruleset wires the preset context through, so its
+        // Chinese-narrative doctrine reaches this flow too (review Important
+        // 2026-08-27: the hardcoded English mandates here escaped the ruleset).
+        const secretPresetContext = getTransformerPresetContext(
+          'npc',
+          params.anchorPositive ? 'anchor' : 'default',
+          this.getCustomPresetOptions(),
+        );
 
-      const refMeta = this.buildReferenceMeta(params.references, params.backend);
-      this.markGenerating(task.id, composed, loraSnapshot, refMeta);
-
-      const blob = await this.callProvider(params.backend, composed, civitaiProviderParams, params.references, params.styleParamOverrides);
-      const asset = await this.storeAsset(task, blob, params.backend);
-
-      this.completeTask(task.id, asset.id);
-
-      // Store result in both the secret archive AND the general history so
-      // 图库/历史 tabs see the entry alongside portrait/full-body images.
-      // Without the writeNpcImageRecord call, secret-part images live only in
-      // 图片档案.香闺秘档 and are invisible to gallery which reads 生图历史.
-      if (params.characterName) {
-        const createdAt = Date.now();
-        const modelName = this.getCurrentModelName(params.backend);
-        const apiName = this.getCurrentApiConfigName(params.backend);
-        const archiveMeta = { ...(loraSnapshot ? { civitai: loraSnapshot } : {}), ...refMeta };
-        const metaSpread = Object.keys(archiveMeta).length > 0 ? { providerMeta: archiveMeta } : {};
-
-        // Delete previous secret-part blob before overwriting the archive entry
-        this.deletePreviousSecretBlob(params.characterName, params.part, asset.id);
-
-        this.state.setSecretPartResult(params.characterName, params.part, {
-          id: asset.id,
-          taskId: task.id,
+        const tokenResult = await this.tokenizer.tokenizeSecretPart({
+          characterName: params.characterName,
           part: params.part,
-          status: 'complete',
-          positivePrompt: composed.positive,
-          negativePrompt: composed.negative,
-          width: composed.width,
-          height: composed.height,
-          backend: params.backend,
-          model: modelName,
-          apiConfigName: apiName,
-          createdAt,
-          ...metaSpread,
-        });
-        const trimmed = this.state.writeNpcImageRecord(params.characterName, {
-          id: asset.id,
-          taskId: task.id,
-          composition: 'secret_part',
-          part: params.part,
-          status: 'complete',
-          positivePrompt: composed.positive,
-          negativePrompt: composed.negative,
-          width: composed.width,
-          height: composed.height,
-          backend: params.backend,
-          model: modelName,
-          apiConfigName: apiName,
+          partDescription: resolvedDescription,
+          bodyPartEntry: resolvedEntry,
+          bodyDescription: resolvedBodyDesc,
+          npcDataJson: params.npcDataJson,
+          anchor: params.anchorPositive
+            ? { positive: params.anchorPositive, negative: params.anchorNegative, structuredFeatures: params.anchorStructuredFeatures }
+            : undefined,
+          isNovelAI,
+          extraRequirements: params.extraPrompt,
           artStyle: params.artStyle,
-          createdAt,
-          ...metaSpread,
+          presetContext: secretPresetContext.serializationStrategy === 'seedream_narrative'
+            ? secretPresetContext
+            : undefined,
         });
-        this.deleteTrimmedAssets(trimmed);
-      }
 
-      return this.queue.get(task.id)!;
-    } catch (err) {
-      return this.failTask(task.id, err);
-    } finally {
-      this.state.unlockGeneration(lockKey);
-    }
+        const processedPositive = normalizeSingleCharacterOutput(tokenResult.rawResponse, { isNovelAI });
+
+        const composedRaw = this.composer.compose({
+          subjectTokens: processedPositive ? [processedPositive] : tokenResult.tokens,
+          subjectNegative: tokenResult.negative,
+          composition: 'secret_part',
+          artistPrefix: joinPromptFragments([
+            params.preset?.positivePrefix,
+            params.artistPrefix,
+            params.preset?.positiveSuffix,
+          ]),
+          extraNegative: joinPromptFragments([
+            params.preset?.negative,
+            params.anchorNegative,
+            params.extraNegative,
+          ]),
+          width: params.preset?.width,
+          height: params.preset?.height,
+        });
+        return composedRaw;
+      },
+      archive: ({ task, asset, composed, loraSnapshot, refMeta }) => {
+        // Store result in both the secret archive AND the general history so
+        // 图库/历史 tabs see the entry alongside portrait/full-body images.
+        // Without the writeNpcImageRecord call, secret-part images live only in
+        // 图片档案.香闺秘档 and are invisible to gallery which reads 生图历史.
+        if (params.characterName) {
+          const createdAt = Date.now();
+          const modelName = this.getCurrentModelName(params.backend);
+          const apiName = this.getCurrentApiConfigName(params.backend);
+          const archiveMeta = { ...(loraSnapshot ? { civitai: loraSnapshot } : {}), ...refMeta };
+          const metaSpread = Object.keys(archiveMeta).length > 0 ? { providerMeta: archiveMeta } : {};
+
+          // Delete previous secret-part blob before overwriting the archive entry
+          this.deletePreviousSecretBlob(params.characterName, params.part, asset.id);
+
+          this.state.setSecretPartResult(params.characterName, params.part, {
+            id: asset.id,
+            taskId: task.id,
+            part: params.part,
+            status: 'complete',
+            positivePrompt: composed.positive,
+            negativePrompt: composed.negative,
+            width: composed.width,
+            height: composed.height,
+            backend: params.backend,
+            model: modelName,
+            apiConfigName: apiName,
+            createdAt,
+            ...metaSpread,
+          });
+          const trimmed = this.state.writeNpcImageRecord(params.characterName, {
+            id: asset.id,
+            taskId: task.id,
+            composition: 'secret_part',
+            part: params.part,
+            status: 'complete',
+            positivePrompt: composed.positive,
+            negativePrompt: composed.negative,
+            width: composed.width,
+            height: composed.height,
+            backend: params.backend,
+            model: modelName,
+            apiConfigName: apiName,
+            artStyle: params.artStyle,
+            createdAt,
+            ...metaSpread,
+          });
+          this.deleteTrimmedAssets(trimmed);
+        }
+      },
+    });
   }
 
   getTaskQueue(): ImageTaskQueue { return this.queue; }
@@ -773,101 +772,93 @@ export class ImageService {
     }
     if (params.subjectType !== 'scene') this.state.lockGeneration(lockKey);
 
-    const task = this.queue.create({
-      subjectType: params.subjectType,
-      targetCharacter: params.targetCharacter,
-      part: params.part,
-      width: params.width,
-      height: params.height,
-      backend: params.backend,
-    });
-
-    try {
-      const composedRaw = {
-        positive: params.positivePrompt,
-        negative: params.negativePrompt,
+    return this.runGeneration({
+      create: {
+        subjectType: params.subjectType,
+        targetCharacter: params.targetCharacter,
+        part: params.part,
         width: params.width,
         height: params.height,
-      };
-
-      // Civitai LoRA preparation (no-op for non-civitai)
-      const { composed, civitaiProviderParams, loraSnapshot } = this.applyCivitai(params.backend, composedRaw, params.subjectType, params.targetCharacter);
-
-      const refMeta = this.buildReferenceMeta(params.references, params.backend);
-      this.markGenerating(task.id, composed, loraSnapshot, refMeta);
-
-      const blob = await this.callProvider(params.backend, composed, civitaiProviderParams, params.references, params.styleParamOverrides);
-      const asset = await this.storeAsset(task, blob, params.backend);
-
-      this.completeTask(task.id, asset.id);
-
-      const createdAt = Date.now();
-      const modelName = this.getCurrentModelName(params.backend);
-      const apiName = this.getCurrentApiConfigName(params.backend);
-      const archiveMeta = { ...(loraSnapshot ? { civitai: loraSnapshot } : {}), ...refMeta };
-      const metaSpread = Object.keys(archiveMeta).length > 0 ? { providerMeta: archiveMeta } : {};
-      if (params.subjectType === 'scene') {
-        this.writeToSceneArchive(asset.id, this.queue.get(task.id)!);
-      } else if (params.subjectType === 'secret_part' && params.targetCharacter && params.part) {
-        this.deletePreviousSecretBlob(params.targetCharacter, params.part, asset.id);
-        this.state.setSecretPartResult(params.targetCharacter, params.part, {
-          id: asset.id,
-          taskId: task.id,
-          part: params.part,
-          status: 'complete',
-          positivePrompt: composed.positive,
-          negativePrompt: composed.negative,
+        backend: params.backend,
+      },
+      lockKey: params.subjectType !== 'scene' ? lockKey : undefined,
+      tokenize: false,
+      backend: params.backend,
+      civitai: { subjectType: params.subjectType, target: params.targetCharacter },
+      references: params.references,
+      styleParamOverrides: params.styleParamOverrides,
+      compose: async () => {
+        const composedRaw = {
+          positive: params.positivePrompt,
+          negative: params.negativePrompt,
           width: params.width,
           height: params.height,
-          backend: params.backend,
-          model: modelName,
-          apiConfigName: apiName,
-          createdAt,
-          ...metaSpread,
-        });
-        const trimmed2 = this.state.writeNpcImageRecord(params.targetCharacter, {
-          id: asset.id,
-          taskId: task.id,
-          composition: 'secret_part',
-          part: params.part,
-          status: 'complete',
-          positivePrompt: composed.positive,
-          negativePrompt: composed.negative,
-          width: params.width,
-          height: params.height,
-          backend: params.backend,
-          model: modelName,
-          apiConfigName: apiName,
-          createdAt,
-          ...metaSpread,
-        });
-        this.deleteTrimmedAssets(trimmed2);
-      } else if (params.subjectType === 'character' && params.targetCharacter) {
-        const trimmed3 = this.state.writeNpcImageRecord(params.targetCharacter, {
-          id: asset.id,
-          taskId: task.id,
-          composition: params.composition ?? 'portrait',
-          status: 'complete',
-          positivePrompt: composed.positive,
-          negativePrompt: composed.negative,
-          width: params.width,
-          height: params.height,
-          backend: params.backend,
-          model: modelName,
-          apiConfigName: apiName,
-          artStyle: params.artStyle,
-          createdAt,
-          ...metaSpread,
-        });
-        this.deleteTrimmedAssets(trimmed3);
-      }
-
-      return this.queue.get(task.id)!;
-    } catch (err) {
-      return this.failTask(task.id, err);
-    } finally {
-      if (params.subjectType !== 'scene') this.state.unlockGeneration(lockKey);
-    }
+        };
+        return composedRaw;
+      },
+      archive: ({ task, asset, composed, loraSnapshot, refMeta }) => {
+        const createdAt = Date.now();
+        const modelName = this.getCurrentModelName(params.backend);
+        const apiName = this.getCurrentApiConfigName(params.backend);
+        const archiveMeta = { ...(loraSnapshot ? { civitai: loraSnapshot } : {}), ...refMeta };
+        const metaSpread = Object.keys(archiveMeta).length > 0 ? { providerMeta: archiveMeta } : {};
+        if (params.subjectType === 'scene') {
+          this.writeToSceneArchive(asset.id, this.queue.get(task.id)!);
+        } else if (params.subjectType === 'secret_part' && params.targetCharacter && params.part) {
+          this.deletePreviousSecretBlob(params.targetCharacter, params.part, asset.id);
+          this.state.setSecretPartResult(params.targetCharacter, params.part, {
+            id: asset.id,
+            taskId: task.id,
+            part: params.part,
+            status: 'complete',
+            positivePrompt: composed.positive,
+            negativePrompt: composed.negative,
+            width: params.width,
+            height: params.height,
+            backend: params.backend,
+            model: modelName,
+            apiConfigName: apiName,
+            createdAt,
+            ...metaSpread,
+          });
+          const trimmed2 = this.state.writeNpcImageRecord(params.targetCharacter, {
+            id: asset.id,
+            taskId: task.id,
+            composition: 'secret_part',
+            part: params.part,
+            status: 'complete',
+            positivePrompt: composed.positive,
+            negativePrompt: composed.negative,
+            width: params.width,
+            height: params.height,
+            backend: params.backend,
+            model: modelName,
+            apiConfigName: apiName,
+            createdAt,
+            ...metaSpread,
+          });
+          this.deleteTrimmedAssets(trimmed2);
+        } else if (params.subjectType === 'character' && params.targetCharacter) {
+          const trimmed3 = this.state.writeNpcImageRecord(params.targetCharacter, {
+            id: asset.id,
+            taskId: task.id,
+            composition: params.composition ?? 'portrait',
+            status: 'complete',
+            positivePrompt: composed.positive,
+            negativePrompt: composed.negative,
+            width: params.width,
+            height: params.height,
+            backend: params.backend,
+            model: modelName,
+            apiConfigName: apiName,
+            artStyle: params.artStyle,
+            createdAt,
+            ...metaSpread,
+          });
+          this.deleteTrimmedAssets(trimmed3);
+        }
+      },
+    });
   }
 
   /**
@@ -1113,6 +1104,45 @@ export class ImageService {
   }
 
   /**
+   * Shared skeleton of the four generation flows: create the task, (tokenize),
+   * compose, prepare Civitai, mark generating, call the provider, store the
+   * asset, complete, archive; any failure marks the task failed; the lock (if
+   * any) is released last. The lock itself is taken by the caller, outside any
+   * try, before this runs.
+   */
+  private async runGeneration(job: GenerationJob): Promise<ImageTask> {
+    const task = this.queue.create(job.create);
+
+    try {
+      if (job.tokenize) {
+        this.queue.updateStatus(task.id, 'tokenizing');
+        eventBus.emit('image:task-update', { taskId: task.id, status: 'tokenizing' });
+      }
+
+      const composedRaw = await job.compose();
+
+      // Civitai LoRA preparation (no-op for non-civitai)
+      const { composed, civitaiProviderParams, loraSnapshot } = this.applyCivitai(job.backend, composedRaw, job.civitai.subjectType, job.civitai.target);
+
+      const refMeta = this.buildReferenceMeta(job.references, job.backend);
+      this.markGenerating(task.id, composed, loraSnapshot, refMeta);
+
+      const blob = await this.callProvider(job.backend, composed, civitaiProviderParams, job.references, job.styleParamOverrides);
+      const asset = await this.storeAsset(task, blob, job.backend);
+
+      this.completeTask(task.id, asset.id);
+
+      job.archive({ task, asset, composed, loraSnapshot, refMeta });
+
+      return this.queue.get(task.id)!;
+    } catch (err) {
+      return this.failTask(task.id, err);
+    } finally {
+      if (job.lockKey !== undefined) this.state.unlockGeneration(job.lockKey);
+    }
+  }
+
+  /**
    * Archive/task `reference` metadata for an image-to-image request; `{}` when
    * there are no references. Returns a fresh literal on every call.
    */
@@ -1164,7 +1194,7 @@ export class ImageService {
     taskId: string,
     composed: { positive: string; negative: string },
     loraSnapshot: CivitaiLoraSnapshot | undefined,
-    refMeta: { reference?: NonNullable<ImageTask['providerMeta']>['reference'] },
+    refMeta: ReferenceMeta,
   ): void {
     this.queue.updateStatus(taskId, 'generating', {
       positivePrompt: composed.positive,
