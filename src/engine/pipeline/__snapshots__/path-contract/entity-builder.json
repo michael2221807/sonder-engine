@@ -1,0 +1,896 @@
+{
+  "entityBuilder": {
+    "includeAll=false,player=true": [
+      {
+        "name": "林",
+        "type": "player",
+        "attributes": {
+          "source": "event_role",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 0,
+        "lastSeen": 5,
+        "mentionCount": 4,
+        "summary": "玩家角色",
+        "is_embedded": false
+      },
+      {
+        "name": "甲",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "__undefined__",
+          "location": "重复",
+          "source": "event_role",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 2,
+        "lastSeen": 2,
+        "mentionCount": 3,
+        "summary": "出身江南；清瘦",
+        "is_embedded": false
+      },
+      {
+        "name": "丙",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "师徒",
+          "location": "山门",
+          "source": "relationship"
+        },
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "mentionCount": 1,
+        "summary": "看门人",
+        "is_embedded": false
+      },
+      {
+        "name": "丁",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "__undefined__",
+          "location": "__undefined__",
+          "source": "relationship"
+        },
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "新人物",
+        "type": "npc",
+        "attributes": {
+          "source": "event_role",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 2,
+        "lastSeen": 2,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "青城山·玉虚宫",
+        "type": "location",
+        "attributes": {
+          "source": "event_location",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 2,
+        "lastSeen": 2,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "茶馆",
+        "type": "location",
+        "attributes": {
+          "source": "event_location",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 2,
+        "lastSeen": 2,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "己",
+        "type": "npc",
+        "attributes": {},
+        "firstSeen": 5,
+        "lastSeen": 5,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "山门",
+        "type": "location",
+        "attributes": {},
+        "firstSeen": 5,
+        "lastSeen": 5,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      }
+    ],
+    "includeAll=false,player=false": [
+      {
+        "name": "玩家",
+        "type": "player",
+        "attributes": {
+          "source": "event_role",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 0,
+        "lastSeen": 5,
+        "mentionCount": 4,
+        "summary": "玩家角色",
+        "is_embedded": false
+      },
+      {
+        "name": "甲",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "__undefined__",
+          "location": "重复",
+          "source": "event_role",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 2,
+        "lastSeen": 2,
+        "mentionCount": 3,
+        "summary": "出身江南；清瘦",
+        "is_embedded": false
+      },
+      {
+        "name": "丙",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "师徒",
+          "location": "山门",
+          "source": "relationship"
+        },
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "mentionCount": 1,
+        "summary": "看门人",
+        "is_embedded": false
+      },
+      {
+        "name": "丁",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "__undefined__",
+          "location": "__undefined__",
+          "source": "relationship"
+        },
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "新人物",
+        "type": "npc",
+        "attributes": {
+          "source": "event_role",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 2,
+        "lastSeen": 2,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "青城山·玉虚宫",
+        "type": "location",
+        "attributes": {
+          "source": "event_location",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 2,
+        "lastSeen": 2,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "茶馆",
+        "type": "location",
+        "attributes": {
+          "source": "event_location",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 2,
+        "lastSeen": 2,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "己",
+        "type": "npc",
+        "attributes": {},
+        "firstSeen": 5,
+        "lastSeen": 5,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "山门",
+        "type": "location",
+        "attributes": {},
+        "firstSeen": 5,
+        "lastSeen": 5,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      }
+    ],
+    "includeAll=true,player=true": [
+      {
+        "name": "林",
+        "type": "player",
+        "attributes": {
+          "source": "event_role",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 0,
+        "lastSeen": 5,
+        "mentionCount": 4,
+        "summary": "玩家角色",
+        "is_embedded": false
+      },
+      {
+        "name": "甲",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "__undefined__",
+          "location": "重复",
+          "source": "event_role",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 2,
+        "lastSeen": 2,
+        "mentionCount": 3,
+        "summary": "出身江南；清瘦",
+        "is_embedded": false
+      },
+      {
+        "name": "乙",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "路人",
+          "location": "街口",
+          "source": "relationship"
+        },
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "mentionCount": 1,
+        "summary": "卖花的",
+        "is_embedded": false
+      },
+      {
+        "name": "丙",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "师徒",
+          "location": "山门",
+          "source": "relationship"
+        },
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "mentionCount": 1,
+        "summary": "看门人",
+        "is_embedded": false
+      },
+      {
+        "name": "丁",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "__undefined__",
+          "location": "__undefined__",
+          "source": "relationship"
+        },
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "戊",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "",
+          "location": "__undefined__",
+          "source": "relationship"
+        },
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "新人物",
+        "type": "npc",
+        "attributes": {
+          "source": "event_role",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 2,
+        "lastSeen": 2,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "青城山·玉虚宫",
+        "type": "location",
+        "attributes": {
+          "source": "event_location",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 2,
+        "lastSeen": 2,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "茶馆",
+        "type": "location",
+        "attributes": {
+          "source": "event_location",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 2,
+        "lastSeen": 2,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "己",
+        "type": "npc",
+        "attributes": {},
+        "firstSeen": 5,
+        "lastSeen": 5,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "山门",
+        "type": "location",
+        "attributes": {},
+        "firstSeen": 5,
+        "lastSeen": 5,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      }
+    ],
+    "includeAll=true,player=false": [
+      {
+        "name": "玩家",
+        "type": "player",
+        "attributes": {
+          "source": "event_role",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 0,
+        "lastSeen": 5,
+        "mentionCount": 4,
+        "summary": "玩家角色",
+        "is_embedded": false
+      },
+      {
+        "name": "甲",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "__undefined__",
+          "location": "重复",
+          "source": "event_role",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 2,
+        "lastSeen": 2,
+        "mentionCount": 3,
+        "summary": "出身江南；清瘦",
+        "is_embedded": false
+      },
+      {
+        "name": "乙",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "路人",
+          "location": "街口",
+          "source": "relationship"
+        },
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "mentionCount": 1,
+        "summary": "卖花的",
+        "is_embedded": false
+      },
+      {
+        "name": "丙",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "师徒",
+          "location": "山门",
+          "source": "relationship"
+        },
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "mentionCount": 1,
+        "summary": "看门人",
+        "is_embedded": false
+      },
+      {
+        "name": "丁",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "__undefined__",
+          "location": "__undefined__",
+          "source": "relationship"
+        },
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "戊",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "",
+          "location": "__undefined__",
+          "source": "relationship"
+        },
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "新人物",
+        "type": "npc",
+        "attributes": {
+          "source": "event_role",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 2,
+        "lastSeen": 2,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "青城山·玉虚宫",
+        "type": "location",
+        "attributes": {
+          "source": "event_location",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 2,
+        "lastSeen": 2,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "茶馆",
+        "type": "location",
+        "attributes": {
+          "source": "event_location",
+          "lastEventId": "e1"
+        },
+        "firstSeen": 2,
+        "lastSeen": 2,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "己",
+        "type": "npc",
+        "attributes": {},
+        "firstSeen": 5,
+        "lastSeen": 5,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      },
+      {
+        "name": "山门",
+        "type": "location",
+        "attributes": {},
+        "firstSeen": 5,
+        "lastSeen": 5,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      }
+    ],
+    "noOptions": [
+      {
+        "name": "林",
+        "type": "player",
+        "attributes": {},
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "mentionCount": 1,
+        "summary": "玩家角色",
+        "is_embedded": false
+      },
+      {
+        "name": "甲",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "__undefined__",
+          "location": "重复",
+          "source": "relationship"
+        },
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "mentionCount": 2,
+        "summary": "出身江南；清瘦",
+        "is_embedded": false
+      },
+      {
+        "name": "丙",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "师徒",
+          "location": "山门",
+          "source": "relationship"
+        },
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "mentionCount": 1,
+        "summary": "看门人",
+        "is_embedded": false
+      },
+      {
+        "name": "丁",
+        "type": "npc",
+        "attributes": {
+          "relationToPlayer": "__undefined__",
+          "location": "__undefined__",
+          "source": "relationship"
+        },
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "mentionCount": 1,
+        "summary": "",
+        "is_embedded": false
+      }
+    ],
+    "relationshipsNotArray": [
+      {
+        "name": "玩家",
+        "type": "player",
+        "attributes": {},
+        "firstSeen": 0,
+        "lastSeen": 0,
+        "mentionCount": 1,
+        "summary": "玩家角色",
+        "is_embedded": false
+      }
+    ]
+  },
+  "eventBuilder": {
+    "full": [
+      {
+        "id": "<id>",
+        "subject": "林",
+        "action": "narrative",
+        "tags": [
+          "narrative"
+        ],
+        "text": "你点了点头。接着离开。",
+        "summary": "你点了点头(承接):\n(1年3月5日 14:20 | 青城山 | 甲, 乙) 你点了点头。接着离开。",
+        "structured_kv": {
+          "event": "你点了点头",
+          "role": [
+            "甲",
+            "乙"
+          ],
+          "location": [
+            "青城山"
+          ],
+          "time_anchor": "1年3月5日 14:20",
+          "causality": "承接",
+          "logic": []
+        },
+        "is_embedded": false,
+        "time": "1年3月5日 14:20",
+        "location": "青城山",
+        "roundNumber": 7,
+        "mentionedEntities": [
+          "林",
+          "甲",
+          "乙"
+        ]
+      }
+    ],
+    "dateOnly": [
+      {
+        "id": "<id>",
+        "subject": "林",
+        "action": "narrative",
+        "tags": [
+          "narrative"
+        ],
+        "text": "你点了点头。接着离开。",
+        "summary": "你点了点头(承接):\n(2年1月9日 | 青城山 | 甲, 乙) 你点了点头。接着离开。",
+        "structured_kv": {
+          "event": "你点了点头",
+          "role": [
+            "甲",
+            "乙"
+          ],
+          "location": [
+            "青城山"
+          ],
+          "time_anchor": "2年1月9日",
+          "causality": "承接",
+          "logic": []
+        },
+        "is_embedded": false,
+        "time": "2年1月9日",
+        "location": "青城山",
+        "roundNumber": 7,
+        "mentionedEntities": [
+          "林",
+          "甲",
+          "乙"
+        ]
+      }
+    ],
+    "partial": [
+      {
+        "id": "<id>",
+        "subject": "林",
+        "action": "narrative",
+        "tags": [
+          "narrative"
+        ],
+        "text": "你点了点头。接着离开。",
+        "summary": "你点了点头(承接):\n(0年4月0日 | 青城山 | 甲, 乙) 你点了点头。接着离开。",
+        "structured_kv": {
+          "event": "你点了点头",
+          "role": [
+            "甲",
+            "乙"
+          ],
+          "location": [
+            "青城山"
+          ],
+          "time_anchor": "0年4月0日",
+          "causality": "承接",
+          "logic": []
+        },
+        "is_embedded": false,
+        "time": "0年4月0日",
+        "location": "青城山",
+        "roundNumber": 7,
+        "mentionedEntities": [
+          "林",
+          "甲",
+          "乙"
+        ]
+      }
+    ],
+    "hourOnly": [
+      {
+        "id": "<id>",
+        "subject": "林",
+        "action": "narrative",
+        "tags": [
+          "narrative"
+        ],
+        "text": "你点了点头。接着离开。",
+        "summary": "你点了点头(承接):\n(1年1月1日 | 青城山 | 甲, 乙) 你点了点头。接着离开。",
+        "structured_kv": {
+          "event": "你点了点头",
+          "role": [
+            "甲",
+            "乙"
+          ],
+          "location": [
+            "青城山"
+          ],
+          "time_anchor": "1年1月1日",
+          "causality": "承接",
+          "logic": []
+        },
+        "is_embedded": false,
+        "time": "1年1月1日",
+        "location": "青城山",
+        "roundNumber": 7,
+        "mentionedEntities": [
+          "林",
+          "甲",
+          "乙"
+        ]
+      }
+    ],
+    "strings": [
+      {
+        "id": "<id>",
+        "subject": "林",
+        "action": "narrative",
+        "tags": [
+          "narrative"
+        ],
+        "text": "你点了点头。接着离开。",
+        "summary": "你点了点头(承接):\n(青城山 | 甲, 乙) 你点了点头。接着离开。",
+        "structured_kv": {
+          "event": "你点了点头",
+          "role": [
+            "甲",
+            "乙"
+          ],
+          "location": [
+            "青城山"
+          ],
+          "time_anchor": "",
+          "causality": "承接",
+          "logic": []
+        },
+        "is_embedded": false,
+        "time": "__undefined__",
+        "location": "青城山",
+        "roundNumber": 7,
+        "mentionedEntities": [
+          "林",
+          "甲",
+          "乙"
+        ]
+      }
+    ],
+    "empty": [
+      {
+        "id": "<id>",
+        "subject": "林",
+        "action": "narrative",
+        "tags": [
+          "narrative"
+        ],
+        "text": "你点了点头。接着离开。",
+        "summary": "你点了点头(承接):\n(青城山 | 甲, 乙) 你点了点头。接着离开。",
+        "structured_kv": {
+          "event": "你点了点头",
+          "role": [
+            "甲",
+            "乙"
+          ],
+          "location": [
+            "青城山"
+          ],
+          "time_anchor": "",
+          "causality": "承接",
+          "logic": []
+        },
+        "is_embedded": false,
+        "time": "__undefined__",
+        "location": "青城山",
+        "roundNumber": 7,
+        "mentionedEntities": [
+          "林",
+          "甲",
+          "乙"
+        ]
+      }
+    ],
+    "notObject": [
+      {
+        "id": "<id>",
+        "subject": "林",
+        "action": "narrative",
+        "tags": [
+          "narrative"
+        ],
+        "text": "你点了点头。接着离开。",
+        "summary": "你点了点头(承接):\n(青城山 | 甲, 乙) 你点了点头。接着离开。",
+        "structured_kv": {
+          "event": "你点了点头",
+          "role": [
+            "甲",
+            "乙"
+          ],
+          "location": [
+            "青城山"
+          ],
+          "time_anchor": "",
+          "causality": "承接",
+          "logic": []
+        },
+        "is_embedded": false,
+        "time": "__undefined__",
+        "location": "青城山",
+        "roundNumber": 7,
+        "mentionedEntities": [
+          "林",
+          "甲",
+          "乙"
+        ]
+      }
+    ],
+    "missing": [
+      {
+        "id": "<id>",
+        "subject": "林",
+        "action": "narrative",
+        "tags": [
+          "narrative"
+        ],
+        "text": "你点了点头。接着离开。",
+        "summary": "你点了点头(承接):\n(青城山 | 甲, 乙) 你点了点头。接着离开。",
+        "structured_kv": {
+          "event": "你点了点头",
+          "role": [
+            "甲",
+            "乙"
+          ],
+          "location": [
+            "青城山"
+          ],
+          "time_anchor": "",
+          "causality": "承接",
+          "logic": []
+        },
+        "is_embedded": false,
+        "time": "__undefined__",
+        "location": "青城山",
+        "roundNumber": 7,
+        "mentionedEntities": [
+          "林",
+          "甲",
+          "乙"
+        ]
+      }
+    ]
+  },
+  "unifiedRetrieverDefaults": {
+    "engramPath": "系统.扩展.engramMemory",
+    "roundNumberPath": "元数据.回合序号"
+  },
+  "unifiedRetrieverPartial": {
+    "engramPath": "X.a",
+    "roundNumberPath": "元数据.回合序号"
+  },
+  "engramEditorDefaults": {
+    "engramPath": "系统.扩展.engramMemory",
+    "roundNumberPath": "元数据.回合序号",
+    "relationshipsPath": "社交.关系",
+    "locationsPath": "世界.地点信息",
+    "npcNameField": "名称",
+    "npcTypeField": "类型",
+    "npcTypeExclude": "普通",
+    "locationNameField": "名称"
+  },
+  "engramEditorPartial": {
+    "engramPath": "系统.扩展.engramMemory",
+    "roundNumberPath": "元数据.回合序号",
+    "relationshipsPath": "R.r",
+    "locationsPath": "世界.地点信息",
+    "npcNameField": "N",
+    "npcTypeField": "类型",
+    "npcTypeExclude": "普通",
+    "locationNameField": "名称"
+  }
+}

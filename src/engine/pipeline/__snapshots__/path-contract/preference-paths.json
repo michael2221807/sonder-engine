@@ -1,0 +1,12 @@
+[
+  "系统.设置",
+  "系统.actionOptions",
+  "系统.nsfwMode",
+  "系统.nsfwGenderFilter",
+  "世界.状态.心跳.配置",
+  "世界.状态.心跳.历史条数",
+  "世界.状态.心跳.遗忘回合数",
+  "系统.扩展.image.enabled",
+  "系统.扩展.image.config",
+  "系统.npcDemotionThreshold"
+]

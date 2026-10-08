@@ -1,0 +1,189 @@
+{
+  "isPrivacyProfileComplete": {
+    "virgin": true,
+    "nonVirgin": true,
+    "nullValue": false,
+    "undefinedValue": false,
+    "stringValue": false,
+    "arrayValue": false,
+    "emptyObject": false,
+    "missingPartnerList": false,
+    "emptyKinks": false,
+    "emptyPartnersNonVirgin": true,
+    "placeholderText": false,
+    "placeholderUpper": false,
+    "placeholderNone": false,
+    "blankText": false,
+    "nanNumber": false,
+    "partsNotArray": false,
+    "partsMissingMouth": false,
+    "partsEmptyDescription": false,
+    "partsPlaceholderDescription": false,
+    "partsExtra": true,
+    "nonVirginMissingFirstNight": false,
+    "nonVirginBlankFirstNight": false,
+    "nonVirginPlaceholderFirstNight": false,
+    "virginWithEmptyFirstNight": true,
+    "virginFlagMissing": false,
+    "virginFlagString": true
+  },
+  "isPlayerBodyComplete": {
+    "full": true,
+    "nullValue": false,
+    "arrayValue": false,
+    "emptyObject": false,
+    "missingHeight": false,
+    "nullWeight": false,
+    "nanHeight": false,
+    "stringHeight": true,
+    "placeholderHeight": false,
+    "blankHeight": false,
+    "sizeNotObject": false,
+    "sizeArray": false,
+    "sizeMissingWaist": false,
+    "sizeNanHip": false,
+    "sizeStringBust": false,
+    "pointsEmpty": false,
+    "pointsNotArray": false,
+    "devEmpty": false,
+    "devArray": false,
+    "devString": false
+  },
+  "findIncompletePrivacy": {
+    "bodyFull": {
+      "all": {
+        "npcNames": [
+          "7",
+          "丙",
+          "乙",
+          "己",
+          "庚",
+          "戊",
+          "甲"
+        ],
+        "playerBodyMissing": false,
+        "total": 7
+      },
+      "male": {
+        "npcNames": [
+          "7",
+          "乙"
+        ],
+        "playerBodyMissing": false,
+        "total": 2
+      },
+      "female": {
+        "npcNames": [
+          "丙",
+          "己",
+          "甲"
+        ],
+        "playerBodyMissing": false,
+        "total": 3
+      }
+    },
+    "bodyMissing": {
+      "all": {
+        "npcNames": [
+          "7",
+          "丙",
+          "乙",
+          "己",
+          "庚",
+          "戊",
+          "甲"
+        ],
+        "playerBodyMissing": true,
+        "total": 8
+      },
+      "male": {
+        "npcNames": [
+          "7",
+          "乙"
+        ],
+        "playerBodyMissing": true,
+        "total": 3
+      },
+      "female": {
+        "npcNames": [
+          "丙",
+          "己",
+          "甲"
+        ],
+        "playerBodyMissing": true,
+        "total": 4
+      }
+    },
+    "bodyPartial": {
+      "all": {
+        "npcNames": [
+          "7",
+          "丙",
+          "乙",
+          "己",
+          "庚",
+          "戊",
+          "甲"
+        ],
+        "playerBodyMissing": true,
+        "total": 8
+      },
+      "male": {
+        "npcNames": [
+          "7",
+          "乙"
+        ],
+        "playerBodyMissing": true,
+        "total": 3
+      },
+      "female": {
+        "npcNames": [
+          "丙",
+          "己",
+          "甲"
+        ],
+        "playerBodyMissing": true,
+        "total": 4
+      }
+    },
+    "noRoster": {
+      "npcNames": [],
+      "playerBodyMissing": false,
+      "total": 0
+    }
+  },
+  "readNsfwSettings": {
+    "stateBoth": {
+      "nsfwMode": true,
+      "nsfwGenderFilter": "male"
+    },
+    "stateModeOnly": {
+      "nsfwMode": false,
+      "nsfwGenderFilter": "all"
+    },
+    "stateFilterOnly": {
+      "nsfwMode": true,
+      "nsfwGenderFilter": "all"
+    },
+    "stateInvalid": {
+      "nsfwMode": true,
+      "nsfwGenderFilter": "male"
+    },
+    "localStorageOnly": {
+      "nsfwMode": true,
+      "nsfwGenderFilter": "all"
+    },
+    "localStorageInvalid": {
+      "nsfwMode": false,
+      "nsfwGenderFilter": "female"
+    },
+    "localStorageBrokenJson": {
+      "nsfwMode": false,
+      "nsfwGenderFilter": "female"
+    },
+    "nothing": {
+      "nsfwMode": false,
+      "nsfwGenderFilter": "female"
+    }
+  }
+}

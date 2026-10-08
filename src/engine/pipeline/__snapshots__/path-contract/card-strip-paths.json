@@ -1,0 +1,60 @@
+{
+  "gameplayHistory": [
+    "元数据.回合序号",
+    "元数据.叙事历史",
+    "元数据.推理历史",
+    "元数据.剧情规划",
+    "元数据.上次对话前快照",
+    "元数据.当前行动选项",
+    "系统.扩展.storageHealth",
+    "记忆.短期",
+    "记忆.中期",
+    "记忆.长期",
+    "记忆.隐式中期",
+    "角色.效果",
+    "社交.事件.事件记录",
+    "社交.关系.*.记忆",
+    "社交.关系.*.私聊历史",
+    "社交.关系.*.上次主回合更新回合",
+    "世界.状态.心跳.历史",
+    "世界.状态.心跳.上次心跳回合序号",
+    "世界.状态.心跳.上次执行时间",
+    "系统.actionOptions",
+    "系统.扩展.image.tasks"
+  ],
+  "secrets": [
+    "系统.扩展.image.config"
+  ],
+  "nsfw": [
+    "角色.身体",
+    "社交.关系.*.私密信息",
+    "角色.图片档案.香闺秘档",
+    "社交.关系.*.图片档案.香闺秘档"
+  ],
+  "generationHistory": [
+    "角色.图片档案.生图历史",
+    "社交.关系.*.图片档案.生图历史",
+    "系统.扩展.image.sceneArchive.生图历史"
+  ],
+  "referenceGallery": [
+    "系统.扩展.image.referenceLibrary"
+  ],
+  "promptSettings": "系统.设置.prompt",
+  "heroinePlan": "元数据.女主规划",
+  "plotDirection": "元数据.剧情导向",
+  "engramMemory": "系统.扩展.engramMemory",
+  "capturedSettings": "系统.扩展.slotWorldBooks",
+  "narrativeContract": "系统.扩展.narrativeContract",
+  "characterVectors": "系统.扩展.characterVectors",
+  "variableReset": {
+    "reputationPath": "角色.可变属性.声望",
+    "vitalPaths": [
+      "角色.可变属性.体力",
+      "角色.可变属性.精力"
+    ],
+    "vitalCurrentField": "当前",
+    "vitalCapField": "上限"
+  },
+  "systemSettings": "系统.设置",
+  "characterRoot": "角色"
+}

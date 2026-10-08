@@ -1,0 +1,333 @@
+{
+  "emptySave/valid": {
+    "系统": {
+      "nsfwMode": true,
+      "nsfwGenderFilter": "male",
+      "actionOptions": {
+        "mode": "story",
+        "pace": "slow",
+        "customPrompt": "多写对白"
+      },
+      "设置": {
+        "cot": {
+          "enabled": true,
+          "judgeEnabled": true,
+          "injectStep2": false,
+          "reasoningRingSize": 4
+        },
+        "bodyPolish": true,
+        "social": {
+          "presenceEnabled": true
+        },
+        "prompt": {
+          "perspective": "第二人称",
+          "wordCountRequirement": 650,
+          "storyStyle": "general",
+          "enableNoControl": true,
+          "enableActionOptions": true,
+          "actionOptionsMode": "action",
+          "actionPace": "fast",
+          "customSystemPrompt": ""
+        }
+      },
+      "扩展": {
+        "image": {
+          "enabled": true
+        }
+      }
+    },
+    "世界": {
+      "状态": {
+        "心跳": {
+          "配置": {
+            "enabled": true,
+            "period": 7
+          }
+        }
+      }
+    },
+    "元数据": {
+      "女主规划": {
+        "stageProgression": [],
+        "heroineEntries": [],
+        "interactionEvents": [],
+        "scenePlans": []
+      }
+    }
+  },
+  "emptySave/absent": {
+    "系统": {
+      "设置": {
+        "prompt": {
+          "perspective": "第二人称",
+          "wordCountRequirement": 650,
+          "storyStyle": "general",
+          "enableNoControl": true,
+          "enableActionOptions": true,
+          "actionOptionsMode": "action",
+          "actionPace": "fast",
+          "customSystemPrompt": ""
+        }
+      }
+    },
+    "元数据": {
+      "女主规划": {
+        "stageProgression": [],
+        "heroineEntries": [],
+        "interactionEvents": [],
+        "scenePlans": []
+      }
+    }
+  },
+  "emptySave/invalid": {
+    "系统": {
+      "设置": {
+        "prompt": {
+          "perspective": "第二人称",
+          "wordCountRequirement": 650,
+          "storyStyle": "general",
+          "enableNoControl": true,
+          "enableActionOptions": true,
+          "actionOptionsMode": "action",
+          "actionPace": "fast",
+          "customSystemPrompt": ""
+        }
+      }
+    },
+    "元数据": {
+      "女主规划": {
+        "stageProgression": [],
+        "heroineEntries": [],
+        "interactionEvents": [],
+        "scenePlans": []
+      }
+    }
+  },
+  "populatedSave/valid": {
+    "元数据": {
+      "回合序号": 3,
+      "女主规划": {
+        "stageProgression": [],
+        "heroineEntries": [],
+        "interactionEvents": [],
+        "scenePlans": []
+      }
+    },
+    "世界": {
+      "状态": {
+        "心跳": {
+          "配置": {
+            "enabled": true,
+            "period": 7
+          }
+        }
+      }
+    },
+    "系统": {
+      "nsfwMode": true,
+      "nsfwGenderFilter": "male",
+      "actionOptions": {
+        "mode": "story",
+        "pace": "slow",
+        "customPrompt": "多写对白"
+      },
+      "设置": {
+        "cot": {
+          "enabled": true,
+          "judgeEnabled": true,
+          "injectStep2": false,
+          "reasoningRingSize": 4
+        },
+        "bodyPolish": true,
+        "social": {
+          "presenceEnabled": true
+        },
+        "prompt": {
+          "perspective": "第二人称",
+          "wordCountRequirement": 650,
+          "storyStyle": "general",
+          "enableNoControl": true,
+          "enableActionOptions": true,
+          "actionOptionsMode": "action",
+          "actionPace": "fast",
+          "customSystemPrompt": ""
+        }
+      },
+      "扩展": {
+        "image": {
+          "enabled": true
+        }
+      }
+    }
+  },
+  "populatedSave/absent": {
+    "元数据": {
+      "回合序号": 3,
+      "女主规划": {
+        "stageProgression": [],
+        "heroineEntries": [],
+        "interactionEvents": [],
+        "scenePlans": []
+      }
+    },
+    "世界": {
+      "状态": {
+        "心跳": {
+          "配置": {
+            "enabled": false,
+            "period": 3
+          }
+        }
+      }
+    },
+    "系统": {
+      "nsfwMode": false,
+      "nsfwGenderFilter": "female",
+      "actionOptions": {
+        "mode": "action",
+        "pace": "fast",
+        "customPrompt": ""
+      },
+      "设置": {
+        "cot": {
+          "enabled": false,
+          "judgeEnabled": false,
+          "injectStep2": true,
+          "reasoningRingSize": 3
+        },
+        "bodyPolish": false,
+        "social": {
+          "presenceEnabled": false
+        },
+        "prompt": {
+          "perspective": "第二人称",
+          "wordCountRequirement": 650,
+          "storyStyle": "general",
+          "enableNoControl": true,
+          "enableActionOptions": true,
+          "actionOptionsMode": "action",
+          "actionPace": "fast",
+          "customSystemPrompt": ""
+        }
+      },
+      "扩展": {
+        "image": {
+          "enabled": false
+        }
+      }
+    }
+  },
+  "populatedSave/invalid": {
+    "元数据": {
+      "回合序号": 3,
+      "女主规划": {
+        "stageProgression": [],
+        "heroineEntries": [],
+        "interactionEvents": [],
+        "scenePlans": []
+      }
+    },
+    "世界": {
+      "状态": {
+        "心跳": {
+          "配置": {
+            "enabled": false,
+            "period": 3
+          }
+        }
+      }
+    },
+    "系统": {
+      "nsfwMode": false,
+      "nsfwGenderFilter": "female",
+      "actionOptions": {
+        "mode": "action",
+        "pace": "fast",
+        "customPrompt": ""
+      },
+      "设置": {
+        "cot": {
+          "enabled": false,
+          "judgeEnabled": false,
+          "injectStep2": true,
+          "reasoningRingSize": 3
+        },
+        "bodyPolish": false,
+        "social": {
+          "presenceEnabled": false
+        },
+        "prompt": {
+          "perspective": "第二人称",
+          "wordCountRequirement": 650,
+          "storyStyle": "general",
+          "enableNoControl": true,
+          "enableActionOptions": true,
+          "actionOptionsMode": "action",
+          "actionPace": "fast",
+          "customSystemPrompt": ""
+        }
+      },
+      "扩展": {
+        "image": {
+          "enabled": false
+        }
+      }
+    }
+  },
+  "markLoaded/valid": {
+    "系统": {
+      "nsfwMode": true,
+      "nsfwGenderFilter": "male",
+      "actionOptions": {
+        "mode": "story",
+        "pace": "slow",
+        "customPrompt": "多写对白"
+      },
+      "设置": {
+        "cot": {
+          "enabled": true,
+          "judgeEnabled": true,
+          "injectStep2": false,
+          "reasoningRingSize": 4
+        },
+        "bodyPolish": true,
+        "social": {
+          "presenceEnabled": true
+        },
+        "prompt": {
+          "perspective": "第二人称",
+          "wordCountRequirement": 650,
+          "storyStyle": "general",
+          "enableNoControl": true,
+          "enableActionOptions": true,
+          "actionOptionsMode": "action",
+          "actionPace": "fast",
+          "customSystemPrompt": ""
+        }
+      },
+      "扩展": {
+        "image": {
+          "enabled": true
+        }
+      }
+    },
+    "世界": {
+      "状态": {
+        "心跳": {
+          "配置": {
+            "enabled": true,
+            "period": 7
+          }
+        }
+      }
+    },
+    "元数据": {
+      "女主规划": {
+        "stageProgression": [],
+        "heroineEntries": [],
+        "interactionEvents": [],
+        "scenePlans": []
+      }
+    }
+  }
+}

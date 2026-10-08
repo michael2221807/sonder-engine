@@ -3,3 +3,4 @@
 src/engine/pipeline/stages/__snapshots__/request-matrix/*.json text eol=lf
 src/engine/ai/__snapshots__/reply-corpus/*.json text eol=lf
 src/engine/image/__snapshots__/**/*.json text eol=lf
+src/engine/pipeline/__snapshots__/path-contract/*.json text eol=lf
