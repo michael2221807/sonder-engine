@@ -28,7 +28,7 @@ export function readRoundNumber(stateTree: GameStateTree): number | null {
 }
 
 /** 存档在 IndexedDB 中的 key 格式 */
-function saveKey(profileId: string, slotId: string): string {
+export function saveKey(profileId: string, slotId: string): string {
   return `save_${profileId}_${slotId}`;
 }
 
