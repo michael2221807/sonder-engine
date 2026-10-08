@@ -30,8 +30,19 @@ import type { VectorBoardAccess, BoardView } from '@/features/plot-vector/board-
 import { readVectorState, type PreparedVector } from '@/features/plot-vector/runtime';
 import { readBoardShape, type BoardShape } from '@/features/plot-vector/vector-board';
 import { SIX_CELL_RING_ID } from '@/features/plot-vector/default-board';
-import { arrange, rateStoryCard, sweep, tableModel, tripWalk, unratedStoryCards, type RoundOpening, type TableCard, type TableCardKind, type TableModel } from '@/features/plot-vector/table-model';
-import { RATING_VERSION, readRating, type CardRating, type CardTier } from '@/features/plot-vector/rating';
+import { arrange, rateStoryCard, sweep, tableModel, tripWalk, unratedStoryCards, type RoundOpening, type TableCard, type TableModel } from '@/features/plot-vector/table-model';
+import { type CardRating, type CardTier } from '@/features/plot-vector/rating';
+import {
+  PREFS_KEY,
+  compareSeen,
+  createTierCacheDropper,
+  readPrefs,
+  readRatingCache,
+  readSeen,
+  writeRatingCache,
+  writeSeen,
+  type Arrivals,
+} from '@/ui/composables/plot-vector/table-memory';
 import { chargeFull, dealIn, dissolve, levelUp, settle, tierRank, topTier } from './table-effects';
 import { weatherIcon, WEATHER_PATHS } from './weather-icon';
 import { cardTripReceipt } from '@/features/plot-vector/card-trip-receipt';
@@ -43,58 +54,10 @@ const access = inject<VectorBoardAccess | undefined>('plotVectorBoard', undefine
 const enabled = ref(readPlotVectorControl().enabled);
 
 // ── Per-viewer conveniences (not game state): the two switches in "?", and which cards were already seen. ──
-const PREFS_KEY = 'aga:plotVector:table';
-function readPrefs(): { animate: boolean; exact: boolean } {
-  try {
-    const raw = JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') as Record<string, unknown>;
-    return { animate: raw.animate !== false, exact: raw.exact === true };
-  } catch { return { animate: true, exact: false }; }
-}
 const prefs = reactive(readPrefs());
 watch(prefs, value => { try { localStorage.setItem(PREFS_KEY, JSON.stringify(value)); } catch { /* storage unavailable */ } });
-/** What the player saw of each card the last time the table was open (per save, this device only). */
-interface SeenCard { kind: TableCardKind; name: LocalizedLabel; line?: LocalizedLabel; tier?: CardTier; level?: number; resting?: boolean }
-const seenKey = (slot: string) => `aga:plotVector:seen:${slot}`;
-function readSeen(slot: string): Record<string, Partial<SeenCard>> | null {
-  try {
-    const raw = localStorage.getItem(seenKey(slot));
-    if (!raw) return null;
-    const data = JSON.parse(raw) as unknown;
-    // An older record kept only the ids.
-    if (Array.isArray(data)) return Object.fromEntries(data.filter((id): id is string => typeof id === 'string').map(id => [id, {}]));
-    const cards = data && typeof data === 'object' ? (data as { cards?: unknown }).cards : undefined;
-    return cards && typeof cards === 'object' ? cards as Record<string, Partial<SeenCard>> : null;
-  } catch { return null; }
-}
-function writeSeen(slot: string, cards: Record<string, SeenCard>): void {
-  try { localStorage.setItem(seenKey(slot), JSON.stringify({ v: 2, cards })); } catch { /* storage unavailable */ }
-}
-/**
- * Ratings the table worked out for story cards the runtime has not rated yet (their tier and what they do), kept
- * on this device so a slow phone works each one out once, not on every visit (the runtime's own rating replaces
- * them as rounds go by). The older tiers-only record is dropped.
- */
-const ratingsKey = (slot: string) => `aga:plotVector:ratings:${slot}`;
-/** The tiers-only record an earlier build kept, dropped once per slot. */
-const droppedTierCache = new Set<string>();
-function dropTierCache(slot: string): void {
-  if (droppedTierCache.has(slot)) return;
-  droppedTierCache.add(slot);
-  try { localStorage.removeItem(`aga:plotVector:tiers:${slot}`); } catch { /* storage unavailable */ }
-}
-function readRatingCache(slot: string): Map<string, CardRating> {
-  try {
-    const data = JSON.parse(localStorage.getItem(ratingsKey(slot)) ?? 'null') as { v?: unknown; ratings?: unknown } | null;
-    if (data?.v !== RATING_VERSION || !data.ratings || typeof data.ratings !== 'object') return new Map();
-    return new Map(Object.entries(data.ratings as Record<string, unknown>).flatMap(([id, raw]) => {
-      const rating = readRating(raw);
-      return rating ? [[id, rating] as const] : [];
-    }));
-  } catch { return new Map(); }
-}
-function writeRatingCache(slot: string, ratings: ReadonlyMap<string, CardRating>): void {
-  try { localStorage.setItem(ratingsKey(slot), JSON.stringify({ v: RATING_VERSION, ratings: Object.fromEntries(ratings) })); } catch { /* storage unavailable */ }
-}
+/** The tiers-only record an earlier build kept, dropped once per slot (one memory per table instance). */
+const dropTierCache = createTierCacheDropper();
 const slotOf = (next: BoardView) => next.prepared.id.split('/').slice(0, 2).join('/');
 
 // ── The closed badge reads the saved board straight from the state (no copy of the tree). ──
@@ -228,31 +191,13 @@ function stopEffects(): void {
   effectTimers = [];
 }
 onBeforeUnmount(stopEffects);
-interface Arrivals { fresh: string[]; leveled: string[]; charged: string[]; departed: TableCard[] }
 /** Compare with what the player saw last time: new cards, growth, recharge, and supply cards that were used up. */
 function markSeen(next: BoardView): Arrivals {
   const slot = slotOf(next);
   const now = tableModel(next, next.prepared, next.prepared.layout, readBoardShape(next.state.shape), provisional.value);
   const before = readSeen(slot);
-  const record: Record<string, SeenCard> = {};
-  for (const card of Object.values(now.cards)) {
-    record[card.id] = { kind: card.kind, name: card.name, ...(card.line ? { line: card.line } : {}), ...(card.tier ? { tier: card.tier } : {}),
-      ...(card.level ? { level: card.level.value } : {}), ...(card.resting ? { resting: true } : {}) };
-  }
-  for (const f of now.forming) record[f.id] = { kind: f.kind, name: { zh: f.name, en: f.name } };
+  const { record, arrivals } = compareSeen(now, before);
   writeSeen(slot, record);
-  const arrivals: Arrivals = { fresh: [], leveled: [], charged: [], departed: [] };
-  if (!before) { fresh.value = new Set(); return arrivals; }
-  for (const [id, card] of Object.entries(record)) {
-    const was = before[id];
-    if (!was) { arrivals.fresh.push(id); continue; }
-    if (was.level !== undefined && (card.level ?? 0) > was.level) arrivals.leveled.push(id);
-    if (was.resting && !card.resting) arrivals.charged.push(id);
-  }
-  for (const [id, was] of Object.entries(before)) {
-    if (record[id] || was.kind !== 'supply' || !was.name) continue;
-    arrivals.departed.push({ id, kind: 'supply', name: was.name, ...(was.line ? { line: was.line } : {}), ...(was.tier ? { tier: was.tier } : {}), effects: [], resting: false });
-  }
   fresh.value = new Set(arrivals.fresh);
   return arrivals;
 }
