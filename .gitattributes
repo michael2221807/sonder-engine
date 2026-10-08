@@ -1,0 +1,3 @@
+# Request-matrix snapshots are compared byte for byte (vitest toMatchFileSnapshot): keep them LF in every checkout,
+# including Windows with core.autocrlf=true, or the matrix fails on a fresh checkout.
+src/engine/pipeline/stages/__snapshots__/request-matrix/*.json text eol=lf
