@@ -26,7 +26,6 @@ import type { EngramEventNode } from './event-builder';
 import { EntityBuilder } from './entity-builder';
 import type { EngramEntity } from './entity-builder';
 import { inferEntityType, isSentenceLikeName, makeFactStubEntity } from './entity-builder';
-import type { EngramRelation } from './engram-types';
 import { VectorStore } from './vector-store';
 import { Embedder } from './embedder';
 import { loadEngramConfig } from './engram-config';
@@ -73,24 +72,23 @@ export type {
   EngramWriteSnapshot,
 } from './engram-types';
 export { DEFAULT_ENGRAM_CONFIG } from './engram-types';
-import { ENGRAM_SCHEMA_VERSION, EDGE_CAPACITY_DEFAULT, normalizeEngramBlock } from './engram-types';
+import { ENGRAM_SCHEMA_VERSION, EDGE_CAPACITY_DEFAULT } from './engram-types';
 import type { EngramStateData } from './engram-types';
+import {
+  loadEngramBlock,
+  isLegacyEngramData,
+  migrateLegacyEngram,
+  migrateEngramSchema,
+  preserveEmbeddingFlags,
+} from './engram-state';
+import { trimEvents, pruneToImportant, pruneEdgesToImportant } from './engram-prune';
+import type { ImportantNpcScope, PrunedData } from './engram-prune';
 import type {
   EngramConfig,
-  EngramTrimConfig,
   EngramWriteSnapshot,
   EngramWriteEventDetail,
   EngramWriteEntityDelta,
 } from './engram-types';
-
-/** 修剪后的数据集 */
-interface PrunedData {
-  events: EngramEventNode[];
-  entities: EngramEntity[];
-  relations: EngramRelation[];
-}
-
-type NpcRelationshipEntry = Record<string, unknown>;
 
 /** 当前 engramMemory schema 版本 —— v3 = KnowledgeEdge, v4 = EngramEdge (V2 Graphiti) */
 const CURRENT_SCHEMA_VERSION = ENGRAM_SCHEMA_VERSION;
@@ -367,33 +365,153 @@ export class EngramManager {
     const startTime = performance.now();
     const currentRound = stateManager.get<number>(this.roundNumberPath) ?? 0;
 
-    // ── Step 0: Legacy migration ──
-    const existing = this.loadEngram(stateManager);
-    const isLegacy = this.isLegacyData(existing);
-    const engram = isLegacy ? this.migrateLegacy(stateManager) : existing;
-
-    // ── Step 0.5: V2 Graphiti migration — ensure v2Edges initialized ──
-    if (engram.meta.schemaVersion < 4) {
-      engram.v2Edges = engram.v2Edges ?? [];
-      engram.meta.schemaVersion = 4;
-      console.info('[Engram] Migrated to v4: initialized v2Edges');
-    }
-
-    if (engram.meta.schemaVersion < 5) {
-      for (const edge of engram.v2Edges) {
-        if (edge.learnedAtRound == null) edge.learnedAtRound = edge.createdAtRound;
-        if (edge.invalidatedAtRound != null && edge.invalidAtRound == null) {
-          edge.invalidAtRound = edge.invalidatedAtRound;
-        }
-      }
-      engram.meta.schemaVersion = 5;
-      console.info('[Engram] Migrated to v5: temporal fields (learnedAtRound, invalidAtRound)');
-    }
+    // ── Step 0 / 0.5: legacy + schema migration ──
+    const engram = this.loadMigrated(stateManager);
 
     // Snapshot previous state for delta detection
     const prevEntityMap = new Map(engram.entities.map((e) => [e.name, e]));
 
     // ── Step 1: 事件提取 ──
+    const newEvents = this.buildRoundEvents(response, stateManager, currentRound);
+
+    const allEvents: EngramEventNode[] = [...engram.events, ...newEvents];
+
+    // ── Step 2 / 2.3 / 2.25: 实体构建（双源）+ 恢复用户实体与桩实体 ──
+    const entities = this.buildRoundEntities(allEvents, engram, stateManager, currentRound, options);
+
+    // ── Canon Capture: fold this round's captured relationships into the same batch ──
+    //
+    // Deliberately merged into the EXISTING write rather than given its own
+    // `processResponse()` call: a second call would rebuild every Event and Entity and
+    // re-run embedding for the round, doubling the cost to add one edge.
+    // Canon facts go FIRST. When the model and the player describe the same relationship
+    // in one round, whichever is processed first becomes the edge and the other dedupes
+    // into it — so leading with canon means the surviving edge carries the PLAYER's
+    // wording (and their `canonEntryId`), not the model's paraphrase of it.
+    const canonFacts = buildCanonFacts(options?.canonMutations);
+    const combinedFacts: KnowledgeFact[] = [
+      ...canonFacts,
+      ...(response.knowledgeFacts ?? []).map((kf) => ({
+        fact: kf.fact,
+        sourceEntity: kf.sourceEntity,
+        targetEntity: kf.targetEntity,
+      })),
+    ];
+
+    // ── Step 2.5: Tier 1 — 自动补桩缺失实体（事实边端点） ──
+    if (config.knowledgeEdgeMode === 'active' && combinedFacts.length > 0) {
+      this.stubMissingFactEndpoints(entities, combinedFacts, currentRound);
+    }
+
+    // ── Step 3: 关系（V2 不再构建，仅保留历史数据） ──
+    const relations = engram.relations;
+
+    // ── Step 3b: Knowledge edge build ──
+    let edgesPrunedCount = 0;
+    const edgeActive = config.knowledgeEdgeMode === 'active';
+    if (edgeActive && combinedFacts.length > 0) {
+      edgesPrunedCount = await this.buildKnowledgeEdges(
+        engram, entities, combinedFacts, newEvents, currentRound, config, options,
+      );
+    }
+
+    // ── Step 4: 修剪（重点 NPC 过滤） ──
+    const data: PrunedData = config.pruneToImportantNpcs
+      ? pruneToImportant(allEvents, entities, relations, stateManager, this.importantNpcScope())
+      : { events: allEvents, entities, relations };
+
+    // Apply NPC importance filter to V2 edges (episodes >= 3 exempt)
+    if (config.pruneToImportantNpcs && engram.v2Edges.length > 0) {
+      engram.v2Edges = pruneEdgesToImportant(engram.v2Edges, stateManager, this.importantNpcScope());
+    }
+
+    const eventsBeforeTrim = data.events.length;
+    const entitiesBeforeTrim = data.entities.length;
+
+    // ── Step 5: trim 策略 ──
+    const trimmedEvents = trimEvents(data.events, config.trim);
+    const trimmedEntities = data.entities.slice(-config.maxEntities);
+
+    // 保留已有向量化状态（通过 name / id 合并）
+    const preserveEmbedFlags = preserveEmbeddingFlags(
+      trimmedEvents,
+      trimmedEntities,
+      engram,
+    );
+
+    const updatedEngram: EngramStateData = {
+      events: preserveEmbedFlags.events,
+      entities: preserveEmbedFlags.entities,
+      relations: data.relations,
+      v2Edges: engram.v2Edges,
+      meta: {
+        lastUpdated: Date.now(),
+        eventCount: preserveEmbedFlags.events.length,
+        embeddedEventCount: preserveEmbedFlags.events.filter((e) => e.is_embedded).length,
+        embeddedEntityCount: preserveEmbedFlags.entities.filter((e) => e.is_embedded).length,
+        schemaVersion: Math.max(engram.meta.schemaVersion, CURRENT_SCHEMA_VERSION),
+        v2PendingReview: engram.meta.v2PendingReview ?? null,
+      },
+    };
+    options?.guard?.();
+    stateManager.set(this.engramPath, updatedEngram, 'system');
+
+    // ── Step 6: 向量 trim 同步 ──
+    const keptEventIds = new Set(preserveEmbedFlags.events.map((e) => e.id));
+    const keptEntityNames = new Set(preserveEmbedFlags.entities.map((e) => e.name));
+    const slot = this.getActiveSlot();
+    if (slot?.profileId && slot?.slotId) {
+      this.vectorStore
+        .trimToMatchEvents(keptEventIds, keptEntityNames, slot.profileId, slot.slotId)
+        .catch((err) => console.warn('[Engram] trimToMatchEvents failed (non-blocking):', err));
+    }
+
+    // ── Step 7: 异步向量化（events + entities + v2Edges 合批） ──
+    const unembeddedEntities = preserveEmbedFlags.entities.filter((e) => !e.is_embedded);
+    const unembeddedEdges = engram.v2Edges.filter((e) => !e.is_embedded);
+    const vectorizeQueued = newEvents.length + unembeddedEntities.length + unembeddedEdges.length;
+    if (newEvents.length > 0 || unembeddedEntities.length > 0 || unembeddedEdges.length > 0) {
+      this.vectorizeAsync(newEvents, unembeddedEntities, stateManager, unembeddedEdges, options?.guard).catch((err) =>
+        console.warn('[Engram] Vectorization failed (non-blocking):', err),
+      );
+    }
+
+    return this.buildWriteSnapshot({
+      engram,
+      newEvents,
+      prevEntityMap,
+      finalEntities: preserveEmbedFlags.entities,
+      relationsTotal: data.relations.length,
+      currentRound,
+      startTime,
+      edgesPrunedCount,
+      trim: {
+        eventsBefore: eventsBeforeTrim,
+        eventsAfter: trimmedEvents.length,
+        entitiesBefore: entitiesBeforeTrim,
+        entitiesAfter: trimmedEntities.length,
+      },
+      vectorizeQueued,
+    });
+  }
+
+  /** Step 0 + 0.5: load the block, clear legacy data, run the v4/v5 schema steps. */
+  private loadMigrated(stateManager: StateManager): EngramStateData {
+    const existing = this.loadEngram(stateManager);
+    const isLegacy = isLegacyEngramData(existing);
+    const engram = isLegacy
+      ? migrateLegacyEngram(stateManager, this.engramPath, this.vectorStore, this.getActiveSlot)
+      : existing;
+    migrateEngramSchema(engram);
+    return engram;
+  }
+
+  /** Step 1: this round's event node (+ the model's mid-term summary on the first one). */
+  private buildRoundEvents(
+    response: AIResponse,
+    stateManager: StateManager,
+    currentRound: number,
+  ): EngramEventNode[] {
     const eventPaths = {
       playerName: this.playerNamePath,
       playerLocation: this.playerLocationPath,
@@ -410,10 +528,17 @@ export class EngramManager {
         }
       }
     }
+    return newEvents;
+  }
 
-    const allEvents: EngramEventNode[] = [...engram.events, ...newEvents];
-
-    // ── Step 2: 实体构建（双源） ──
+  /** Step 2 + 2.3 + 2.25: build entities, then restore user-created and pending-enrichment ones. */
+  private buildRoundEntities(
+    allEvents: EngramEventNode[],
+    engram: EngramStateData,
+    stateManager: StateManager,
+    currentRound: number,
+    options?: ProcessResponseOptions,
+  ): EngramEntity[] {
     const entityPaths = {
       playerName: this.playerNamePath,
       relationships: this.relationshipsPath,
@@ -458,204 +583,143 @@ export class EngramManager {
         }
       }
     }
+    return entities;
+  }
 
-    // ── Canon Capture: fold this round's captured relationships into the same batch ──
-    //
-    // Deliberately merged into the EXISTING write rather than given its own
-    // `processResponse()` call: a second call would rebuild every Event and Entity and
-    // re-run embedding for the round, doubling the cost to add one edge.
-    // Canon facts go FIRST. When the model and the player describe the same relationship
-    // in one round, whichever is processed first becomes the edge and the other dedupes
-    // into it — so leading with canon means the surviving edge carries the PLAYER's
-    // wording (and their `canonEntryId`), not the model's paraphrase of it.
-    const canonFacts = buildCanonFacts(options?.canonMutations);
-    const combinedFacts: KnowledgeFact[] = [
-      ...canonFacts,
-      ...(response.knowledgeFacts ?? []).map((kf) => ({
-        fact: kf.fact,
-        sourceEntity: kf.sourceEntity,
-        targetEntity: kf.targetEntity,
-      })),
-    ];
-
-    // ── Step 2.5: Tier 1 — 自动补桩缺失实体（事实边端点） ──
-    if (config.knowledgeEdgeMode === 'active' && combinedFacts.length > 0) {
-      const entityNames = new Set(entities.map((e) => e.name));
-      // Derived from EntityBuilder.build()'s pre-scan — both sites must stay in sync
-      const knownLocationNames = new Set(
-        entities.filter((e) => e.type === 'location').map((e) => e.name),
-      );
-      // Scans `combinedFacts`, so a captured relationship whose entity does not exist yet
-      // gets the same stub treatment as an AI-produced one. Without this the fact would
-      // be rejected outright (`buildFacts` drops facts with two unknown endpoints) and
-      // the design's "at most one live edge per canonEntryId" metric would pass vacuously
-      // by never creating an edge at all.
-      for (const kf of combinedFacts) {
-        for (const name of [kf.sourceEntity, kf.targetEntity]) {
-          if (!name || entityNames.has(name)) continue;
-          if (isSentenceLikeName(name)) continue;
-          entities.push(makeFactStubEntity(name, inferEntityType(name, knownLocationNames), currentRound));
-          entityNames.add(name);
-        }
+  /** Step 2.5 (Tier 1): stub entities for fact endpoints that do not exist yet. Mutates `entities`. */
+  private stubMissingFactEndpoints(
+    entities: EngramEntity[],
+    combinedFacts: KnowledgeFact[],
+    currentRound: number,
+  ): void {
+    const entityNames = new Set(entities.map((e) => e.name));
+    // Derived from EntityBuilder.build()'s pre-scan — both sites must stay in sync
+    const knownLocationNames = new Set(
+      entities.filter((e) => e.type === 'location').map((e) => e.name),
+    );
+    // Scans `combinedFacts`, so a captured relationship whose entity does not exist yet
+    // gets the same stub treatment as an AI-produced one. Without this the fact would
+    // be rejected outright (`buildFacts` drops facts with two unknown endpoints) and
+    // the design's "at most one live edge per canonEntryId" metric would pass vacuously
+    // by never creating an edge at all.
+    for (const kf of combinedFacts) {
+      for (const name of [kf.sourceEntity, kf.targetEntity]) {
+        if (!name || entityNames.has(name)) continue;
+        if (isSentenceLikeName(name)) continue;
+        entities.push(makeFactStubEntity(name, inferEntityType(name, knownLocationNames), currentRound));
+        entityNames.add(name);
       }
     }
+  }
 
-    // ── Step 3: 关系（V2 不再构建，仅保留历史数据） ──
-    const relations = engram.relations;
+  /**
+   * Step 3b: FactBuilder + prune + pending-review merge. Mutates `engram.v2Edges` /
+   * `engram.meta.v2PendingReview`; returns how many edges the capacity prune dropped.
+   * The awaits and `guard()` calls keep their original order.
+   */
+  private async buildKnowledgeEdges(
+    engram: EngramStateData,
+    entities: EngramEntity[],
+    combinedFacts: KnowledgeFact[],
+    newEvents: EngramEventNode[],
+    currentRound: number,
+    config: EngramConfig,
+    options?: ProcessResponseOptions,
+  ): Promise<number> {
+    // V2 path: use FactBuilder with knowledge_facts + captured relationships
+    const kfacts: KnowledgeFact[] = combinedFacts;
 
-    // ── Step 3b: Knowledge edge build ──
-    let edgesPrunedCount = 0;
-    const edgeActive = config.knowledgeEdgeMode === 'active';
-    if (edgeActive && combinedFacts.length > 0) {
-      // V2 path: use FactBuilder with knowledge_facts + captured relationships
-      const kfacts: KnowledgeFact[] = combinedFacts;
-
-      // Load edge vectors for dedup (skip embedding if no existing edges to compare against)
-      let edgeVectors: Record<string, number[]> = {};
-      let newFactVectors = new Map<string, number[]>();
-      const slot = this.getActiveSlot();
-      const hasExistingEdges = (engram.v2Edges ?? []).length > 0;
-      if (slot?.profileId && slot?.slotId && hasExistingEdges) {
-        try {
-          const vectorData = await this.vectorStore.load(slot.profileId, slot.slotId);
-          options?.guard?.();
-          edgeVectors = vectorData.edgeVectors ?? {};
-          // Only embed for dedup when there are existing edges to compare against
-          if (Object.keys(edgeVectors).length > 0) {
-            const factsToEmbed = kfacts.map((kf) => kf.fact);
-            if (factsToEmbed.length > 0) {
-              const vectors = await this.embedder.embed(factsToEmbed);
-              options?.guard?.();
-              for (let i = 0; i < kfacts.length; i++) {
-                if (vectors[i]?.length > 0) newFactVectors.set(kfacts[i].fact, vectors[i]);
-              }
+    // Load edge vectors for dedup (skip embedding if no existing edges to compare against)
+    let edgeVectors: Record<string, number[]> = {};
+    let newFactVectors = new Map<string, number[]>();
+    const slot = this.getActiveSlot();
+    const hasExistingEdges = (engram.v2Edges ?? []).length > 0;
+    if (slot?.profileId && slot?.slotId && hasExistingEdges) {
+      try {
+        const vectorData = await this.vectorStore.load(slot.profileId, slot.slotId);
+        options?.guard?.();
+        edgeVectors = vectorData.edgeVectors ?? {};
+        // Only embed for dedup when there are existing edges to compare against
+        if (Object.keys(edgeVectors).length > 0) {
+          const factsToEmbed = kfacts.map((kf) => kf.fact);
+          if (factsToEmbed.length > 0) {
+            const vectors = await this.embedder.embed(factsToEmbed);
+            options?.guard?.();
+            for (let i = 0; i < kfacts.length; i++) {
+              if (vectors[i]?.length > 0) newFactVectors.set(kfacts[i].fact, vectors[i]);
             }
           }
-        } catch {
-          // Embedding failure is non-blocking — dedup will skip cosine checks
         }
-      }
-
-      // Do not swallow a stale-round error as an optional embedding failure.
-      options?.guard?.();
-      const result = buildFacts(
-        { knowledgeFacts: kfacts, entities, currentEventId: newEvents[0]?.id ?? null, currentRound },
-        engram.v2Edges ?? [],
-        this.vectorStore,
-        edgeVectors,
-        newFactVectors,
-        {
-          reviewThreshold: config.edgeReviewThreshold!,
-          perFactCap: config.edgeReviewPerFactCap!,
-          defaultCore: options?.defaultEdgeCore,
-          defaultSource: options?.defaultEdgeSource,
-        },
-      );
-
-      const allEdges = [...engram.v2Edges, ...result.newEdges];
-      const beforePruneCount = allEdges.length;
-      engram.v2Edges = pruneEdgesV2(allEdges, currentRound, config.edgeCapacity ?? EDGE_CAPACITY_DEFAULT);
-      edgesPrunedCount = beforePruneCount - engram.v2Edges.length;
-
-      if (result.pendingReviewPairs.length > 0) {
-        console.log(`[Engram V2] ${result.pendingReviewPairs.length} edge pair(s) flagged for contradiction review`);
-        const existingPending = engram.meta.v2PendingReview ?? [];
-        const currentEdgeIds = new Set(engram.v2Edges.map((e) => e.id));
-        const merged = [...existingPending, ...result.pendingReviewPairs]
-          .filter((p) => currentEdgeIds.has(p.oldEdgeId));
-        const seen = new Set<string>();
-        const MAX_PENDING_REVIEW = 200;
-        engram.meta.v2PendingReview = merged.filter((p) => {
-          const key = `${p.newFact}::${p.oldEdgeId}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        }).slice(-MAX_PENDING_REVIEW);
-      }
-
-      // Clean up orphaned IDB vectors from renamed edges
-      if (result.renamedEdgeIds.length > 0 && slot?.profileId && slot?.slotId) {
-        const oldIds = result.renamedEdgeIds.map((r) => r.oldId);
-        this.vectorStore
-          .deleteEdgeVectorsByIds(oldIds, slot.profileId, slot.slotId)
-          .catch((err) => console.warn('[Engram] deleteEdgeVectorsByIds failed (non-blocking):', err));
+      } catch {
+        // Embedding failure is non-blocking — dedup will skip cosine checks
       }
     }
 
-    // ── Step 4: 修剪（重点 NPC 过滤） ──
-    const data: PrunedData = config.pruneToImportantNpcs
-      ? this.pruneToImportant(allEvents, entities, relations, stateManager)
-      : { events: allEvents, entities, relations };
-
-    // Apply NPC importance filter to V2 edges (episodes >= 3 exempt)
-    if (config.pruneToImportantNpcs && engram.v2Edges.length > 0) {
-      const importantNames = this.collectImportantNpcNames(stateManager);
-      const playerName = stateManager.get<string>(this.playerNamePath) || '玩家';
-      const isRelevant = (n: string) => importantNames.has(n) || n === playerName || n === '玩家';
-
-      engram.v2Edges = engram.v2Edges.filter((e) =>
-        e.episodes.length >= 3
-        || isRelevant(e.sourceEntity)
-        || isRelevant(e.targetEntity)
-        || e.source === 'batch-sync'
-        || e.source === 'user'
-        || e.source === 'user-canon'
-        || e.source === 'opening'
-        || e.source === 'card-import'
-        || e.core === true,
-      );
-    }
-
-    const eventsBeforeTrim = data.events.length;
-    const entitiesBeforeTrim = data.entities.length;
-
-    // ── Step 5: trim 策略 ──
-    const trimmedEvents = this.trimEvents(data.events, config.trim);
-    const trimmedEntities = data.entities.slice(-config.maxEntities);
-
-    // 保留已有向量化状态（通过 name / id 合并）
-    const preserveEmbedFlags = this.preserveEmbeddingFlags(
-      trimmedEvents,
-      trimmedEntities,
-      engram,
+    // Do not swallow a stale-round error as an optional embedding failure.
+    options?.guard?.();
+    const result = buildFacts(
+      { knowledgeFacts: kfacts, entities, currentEventId: newEvents[0]?.id ?? null, currentRound },
+      engram.v2Edges ?? [],
+      this.vectorStore,
+      edgeVectors,
+      newFactVectors,
+      {
+        reviewThreshold: config.edgeReviewThreshold!,
+        perFactCap: config.edgeReviewPerFactCap!,
+        defaultCore: options?.defaultEdgeCore,
+        defaultSource: options?.defaultEdgeSource,
+      },
     );
 
-    const updatedEngram: EngramStateData = {
-      events: preserveEmbedFlags.events,
-      entities: preserveEmbedFlags.entities,
-      relations: data.relations,
-      v2Edges: engram.v2Edges,
-      meta: {
-        lastUpdated: Date.now(),
-        eventCount: preserveEmbedFlags.events.length,
-        embeddedEventCount: preserveEmbedFlags.events.filter((e) => e.is_embedded).length,
-        embeddedEntityCount: preserveEmbedFlags.entities.filter((e) => e.is_embedded).length,
-        schemaVersion: Math.max(engram.meta.schemaVersion, CURRENT_SCHEMA_VERSION),
-        v2PendingReview: engram.meta.v2PendingReview ?? null,
-      },
-    };
-    options?.guard?.();
-    stateManager.set(this.engramPath, updatedEngram, 'system');
+    const allEdges = [...engram.v2Edges, ...result.newEdges];
+    const beforePruneCount = allEdges.length;
+    engram.v2Edges = pruneEdgesV2(allEdges, currentRound, config.edgeCapacity ?? EDGE_CAPACITY_DEFAULT);
+    const edgesPrunedCount = beforePruneCount - engram.v2Edges.length;
 
-    // ── Step 6: 向量 trim 同步 ──
-    const keptEventIds = new Set(preserveEmbedFlags.events.map((e) => e.id));
-    const keptEntityNames = new Set(preserveEmbedFlags.entities.map((e) => e.name));
-    const slot = this.getActiveSlot();
-    if (slot?.profileId && slot?.slotId) {
+    if (result.pendingReviewPairs.length > 0) {
+      console.log(`[Engram V2] ${result.pendingReviewPairs.length} edge pair(s) flagged for contradiction review`);
+      const existingPending = engram.meta.v2PendingReview ?? [];
+      const currentEdgeIds = new Set(engram.v2Edges.map((e) => e.id));
+      const merged = [...existingPending, ...result.pendingReviewPairs]
+        .filter((p) => currentEdgeIds.has(p.oldEdgeId));
+      const seen = new Set<string>();
+      const MAX_PENDING_REVIEW = 200;
+      engram.meta.v2PendingReview = merged.filter((p) => {
+        const key = `${p.newFact}::${p.oldEdgeId}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).slice(-MAX_PENDING_REVIEW);
+    }
+
+    // Clean up orphaned IDB vectors from renamed edges
+    if (result.renamedEdgeIds.length > 0 && slot?.profileId && slot?.slotId) {
+      const oldIds = result.renamedEdgeIds.map((r) => r.oldId);
       this.vectorStore
-        .trimToMatchEvents(keptEventIds, keptEntityNames, slot.profileId, slot.slotId)
-        .catch((err) => console.warn('[Engram] trimToMatchEvents failed (non-blocking):', err));
+        .deleteEdgeVectorsByIds(oldIds, slot.profileId, slot.slotId)
+        .catch((err) => console.warn('[Engram] deleteEdgeVectorsByIds failed (non-blocking):', err));
     }
 
-    // ── Step 7: 异步向量化（events + entities + v2Edges 合批） ──
-    const unembeddedEntities = preserveEmbedFlags.entities.filter((e) => !e.is_embedded);
-    const unembeddedEdges = engram.v2Edges.filter((e) => !e.is_embedded);
-    const vectorizeQueued = newEvents.length + unembeddedEntities.length + unembeddedEdges.length;
-    if (newEvents.length > 0 || unembeddedEntities.length > 0 || unembeddedEdges.length > 0) {
-      this.vectorizeAsync(newEvents, unembeddedEntities, stateManager, unembeddedEdges, options?.guard).catch((err) =>
-        console.warn('[Engram] Vectorization failed (non-blocking):', err),
-      );
-    }
+    return edgesPrunedCount;
+  }
+
+  /** The write snapshot handed to the UI (event / entity deltas / edge stats / trim stats). */
+  private buildWriteSnapshot(input: {
+    engram: EngramStateData;
+    newEvents: EngramEventNode[];
+    prevEntityMap: Map<string, EngramEntity>;
+    finalEntities: EngramEntity[];
+    relationsTotal: number;
+    currentRound: number;
+    startTime: number;
+    edgesPrunedCount: number;
+    trim: NonNullable<EngramWriteSnapshot['trimmed']>;
+    vectorizeQueued: number;
+  }): EngramWriteSnapshot {
+    const {
+      engram, newEvents, prevEntityMap, finalEntities, relationsTotal,
+      currentRound, startTime, edgesPrunedCount, trim, vectorizeQueued,
+    } = input;
 
     // ── Build write snapshot ──
     const eventDetail: EngramWriteEventDetail | null = newEvents.length > 0
@@ -668,7 +732,7 @@ export class EngramManager {
         }
       : null;
 
-    const entityDeltas: EngramWriteEntityDelta[] = preserveEmbedFlags.entities.map((e) => {
+    const entityDeltas: EngramWriteEntityDelta[] = finalEntities.map((e) => {
       const prev = prevEntityMap.get(e.name);
       return {
         name: e.name,
@@ -705,110 +769,28 @@ export class EngramManager {
       capturedAt: Date.now(),
       totalDurationMs: performance.now() - startTime,
       event: eventDetail,
-      entities: { total: preserveEmbedFlags.entities.length, deltas: entityDeltas.slice(0, 20) },
-      relations: { total: data.relations.length, deltas: [] },
+      entities: { total: finalEntities.length, deltas: entityDeltas.slice(0, 20) },
+      relations: { total: relationsTotal, deltas: [] },
       snapshotVersion: 2,
-      trimmed: {
-        eventsBefore: eventsBeforeTrim,
-        eventsAfter: trimmedEvents.length,
-        entitiesBefore: entitiesBeforeTrim,
-        entitiesAfter: trimmedEntities.length,
-      },
+      trimmed: trim,
       vectorizeQueued,
       edges: edgesSnapshot,
     };
   }
 
-  // ─── Legacy migration（A8） ───
-
-  /**
-   * 检测旧版本 events —— 缺 `summary` 字段或 `structured_kv` 对象
-   * 返回 true 表示需要清空 engramMemory 并重新开始（clean state）
-   */
-  private isLegacyData(engram: EngramStateData): boolean {
-    if (!engram.events || engram.events.length === 0) return false;
-    // 任意一条 event 缺 summary 或 structured_kv → 视为旧版本
-    return engram.events.some(
-      (e) => typeof (e as { summary?: unknown }).summary !== 'string'
-        || typeof (e as { structured_kv?: unknown }).structured_kv !== 'object',
-    );
-  }
-
-  /**
-   * 清空 engramMemory + 对应的 IDB 向量数据，返回干净的空结构
-   *
-   * 用户确认过：可以直接清空老的 events 重置为 clean state（无需保留）。
-   */
-  private migrateLegacy(stateManager: StateManager): EngramStateData {
-    console.info(
-      '[Engram] Legacy data detected (events lack summary/structured_kv). ' +
-      'Clearing engramMemory and vectors to clean state (2026-04-14 migration).',
-    );
-    const empty = this.createEmpty();
-    stateManager.set(this.engramPath, empty, 'system');
-
-    // 异步清空 IDB 向量（fire-and-forget，不阻塞 migration）
-    const slot = this.getActiveSlot();
-    if (slot?.profileId && slot?.slotId) {
-      this.vectorStore
-        .deleteForSlot(slot.profileId, slot.slotId)
-        .catch((err) =>
-          console.warn('[Engram] Failed to clear legacy vectors (non-blocking):', err),
-        );
-    }
-
-    return empty;
-  }
-
-  /**
-   * 保留已有事件/实体的 is_embedded 标记
-   *
-   * trim 后生成的新事件列表中，已存在于 prevEngram 且原本已向量化的，
-   * 保持 is_embedded=true；新生成的事件/实体一律 false。
-   */
-  private preserveEmbeddingFlags(
-    events: EngramEventNode[],
-    entities: EngramEntity[],
-    prev: EngramStateData,
-  ): { events: EngramEventNode[]; entities: EngramEntity[] } {
-    const prevEventMap = new Map(prev.events.map((e) => [e.id, e.is_embedded]));
-    const prevEntityMap = new Map(prev.entities.map((e) => [e.name, e.is_embedded]));
+  /** The configured paths / field names the NPC-importance filter reads. */
+  private importantNpcScope(): ImportantNpcScope {
     return {
-      events: events.map((e) => ({ ...e, is_embedded: prevEventMap.get(e.id) ?? e.is_embedded })),
-      entities: entities.map((e) => ({ ...e, is_embedded: prevEntityMap.get(e.name) ?? e.is_embedded })),
+      relationshipsPath: this.relationshipsPath,
+      playerNamePath: this.playerNamePath,
+      npcNameField: this.npcNameField,
+      npcTypeField: this.npcTypeField,
+      npcTypeKey: this.npcTypeKey,
     };
   }
 
-  /**
-   * 完整 Trim 策略
-   */
-  private trimEvents(events: EngramEventNode[], config: EngramTrimConfig): EngramEventNode[] {
-    const { trigger, tokenLimit, countLimit, keepRecent } = config;
-
-    const recent = events.slice(-keepRecent);
-    const older = events.slice(0, -keepRecent);
-
-    if (trigger === 'count') {
-      const budget = Math.max(0, countLimit - recent.length);
-      return [...(budget > 0 ? older.slice(-budget) : []), ...recent];
-    }
-
-    const recentTokens = recent.reduce((sum, e) => sum + Math.ceil(e.text.length / 4), 0);
-    let remaining = tokenLimit - recentTokens;
-
-    const selected: EngramEventNode[] = [];
-    for (let i = older.length - 1; i >= 0 && remaining > 0; i--) {
-      const cost = Math.ceil(older[i].text.length / 4);
-      if (cost <= remaining) {
-        selected.unshift(older[i]);
-        remaining -= cost;
-      }
-    }
-    return [...selected, ...recent];
-  }
-
   private loadEngram(stateManager: StateManager): EngramStateData {
-    return normalizeEngramBlock(stateManager.get<unknown>(this.engramPath)) ?? this.createEmpty();
+    return loadEngramBlock(stateManager, this.engramPath);
   }
 
   /**
@@ -973,68 +955,4 @@ export class EngramManager {
 
     this._vectorizeAbort = null;
   }
-
-  /**
-   * 修剪到重点 NPC 相关数据
-   */
-  private pruneToImportant(
-    events: EngramEventNode[],
-    entities: EngramEntity[],
-    relations: EngramRelation[],
-    stateManager: StateManager,
-  ): PrunedData {
-    const importantNames = this.collectImportantNpcNames(stateManager);
-    const playerName = stateManager.get<string>(this.playerNamePath) || '玩家';
-    const isRelevant = (name: string): boolean =>
-      importantNames.has(name) || name === playerName || name === '玩家' || name === 'player';
-
-    return {
-      events: events.filter((e) => {
-        const kv = e.structured_kv;
-        const rolesRelevant = kv && Array.isArray(kv.role)
-          ? kv.role.some((r) => typeof r === 'string' && isRelevant(r))
-          : false;
-        return (
-          !e.subject
-          || isRelevant(e.subject)
-          || (e.object !== undefined && isRelevant(e.object))
-          || rolesRelevant
-        );
-      }),
-      entities: entities.filter((e) => isRelevant(e.name) || e.type === 'location' || e._pendingEnrichment),
-      relations: relations.filter((r) => isRelevant(r.fromName) || isRelevant(r.toName)),
-    };
-  }
-
-  private collectImportantNpcNames(stateManager: StateManager): Set<string> {
-    const raw = stateManager.get<NpcRelationshipEntry[]>(this.relationshipsPath);
-    const relationships = Array.isArray(raw) ? raw : [];
-    const names = new Set<string>();
-    for (const npc of relationships) {
-      const name = npc[this.npcNameField];
-      if (typeof name !== 'string' || !name) continue;
-      const npcType = npc[this.npcTypeField];
-      if (npcType === this.npcTypeKey || !npcType) {
-        names.add(name);
-      }
-    }
-    return names;
-  }
-
-  private createEmpty(): EngramStateData {
-    return {
-      events: [],
-      entities: [],
-      relations: [],
-      v2Edges: [],
-      meta: {
-        lastUpdated: 0,
-        eventCount: 0,
-        embeddedEventCount: 0,
-        embeddedEntityCount: 0,
-        schemaVersion: CURRENT_SCHEMA_VERSION,
-      },
-    };
-  }
-
 }
