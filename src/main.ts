@@ -54,37 +54,6 @@ import './ui/styles/mobile.css';
 
 import { eventBus } from './engine/core/event-bus';
 import { CharacterInitPipeline } from './engine/pipeline/sub-pipelines/character-init';
-import { MemorySummaryPipeline } from './engine/pipeline/sub-pipelines/memory-summary';
-import { MidTermRefinePipeline } from './engine/pipeline/sub-pipelines/mid-term-refine';
-import { CharacterVectorProposePipeline } from './engine/pipeline/sub-pipelines/character-vector-propose';
-import { LongTermCompactPipeline } from './engine/pipeline/sub-pipelines/long-term-compact';
-import { WorldHeartbeatPipeline } from './engine/pipeline/sub-pipelines/world-heartbeat';
-import { NpcGenerationPipeline } from './engine/pipeline/sub-pipelines/npc-generation';
-import { PrivacyProfileRepairPipeline } from './engine/pipeline/sub-pipelines/privacy-profile-repair';
-import { FieldRepairPipeline } from './engine/pipeline/sub-pipelines/field-repair';
-import { PlotEvaluationPipeline } from './engine/plot/plot-evaluation-pipeline';
-import { PlotDecomposer } from './engine/plot/plot-decomposer';
-import { PlotReviser } from './engine/plot/plot-reviser';
-import { NpcMemorySummarizer } from './engine/social/npc-memory-summarizer';
-import { ImageService } from './engine/image/image-service';
-import { ImageProviderRegistry } from './engine/image/provider-registry';
-import { NovelAIImageProvider } from './engine/image/providers/novelai';
-import { OpenAIImageProvider } from './engine/image/providers/openai';
-import { SDWebUIImageProvider } from './engine/image/providers/sd-webui';
-import { ComfyUIImageProvider } from './engine/image/providers/comfyui';
-import { CivitaiImageProvider } from './engine/image/providers/civitai';
-import { VolcengineImageProvider } from './engine/image/providers/volcengine';
-import { TtsService } from './engine/tts/tts-service';
-import { TtsProviderRegistry } from './engine/tts/provider-registry';
-import { CosyVoiceProvider } from './engine/tts/providers/cosyvoice';
-import { DoubaoTtsProvider } from './engine/tts/providers/doubao';
-import { SttService } from './engine/stt/stt-service';
-import { SttProviderRegistry } from './engine/stt/provider-registry';
-import { CosyVoiceSttProvider } from './engine/stt/providers/cosyvoice';
-import { DoubaoSttProvider } from './engine/stt/providers/doubao';
-import { providerCatalog, measureConnectionTest } from './engine/providers';
-import { migrateImageState } from './engine/image/save-migration';
-import { NpcChatPipeline } from './engine/pipeline/sub-pipelines/npc-chat';
 import { DEFAULT_ENGINE_PATHS } from './engine/pipeline/types';
 import { GameOrchestrator } from './engine/core/game-orchestrator';
 import { useEngineStateStore } from './engine/stores/engine-state';
@@ -114,6 +83,8 @@ import { createStateKernel } from './bootstrap/state-kernel';
 import { createMemoryStack } from './bootstrap/memory-stack';
 import { registerPackBehaviors } from './bootstrap/pack-behaviors';
 import { createEngramStack } from './bootstrap/engram-stack';
+import { createSubPipelines, type PlotVectorHolder } from './bootstrap/sub-pipelines';
+import { createMediaServices } from './bootstrap/media-services';
 
 async function bootstrap(): Promise<void> {
   const app = createApp(App);
@@ -150,235 +121,11 @@ async function bootstrap(): Promise<void> {
   // EnhancedOpeningPipeline injection which requires orchestrator.createStagesForOpening().
   let characterInitPipeline: CharacterInitPipeline | null = null;
 
-  // ── GAP_AUDIT §G2: 实例化 4 个后置子管线 ──
-  // 这些管线由 GameOrchestrator.runRound 在主回合结束后按条件触发：
-  // - MemorySummary: 短期记忆满 → 总结为一条中期记忆条目
-  // - MidTermRefine: 中期记忆满 → 精炼为长期记忆条目
-  // - WorldHeartbeat: 到达心跳周期 → 为候选 NPC 更新状态
-  // - NpcGeneration: 玩家移动到新地点 → 生成 1-3 个 NPC
-  let memorySummaryPipeline: MemorySummaryPipeline | undefined;
-  let midTermRefinePipeline: MidTermRefinePipeline | undefined;
-  let characterVectorProposePipeline: CharacterVectorProposePipeline | undefined;
-  let longTermCompactPipeline: LongTermCompactPipeline | undefined;
-  let worldHeartbeatPipeline: WorldHeartbeatPipeline | undefined;
-  let npcGenerationPipeline: NpcGenerationPipeline | undefined;
-  let privacyRepairPipeline: PrivacyProfileRepairPipeline | undefined;
-  let fieldRepairPipeline: FieldRepairPipeline | undefined;
   // Assigned when the orchestrator is built; step-3 field repair asks it for environment-ability repairs.
-  let plotVectorAdapter: AgaPlotVectorAdapter | undefined;
-  let npcMemSummarizer: NpcMemorySummarizer | undefined;
+  const plotVectorHolder: PlotVectorHolder = {};
+  const { memorySummaryPipeline, midTermRefinePipeline, characterVectorProposePipeline, longTermCompactPipeline, worldHeartbeatPipeline, npcGenerationPipeline, privacyRepairPipeline, fieldRepairPipeline, npcMemSummarizer, plotEvaluationPipeline, plotDecomposer, plotReviser, npcChatPipeline } = createSubPipelines({ pack, aiService, responseParser, promptAssembler, stateManager, commandExecutor, memoryManager, memoryRetriever, engramManager, plotVectorHolder });
 
-  if (pack) {
-    memorySummaryPipeline = new MemorySummaryPipeline(
-      aiService,
-      responseParser,
-      promptAssembler,
-      memoryManager,
-      pack,
-      stateManager, // 2026-04-11: worldview evolution 需要读游戏状态概要
-      DEFAULT_ENGINE_PATHS, // 2026-04-11 CR M-09: 路径从 config 读，不再硬编码
-    );
-    midTermRefinePipeline = new MidTermRefinePipeline(
-      aiService,
-      responseParser,
-      promptAssembler,
-      memoryManager,
-      pack,
-    );
-    // Character Vectors (R2 second half, 2026-09-06): the world proposes per-NPC vectors after
-    // the mid-term refine and every CHARACTER_VECTOR_PROPOSE_INTERVAL rounds.
-    characterVectorProposePipeline = new CharacterVectorProposePipeline(
-      aiService,
-      promptAssembler,
-      stateManager,
-      memoryManager,
-      pack,
-      DEFAULT_ENGINE_PATHS,
-    );
-    longTermCompactPipeline = new LongTermCompactPipeline(
-      aiService,
-      responseParser,
-      promptAssembler,
-      memoryManager,
-      pack,
-    );
-    worldHeartbeatPipeline = new WorldHeartbeatPipeline(
-      stateManager,
-      commandExecutor,
-      aiService,
-      responseParser,
-      promptAssembler,
-      pack,
-      DEFAULT_ENGINE_PATHS,
-      engramManager,
-    );
-    npcGenerationPipeline = new NpcGenerationPipeline(
-      stateManager,
-      commandExecutor,
-      aiService,
-      responseParser,
-      promptAssembler,
-      pack,
-      DEFAULT_ENGINE_PATHS,
-    );
-    // Phase 4 (2026-04-19): Body polish was promoted from sub-pipeline to
-    // `BodyPolishStage` inside the main pipeline (see game-orchestrator.ts).
-    // The old `BodyPolishPipeline` sub-pipeline construction was removed from here.
-
-    // Sprint Social-5: NPC memory summarizer
-    npcMemSummarizer = new NpcMemorySummarizer(
-      stateManager,
-      aiService,
-      promptAssembler,
-      DEFAULT_ENGINE_PATHS,
-    );
-
-    privacyRepairPipeline = new PrivacyProfileRepairPipeline(
-      stateManager,
-      commandExecutor,
-      aiService,
-      responseParser,
-      promptAssembler,
-      pack,
-      DEFAULT_ENGINE_PATHS,
-    );
-
-    fieldRepairPipeline = new FieldRepairPipeline(
-      stateManager,
-      commandExecutor,
-      aiService,
-      responseParser,
-      promptAssembler,
-      memoryRetriever,
-      pack,
-      DEFAULT_ENGINE_PATHS,
-      // Step 3 also regenerates abilities that failed: environment tags and one item/talent/status per round (plot vector, when enabled).
-      () => plotVectorAdapter?.abilityRepairTask() ?? Promise.resolve(null),
-    );
-  }
-
-  // Sprint Plot-1 P4: PlotEvaluationPipeline — 剧情节点评估
-  let plotEvaluationPipeline: PlotEvaluationPipeline | undefined;
-  let plotDecomposer: PlotDecomposer | undefined;
-  let plotReviser: PlotReviser | undefined;
-  if (pack) {
-    plotEvaluationPipeline = new PlotEvaluationPipeline(
-      stateManager,
-      DEFAULT_ENGINE_PATHS,
-    );
-    plotDecomposer = new PlotDecomposer(
-      aiService,
-      responseParser,
-      stateManager,
-      pack,
-      DEFAULT_ENGINE_PATHS,
-      promptAssembler,
-    );
-    // Plot Revise & Extend epic — AI revision of an existing thread's pending region
-    plotReviser = new PlotReviser(
-      plotDecomposer,
-      stateManager,
-      pack,
-      DEFAULT_ENGINE_PATHS,
-    );
-  }
-
-  // §7.2 NPC 私聊子管线 — 独立于主回合的异步 1:1 对话
-  // 通过 app.provide 暴露给 UI 层（RelationshipPanel / NpcChatModal）
-  let npcChatPipeline: NpcChatPipeline | null = null;
-  if (pack) {
-    npcChatPipeline = new NpcChatPipeline(
-      stateManager,
-      commandExecutor,
-      aiService,
-      responseParser,
-      promptAssembler,
-      pack,
-      DEFAULT_ENGINE_PATHS,
-      memoryManager,
-      engramManager,
-    );
-  }
-
-  // ── Image subsystem bootstrap (must be before orchestrator which references imageService) ──
-  const imageProviderRegistry = new ImageProviderRegistry();
-  imageProviderRegistry.register('novelai', (c) => new NovelAIImageProvider(c.endpoint, c.apiKey, c.model));
-  imageProviderRegistry.register('openai', (c) => new OpenAIImageProvider(c.endpoint, c.apiKey, c.model));
-  imageProviderRegistry.register('sd_webui', (c) => new SDWebUIImageProvider(c.endpoint, c.apiKey, c.model));
-  imageProviderRegistry.register('comfyui', (c) => new ComfyUIImageProvider(c.endpoint, c.apiKey, c.model));
-  imageProviderRegistry.register('civitai', (c) => new CivitaiImageProvider(c.endpoint, c.apiKey, c.model));
-  imageProviderRegistry.register('volcengine', (c) => new VolcengineImageProvider(c.endpoint, c.apiKey, c.model));
-
-  const imageService = new ImageService(
-    stateManager,
-    aiService,
-    promptAssembler,
-    imageProviderRegistry,
-    DEFAULT_ENGINE_PATHS,
-  );
-
-  // Pass pack-level transformer defaults to ImageService for i18n-aware prompt text
-  if (pack?.transformerDefaults) {
-    imageService.setTransformerDefaults(
-      pack.transformerDefaults as import('./engine/image/transformer-presets').TransformerDefaultsData,
-    );
-  }
-
-  migrateImageState(stateManager);
-
-  // ── TTS subsystem bootstrap (before orchestrator which references ttsService) ──
-  const ttsProviderRegistry = new TtsProviderRegistry();
-  ttsProviderRegistry.register('cosyvoice', (c) => new CosyVoiceProvider(c.endpoint, c.apiKey, c.routingPath));
-  ttsProviderRegistry.register('doubao', (c) => new DoubaoTtsProvider(c.endpoint, c.apiKey, c.routingPath, c.credentials));
-  const ttsService = new TtsService(aiService, ttsProviderRegistry);
-
-  // ── STT subsystem bootstrap (语音输入;用户触发,不进 orchestrator subPipelines) ──
-  const sttProviderRegistry = new SttProviderRegistry();
-  sttProviderRegistry.register('cosyvoice', (c) => new CosyVoiceSttProvider(c.endpoint, c.apiKey, c.routingPath));
-  sttProviderRegistry.register('doubao', (c) => new DoubaoSttProvider(c.endpoint, c.apiKey, c.routingPath, c.credentials));
-  const sttService = new SttService(aiService, sttProviderRegistry);
-
-  // ── Provider catalog wiring (epic P0) ──
-  // 1. Fail-fast pairing check: every image/tts/stt descriptor must have a
-  //    registered factory and vice versa — a mismatch is a wiring bug caught at boot.
-  for (const [category, registry] of [
-    ['image', imageProviderRegistry],
-    ['tts', ttsProviderRegistry],
-    ['stt', sttProviderRegistry],
-  ] as const) {
-    const catalogIds = providerCatalog.byCategory(category).map((d) => d.id).sort();
-    const factoryIds = [...registry.registeredBackends].sort();
-    if (JSON.stringify(catalogIds) !== JSON.stringify(factoryIds)) {
-      throw new Error(
-        `[bootstrap] provider catalog/registry mismatch for "${category}": ` +
-        `catalog=[${catalogIds.join(',')}] factories=[${factoryIds.join(',')}]`,
-      );
-    }
-  }
-  // 2. Connection-test delegation (epic P0 §3.4): the APIPanel test button now
-  //    exercises each backend's own testConnection() instead of AIService's
-  //    former hardcoded branches (which probed Civitai's endpoint for every
-  //    image backend).
-  aiService.registerConnectionTester('image', (cfg) => measureConnectionTest(async () => {
-    const backend = (cfg.backend ?? '') as import('./engine/image/types').ImageBackendType;
-    if (!imageProviderRegistry.has(backend)) {
-      return { ok: false, error: `未知图片后端 "${cfg.backend ?? ''}"（自定义后端暂不支持连测）` };
-    }
-    const provider = imageProviderRegistry.resolve({ backend, endpoint: cfg.url, apiKey: cfg.apiKey, model: cfg.model });
-    return { ok: await provider.testConnection() };
-  }));
-  aiService.registerConnectionTester('tts', (cfg) => measureConnectionTest(async () => {
-    const backend = (cfg.backend ?? 'cosyvoice') as import('./engine/tts/types').TtsBackendType;
-    if (!ttsProviderRegistry.has(backend)) return { ok: false, error: `未知配音后端 "${backend}"` };
-    const provider = ttsProviderRegistry.resolve({ backend, endpoint: cfg.url, apiKey: cfg.apiKey, model: cfg.model, routingPath: cfg.customRoutingPath, credentials: cfg.credentials });
-    return provider.testConnection({ speaker: cfg.ttsSpeaker });
-  }));
-  aiService.registerConnectionTester('stt', (cfg) => measureConnectionTest(async () => {
-    const backend = (cfg.backend ?? 'cosyvoice') as import('./engine/stt/types').SttBackendType;
-    if (!sttProviderRegistry.has(backend)) return { ok: false, error: `未知语音输入后端 "${backend}"` };
-    const provider = sttProviderRegistry.resolve({ backend, endpoint: cfg.url, apiKey: cfg.apiKey, model: cfg.model, routingPath: cfg.customRoutingPath, credentials: cfg.credentials });
-    return provider.testConnection();
-  }));
+  const { imageService, ttsService, sttService } = createMediaServices({ pack, aiService, promptAssembler, stateManager });
 
   // ── #1: 创建 Orchestrator，接通 pipeline:user-input → PipelineRunner ──
   let orchestrator: GameOrchestrator | null = null;
@@ -401,7 +148,7 @@ async function bootstrap(): Promise<void> {
     () => !orchestrator || orchestrator.isBusy, vectorNativeRules,
     () => orchestrator?.onStateEditSettled(),
     // The player's ability retry runs through the round adapter (same repair and binding as Step 3).
-    (entryId) => plotVectorAdapter ? plotVectorAdapter.regenerateAbility(entryId) : Promise.reject(new Error('ability-retry-unavailable')),
+    (entryId) => plotVectorHolder.adapter ? plotVectorHolder.adapter.regenerateAbility(entryId) : Promise.reject(new Error('ability-retry-unavailable')),
     vectorSupplyRules);
   if (pack) {
     orchestrator = new GameOrchestrator(
@@ -433,7 +180,7 @@ async function bootstrap(): Promise<void> {
         memoryManager,
         paths: DEFAULT_ENGINE_PATHS,
         plotEvaluation: plotEvaluationPipeline,
-        plotVector: plotVectorAdapter = new AgaPlotVectorAdapter(stateManager, aiService, saveManager, getActiveSlot, vectorNativeRules,
+        plotVector: plotVectorHolder.adapter = new AgaPlotVectorAdapter(stateManager, aiService, saveManager, getActiveSlot, vectorNativeRules,
           vectorPromptPolicy, vectorSupplyRules),
         stateEditInProgress: () => plotVectorBoard.isSaving,
       },
