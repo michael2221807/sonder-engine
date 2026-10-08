@@ -360,51 +360,21 @@ export class ImageService {
       });
 
       // Civitai LoRA preparation (no-op for non-civitai)
-      let composed = composedRaw;
-      let civitaiProviderParams: Record<string, unknown> | undefined;
-      let loraSnapshot: CivitaiLoraSnapshot | undefined;
-      if (params.backend === 'civitai') {
-        const prep = this.prepareCivitaiRequest(composedRaw, 'scene');
-        composed = prep.composed;
-        civitaiProviderParams = prep.providerParams;
-        loraSnapshot = prep.snapshot;
-      }
+      const { composed, civitaiProviderParams, loraSnapshot } = this.applyCivitai(params.backend, composedRaw, 'scene');
 
-      const refMeta = params.references?.length ? {
-        reference: {
-          mode: 'image_to_image' as const,
-          // 有序：归档的 id 序列必须与发给 provider 的 image 数组同序，否则
-          // 「图1/图2」的语义在复现历史任务时会错位。
-          // 与 image 数组**下标对齐**：未持久化的项（dataUrl-only）记空串占位。
-          // 早先的 .filter() 会把中间项抽掉，让 index 1 实际指向图3——正好违反
-          // 本字段自己声明的顺序契约（review Important 2026-08-29）。
-          sourceAssetIds: params.references.map((r) => r.assetId ?? ''),
-          // 幅度是整单一个值（NovelAI/Civitai 单图；豆包无此参数）→ 取首张。
-          denoiseStrength: params.references[0].denoiseStrength,
-          provider: params.backend,
-        },
-      } : {};
-      this.queue.updateStatus(task.id, 'generating', {
-        positivePrompt: composed.positive,
-        negativePrompt: composed.negative,
-        providerMeta: { ...(loraSnapshot ? { civitai: loraSnapshot } : {}), ...refMeta },
-      });
-      eventBus.emit('image:task-update', { taskId: task.id, status: 'generating' });
+      const refMeta = this.buildReferenceMeta(params.references, params.backend);
+      this.markGenerating(task.id, composed, loraSnapshot, refMeta);
 
       const blob = await this.callProvider(params.backend, composed, civitaiProviderParams, params.references, params.styleParamOverrides);
       const asset = await this.storeAsset(task, blob, params.backend);
 
-      this.queue.updateStatus(task.id, 'complete', { resultAssetId: asset.id });
-      eventBus.emit('image:task-update', { taskId: task.id, status: 'complete', assetId: asset.id });
+      this.completeTask(task.id, asset.id);
 
       this.writeToSceneArchive(asset.id, this.queue.get(task.id)!);
 
       return this.queue.get(task.id)!;
     } catch (err) {
-      const msg = (err as Error).message ?? String(err);
-      this.queue.updateStatus(task.id, 'failed', { error: msg });
-      eventBus.emit('image:task-update', { taskId: task.id, status: 'failed', error: msg });
-      return this.queue.get(task.id)!;
+      return this.failTask(task.id, err);
     }
   }
 
@@ -531,42 +501,15 @@ export class ImageService {
       });
 
       // Civitai LoRA preparation (no-op for non-civitai)
-      let composed = composedRaw;
-      let civitaiProviderParams: Record<string, unknown> | undefined;
-      let loraSnapshot: CivitaiLoraSnapshot | undefined;
-      if (params.backend === 'civitai') {
-        const prep = this.prepareCivitaiRequest(composedRaw, 'character', params.characterName);
-        composed = prep.composed;
-        civitaiProviderParams = prep.providerParams;
-        loraSnapshot = prep.snapshot;
-      }
+      const { composed, civitaiProviderParams, loraSnapshot } = this.applyCivitai(params.backend, composedRaw, 'character', params.characterName);
 
-      const refMeta = params.references?.length ? {
-        reference: {
-          mode: 'image_to_image' as const,
-          // 有序：归档的 id 序列必须与发给 provider 的 image 数组同序，否则
-          // 「图1/图2」的语义在复现历史任务时会错位。
-          // 与 image 数组**下标对齐**：未持久化的项（dataUrl-only）记空串占位。
-          // 早先的 .filter() 会把中间项抽掉，让 index 1 实际指向图3——正好违反
-          // 本字段自己声明的顺序契约（review Important 2026-08-29）。
-          sourceAssetIds: params.references.map((r) => r.assetId ?? ''),
-          // 幅度是整单一个值（NovelAI/Civitai 单图；豆包无此参数）→ 取首张。
-          denoiseStrength: params.references[0].denoiseStrength,
-          provider: params.backend,
-        },
-      } : {};
-      this.queue.updateStatus(task.id, 'generating', {
-        positivePrompt: composed.positive,
-        negativePrompt: composed.negative,
-        providerMeta: { ...(loraSnapshot ? { civitai: loraSnapshot } : {}), ...refMeta },
-      });
-      eventBus.emit('image:task-update', { taskId: task.id, status: 'generating' });
+      const refMeta = this.buildReferenceMeta(params.references, params.backend);
+      this.markGenerating(task.id, composed, loraSnapshot, refMeta);
 
       const blob = await this.callProvider(params.backend, composed, civitaiProviderParams, params.references, params.styleParamOverrides);
       const asset = await this.storeAsset(task, blob, params.backend);
 
-      this.queue.updateStatus(task.id, 'complete', { resultAssetId: asset.id });
-      eventBus.emit('image:task-update', { taskId: task.id, status: 'complete', assetId: asset.id });
+      this.completeTask(task.id, asset.id);
 
       if (params.characterName) {
         const trimmed = this.state.writeNpcImageRecord(params.characterName, {
@@ -590,10 +533,7 @@ export class ImageService {
 
       return this.queue.get(task.id)!;
     } catch (err) {
-      const msg = (err as Error).message ?? String(err);
-      this.queue.updateStatus(task.id, 'failed', { error: msg });
-      eventBus.emit('image:task-update', { taskId: task.id, status: 'failed', error: msg });
-      return this.queue.get(task.id)!;
+      return this.failTask(task.id, err);
     } finally {
       this.state.unlockGeneration(lockKey);
     }
@@ -708,42 +648,15 @@ export class ImageService {
       });
 
       // Civitai LoRA preparation (no-op for non-civitai)
-      let composed = composedRaw;
-      let civitaiProviderParams: Record<string, unknown> | undefined;
-      let loraSnapshot: CivitaiLoraSnapshot | undefined;
-      if (params.backend === 'civitai') {
-        const prep = this.prepareCivitaiRequest(composedRaw, 'secret_part', params.characterName);
-        composed = prep.composed;
-        civitaiProviderParams = prep.providerParams;
-        loraSnapshot = prep.snapshot;
-      }
+      const { composed, civitaiProviderParams, loraSnapshot } = this.applyCivitai(params.backend, composedRaw, 'secret_part', params.characterName);
 
-      const refMeta = params.references?.length ? {
-        reference: {
-          mode: 'image_to_image' as const,
-          // 有序：归档的 id 序列必须与发给 provider 的 image 数组同序，否则
-          // 「图1/图2」的语义在复现历史任务时会错位。
-          // 与 image 数组**下标对齐**：未持久化的项（dataUrl-only）记空串占位。
-          // 早先的 .filter() 会把中间项抽掉，让 index 1 实际指向图3——正好违反
-          // 本字段自己声明的顺序契约（review Important 2026-08-29）。
-          sourceAssetIds: params.references.map((r) => r.assetId ?? ''),
-          // 幅度是整单一个值（NovelAI/Civitai 单图；豆包无此参数）→ 取首张。
-          denoiseStrength: params.references[0].denoiseStrength,
-          provider: params.backend,
-        },
-      } : {};
-      this.queue.updateStatus(task.id, 'generating', {
-        positivePrompt: composed.positive,
-        negativePrompt: composed.negative,
-        providerMeta: { ...(loraSnapshot ? { civitai: loraSnapshot } : {}), ...refMeta },
-      });
-      eventBus.emit('image:task-update', { taskId: task.id, status: 'generating' });
+      const refMeta = this.buildReferenceMeta(params.references, params.backend);
+      this.markGenerating(task.id, composed, loraSnapshot, refMeta);
 
       const blob = await this.callProvider(params.backend, composed, civitaiProviderParams, params.references, params.styleParamOverrides);
       const asset = await this.storeAsset(task, blob, params.backend);
 
-      this.queue.updateStatus(task.id, 'complete', { resultAssetId: asset.id });
-      eventBus.emit('image:task-update', { taskId: task.id, status: 'complete', assetId: asset.id });
+      this.completeTask(task.id, asset.id);
 
       // Store result in both the secret archive AND the general history so
       // 图库/历史 tabs see the entry alongside portrait/full-body images.
@@ -757,11 +670,7 @@ export class ImageService {
         const metaSpread = Object.keys(archiveMeta).length > 0 ? { providerMeta: archiveMeta } : {};
 
         // Delete previous secret-part blob before overwriting the archive entry
-        const prevSecret = this.state.getSecretPartResult(params.characterName, params.part);
-        const prevSecretId = typeof prevSecret?.id === 'string' ? prevSecret.id : '';
-        if (prevSecretId && prevSecretId !== asset.id) {
-          void this.cache.delete(prevSecretId).catch(() => {/* best effort */});
-        }
+        this.deletePreviousSecretBlob(params.characterName, params.part, asset.id);
 
         this.state.setSecretPartResult(params.characterName, params.part, {
           id: asset.id,
@@ -800,10 +709,7 @@ export class ImageService {
 
       return this.queue.get(task.id)!;
     } catch (err) {
-      const msg = (err as Error).message ?? String(err);
-      this.queue.updateStatus(task.id, 'failed', { error: msg });
-      eventBus.emit('image:task-update', { taskId: task.id, status: 'failed', error: msg });
-      return this.queue.get(task.id)!;
+      return this.failTask(task.id, err);
     } finally {
       this.state.unlockGeneration(lockKey);
     }
@@ -885,42 +791,15 @@ export class ImageService {
       };
 
       // Civitai LoRA preparation (no-op for non-civitai)
-      let composed = composedRaw;
-      let civitaiProviderParams: Record<string, unknown> | undefined;
-      let loraSnapshot: CivitaiLoraSnapshot | undefined;
-      if (params.backend === 'civitai') {
-        const prep = this.prepareCivitaiRequest(composedRaw, params.subjectType, params.targetCharacter);
-        composed = prep.composed;
-        civitaiProviderParams = prep.providerParams;
-        loraSnapshot = prep.snapshot;
-      }
+      const { composed, civitaiProviderParams, loraSnapshot } = this.applyCivitai(params.backend, composedRaw, params.subjectType, params.targetCharacter);
 
-      const refMeta = params.references?.length ? {
-        reference: {
-          mode: 'image_to_image' as const,
-          // 有序：归档的 id 序列必须与发给 provider 的 image 数组同序，否则
-          // 「图1/图2」的语义在复现历史任务时会错位。
-          // 与 image 数组**下标对齐**：未持久化的项（dataUrl-only）记空串占位。
-          // 早先的 .filter() 会把中间项抽掉，让 index 1 实际指向图3——正好违反
-          // 本字段自己声明的顺序契约（review Important 2026-08-29）。
-          sourceAssetIds: params.references.map((r) => r.assetId ?? ''),
-          // 幅度是整单一个值（NovelAI/Civitai 单图；豆包无此参数）→ 取首张。
-          denoiseStrength: params.references[0].denoiseStrength,
-          provider: params.backend,
-        },
-      } : {};
-      this.queue.updateStatus(task.id, 'generating', {
-        positivePrompt: composed.positive,
-        negativePrompt: composed.negative,
-        providerMeta: { ...(loraSnapshot ? { civitai: loraSnapshot } : {}), ...refMeta },
-      });
-      eventBus.emit('image:task-update', { taskId: task.id, status: 'generating' });
+      const refMeta = this.buildReferenceMeta(params.references, params.backend);
+      this.markGenerating(task.id, composed, loraSnapshot, refMeta);
 
       const blob = await this.callProvider(params.backend, composed, civitaiProviderParams, params.references, params.styleParamOverrides);
       const asset = await this.storeAsset(task, blob, params.backend);
 
-      this.queue.updateStatus(task.id, 'complete', { resultAssetId: asset.id });
-      eventBus.emit('image:task-update', { taskId: task.id, status: 'complete', assetId: asset.id });
+      this.completeTask(task.id, asset.id);
 
       const createdAt = Date.now();
       const modelName = this.getCurrentModelName(params.backend);
@@ -930,11 +809,7 @@ export class ImageService {
       if (params.subjectType === 'scene') {
         this.writeToSceneArchive(asset.id, this.queue.get(task.id)!);
       } else if (params.subjectType === 'secret_part' && params.targetCharacter && params.part) {
-        const prevSecret = this.state.getSecretPartResult(params.targetCharacter, params.part);
-        const prevSecretId = typeof prevSecret?.id === 'string' ? prevSecret.id : '';
-        if (prevSecretId && prevSecretId !== asset.id) {
-          void this.cache.delete(prevSecretId).catch(() => {/* best effort */});
-        }
+        this.deletePreviousSecretBlob(params.targetCharacter, params.part, asset.id);
         this.state.setSecretPartResult(params.targetCharacter, params.part, {
           id: asset.id,
           taskId: task.id,
@@ -989,10 +864,7 @@ export class ImageService {
 
       return this.queue.get(task.id)!;
     } catch (err) {
-      const msg = (err as Error).message ?? String(err);
-      this.queue.updateStatus(task.id, 'failed', { error: msg });
-      eventBus.emit('image:task-update', { taskId: task.id, status: 'failed', error: msg });
-      return this.queue.get(task.id)!;
+      return this.failTask(task.id, err);
     } finally {
       if (params.subjectType !== 'scene') this.state.unlockGeneration(lockKey);
     }
@@ -1105,11 +977,7 @@ export class ImageService {
   clearNpcBackground(npcName: string): void { this.state.clearNpcBackground(npcName); }
 
   setNpcSecretPart(npcName: string, part: SecretPartType, assetId: string): void {
-    const prevResult = this.state.getSecretPartResult(npcName, part);
-    const prevId = typeof prevResult?.id === 'string' ? prevResult.id : '';
-    if (prevId && prevId !== assetId) {
-      void this.cache.delete(prevId).catch(() => {/* best effort */});
-    }
+    this.deletePreviousSecretBlob(npcName, part, assetId);
     this.state.setSecretPartResult(npcName, part, { id: assetId, status: 'complete', part, createdAt: Date.now() });
   }
 
@@ -1244,7 +1112,96 @@ export class ImageService {
     return ids;
   }
 
+  /**
+   * Archive/task `reference` metadata for an image-to-image request; `{}` when
+   * there are no references. Returns a fresh literal on every call.
+   */
+  private buildReferenceMeta(
+    references: ImageReferenceInput[] | undefined,
+    backend: ImageBackendType,
+  ) {
+    return references?.length ? {
+      reference: {
+        mode: 'image_to_image' as const,
+        // 有序：归档的 id 序列必须与发给 provider 的 image 数组同序，否则
+        // 「图1/图2」的语义在复现历史任务时会错位。
+        // 与 image 数组**下标对齐**：未持久化的项（dataUrl-only）记空串占位。
+        // 早先的 .filter() 会把中间项抽掉，让 index 1 实际指向图3——正好违反
+        // 本字段自己声明的顺序契约（review Important 2026-08-29）。
+        sourceAssetIds: references.map((r) => r.assetId ?? ''),
+        // 幅度是整单一个值（NovelAI/Civitai 单图；豆包无此参数）→ 取首张。
+        denoiseStrength: references[0].denoiseStrength,
+        provider: backend,
+      },
+    } : {};
+  }
+
+  /** Civitai LoRA preparation (no-op for non-civitai backends). */
+  private applyCivitai(
+    backend: ImageBackendType,
+    composedRaw: { positive: string; negative: string; width: number; height: number },
+    subjectType: ImageSubjectType,
+    targetCharacter?: string,
+  ): {
+    composed: { positive: string; negative: string; width: number; height: number };
+    civitaiProviderParams: Record<string, unknown> | undefined;
+    loraSnapshot: CivitaiLoraSnapshot | undefined;
+  } {
+    let composed = composedRaw;
+    let civitaiProviderParams: Record<string, unknown> | undefined;
+    let loraSnapshot: CivitaiLoraSnapshot | undefined;
+    if (backend === 'civitai') {
+      const prep = this.prepareCivitaiRequest(composedRaw, subjectType, targetCharacter);
+      composed = prep.composed;
+      civitaiProviderParams = prep.providerParams;
+      loraSnapshot = prep.snapshot;
+    }
+    return { composed, civitaiProviderParams, loraSnapshot };
+  }
+
+  /** Move a task to `generating` and announce it (status update first, then the event). */
+  private markGenerating(
+    taskId: string,
+    composed: { positive: string; negative: string },
+    loraSnapshot: CivitaiLoraSnapshot | undefined,
+    refMeta: { reference?: NonNullable<ImageTask['providerMeta']>['reference'] },
+  ): void {
+    this.queue.updateStatus(taskId, 'generating', {
+      positivePrompt: composed.positive,
+      negativePrompt: composed.negative,
+      providerMeta: { ...(loraSnapshot ? { civitai: loraSnapshot } : {}), ...refMeta },
+    });
+    eventBus.emit('image:task-update', { taskId, status: 'generating' });
+  }
+
+  private completeTask(taskId: string, assetId: string): void {
+    this.queue.updateStatus(taskId, 'complete', { resultAssetId: assetId });
+    eventBus.emit('image:task-update', { taskId, status: 'complete', assetId });
+  }
+
+  private failTask(taskId: string, err: unknown): ImageTask {
+    const msg = (err as Error).message ?? String(err);
+    this.queue.updateStatus(taskId, 'failed', { error: msg });
+    eventBus.emit('image:task-update', { taskId, status: 'failed', error: msg });
+    return this.queue.get(taskId)!;
+  }
+
+  /** Best-effort delete of the secret-part blob that is about to be overwritten. */
+  private deletePreviousSecretBlob(npcName: string, part: SecretPartType, newAssetId: string): void {
+    const prevSecret = this.state.getSecretPartResult(npcName, part);
+    const prevSecretId = typeof prevSecret?.id === 'string' ? prevSecret.id : '';
+    if (prevSecretId && prevSecretId !== newAssetId) {
+      void this.cache.delete(prevSecretId).catch(() => {/* best effort */});
+    }
+  }
+
   private getCivitaiProviderParams(): Record<string, unknown> {
+    const base = '系统.扩展.image.config.civitai';
+    return this.readCivitaiProviderParams(this.stateManager.get<string>(`${base}.additionalNetworksJson`) ?? undefined);
+  }
+
+  /** Civitai provider params from the state tree; the merged-networks JSON is supplied by the caller. */
+  private readCivitaiProviderParams(additionalNetworksJson: string | undefined): Record<string, unknown> {
     const base = '系统.扩展.image.config.civitai';
     return {
       allowMatureContent: this.stateManager.get<boolean>(`${base}.allowMatureContent`) === true,
@@ -1254,7 +1211,7 @@ export class ImageService {
       seed: this.stateManager.get<number>(`${base}.seed`) ?? undefined,
       clipSkip: this.stateManager.get<number>(`${base}.clipSkip`) ?? undefined,
       outputFormat: this.stateManager.get<string>(`${base}.outputFormat`) ?? undefined,
-      additionalNetworksJson: this.stateManager.get<string>(`${base}.additionalNetworksJson`) ?? undefined,
+      additionalNetworksJson,
       controlNetsJson: this.stateManager.get<string>(`${base}.controlNetsJson`) ?? undefined,
     };
   }
@@ -1285,18 +1242,7 @@ export class ImageService {
       rawAdditionalNetworksJson: rawJson,
     });
 
-    // Build provider params directly — avoids redundant state reads via getCivitaiProviderParams
-    const providerParams: Record<string, unknown> = {
-      allowMatureContent: this.stateManager.get<boolean>(`${base}.allowMatureContent`) === true,
-      scheduler: this.stateManager.get<string>(`${base}.scheduler`) ?? undefined,
-      steps: this.stateManager.get<number>(`${base}.steps`) ?? undefined,
-      cfgScale: this.stateManager.get<number>(`${base}.cfgScale`) ?? undefined,
-      seed: this.stateManager.get<number>(`${base}.seed`) ?? undefined,
-      clipSkip: this.stateManager.get<number>(`${base}.clipSkip`) ?? undefined,
-      outputFormat: this.stateManager.get<string>(`${base}.outputFormat`) ?? undefined,
-      additionalNetworksJson: prepared.mergedAdditionalNetworksJson,
-      controlNetsJson: this.stateManager.get<string>(`${base}.controlNetsJson`) ?? undefined,
-    };
+    const providerParams = this.readCivitaiProviderParams(prepared.mergedAdditionalNetworksJson);
 
     return {
       composed: { ...composed, positive: prepared.modifiedPositive },
