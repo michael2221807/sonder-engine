@@ -2,7 +2,7 @@
  * Rule template editor state, active-rule selection and import/export (R7 step 2).
  */
 import { type Ref, ref, computed, watch } from 'vue';
-import { type SelectOption } from '@/ui/components/shared/AgaSelect.vue';
+import type { SelectOption } from '@/ui/components/shared/AgaSelect.vue';
 import { eventBus } from '@/engine/core/event-bus';
 import type { TransformerPreset } from './transformers';
 import type { ModelRuleset } from './model-rulesets';

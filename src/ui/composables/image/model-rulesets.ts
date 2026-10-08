@@ -2,7 +2,7 @@
  * Model ruleset editor state, CRUD and import/export (R7 step 2).
  */
 import { ref, computed, watch } from 'vue';
-import { type SelectOption } from '@/ui/components/shared/AgaSelect.vue';
+import type { SelectOption } from '@/ui/components/shared/AgaSelect.vue';
 import { eventBus } from '@/engine/core/event-bus';
 import type { PanelTranslate, GetState, SetState } from './panel-deps';
 

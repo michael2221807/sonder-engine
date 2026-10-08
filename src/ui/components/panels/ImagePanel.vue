@@ -6,11 +6,11 @@
  * This is a simplified first-pass that provides actual usable controls.
  * Full ImageManagerModal (7-tab system) will be built on top of this foundation.
  */
-import { ref, computed, inject, onMounted, onUnmounted, watch, type Ref } from 'vue';
+import { ref, computed, inject, onMounted, onUnmounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import type { ImageService } from '@/engine/image/image-service';
-import type { ImageBackendType, ImageTask, ImageAsset, StylePreset } from '@/engine/image/types';
+import type { ImageBackendType, ImageTask, StylePreset } from '@/engine/image/types';
 import { generateReferenceId } from '@/engine/image/utils';
 import { listConfiguredImageBackends, extractLoraSnapshot, copyAssetToReferenceLibrary } from '@/ui/composables/image/image-backends';
 import type { GameTime, SceneNpcDetail } from '@/engine/image/scene-context';
@@ -18,11 +18,9 @@ import ImageDisplay from '@/ui/components/image/ImageDisplay.vue';
 import ImageViewer from '@/ui/components/image/ImageViewer.vue';
 import RegenerateSameModal from '@/ui/components/image/RegenerateSameModal.vue';
 import CivitaiLoraShelf from '@/ui/components/image/CivitaiLoraShelf.vue';
-import { prepareCivitaiLora } from '@/engine/image/civitai-lora';
 import { buildPromptStyleInjection } from '@/engine/image/style-preset-injection';
 import { resolveStyleParams } from '@/engine/image/style-param-resolver';
-import { PROVIDER_CAPABILITIES } from '@/engine/image/provider-capabilities';
-import type { CivitaiLoraShelfItem, CivitaiLoraScope, CivitaiLoraSnapshot } from '@/engine/image/types';
+import type { CivitaiLoraSnapshot } from '@/engine/image/types';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import AgaSelect, { type SelectOption } from '@/ui/components/shared/AgaSelect.vue';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
@@ -30,7 +28,6 @@ import AgaTabBar, { type TabItem } from '@/ui/components/shared/AgaTabBar.vue';
 import AgaProgressBar from '@/ui/components/shared/AgaProgressBar.vue';
 import AgaConfirmModal from '@/ui/components/shared/AgaConfirmModal.vue';
 import MultiReferencePicker, { type MultiReferenceItem } from '@/ui/components/shared/MultiReferencePicker.vue';
-import { appendReferenceFiles, readFileAsDataUrl } from '@/ui/components/shared/multi-reference-files';
 import { SEEDREAM_MAX_REFERENCE_IMAGES } from '@/engine/image/providers/volcengine';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import { useGameState } from '@/ui/composables/useGameState';
@@ -58,6 +55,10 @@ import type { CombinedHistoryEntry } from '@/ui/composables/image/combined-histo
 import type { ModelRuleset } from '@/ui/composables/image/model-rulesets';
 import type { RuleTemplate } from '@/ui/composables/image/rule-templates';
 import { reconcileBuiltins, mergeRulesetLocale, mergeTemplateLocale, enginePresetToRuleTemplate, engineBundleToModelRuleset } from '@/ui/composables/image/preset-seeding';
+import { useManualForm } from '@/ui/composables/image/manual-form';
+import { useReferences } from '@/ui/composables/image/references';
+import { useSecretParts } from '@/ui/composables/image/secret-parts';
+import { useSettingsTab } from '@/ui/composables/image/settings-tab';
 
 const { t } = useI18n();
 const imageService = inject<ImageService>('imageService');
@@ -102,161 +103,62 @@ const tabs = computed<TabItem[]>(() => [
 ]);
 const activeTab = ref('manual');
 
-// Manual generation state
-const selectedNpc = ref('');
-const composition = ref<'portrait' | 'half-body' | 'full-length' | 'custom'>('portrait');
-const customComposition = ref('');
-const artStyle = ref<'none' | 'generic' | 'anime' | 'realistic' | 'chinese'>('none');
-const backend = computed<ImageBackendType>(() => {
-  const saved = String(get('系统.扩展.image.config.defaultBackend') ?? 'novelai');
-  // Catalog-derived allowlist (review Critical 2026-08-26: a hand-written set
-  // here silently coerced newly-added backends back to novelai).
-  return IMAGE_BACKEND_KEYS.includes(saved as ImageBackendType) ? saved as ImageBackendType : 'novelai';
+const {
+  IMAGE_BACKEND_KEYS,
+  selectedNpc,
+  composition,
+  customComposition,
+  artStyle,
+  backend,
+  extraPrompt,
+  selectedArtistPreset,
+  selectedPngPreset,
+  sizePreset,
+  sizeScale,
+  manualWidth,
+  manualHeight,
+  backgroundMode,
+  backendSupportsImg2Img,
+  backendSupportsRefStrength,
+  backendSupportsMultiRef,
+  npcReferenceEnabled,
+  npcReferenceItems,
+  npcReferenceSource,
+  npcReferenceDenoise,
+  npcReferenceFile,
+  npcReferenceDataUrl,
+  npcReferenceAssetId,
+  npcReferenceNoise,
+  refConfigDenoiseDefault,
+  refConfigMaxUploadBytes,
+  refConfigPersist,
+} = useManualForm({
+  get,
 });
-const extraPrompt = ref('');
-const selectedArtistPreset = ref('');
-const selectedPngPreset = ref('');
-const sizePreset = ref<'none' | '1:1' | '3:4' | '9:16' | '16:9' | 'custom'>('none');
-const sizeScale = ref<'1x' | '2x'>('2x');
-const manualWidth = ref('1024');
-const manualHeight = ref('1024');
-const backgroundMode = ref(true);
-const backendSupportsImg2Img = computed(() =>
-  PROVIDER_CAPABILITIES[backend.value]?.imageToImage === true,
-);
-/**
- * Numeric 重绘幅度 slider — only rendered for backends whose API actually has a
- * strength parameter (NovelAI `strength` / Civitai `sourceImageDenoiseStrenght`).
- * Seedream/Doubao has none, so the slider would be a dead control there; the
- * hint points users at 额外要求 instead (capability-gated, epic 2026-08-27).
- */
-const backendSupportsRefStrength = computed(() =>
-  PROVIDER_CAPABILITIES[backend.value]?.referenceStrength === true,
-);
-/**
- * 多图参考（PO 决策① 2026-08-29）：只有声明 `multiReference` 的后端（当前仅
- * 豆包 Seedream）渲染多图选择器；其余后端保持原有单张控件，绝不出现「选了 5 张
- * 只有 1 张生效」的死控件。
- */
-const backendSupportsMultiRef = computed(() =>
-  PROVIDER_CAPABILITIES[backend.value]?.multiReference === true,
-);
-const npcReferenceEnabled = ref(false);
-const npcReferenceItems = ref<MultiReferenceItem[]>([]);
-const npcReferenceSource = ref('upload');
-const npcReferenceDenoise = ref(0.65);
-const npcReferenceFile = ref<File | null>(null);
-const npcReferenceDataUrl = ref<string | null>(null);
-const npcReferenceAssetId = ref<string | null>(null);
-// 换 NPC 必须清空参考图：留着上一个角色的图会被当成这个角色的参考发出去。
-// 单图时代就存在，多图把影响面从「1 张」放大到「14 张」（review Minor 2026-08-29）。
-watch(selectedNpc, () => {
-  npcReferenceItems.value = [];
-  npcReferenceFile.value = null;
-  npcReferenceDataUrl.value = null;
-  npcReferenceAssetId.value = null;
+
+const {
+  validateUploadSize,
+  persistUploadedReference,
+  addMultiRefFiles,
+  addAssetToMultiRef,
+  onNpcMultiRefFiles,
+  npcAvatarAssetId,
+  npcQuickSources,
+  multiRefToInputs,
+  onNpcReferenceFileChange,
+} = useReferences({
+  imageService,
+  t,
+  refConfigMaxUploadBytes,
+  refConfigPersist,
+  npcReferenceItems,
+  npcReferenceFile,
+  npcReferenceDataUrl,
+  npcReferenceAssetId,
+  // selectedNpcData is declared further down; the wrapper defers the read to first use
+  selectedNpcData: computed(() => selectedNpcData.value),
 });
-const npcReferenceNoise = ref(0.1);
-const refConfigDenoiseDefault = computed(() =>
-  (get('系统.扩展.image.config.reference.defaultDenoiseStrength') as number | undefined) ?? 0.65,
-);
-const refConfigMaxUploadBytes = computed(() =>
-  (get('系统.扩展.image.config.reference.maxUploadBytes') as number | undefined) ?? 10485760,
-);
-const refConfigPersist = computed(() =>
-  get('系统.扩展.image.config.reference.persistUploadedReferences') !== false,
-);
-watch(npcReferenceEnabled, (v) => { if (v) npcReferenceDenoise.value = refConfigDenoiseDefault.value; });
 
-function validateUploadSize(file: File): boolean {
-  if (file.size > refConfigMaxUploadBytes.value) {
-    const limitMB = (refConfigMaxUploadBytes.value / 1048576).toFixed(0);
-    eventBus.emit('ui:toast', { type: 'error', message: t('image.manual.fileOversize', { actual: (file.size / 1048576).toFixed(1), limit: limitMB }), duration: 3000 });
-    return false;
-  }
-  return true;
-}
-
-async function persistUploadedReference(file: File, _dataUrl: string): Promise<string | null> {
-  if (!imageService || !refConfigPersist.value) return null;
-  const assetId = `ref_upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  const blob = file;
-  const asset: ImageAsset = {
-    id: assetId,
-    taskId: '',
-    storageKey: assetId,
-    mimeType: file.type || 'image/png',
-    width: 0,
-    height: 0,
-    sizeBytes: file.size,
-    backend: 'civitai',
-    createdAt: Date.now(),
-    origin: 'upload',
-  };
-  try {
-    await imageService.getAssetCache().store(asset, blob);
-    imageService.state.addReferenceEntry({
-      id: generateReferenceId(),
-      assetId,
-      name: file.name.replace(/\.\w+$/, ''),
-      mimeType: file.type || 'image/png',
-      width: 0,
-      height: 0,
-      sizeBytes: file.size,
-      source: 'upload',
-      createdAt: Date.now(),
-    });
-    return assetId;
-  } catch (err) {
-    console.warn('[ImagePanel] Failed to persist uploaded reference:', err);
-    return null;
-  }
-}
-
-/**
- * 多图选择器的追加入口。读取/校验/持久化/溢出提示全部走共用助手
- * `appendReferenceFiles`（顺序 await，保证「图N」编号与选择顺序一致）。
- */
-async function addMultiRefFiles(
-  target: Ref<MultiReferenceItem[]>,
-  files: FileList,
-): Promise<void> {
-  target.value = await appendReferenceFiles(files, {
-    max: SEEDREAM_MAX_REFERENCE_IMAGES,
-    current: target.value,
-    validate: validateUploadSize,
-    persist: persistUploadedReference,
-    makeId: generateReferenceId,
-    onOverflow: () => eventBus.emit('ui:toast', {
-      type: 'warning',
-      message: t('image.multiRef.tooMany', { max: SEEDREAM_MAX_REFERENCE_IMAGES }),
-      duration: 3000,
-    }),
-  });
-}
-
-/** 把一张已有资产追加进多图列表（快捷来源：头像 / 壁纸等；重复不加）。 */
-async function addAssetToMultiRef(
-  target: Ref<MultiReferenceItem[]>,
-  assetId: string,
-  label: string,
-): Promise<void> {
-  if (!assetId || !imageService) return;
-  if (target.value.length >= SEEDREAM_MAX_REFERENCE_IMAGES) return;
-  if (target.value.some((it) => it.assetId === assetId)) return;
-  try {
-    const entry = await imageService.getAssetCache().retrieve(assetId);
-    if (!entry) return;
-    const dataUrl = await readFileAsDataUrl(new File([entry.blob], label, { type: entry.metadata.mimeType }));
-    target.value = [...target.value, { id: generateReferenceId(), dataUrl, assetId, label }];
-  } catch (err) {
-    console.warn('[ImagePanel] 快捷来源加入多图参考失败:', err);
-  }
-}
-
-function onNpcMultiRefFiles(files: FileList): void {
-  void addMultiRefFiles(npcReferenceItems, files);
-}
 function onSceneMultiRefFiles(files: FileList): void {
   void addMultiRefFiles(sceneReferenceItems, files);
 }
@@ -268,47 +170,11 @@ function onSceneQuickSource(): void {
   void addAssetToMultiRef(sceneReferenceItems, sceneWallpaperAssetId.value, t('image.scene.refWallpaper'));
 }
 
-/** 当前 NPC 已选头像/立绘的资产 id（多图选择器的快捷来源按钮据此显隐）。 */
-const npcAvatarAssetId = computed(() => {
-  const archive = selectedNpcData.value?.['图片档案'] as Record<string, unknown> | undefined;
-  return String(archive?.['已选头像图片ID'] ?? archive?.['已选立绘图片ID'] ?? '') || '';
-});
-const npcQuickSources = computed(() => (npcAvatarAssetId.value
-  ? [{ key: 'avatar', label: t('image.manual.refAvatar') }]
-  : []));
 const sceneWallpaperAssetId = computed(() =>
   String(get('系统.扩展.image.sceneArchive.当前壁纸图片ID') ?? '') || '');
 const sceneQuickSources = computed(() => (sceneWallpaperAssetId.value
   ? [{ key: 'wallpaper', label: t('image.scene.refWallpaper') }]
   : []));
-
-/** 多图选择器 → 引擎入参。顺序原样保留（= 提示词里的「图N」）。 */
-function multiRefToInputs(
-  items: MultiReferenceItem[],
-  denoise: number,
-): import('@/engine/image/types').ImageReferenceInput[] {
-  return items.map((it) => (it.assetId
-    ? { id: generateReferenceId(), role: 'source' as const, source: 'asset' as const, assetId: it.assetId, denoiseStrength: denoise }
-    : { id: generateReferenceId(), role: 'source' as const, source: 'data_url' as const, dataUrl: it.dataUrl, denoiseStrength: denoise }));
-}
-
-async function onNpcReferenceFileChange(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0];
-  if (!file) return;
-  if (!validateUploadSize(file)) { (e.target as HTMLInputElement).value = ''; return; }
-  npcReferenceFile.value = file;
-  const reader = new FileReader();
-  reader.onload = async () => {
-    try {
-      npcReferenceDataUrl.value = reader.result as string;
-      npcReferenceAssetId.value = await persistUploadedReference(file, reader.result as string);
-    } catch (err) {
-      console.warn('[ImagePanel] Reference persist failed:', err);
-      npcReferenceAssetId.value = null;
-    }
-  };
-  reader.readAsDataURL(file);
-}
 
 const isGenerating = ref(false);
 const lastTask = ref<ImageTask | null>(null);
@@ -448,8 +314,6 @@ const styleOptions = computed(() => [
 const ALL_IMAGE_BACKENDS = computed<SelectOption[]>(() =>
   providerCatalog.byCategory('image').map((d) => ({ label: t(`api.backend.${d.id}`), value: d.id })),
 );
-
-const IMAGE_BACKEND_KEYS = providerCatalog.byCategory('image').map((d) => d.id) as ImageBackendType[];
 
 const configuredBackends = computed<Set<string>>(() => {
   apiStore.apiConfigs; apiStore.apiAssignments;
@@ -823,170 +687,35 @@ async function saveToLocal(assetId: string) {
   }
 }
 
-// Secret-part UI rows. Keys are engine-native `SecretPartType` values; the
-// service auto-resolves `特征描述` from the NPC's `私密信息.身体部位` array by
-// `部位名称` (breast→胸部, vagina→小穴, anus→屁穴).
-const secretParts = computed(() => [
-  { key: 'breast' as const, label: t('image.secret.bodyPart.breast') },
-  { key: 'vagina' as const, label: t('image.secret.bodyPart.vagina') },
-  { key: 'anus' as const,   label: t('image.secret.bodyPart.anus') },
-]);
-
-/**
- * Secret-part size buttons → StylePreset carrier (same consumption fix as
- * `manualSizePreset`): the engine only honors width/height via `params.preset`.
- * 'none' falls through to the engine's secret_part default (1024×1024).
- */
-function secretSizeStylePreset(): StylePreset | undefined {
-  const p = secretSizePreset.value;
-  if (p === 'none') return undefined;
-  const dims = SIZE_BASES[p];
-  return { id: `secret_${p}`, name: p, positivePrefix: '', positiveSuffix: '', negative: '', source: 'manual', width: dims.w, height: dims.h };
-}
-
-/** Secret grid options — the shared list minus 'custom' (the secret section has
- *  no width/height inputs, so a 'custom' button there could never take effect). */
-const secretSizeOptions = computed(() => sizePresetOptions.value.filter((o) => o.value !== 'custom'));
-
-/** 画风 grid key → display label passed to the engine ('none' → no style line). */
-function artStyleLabelFor(key: 'none' | 'generic' | 'anime' | 'realistic' | 'chinese'): string | undefined {
-  if (key === 'none') return undefined;
-  return t(`image.manual.artStyle.${key}`);
-}
-
-async function generateSecretPart(partKey: 'breast' | 'vagina' | 'anus') {
-  if (!imageService || !selectedNpc.value) return;
-  const part = secretParts.value.find((p) => p.key === partKey);
-  if (!part) return;
-  secretBusy.value = partKey;
-  secretStatusText.value = t('image.secret.submitted');
-  try {
-    const styleInjection = buildPromptStyleInjection(artistPresets.value, [
-      secretArtistPreset.value,
-      secretPngPreset.value,
-    ]);
-    const secretPngObj = secretPngPreset.value ? artistPresets.value.find((p) => p.id === secretPngPreset.value) : undefined;
-    const secretStyleApplicability = secretPngObj ? resolveStyleParams(secretPngObj, backend.value, configuredModelFor(backend.value)) : null;
-    const task = await imageService.generateSecretPartImage({
-      characterName: selectedNpc.value,
-      part: partKey,
-      backend: backend.value,
-      preset: secretSizeStylePreset(),
-      artStyle: artStyleLabelFor(secretStyle.value),
-      artistPrefix: styleInjection.artistPrefix,
-      extraNegative: styleInjection.extraNegative,
-      extraPrompt: secretExtraPrompt.value || undefined,
-      styleParamOverrides: secretStyleApplicability?.applied,
-    });
-    // Mirror the regular generate flow — push result into lastTask so the NPC
-    // preview panel picks up the latest image instead of staying blank.
-    lastTask.value = task;
-    if (task.status === 'failed') {
-      secretStatusText.value = t('image.secret.failGenerate', { part: part.label, error: task.error ?? t('common.fallback.unknownError') });
-    } else {
-      secretStatusText.value = t('image.secret.allComplete');
-    }
-  } catch (err) {
-    secretStatusText.value = t('image.secret.failGenerate', { part: part.label, error: (err as Error).message });
-  } finally {
-    secretBusy.value = '';
-  }
-}
-
-async function generateAllSecretParts() {
-  if (!imageService || !selectedNpc.value) return;
-  secretBusy.value = 'all';
-  secretStatusText.value = t('image.secret.submitted');
-  try {
-    let lastCompleted: ImageTask | null = null;
-    const styleInjection = buildPromptStyleInjection(artistPresets.value, [
-      secretArtistPreset.value,
-      secretPngPreset.value,
-    ]);
-    const secretPngObj2 = secretPngPreset.value ? artistPresets.value.find((p) => p.id === secretPngPreset.value) : undefined;
-    const secretStyleApplicability2 = secretPngObj2 ? resolveStyleParams(secretPngObj2, backend.value, configuredModelFor(backend.value)) : null;
-    for (const part of secretParts.value) {
-      const task = await imageService.generateSecretPartImage({
-        characterName: selectedNpc.value,
-        part: part.key,
-        backend: backend.value,
-        preset: secretSizeStylePreset(),
-        artStyle: artStyleLabelFor(secretStyle.value),
-        artistPrefix: styleInjection.artistPrefix,
-        extraNegative: styleInjection.extraNegative,
-        extraPrompt: secretExtraPrompt.value || undefined,
-        styleParamOverrides: secretStyleApplicability2?.applied,
-      });
-      if (task.status === 'complete') lastCompleted = task;
-    }
-    if (lastCompleted) lastTask.value = lastCompleted;
-    secretStatusText.value = t('image.secret.allComplete');
-  } catch {
-    secretStatusText.value = t('image.secret.partialFail');
-  } finally {
-    secretBusy.value = '';
-  }
-}
-
-async function generateSecretPartWithReference(partKey: 'breast' | 'vagina' | 'anus') {
-  if (!imageService || !selectedNpc.value) return;
-  const prevAssetId = getSecretPartAssetId(partKey);
-  if (!prevAssetId) {
-    eventBus.emit('ui:toast', { type: 'error', message: t('image.secret.noPreviousRef'), duration: 2000 });
-    return;
-  }
-  const entry = await imageService.getAssetCache().retrieve(prevAssetId);
-  if (!entry) {
-    eventBus.emit('ui:toast', { type: 'error', message: t('image.secret.cacheRefMissing'), duration: 2000 });
-    return;
-  }
-  const part = secretParts.value.find((p) => p.key === partKey);
-  if (!part) return;
-  secretBusy.value = partKey;
-  secretStatusText.value = t('image.secret.submitted');
-  try {
-    const styleInjection = buildPromptStyleInjection(artistPresets.value, [secretArtistPreset.value, secretPngPreset.value]);
-    const secretRef: import('@/engine/image/types').ImageReferenceInput = {
-      id: generateReferenceId(), role: 'source', source: 'asset', assetId: prevAssetId,
-      denoiseStrength: refConfigDenoiseDefault.value,
-    };
-    const task = await imageService.generateSecretPartImage({
-      characterName: selectedNpc.value,
-      part: partKey,
-      backend: backend.value,
-      preset: secretSizeStylePreset(),
-      artStyle: artStyleLabelFor(secretStyle.value),
-      artistPrefix: styleInjection.artistPrefix,
-      extraNegative: styleInjection.extraNegative,
-      extraPrompt: secretExtraPrompt.value || undefined,
-      references: [secretRef],
-    });
-    lastTask.value = task;
-    secretStatusText.value = task.status === 'failed'
-      ? t('image.secret.refRepaintFail', { part: part.label, error: task.error ?? t('common.fallback.unknownError') })
-      : t('image.secret.allComplete');
-  } catch (err) {
-    secretStatusText.value = t('image.secret.refRepaintFail', { part: part.label, error: (err as Error).message });
-  } finally {
-    secretBusy.value = '';
-  }
-}
-
-/**
- * Resolve the stored secret-part result's asset ID for the currently-selected
- * NPC, per body part. Drives the inline preview inside each secret card so the
- * latest generation shows up without leaving the manual tab.
- */
-function getSecretPartAssetId(partKey: 'breast' | 'vagina' | 'anus'): string | null {
-  void imageUpdateTick.value;
-  const archive = selectedNpcData.value?.['图片档案'] as Record<string, unknown> | undefined;
-  const secretArchive = archive?.['香闺秘档'] as Record<string, unknown> | undefined;
-  if (!secretArchive) return null;
-  const cnKey = partKey === 'breast' ? '胸部' : partKey === 'vagina' ? '小穴' : '屁穴';
-  const entry = secretArchive[cnKey] as Record<string, unknown> | undefined;
-  const id = entry?.id;
-  return typeof id === 'string' && id ? id : null;
-}
+const {
+  secretParts,
+  secretSizeOptions,
+  generateSecretPart,
+  generateAllSecretParts,
+  generateSecretPartWithReference,
+  getSecretPartAssetId,
+} = useSecretParts({
+  t,
+  imageService,
+  selectedNpc,
+  selectedNpcData,
+  // artistPresets / configuredModelFor are declared further down; defer the reads to first use
+  artistPresets: computed(() => artistPresets.value),
+  secretArtistPreset,
+  secretPngPreset,
+  secretStyle,
+  secretSizePreset,
+  secretExtraPrompt,
+  secretStatusText,
+  secretBusy,
+  lastTask,
+  backend,
+  configuredModelFor: (bk) => configuredModelFor(bk),
+  refConfigDenoiseDefault,
+  imageUpdateTick,
+  sizePresetOptions,
+  SIZE_BASES,
+});
 
 // ── Regenerate-Same modal (shared by queue / gallery / scene history) ──
 // Captures a snapshot of the source record so the modal can display prompts
@@ -1675,79 +1404,26 @@ async function generateScene() {
   }
 }
 
-// Settings tab state
-const settingsBackend = computed(() => String(get('系统.扩展.image.config.defaultBackend') ?? 'novelai'));
-const isNovelAIBackend = computed(() => settingsBackend.value === 'novelai');
-const settingsLoraPreviewScope = ref<CivitaiLoraScope>('character');
-const settingsTransformerIndependent = computed(() => get('系统.扩展.image.config.transformerIndependentModel') === true);
-
-/** 该后端当前配置的模型名——`resolveStyleParams` 判定 Seedream `seed` 是否适用要用它 */
-function configuredModelFor(bk: ImageBackendType): string | undefined {
-  return aiService?.getImageConfigForBackend(bk)?.model || undefined;
-}
-
-const activeBackendStatus = computed(() => {
-  const bk = backend.value;
-  const label = ALL_IMAGE_BACKENDS.value.find((o) => o.value === bk)?.label ?? bk;
-  const cfg = aiService?.getImageConfigForBackend(bk);
-  return {
-    label,
-    model: cfg?.model ?? '',
-    configured: !!cfg,
-    apiName: cfg?.name ?? '',
-  };
+const {
+  settingsBackend,
+  isNovelAIBackend,
+  settingsLoraPreviewScope,
+  settingsTransformerIndependent,
+  configuredModelFor,
+  activeBackendStatus,
+  civitaiNetworksJsonError,
+  civitaiControlNetsJsonError,
+  validateCivitaiJson,
+  civitaiWhatifLoading,
+  civitaiWhatifResult,
+  runCivitaiWhatif,
+} = useSettingsTab({
+  get,
+  t,
+  aiService,
+  backend,
+  ALL_IMAGE_BACKENDS,
 });
-
-const civitaiNetworksJsonError = ref('');
-const civitaiControlNetsJsonError = ref('');
-function validateCivitaiJson(field: 'additionalNetworksJson' | 'controlNetsJson', errorRef: 'civitaiNetworksJsonError' | 'civitaiControlNetsJsonError') {
-  const raw = String(get(`系统.扩展.image.config.civitai.${field}`) ?? '').trim();
-  if (!raw) { (errorRef === 'civitaiNetworksJsonError' ? civitaiNetworksJsonError : civitaiControlNetsJsonError).value = ''; return; }
-  try { JSON.parse(raw); (errorRef === 'civitaiNetworksJsonError' ? civitaiNetworksJsonError : civitaiControlNetsJsonError).value = ''; }
-  catch (e) { (errorRef === 'civitaiNetworksJsonError' ? civitaiNetworksJsonError : civitaiControlNetsJsonError).value = t('image.civitai.jsonFormatError', { error: (e as Error).message }); }
-}
-
-const civitaiWhatifLoading = ref(false);
-const civitaiWhatifResult = ref('');
-async function runCivitaiWhatif() {
-  civitaiWhatifLoading.value = true;
-  civitaiWhatifResult.value = '';
-  try {
-    const apiConfig = aiService?.getImageConfigForBackend('civitai');
-    if (!apiConfig) { civitaiWhatifResult.value = t('image.civitai.notConfigured'); return; }
-    const base = apiConfig.url.replace(/\/+$/, '');
-    const body: Record<string, unknown> = { prompt: 'cost estimate', width: 1024, height: 1024, quantity: 1, batchSize: 1 };
-    if (apiConfig.model) body.model = apiConfig.model;
-    const steps = get('系统.扩展.image.config.civitai.steps');
-    if (steps != null) body.steps = steps;
-
-    // Include LoRA shelf in whatif request
-    const loraShelfRaw = get('系统.扩展.image.config.civitai.loras');
-    const loraShelf: CivitaiLoraShelfItem[] = Array.isArray(loraShelfRaw) ? loraShelfRaw as CivitaiLoraShelfItem[] : [];
-    const rawNetJson = String(get('系统.扩展.image.config.civitai.additionalNetworksJson') ?? '');
-    const scope = settingsLoraPreviewScope.value;
-    const prepared = prepareCivitaiLora({ shelf: loraShelf, scope, positivePrompt: body.prompt as string, rawAdditionalNetworksJson: rawNetJson });
-    body.prompt = prepared.modifiedPositive;
-    if (prepared.mergedAdditionalNetworksJson) {
-      try { body.additionalNetworks = JSON.parse(prepared.mergedAdditionalNetworksJson); } catch { /* ignore parse error */ }
-    }
-
-    const res = await fetch(`${base}/v2/consumer/recipes/textToImage?whatif=true`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiConfig.apiKey}` },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (!res.ok) { civitaiWhatifResult.value = t('image.civitai.queryFailedHttp', { status: res.status }); return; }
-    const data = await res.json();
-    const cost = data?.cost ?? data?.totalCost ?? data?.jobs?.[0]?.cost;
-    civitaiWhatifResult.value = cost != null ? t('image.civitai.estimatedCost', { cost }) : t('image.civitai.queryComplete', { data: JSON.stringify(data).slice(0, 120) });
-  } catch (e) {
-    civitaiWhatifResult.value = t('image.civitai.queryFailed', { error: (e as Error).message });
-  } finally {
-    civitaiWhatifLoading.value = false;
-  }
-}
 
 const {
   presetScope,
