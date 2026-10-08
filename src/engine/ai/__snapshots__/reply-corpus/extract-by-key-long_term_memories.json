@@ -1,0 +1,319 @@
+{
+  "normal-full": {
+    "ok": {
+      "text": "码头的风很凉，林月停在栈桥前。",
+      "commands": [
+        {
+          "action": "add",
+          "path": "世界.时间.分钟",
+          "value": 20
+        },
+        {
+          "action": "set",
+          "key": "角色.位置",
+          "value": "码头"
+        }
+      ],
+      "mid_term_memory": {
+        "相关角色": [
+          "林月"
+        ],
+        "事件时间": "1-01-15-08-30",
+        "记忆主体": "带林月到码头。"
+      },
+      "action_options": [
+        "靠近水边",
+        "牵住她的手",
+        "  换条路走  ",
+        "",
+        7
+      ],
+      "judgement": {
+        "type": "力量",
+        "dc": 12,
+        "roll": 15,
+        "success_rate": 60,
+        "grade": "成功"
+      },
+      "semantic_memory": {
+        "long_term_memories": [
+          "林月怕水"
+        ]
+      },
+      "knowledge_facts": [
+        {
+          "fact": "林月害怕靠近深水区域",
+          "source_entity": "林月",
+          "target_entity": "码头"
+        }
+      ],
+      "setting_updates": [
+        {
+          "kind": "character",
+          "statement": "林月从小怕水。",
+          "evidence": "她从小怕水",
+          "anchors": [
+            "林月"
+          ],
+          "entities": [
+            "林月"
+          ]
+        }
+      ],
+      "memoryEntry": "  她站在水边没有动。  ",
+      "plot_evaluation": {
+        "stage": "rising",
+        "note": "透传"
+      }
+    }
+  },
+  "normal-minimal": {
+    "ok": null
+  },
+  "normal-cn-aliases": {
+    "ok": null
+  },
+  "normal-tavern-commands": {
+    "ok": null
+  },
+  "commands-invalid-mixed": {
+    "ok": null
+  },
+  "commands-not-array": {
+    "ok": null
+  },
+  "setting-updates-variants": {
+    "ok": null
+  },
+  "memory-entry-long": {
+    "ok": null
+  },
+  "knowledge-facts-filter": {
+    "ok": null
+  },
+  "judgement-string": {
+    "ok": null
+  },
+  "extract-keys-nested": {
+    "ok": {
+      "text": "n",
+      "semantic_memory": {
+        "long_term_memories": [
+          "a",
+          "b"
+        ]
+      },
+      "refined": "精炼后的文本",
+      "vectors": [
+        [
+          0.1,
+          0.2
+        ]
+      ],
+      "extra_out": {
+        "k": 1
+      }
+    }
+  },
+  "think-lower": {
+    "ok": null
+  },
+  "think-upper-multiline": {
+    "ok": null
+  },
+  "think-reasoning-thought-two-blocks": {
+    "ok": null
+  },
+  "think-unclosed": {
+    "ok": null
+  },
+  "think-with-half-json": {
+    "ok": null
+  },
+  "think-mismatched-close": {
+    "ok": null
+  },
+  "think-only": {
+    "ok": null
+  },
+  "think-empty-block": {
+    "ok": null
+  },
+  "think-then-tag-reply": {
+    "ok": null
+  },
+  "tag-whole-reply-json": {
+    "ok": null
+  },
+  "tag-whole-reply-loose": {
+    "ok": null
+  },
+  "tag-inside-json-string": {
+    "ok": null
+  },
+  "tag-inside-loose-json-string": {
+    "ok": null
+  },
+  "tag-story-then-json": {
+    "ok": null
+  },
+  "tag-placeholder-in-json": {
+    "ok": null
+  },
+  "tag-unclosed": {
+    "ok": null
+  },
+  "tag-after-stray-brace": {
+    "ok": null
+  },
+  "tag-fenced-reply": {
+    "ok": null
+  },
+  "tag-prose-looks-like-json": {
+    "ok": null
+  },
+  "tag-extra-json-after": {
+    "ok": null
+  },
+  "cot-protocol-shape": {
+    "ok": null
+  },
+  "tag-in-unparseable-json": {
+    "ok": null
+  },
+  "tag-in-string-loose-escapes": {
+    "ok": null
+  },
+  "cot-pseudo-tags-in-text": {
+    "ok": null
+  },
+  "truncated-envelope": {
+    "ok": null
+  },
+  "truncated-in-commands": {
+    "ok": null
+  },
+  "truncated-in-unicode-escape": {
+    "ok": null
+  },
+  "unescaped-quotes-in-story": {
+    "ok": null
+  },
+  "raw-linebreak-in-string": {
+    "ok": null
+  },
+  "invalid-escape-stutter": {
+    "ok": null
+  },
+  "invalid-escape-valid-mix": {
+    "ok": null
+  },
+  "heal-quotes-evidence": {
+    "ok": null
+  },
+  "loose-bare-keys-after-story": {
+    "ok": null
+  },
+  "trailing-comma-object": {
+    "ok": null
+  },
+  "bare-number": {
+    "ok": null
+  },
+  "bare-string": {
+    "ok": null
+  },
+  "bare-array": {
+    "ok": null
+  },
+  "bare-true": {
+    "ok": null
+  },
+  "bare-null": {
+    "ok": null
+  },
+  "double-encoded-envelope": {
+    "ok": null
+  },
+  "fenced-array": {
+    "ok": null
+  },
+  "escaped-twice-in-json": {
+    "ok": null
+  },
+  "escaped-twice-in-tag": {
+    "ok": null
+  },
+  "fence-json": {
+    "ok": null
+  },
+  "fence-no-language": {
+    "ok": null
+  },
+  "fence-upper-json": {
+    "ok": null
+  },
+  "fence-unclosed": {
+    "ok": null
+  },
+  "prose-then-json": {
+    "ok": null
+  },
+  "json-then-prose": {
+    "ok": null
+  },
+  "multi-json-blocks-cot-then-final": {
+    "ok": null
+  },
+  "multi-json-blocks-equal-score": {
+    "ok": null
+  },
+  "multi-json-text-twice": {
+    "ok": null
+  },
+  "assistant-payload-full": {
+    "ok": null
+  },
+  "loose-json-knowledge-facts": {
+    "ok": null
+  },
+  "combined-response-field-repair": {
+    "ok": null
+  },
+  "sidecars-after-json": {
+    "ok": null
+  },
+  "sidecar-inside-json-string": {
+    "ok": null
+  },
+  "sidecar-unclosed": {
+    "ok": null
+  },
+  "sidecar-repeated": {
+    "ok": null
+  },
+  "empty": {
+    "ok": null
+  },
+  "whitespace-only": {
+    "ok": null
+  },
+  "plain-prose": {
+    "ok": null
+  },
+  "prose-with-braces": {
+    "ok": null
+  },
+  "prose-quoting-envelope": {
+    "ok": null
+  },
+  "unbalanced-brace-prose-envelope": {
+    "ok": null
+  },
+  "stream-long-prose": {
+    "ok": null
+  },
+  "unicode-escapes-and-emoji": {
+    "ok": null
+  }
+}

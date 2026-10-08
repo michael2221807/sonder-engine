@@ -1,0 +1,1212 @@
+{
+  "normal-full": {
+    "ok": {
+      "plain": {
+        "commands": [
+          {
+            "action": "set",
+            "key": "角色.位置",
+            "value": "码头"
+          }
+        ],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": [
+          {
+            "action": "set",
+            "key": "角色.位置",
+            "value": "码头"
+          }
+        ],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "normal-minimal": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "normal-cn-aliases": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "normal-tavern-commands": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "commands-invalid-mixed": {
+    "ok": {
+      "plain": {
+        "commands": [
+          {
+            "action": "remove",
+            "key": "a",
+            "value": "__undefined__"
+          },
+          {
+            "action": "set",
+            "key": "ok",
+            "value": 1
+          }
+        ],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": [
+          {
+            "action": "remove",
+            "key": "a",
+            "value": "__undefined__"
+          },
+          {
+            "action": "set",
+            "key": "ok",
+            "value": 1
+          }
+        ],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "commands-not-array": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "setting-updates-variants": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "memory-entry-long": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "knowledge-facts-filter": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "judgement-string": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "extract-keys-nested": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null,
+        "extraOutput": {
+          "k": 1
+        }
+      }
+    }
+  },
+  "think-lower": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "think-upper-multiline": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "think-reasoning-thought-two-blocks": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "think-unclosed": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "think-with-half-json": {
+    "ok": {
+      "plain": {
+        "commands": [
+          {
+            "action": "set",
+            "key": "a",
+            "value": 1
+          }
+        ],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": [
+          {
+            "action": "set",
+            "key": "a",
+            "value": 1
+          }
+        ],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "think-mismatched-close": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "think-only": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "think-empty-block": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "think-then-tag-reply": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "tag-whole-reply-json": {
+    "ok": {
+      "plain": {
+        "commands": [
+          {
+            "action": "set",
+            "key": "世界.天气",
+            "value": "晴"
+          }
+        ],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": [
+          {
+            "action": "set",
+            "key": "世界.天气",
+            "value": "晴"
+          }
+        ],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "tag-whole-reply-loose": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "tag-inside-json-string": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "tag-inside-loose-json-string": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "tag-story-then-json": {
+    "ok": {
+      "plain": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "tag-placeholder-in-json": {
+    "ok": {
+      "plain": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "tag-unclosed": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "tag-after-stray-brace": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "tag-fenced-reply": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "tag-prose-looks-like-json": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "tag-extra-json-after": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "cot-protocol-shape": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "tag-in-unparseable-json": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "tag-in-string-loose-escapes": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "cot-pseudo-tags-in-text": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "truncated-envelope": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "truncated-in-commands": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "truncated-in-unicode-escape": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "unescaped-quotes-in-story": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "raw-linebreak-in-string": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "invalid-escape-stutter": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "invalid-escape-valid-mix": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "heal-quotes-evidence": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "loose-bare-keys-after-story": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "trailing-comma-object": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "bare-number": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "bare-string": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "bare-array": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "bare-true": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "bare-null": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "double-encoded-envelope": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "fenced-array": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "escaped-twice-in-json": {
+    "ok": {
+      "plain": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "escaped-twice-in-tag": {
+    "ok": {
+      "plain": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "fence-json": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "fence-no-language": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "fence-upper-json": {
+    "ok": {
+      "plain": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "fence-unclosed": {
+    "ok": {
+      "plain": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "prose-then-json": {
+    "ok": {
+      "plain": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "json-then-prose": {
+    "ok": {
+      "plain": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "multi-json-blocks-cot-then-final": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "multi-json-blocks-equal-score": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "multi-json-text-twice": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "assistant-payload-full": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "loose-json-knowledge-facts": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": [
+          {
+            "name": "甲",
+            "summary": "一个人"
+          }
+        ],
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": [
+          {
+            "name": "甲",
+            "summary": "一个人"
+          }
+        ],
+        "edgeUpdates": null
+      }
+    }
+  },
+  "combined-response-field-repair": {
+    "ok": {
+      "plain": {
+        "commands": [
+          {
+            "action": "set",
+            "key": "a",
+            "value": 1
+          }
+        ],
+        "entityDescriptions": [
+          {
+            "name": "甲",
+            "summary": "一个人"
+          }
+        ],
+        "edgeUpdates": [
+          {
+            "edge_id": "e1",
+            "action": "invalidate",
+            "reason": "过期"
+          },
+          {
+            "edge_id": "e2",
+            "action": "keep",
+            "reason": ""
+          }
+        ]
+      },
+      "withExtra": {
+        "commands": [
+          {
+            "action": "set",
+            "key": "a",
+            "value": 1
+          }
+        ],
+        "entityDescriptions": [
+          {
+            "name": "甲",
+            "summary": "一个人"
+          }
+        ],
+        "edgeUpdates": [
+          {
+            "edge_id": "e1",
+            "action": "invalidate",
+            "reason": "过期"
+          },
+          {
+            "edge_id": "e2",
+            "action": "keep",
+            "reason": ""
+          }
+        ],
+        "extraOutput": {
+          "done": true
+        }
+      }
+    }
+  },
+  "sidecars-after-json": {
+    "ok": {
+      "plain": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "sidecar-inside-json-string": {
+    "ok": {
+      "plain": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "sidecar-unclosed": {
+    "ok": {
+      "plain": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": [],
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "sidecar-repeated": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "empty": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "whitespace-only": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "plain-prose": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "prose-with-braces": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "prose-quoting-envelope": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "unbalanced-brace-prose-envelope": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "stream-long-prose": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  },
+  "unicode-escapes-and-emoji": {
+    "ok": {
+      "plain": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      },
+      "withExtra": {
+        "commands": null,
+        "entityDescriptions": null,
+        "edgeUpdates": null
+      }
+    }
+  }
+}

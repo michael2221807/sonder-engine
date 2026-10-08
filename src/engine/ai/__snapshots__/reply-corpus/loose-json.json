@@ -1,0 +1,1008 @@
+{
+  "normal-full": {
+    "ok": {
+      "anyValue": {
+        "text": "码头的风很凉，林月停在栈桥前。",
+        "commands": [
+          {
+            "action": "add",
+            "path": "世界.时间.分钟",
+            "value": 20
+          },
+          {
+            "action": "set",
+            "key": "角色.位置",
+            "value": "码头"
+          }
+        ],
+        "mid_term_memory": {
+          "相关角色": [
+            "林月"
+          ],
+          "事件时间": "1-01-15-08-30",
+          "记忆主体": "带林月到码头。"
+        },
+        "action_options": [
+          "靠近水边",
+          "牵住她的手",
+          "  换条路走  ",
+          "",
+          7
+        ],
+        "judgement": {
+          "type": "力量",
+          "dc": 12,
+          "roll": 15,
+          "success_rate": 60,
+          "grade": "成功"
+        },
+        "semantic_memory": {
+          "long_term_memories": [
+            "林月怕水"
+          ]
+        },
+        "knowledge_facts": [
+          {
+            "fact": "林月害怕靠近深水区域",
+            "source_entity": "林月",
+            "target_entity": "码头"
+          }
+        ],
+        "setting_updates": [
+          {
+            "kind": "character",
+            "statement": "林月从小怕水。",
+            "evidence": "她从小怕水",
+            "anchors": [
+              "林月"
+            ],
+            "entities": [
+              "林月"
+            ]
+          }
+        ],
+        "memoryEntry": "  她站在水边没有动。  ",
+        "plot_evaluation": {
+          "stage": "rising",
+          "note": "透传"
+        }
+      },
+      "knowledgeFacts": {
+        "text": "码头的风很凉，林月停在栈桥前。",
+        "commands": [
+          {
+            "action": "add",
+            "path": "世界.时间.分钟",
+            "value": 20
+          },
+          {
+            "action": "set",
+            "key": "角色.位置",
+            "value": "码头"
+          }
+        ],
+        "mid_term_memory": {
+          "相关角色": [
+            "林月"
+          ],
+          "事件时间": "1-01-15-08-30",
+          "记忆主体": "带林月到码头。"
+        },
+        "action_options": [
+          "靠近水边",
+          "牵住她的手",
+          "  换条路走  ",
+          "",
+          7
+        ],
+        "judgement": {
+          "type": "力量",
+          "dc": 12,
+          "roll": 15,
+          "success_rate": 60,
+          "grade": "成功"
+        },
+        "semantic_memory": {
+          "long_term_memories": [
+            "林月怕水"
+          ]
+        },
+        "knowledge_facts": [
+          {
+            "fact": "林月害怕靠近深水区域",
+            "source_entity": "林月",
+            "target_entity": "码头"
+          }
+        ],
+        "setting_updates": [
+          {
+            "kind": "character",
+            "statement": "林月从小怕水。",
+            "evidence": "她从小怕水",
+            "anchors": [
+              "林月"
+            ],
+            "entities": [
+              "林月"
+            ]
+          }
+        ],
+        "memoryEntry": "  她站在水边没有动。  ",
+        "plot_evaluation": {
+          "stage": "rising",
+          "note": "透传"
+        }
+      }
+    }
+  },
+  "normal-minimal": {
+    "ok": {
+      "anyValue": {
+        "text": "码头的风很凉，林月停在栈桥前。"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "normal-cn-aliases": {
+    "ok": {
+      "anyValue": {
+        "叙事文本": "别名正文",
+        "指令": [
+          {
+            "action": "push",
+            "key": "背包",
+            "value": "a"
+          }
+        ],
+        "中期记忆": "一句话记忆",
+        "行动选项": [
+          "走",
+          "停"
+        ],
+        "记忆条目": "别名记忆"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "normal-tavern-commands": {
+    "ok": {
+      "anyValue": {
+        "text": "旧键名",
+        "tavern_commands": [
+          {
+            "type": "delete",
+            "path": "x.y"
+          }
+        ]
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "commands-invalid-mixed": {
+    "ok": {
+      "anyValue": {
+        "text": "n",
+        "commands": [
+          {
+            "action": "remove",
+            "key": "a"
+          },
+          {
+            "op": "set",
+            "key": "b",
+            "value": 1
+          },
+          {
+            "action": "update",
+            "path": "c",
+            "value": 2
+          },
+          {
+            "action": "set",
+            "key": "ok",
+            "value": 1
+          },
+          {
+            "action": "set",
+            "key": 5,
+            "value": 1
+          },
+          "str",
+          null
+        ]
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "commands-not-array": {
+    "ok": {
+      "anyValue": {
+        "text": "n",
+        "commands": {
+          "action": "set",
+          "key": "a",
+          "value": 1
+        }
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "setting-updates-variants": {
+    "ok": {
+      "anyValue": {
+        "text": "n",
+        "setting_updates": [
+          "设定A",
+          {
+            "kind": "world_fact",
+            "statement": "x"
+          },
+          null,
+          [
+            1
+          ],
+          {
+            "kind": "character"
+          }
+        ]
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "memory-entry-long": {
+    "ok": {
+      "anyValue": {
+        "text": "n",
+        "memoryEntry": "字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "knowledge-facts-filter": {
+    "ok": {
+      "anyValue": {
+        "text": "n",
+        "knowledge_facts": [
+          {
+            "fact": "太短",
+            "source_entity": "a",
+            "target_entity": "b"
+          },
+          {
+            "fact": "这是一条足够长的事实陈述",
+            "source_entity": "a",
+            "target_entity": "a"
+          },
+          {
+            "fact": "这是一条足够长的事实陈述",
+            "source_entity": "a"
+          },
+          {
+            "fact": "这是一条足够长的事实陈述",
+            "source_entity": " 甲 ",
+            "target_entity": " 乙 "
+          }
+        ]
+      },
+      "knowledgeFacts": {
+        "text": "n",
+        "knowledge_facts": [
+          {
+            "fact": "太短",
+            "source_entity": "a",
+            "target_entity": "b"
+          },
+          {
+            "fact": "这是一条足够长的事实陈述",
+            "source_entity": "a",
+            "target_entity": "a"
+          },
+          {
+            "fact": "这是一条足够长的事实陈述",
+            "source_entity": "a"
+          },
+          {
+            "fact": "这是一条足够长的事实陈述",
+            "source_entity": " 甲 ",
+            "target_entity": " 乙 "
+          }
+        ]
+      }
+    }
+  },
+  "judgement-string": {
+    "ok": {
+      "anyValue": {
+        "text": "n",
+        "judgement": "判定内容",
+        "semantic_memory": "not-an-object"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "extract-keys-nested": {
+    "ok": {
+      "anyValue": {
+        "text": "n",
+        "semantic_memory": {
+          "long_term_memories": [
+            "a",
+            "b"
+          ]
+        },
+        "refined": "精炼后的文本",
+        "vectors": [
+          [
+            0.1,
+            0.2
+          ]
+        ],
+        "extra_out": {
+          "k": 1
+        }
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "think-lower": {
+    "ok": {
+      "anyValue": {
+        "text": "想完了"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "think-upper-multiline": {
+    "ok": {
+      "anyValue": {
+        "text": "大写块"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "think-reasoning-thought-two-blocks": {
+    "ok": {
+      "anyValue": {
+        "text": "两块"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "think-unclosed": {
+    "ok": {
+      "anyValue": {
+        "text": "不会被读到"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "think-with-half-json": {
+    "ok": {
+      "anyValue": {
+        "text": "正式",
+        "commands": [
+          {
+            "action": "set",
+            "key": "a",
+            "value": 1
+          }
+        ]
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "think-mismatched-close": {
+    "ok": {
+      "anyValue": {
+        "text": "错配"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "think-only": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "think-empty-block": {
+    "ok": {
+      "anyValue": {
+        "text": "空块"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "think-then-tag-reply": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "tag-whole-reply-json": {
+    "ok": {
+      "anyValue": {
+        "text": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。",
+        "commands": [
+          {
+            "action": "set",
+            "key": "世界.天气",
+            "value": "晴"
+          }
+        ],
+        "action_options": [
+          "走",
+          "停"
+        ]
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "tag-whole-reply-loose": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "tag-inside-json-string": {
+    "ok": {
+      "anyValue": {
+        "text": "<正文>【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。</正文>"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "tag-inside-loose-json-string": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "tag-story-then-json": {
+    "ok": {
+      "anyValue": {
+        "commands": [
+          {
+            "action": "set",
+            "path": "draft_id",
+            "value": {}
+          }
+        ],
+        "action_options": [
+          "草稿选项"
+        ]
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "tag-placeholder-in-json": {
+    "ok": {
+      "anyValue": {
+        "text": "(见上方正文)",
+        "commands": []
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "tag-unclosed": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "tag-after-stray-brace": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "tag-fenced-reply": {
+    "ok": {
+      "anyValue": {
+        "text": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "tag-prose-looks-like-json": {
+    "ok": {
+      "anyValue": {
+        "系统": "警告"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "tag-extra-json-after": {
+    "ok": {
+      "anyValue": {
+        "commands": [
+          {
+            "action": "set",
+            "key": "x",
+            "value": 1
+          }
+        ],
+        "action_options": [
+          "走",
+          "停",
+          "回头"
+        ]
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "cot-protocol-shape": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "tag-in-unparseable-json": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "tag-in-string-loose-escapes": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "cot-pseudo-tags-in-text": {
+    "ok": {
+      "anyValue": {
+        "text": "<正文>开头碎片 <judge>判定</judge> < /变量规划 > 结尾"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "truncated-envelope": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "truncated-in-commands": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "truncated-in-unicode-escape": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "unescaped-quotes-in-story": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "raw-linebreak-in-string": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "invalid-escape-stutter": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "invalid-escape-valid-mix": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "heal-quotes-evidence": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "loose-bare-keys-after-story": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "trailing-comma-object": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "bare-number": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "bare-string": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "bare-array": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "bare-true": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "bare-null": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "double-encoded-envelope": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "fenced-array": {
+    "ok": {
+      "anyValue": {
+        "y": 2
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "escaped-twice-in-json": {
+    "ok": {
+      "anyValue": {
+        "text": "第一段\\n\\n他说\\\"走\\\"。",
+        "commands": []
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "escaped-twice-in-tag": {
+    "ok": {
+      "anyValue": {
+        "text": "第一段\\n\\n他说\\\"走\\\"。",
+        "commands": []
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "fence-json": {
+    "ok": {
+      "anyValue": {
+        "name": "末世",
+        "description": "灰烬之地",
+        "talent_cost": 3
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "fence-no-language": {
+    "ok": {
+      "anyValue": {
+        "name": "无语言",
+        "description": "d"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "fence-upper-json": {
+    "ok": {
+      "anyValue": {
+        "text": "大写围栏",
+        "commands": []
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "fence-unclosed": {
+    "ok": {
+      "anyValue": {
+        "text": "没闭合的围栏",
+        "commands": []
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "prose-then-json": {
+    "ok": {
+      "anyValue": {
+        "text": "前有散文",
+        "commands": []
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "json-then-prose": {
+    "ok": {
+      "anyValue": {
+        "text": "后有散文",
+        "commands": []
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "multi-json-blocks-cot-then-final": {
+    "ok": {
+      "anyValue": {
+        "name": "完整版",
+        "description": "全部必填齐",
+        "summary": "摘要",
+        "patches": [
+          {
+            "target": "a.b",
+            "op": "set-field",
+            "value": 1
+          }
+        ],
+        "refined": "r"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "multi-json-blocks-equal-score": {
+    "ok": {
+      "anyValue": {
+        "name": "晚",
+        "description": "D2"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "multi-json-text-twice": {
+    "ok": {
+      "anyValue": {
+        "text": "乙"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "assistant-payload-full": {
+    "ok": {
+      "anyValue": {
+        "summary": "改了两处",
+        "patches": [
+          {
+            "target": "角色.名字",
+            "op": "set-field",
+            "value": "林月",
+            "rationale": "统一称呼"
+          },
+          {
+            "target": "背包",
+            "op": "insert-item",
+            "value": "x",
+            "position": {
+              "after": {
+                "by": "id",
+                "value": "k"
+              }
+            }
+          },
+          {
+            "target": "bad",
+            "op": "nope"
+          }
+        ],
+        "knowledge_facts": [
+          {
+            "sourceEntity": "A",
+            "targetEntity": "B",
+            "fact": "A 认识 B"
+          }
+        ]
+      },
+      "knowledgeFacts": {
+        "summary": "改了两处",
+        "patches": [
+          {
+            "target": "角色.名字",
+            "op": "set-field",
+            "value": "林月",
+            "rationale": "统一称呼"
+          },
+          {
+            "target": "背包",
+            "op": "insert-item",
+            "value": "x",
+            "position": {
+              "after": {
+                "by": "id",
+                "value": "k"
+              }
+            }
+          },
+          {
+            "target": "bad",
+            "op": "nope"
+          }
+        ],
+        "knowledge_facts": [
+          {
+            "sourceEntity": "A",
+            "targetEntity": "B",
+            "fact": "A 认识 B"
+          }
+        ]
+      }
+    }
+  },
+  "loose-json-knowledge-facts": {
+    "ok": {
+      "anyValue": {
+        "knowledge_facts": [
+          {
+            "source_entity": "甲",
+            "target_entity": "乙",
+            "fact": "甲认识乙"
+          }
+        ],
+        "entity_descriptions": [
+          {
+            "name": "甲",
+            "summary": "一个人"
+          }
+        ]
+      },
+      "knowledgeFacts": {
+        "knowledge_facts": [
+          {
+            "source_entity": "甲",
+            "target_entity": "乙",
+            "fact": "甲认识乙"
+          }
+        ],
+        "entity_descriptions": [
+          {
+            "name": "甲",
+            "summary": "一个人"
+          }
+        ]
+      }
+    }
+  },
+  "combined-response-field-repair": {
+    "ok": {
+      "anyValue": {
+        "commands": [
+          {
+            "action": "set",
+            "key": "a",
+            "value": 1
+          },
+          {
+            "action": "set"
+          },
+          3
+        ],
+        "entity_descriptions": [
+          {
+            "name": " 甲 ",
+            "summary": " 一个人 "
+          },
+          {
+            "name": "",
+            "summary": "x"
+          }
+        ],
+        "edge_updates": [
+          {
+            "edge_id": " [E1] ",
+            "action": " invalidate ",
+            "reason": " 过期 "
+          },
+          {
+            "edge_id": "E2",
+            "action": "keep"
+          },
+          {
+            "edge_id": 3
+          }
+        ],
+        "extra_out": {
+          "done": true
+        }
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "sidecars-after-json": {
+    "ok": {
+      "anyValue": {
+        "text": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。",
+        "commands": []
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "sidecar-inside-json-string": {
+    "ok": {
+      "anyValue": {
+        "text": "文中写着 <短期记忆>不是旁路</短期记忆> 这样",
+        "commands": []
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "sidecar-unclosed": {
+    "ok": {
+      "anyValue": {
+        "text": "正文",
+        "commands": []
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "sidecar-repeated": {
+    "ok": {
+      "anyValue": {
+        "text": "正文"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "empty": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "whitespace-only": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "plain-prose": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "prose-with-braces": {
+    "ok": {
+      "anyValue": {
+        "系统": "警告"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "prose-quoting-envelope": {
+    "ok": {
+      "anyValue": {
+        "text": "x"
+      },
+      "knowledgeFacts": null
+    }
+  },
+  "unbalanced-brace-prose-envelope": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "stream-long-prose": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  },
+  "unicode-escapes-and-emoji": {
+    "ok": {
+      "anyValue": null,
+      "knowledgeFacts": null
+    }
+  }
+}

@@ -1,0 +1,1472 @@
+{
+  "normal-full": {
+    "ok": {
+      "text": "码头的风很凉，林月停在栈桥前。",
+      "commands": [
+        {
+          "action": "add",
+          "key": "世界.时间.分钟",
+          "value": 20
+        },
+        {
+          "action": "set",
+          "key": "角色.位置",
+          "value": "码头"
+        }
+      ],
+      "midTermMemory": {
+        "相关角色": [
+          "林月"
+        ],
+        "事件时间": "1-01-15-08-30",
+        "记忆主体": "带林月到码头。"
+      },
+      "actionOptions": [
+        "靠近水边",
+        "牵住她的手",
+        "换条路走"
+      ],
+      "judgement": {
+        "type": "力量",
+        "dc": 12,
+        "roll": 15,
+        "success_rate": 60,
+        "grade": "成功"
+      },
+      "semanticMemory": {
+        "long_term_memories": [
+          "林月怕水"
+        ]
+      },
+      "knowledgeFacts": [
+        {
+          "fact": "林月害怕靠近深水区域",
+          "sourceEntity": "林月",
+          "targetEntity": "码头"
+        }
+      ],
+      "settingUpdates": [
+        {
+          "kind": "character",
+          "statement": "林月从小怕水。",
+          "evidence": "她从小怕水",
+          "anchors": [
+            "林月"
+          ],
+          "entities": [
+            "林月"
+          ]
+        }
+      ],
+      "memoryEntry": "她站在水边没有动。",
+      "customFields": {
+        "plot_evaluation": {
+          "stage": "rising",
+          "note": "透传"
+        }
+      },
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"码头的风很凉，林月停在栈桥前。\",\"commands\":[{\"action\":\"add\",\"path\":\"世界.时间.分钟\",\"value\":20},{\"action\":\"set\",\"key\":\"角色.位置\",\"value\":\"码头\"}],\"mid_term_memory\":{\"相关角色\":[\"林月\"],\"事件时间\":\"1-01-15-08-30\",\"记忆主体\":\"带林月到码头。\"},\"action_options\":[\"靠近水边\",\"牵住她的手\",\"  换条路走  \",\"\",7],\"judgement\":{\"type\":\"力量\",\"dc\":12,\"roll\":15,\"success_rate\":60,\"grade\":\"成功\"},\"semantic_memory\":{\"long_term_memories\":[\"林月怕水\"]},\"knowledge_facts\":[{\"fact\":\"林月害怕靠近深水区域\",\"source_entity\":\"林月\",\"target_entity\":\"码头\"}],\"setting_updates\":[{\"kind\":\"character\",\"statement\":\"林月从小怕水。\",\"evidence\":\"她从小怕水\",\"anchors\":[\"林月\"],\"entities\":[\"林月\"]}],\"memoryEntry\":\"  她站在水边没有动。  \",\"plot_evaluation\":{\"stage\":\"rising\",\"note\":\"透传\"}}",
+      "parseOk": true
+    }
+  },
+  "normal-minimal": {
+    "ok": {
+      "text": "码头的风很凉，林月停在栈桥前。",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"码头的风很凉，林月停在栈桥前。\"}",
+      "parseOk": true
+    }
+  },
+  "normal-cn-aliases": {
+    "ok": {
+      "text": "别名正文",
+      "commands": [
+        {
+          "action": "push",
+          "key": "背包",
+          "value": "a"
+        }
+      ],
+      "midTermMemory": "一句话记忆",
+      "actionOptions": [
+        "走",
+        "停"
+      ],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "别名记忆",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"叙事文本\":\"别名正文\",\"指令\":[{\"action\":\"push\",\"key\":\"背包\",\"value\":\"a\"}],\"中期记忆\":\"一句话记忆\",\"行动选项\":[\"走\",\"停\"],\"记忆条目\":\"别名记忆\"}",
+      "parseOk": true
+    }
+  },
+  "normal-tavern-commands": {
+    "ok": {
+      "text": "旧键名",
+      "commands": [
+        {
+          "action": "delete",
+          "key": "x.y",
+          "value": "__undefined__"
+        }
+      ],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"旧键名\",\"tavern_commands\":[{\"type\":\"delete\",\"path\":\"x.y\"}]}",
+      "parseOk": true
+    }
+  },
+  "commands-invalid-mixed": {
+    "ok": {
+      "text": "n",
+      "commands": [
+        {
+          "action": "set",
+          "key": "ok",
+          "value": 1
+        }
+      ],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"n\",\"commands\":[{\"action\":\"remove\",\"key\":\"a\"},{\"op\":\"set\",\"key\":\"b\",\"value\":1},{\"action\":\"update\",\"path\":\"c\",\"value\":2},{\"action\":\"set\",\"key\":\"ok\",\"value\":1},{\"action\":\"set\",\"key\":5,\"value\":1},\"str\",null]}",
+      "parseOk": true
+    }
+  },
+  "commands-not-array": {
+    "ok": {
+      "text": "n",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"n\",\"commands\":{\"action\":\"set\",\"key\":\"a\",\"value\":1}}",
+      "parseOk": true
+    }
+  },
+  "setting-updates-variants": {
+    "ok": {
+      "text": "n",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": [
+        {
+          "kind": "world_fact",
+          "statement": "x",
+          "evidence": "__undefined__",
+          "anchors": "__undefined__",
+          "entities": "__undefined__"
+        },
+        {
+          "kind": "character",
+          "statement": "__undefined__",
+          "evidence": "__undefined__",
+          "anchors": "__undefined__",
+          "entities": "__undefined__"
+        }
+      ],
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"n\",\"setting_updates\":[\"设定A\",{\"kind\":\"world_fact\",\"statement\":\"x\"},null,[1],{\"kind\":\"character\"}]}",
+      "parseOk": true
+    }
+  },
+  "memory-entry-long": {
+    "ok": {
+      "text": "n",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字…",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"n\",\"memoryEntry\":\"字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字\"}",
+      "parseOk": true
+    }
+  },
+  "knowledge-facts-filter": {
+    "ok": {
+      "text": "n",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": [
+        {
+          "fact": "这是一条足够长的事实陈述",
+          "sourceEntity": "甲",
+          "targetEntity": "乙"
+        }
+      ],
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"n\",\"knowledge_facts\":[{\"fact\":\"太短\",\"source_entity\":\"a\",\"target_entity\":\"b\"},{\"fact\":\"这是一条足够长的事实陈述\",\"source_entity\":\"a\",\"target_entity\":\"a\"},{\"fact\":\"这是一条足够长的事实陈述\",\"source_entity\":\"a\"},{\"fact\":\"这是一条足够长的事实陈述\",\"source_entity\":\" 甲 \",\"target_entity\":\" 乙 \"}]}",
+      "parseOk": true
+    }
+  },
+  "judgement-string": {
+    "ok": {
+      "text": "n",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "判定内容",
+      "semanticMemory": "not-an-object",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"n\",\"judgement\":\"判定内容\",\"semantic_memory\":\"not-an-object\"}",
+      "parseOk": true
+    }
+  },
+  "extract-keys-nested": {
+    "ok": {
+      "text": "n",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": {
+        "long_term_memories": [
+          "a",
+          "b"
+        ]
+      },
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": {
+        "refined": "精炼后的文本",
+        "vectors": [
+          [
+            0.1,
+            0.2
+          ]
+        ],
+        "extra_out": {
+          "k": 1
+        }
+      },
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"n\",\"semantic_memory\":{\"long_term_memories\":[\"a\",\"b\"]},\"refined\":\"精炼后的文本\",\"vectors\":[[0.1,0.2]],\"extra_out\":{\"k\":1}}",
+      "parseOk": true
+    }
+  },
+  "think-lower": {
+    "ok": {
+      "text": "想完了",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"想完了\"}",
+      "parseOk": true
+    }
+  },
+  "think-upper-multiline": {
+    "ok": {
+      "text": "大写块",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"大写块\"}",
+      "parseOk": true
+    }
+  },
+  "think-reasoning-thought-two-blocks": {
+    "ok": {
+      "text": "两块",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"两块\"}",
+      "parseOk": true
+    }
+  },
+  "think-unclosed": {
+    "ok": {
+      "text": "不会被读到",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "<thinking>想到一半就断了 {\"text\":\"不会被读到\"}",
+      "parseOk": true
+    }
+  },
+  "think-with-half-json": {
+    "ok": {
+      "text": "正式",
+      "commands": [
+        {
+          "action": "set",
+          "key": "a",
+          "value": 1
+        }
+      ],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"正式\",\"commands\":[{\"action\":\"set\",\"key\":\"a\",\"value\":1}]}",
+      "parseOk": true
+    }
+  },
+  "think-mismatched-close": {
+    "ok": {
+      "text": "错配",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"错配\"}",
+      "parseOk": true
+    }
+  },
+  "think-only": {
+    "ok": {
+      "text": "",
+      "thinking": "__undefined__",
+      "raw": "",
+      "parseOk": false
+    }
+  },
+  "think-empty-block": {
+    "ok": {
+      "text": "空块",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"空块\"}",
+      "parseOk": true
+    }
+  },
+  "think-then-tag-reply": {
+    "ok": {
+      "text": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。",
+      "thinking": "__undefined__",
+      "raw": "<正文>{\"text\":\"【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。\"}</正文>",
+      "parseOk": false
+    }
+  },
+  "tag-whole-reply-json": {
+    "ok": {
+      "text": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。",
+      "commands": [
+        {
+          "action": "set",
+          "key": "世界.天气",
+          "value": "晴"
+        }
+      ],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [
+        "走",
+        "停"
+      ],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "<正文>{\"text\":\"【楼道那盏声控灯，在你踩上最后一级台阶时，又\\\"啪\\\"地熄了。】\\n\\n你轻手轻脚地，推开了寝室那扇门。\",\"commands\":[{\"action\":\"set\",\"key\":\"世界.天气\",\"value\":\"晴\"}],\"action_options\":[\"走\",\"停\"]}</正文>",
+      "parseOk": true
+    }
+  },
+  "tag-whole-reply-loose": {
+    "ok": {
+      "text": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。",
+      "thinking": "__undefined__",
+      "raw": "<正文>{\"text\":\"【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。\"}</正文>",
+      "parseOk": false
+    }
+  },
+  "tag-inside-json-string": {
+    "ok": {
+      "text": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"<正文>【楼道那盏声控灯，在你踩上最后一级台阶时，又\\\"啪\\\"地熄了。】\\n\\n你轻手轻脚地，推开了寝室那扇门。</正文>\"}",
+      "parseOk": true
+    }
+  },
+  "tag-inside-loose-json-string": {
+    "ok": {
+      "text": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。",
+      "commands": [
+        {
+          "action": "set",
+          "key": "x",
+          "value": 1
+        }
+      ],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [
+        "走"
+      ],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"<正文>【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。</正文>\",\"commands\":[{\"action\":\"set\",\"key\":\"x\",\"value\":1}],\"action_options\":[\"走\"]}",
+      "parseOk": true
+    }
+  },
+  "tag-story-then-json": {
+    "ok": {
+      "text": "她把借来的书放回包里。",
+      "commands": [
+        {
+          "action": "set",
+          "key": "draft_id",
+          "value": {}
+        }
+      ],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [
+        "草稿选项"
+      ],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "<正文>她把借来的书放回包里。</正文>\n{\"commands\":[{\"action\":\"set\",\"path\":\"draft_id\",\"value\":{}}],\"action_options\":[\"草稿选项\"]}",
+      "parseOk": true
+    }
+  },
+  "tag-placeholder-in-json": {
+    "ok": {
+      "text": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "<正文>【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。</正文>\n{\"text\":\"(见上方正文)\",\"commands\":[]}",
+      "parseOk": true
+    }
+  },
+  "tag-unclosed": {
+    "ok": {
+      "text": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。",
+      "thinking": "__undefined__",
+      "raw": "<正文>\n【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。",
+      "parseOk": false
+    }
+  },
+  "tag-after-stray-brace": {
+    "ok": {
+      "text": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。",
+      "thinking": "__undefined__",
+      "raw": "好的，{先看看。\n<正文>【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。</正文>",
+      "parseOk": false
+    }
+  },
+  "tag-fenced-reply": {
+    "ok": {
+      "text": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "<正文>```json\n{\"text\":\"【楼道那盏声控灯，在你踩上最后一级台阶时，又\\\"啪\\\"地熄了。】\\n\\n你轻手轻脚地，推开了寝室那扇门。\"}\n```</正文>",
+      "parseOk": true
+    }
+  },
+  "tag-prose-looks-like-json": {
+    "ok": {
+      "text": "{\"系统\":\"警告\"}——屏幕亮了。",
+      "thinking": "__undefined__",
+      "raw": "<正文>{\"系统\":\"警告\"}——屏幕亮了。</正文>",
+      "parseOk": false
+    }
+  },
+  "tag-extra-json-after": {
+    "ok": {
+      "text": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。",
+      "commands": [
+        {
+          "action": "set",
+          "key": "x",
+          "value": 1
+        }
+      ],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [
+        "走",
+        "停",
+        "回头"
+      ],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "<正文>{\"text\":\"【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。\"}</正文>\n{\"commands\":[{\"action\":\"set\",\"key\":\"x\",\"value\":1}],\"action_options\":[\"走\",\"停\",\"回头\"]}",
+      "parseOk": true
+    }
+  },
+  "cot-protocol-shape": {
+    "ok": {
+      "text": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。",
+      "thinking": "__undefined__",
+      "raw": "<正文>\n【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。\n</正文>",
+      "parseOk": false,
+      "sidecars": {
+        "短期记忆": "记下这一夜。",
+        "变量规划": "锚点+2",
+        "剧情规划": "- 保留：会诊"
+      }
+    }
+  },
+  "tag-in-unparseable-json": {
+    "ok": {
+      "text": "他喊\"走\",然后又说\"快\"。\n第二段",
+      "commands": [
+        {
+          "action": "set",
+          "key": "x",
+          "value": 1
+        }
+      ],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [
+        "走"
+      ],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"<正文>他喊\"走\",然后又说\"快\"。\n第二段</正文>\",\"commands\":[{\"action\":\"set\",\"key\":\"x\",\"value\":1}],\"action_options\":[\"走\"]}",
+      "parseOk": true
+    }
+  },
+  "tag-in-string-loose-escapes": {
+    "ok": {
+      "text": "第一段\n他说\"走\"你你/\t好\n第二段",
+      "commands": [
+        {
+          "action": "set",
+          "key": "x",
+          "value": 1
+        }
+      ],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"<正文>第一段\\n他说\\\"走\\\"\\u4f60\\你\\/\\t好\n第二段</正文>\",\"commands\":[{\"action\":\"set\",\"key\":\"x\",\"value\":1}]}",
+      "parseOk": true
+    }
+  },
+  "cot-pseudo-tags-in-text": {
+    "ok": {
+      "text": "开头碎片 判定  结尾",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"<正文>开头碎片 <judge>判定</judge> < /变量规划 > 结尾\"}",
+      "parseOk": true
+    }
+  },
+  "truncated-envelope": {
+    "ok": {
+      "text": "【Nove那扇玻璃门里的暖黄灯，落在身后了。】\n\n你那颗脑子，\"嗡\"地，白了半分。",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"【Nove那扇玻璃门里的暖黄灯，落在身后了。】\\n\\n你那颗脑子，\\\"嗡\\\"地，白了半分。",
+      "parseOk": false
+    }
+  },
+  "truncated-in-commands": {
+    "ok": {
+      "text": "正文走完了",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"正文走完了\",\"commands\":[{\"action\":\"set\",\"key\":\"a\",\"value\":",
+      "parseOk": false
+    }
+  },
+  "truncated-in-unicode-escape": {
+    "ok": {
+      "text": "abc",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"abc\\u4f",
+      "parseOk": false
+    }
+  },
+  "unescaped-quotes-in-story": {
+    "ok": {
+      "text": "他喊\"走\",然后又说\"快\"。",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"他喊\"走\",然后又说\"快\"。\",\"commands\":[",
+      "parseOk": false
+    }
+  },
+  "raw-linebreak-in-string": {
+    "ok": {
+      "text": "第一段\n第二段，\"嗡\"地",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"第一段\n第二段，\\\"嗡\\\"地\"}",
+      "parseOk": false
+    }
+  },
+  "invalid-escape-stutter": {
+    "ok": {
+      "text": "他说你好",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"他说\\你好\",\"commands\":[]}",
+      "parseOk": true
+    }
+  },
+  "invalid-escape-valid-mix": {
+    "ok": {
+      "text": "\\你 你 x q",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [
+        "a"
+      ],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"\\\\你 \\u4f60 \\x \\q\",\"action_options\":[\"\\a\"]}",
+      "parseOk": true
+    }
+  },
+  "heal-quotes-evidence": {
+    "ok": {
+      "text": "",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": [
+        {
+          "kind": "character",
+          "statement": "林月怕水",
+          "evidence": "玩家写道 \"她从小怕水\" 然后继续",
+          "anchors": [
+            "林月"
+          ],
+          "entities": [
+            "林月"
+          ]
+        }
+      ],
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"commands\":[],\"setting_updates\":[{\"kind\":\"character\",\"statement\":\"林月怕水\",\"evidence\":\"玩家写道 \"她从小怕水\" 然后继续\",\"anchors\":[\"林月\"],\"entities\":[\"林月\"]}]}",
+      "parseOk": true
+    }
+  },
+  "loose-bare-keys-after-story": {
+    "ok": {
+      "text": "正文",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"正文\", commands:[{action:\"set\"",
+      "parseOk": false
+    }
+  },
+  "trailing-comma-object": {
+    "ok": {
+      "text": "正文\"引\"",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"正文\\\"引\\\"\" , \"commands\":[{\"action\":\"set\",}]",
+      "parseOk": false
+    }
+  },
+  "bare-number": {
+    "ok": {
+      "text": "",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "42",
+      "parseOk": true
+    }
+  },
+  "bare-string": {
+    "ok": {
+      "text": "",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": {
+        "0": "h",
+        "1": "e",
+        "2": "l",
+        "3": "l",
+        "4": "o"
+      },
+      "thinking": "__undefined__",
+      "raw": "\"hello\"",
+      "parseOk": true
+    }
+  },
+  "bare-array": {
+    "ok": {
+      "text": "",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": {
+        "0": "a",
+        "1": "b"
+      },
+      "thinking": "__undefined__",
+      "raw": "[\"a\",\"b\"]",
+      "parseOk": true
+    }
+  },
+  "bare-true": {
+    "ok": {
+      "text": "",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "true",
+      "parseOk": true
+    }
+  },
+  "bare-null": {
+    "ok": {
+      "text": "null",
+      "thinking": "__undefined__",
+      "raw": "null",
+      "parseOk": false
+    }
+  },
+  "double-encoded-envelope": {
+    "ok": {
+      "text": "",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": {
+        "0": "{",
+        "1": "\"",
+        "2": "t",
+        "3": "e",
+        "4": "x",
+        "5": "t",
+        "6": "\"",
+        "7": ":",
+        "8": "\"",
+        "9": "你",
+        "10": "好",
+        "11": "\"",
+        "12": ",",
+        "13": "\"",
+        "14": "c",
+        "15": "o",
+        "16": "m",
+        "17": "m",
+        "18": "a",
+        "19": "n",
+        "20": "d",
+        "21": "s",
+        "22": "\"",
+        "23": ":",
+        "24": "[",
+        "25": "{",
+        "26": "\"",
+        "27": "a",
+        "28": "c",
+        "29": "t",
+        "30": "i",
+        "31": "o",
+        "32": "n",
+        "33": "\"",
+        "34": ":",
+        "35": "\"",
+        "36": "s",
+        "37": "e",
+        "38": "t",
+        "39": "\"",
+        "40": ",",
+        "41": "\"",
+        "42": "k",
+        "43": "e",
+        "44": "y",
+        "45": "\"",
+        "46": ":",
+        "47": "\"",
+        "48": "a",
+        "49": "\"",
+        "50": ",",
+        "51": "\"",
+        "52": "v",
+        "53": "a",
+        "54": "l",
+        "55": "u",
+        "56": "e",
+        "57": "\"",
+        "58": ":",
+        "59": "1",
+        "60": "}",
+        "61": "]",
+        "62": "}"
+      },
+      "thinking": "__undefined__",
+      "raw": "\"{\\\"text\\\":\\\"你好\\\",\\\"commands\\\":[{\\\"action\\\":\\\"set\\\",\\\"key\\\":\\\"a\\\",\\\"value\\\":1}]}\"",
+      "parseOk": true
+    }
+  },
+  "fenced-array": {
+    "ok": {
+      "text": "",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": {
+        "0": {
+          "x": 1
+        },
+        "1": {
+          "y": 2
+        }
+      },
+      "thinking": "__undefined__",
+      "raw": "```json\n[{\"x\":1},{\"y\":2}]\n```",
+      "parseOk": true
+    }
+  },
+  "escaped-twice-in-json": {
+    "ok": {
+      "text": "第一段\n\n他说\"走\"。",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"第一段\\\\n\\\\n他说\\\\\\\"走\\\\\\\"。\",\"commands\":[]}",
+      "parseOk": true
+    }
+  },
+  "escaped-twice-in-tag": {
+    "ok": {
+      "text": "第一段\n\n他说\"走\"。",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "<正文>\n{\"text\":\"第一段\\\\n\\\\n他说\\\\\\\"走\\\\\\\"。\",\"commands\":[]}\n</正文>",
+      "parseOk": true,
+      "sidecars": {
+        "短期记忆": "记下这一夜。"
+      }
+    }
+  },
+  "fence-json": {
+    "ok": {
+      "text": "",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": {
+        "name": "末世",
+        "description": "灰烬之地",
+        "talent_cost": 3
+      },
+      "thinking": "__undefined__",
+      "raw": "好的，下面是结果：\n```json\n{\"name\":\"末世\",\"description\":\"灰烬之地\",\"talent_cost\":3}\n```\n以上。",
+      "parseOk": true
+    }
+  },
+  "fence-no-language": {
+    "ok": {
+      "text": "",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": {
+        "name": "无语言",
+        "description": "d"
+      },
+      "thinking": "__undefined__",
+      "raw": "```\n{\"name\":\"无语言\",\"description\":\"d\"}\n```",
+      "parseOk": true
+    }
+  },
+  "fence-upper-json": {
+    "ok": {
+      "text": "大写围栏",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "```JSON\n{\"text\":\"大写围栏\",\"commands\":[]}\n```",
+      "parseOk": true
+    }
+  },
+  "fence-unclosed": {
+    "ok": {
+      "text": "没闭合的围栏",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "```json\n{\"text\":\"没闭合的围栏\",\"commands\":[]}",
+      "parseOk": true
+    }
+  },
+  "prose-then-json": {
+    "ok": {
+      "text": "前有散文",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "下面是回复：\n{\"text\":\"前有散文\",\"commands\":[]}",
+      "parseOk": true
+    }
+  },
+  "json-then-prose": {
+    "ok": {
+      "text": "后有散文",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"后有散文\",\"commands\":[]}\n\n（以上为本回合内容）",
+      "parseOk": true
+    }
+  },
+  "multi-json-blocks-cot-then-final": {
+    "ok": {
+      "text": "{\"name\":\"半成品\"}\n\n{\"name\":\"完整版\",\"description\":\"全部必填齐\",\"summary\":\"摘要\",\"patches\":[{\"target\":\"a.b\",\"op\":\"set-field\",\"value\":1}],\"refined\":\"r\"}",
+      "thinking": "__undefined__",
+      "raw": "{\"name\":\"半成品\"}\n\n{\"name\":\"完整版\",\"description\":\"全部必填齐\",\"summary\":\"摘要\",\"patches\":[{\"target\":\"a.b\",\"op\":\"set-field\",\"value\":1}],\"refined\":\"r\"}",
+      "parseOk": false
+    }
+  },
+  "multi-json-blocks-equal-score": {
+    "ok": {
+      "text": "{\"name\":\"早\",\"description\":\"D1\"}\n\n{\"name\":\"晚\",\"description\":\"D2\"}",
+      "thinking": "__undefined__",
+      "raw": "{\"name\":\"早\",\"description\":\"D1\"}\n\n{\"name\":\"晚\",\"description\":\"D2\"}",
+      "parseOk": false
+    }
+  },
+  "multi-json-text-twice": {
+    "ok": {
+      "text": "甲",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"甲\"}\n{\"text\":\"乙\"}",
+      "parseOk": false
+    }
+  },
+  "assistant-payload-full": {
+    "ok": {
+      "text": "",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": {
+        "summary": "改了两处",
+        "patches": [
+          {
+            "target": "角色.名字",
+            "op": "set-field",
+            "value": "林月",
+            "rationale": "统一称呼"
+          },
+          {
+            "target": "背包",
+            "op": "insert-item",
+            "value": "x",
+            "position": {
+              "after": {
+                "by": "id",
+                "value": "k"
+              }
+            }
+          },
+          {
+            "target": "bad",
+            "op": "nope"
+          }
+        ]
+      },
+      "thinking": "__undefined__",
+      "raw": "我来调整一下。\n```json\n{\"summary\":\"改了两处\",\"patches\":[{\"target\":\"角色.名字\",\"op\":\"set-field\",\"value\":\"林月\",\"rationale\":\"统一称呼\"},{\"target\":\"背包\",\"op\":\"insert-item\",\"value\":\"x\",\"position\":{\"after\":{\"by\":\"id\",\"value\":\"k\"}}},{\"target\":\"bad\",\"op\":\"nope\"}],\"knowledge_facts\":[{\"sourceEntity\":\"A\",\"targetEntity\":\"B\",\"fact\":\"A 认识 B\"}]}\n```",
+      "parseOk": true
+    }
+  },
+  "loose-json-knowledge-facts": {
+    "ok": {
+      "text": "",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": {
+        "entity_descriptions": [
+          {
+            "name": "甲",
+            "summary": "一个人"
+          }
+        ]
+      },
+      "thinking": "__undefined__",
+      "raw": "结果如下：\n{\"knowledge_facts\":[{\"source_entity\":\"甲\",\"target_entity\":\"乙\",\"fact\":\"甲认识乙\"}],\"entity_descriptions\":[{\"name\":\"甲\",\"summary\":\"一个人\"}]}",
+      "parseOk": true
+    }
+  },
+  "combined-response-field-repair": {
+    "ok": {
+      "text": "",
+      "commands": [
+        {
+          "action": "set",
+          "key": "a",
+          "value": 1
+        }
+      ],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": {
+        "entity_descriptions": [
+          {
+            "name": " 甲 ",
+            "summary": " 一个人 "
+          },
+          {
+            "name": "",
+            "summary": "x"
+          }
+        ],
+        "edge_updates": [
+          {
+            "edge_id": " [E1] ",
+            "action": " invalidate ",
+            "reason": " 过期 "
+          },
+          {
+            "edge_id": "E2",
+            "action": "keep"
+          },
+          {
+            "edge_id": 3
+          }
+        ],
+        "extra_out": {
+          "done": true
+        }
+      },
+      "thinking": "__undefined__",
+      "raw": "{\"commands\":[{\"action\":\"set\",\"key\":\"a\",\"value\":1},{\"action\":\"set\"},3],\"entity_descriptions\":[{\"name\":\" 甲 \",\"summary\":\" 一个人 \"},{\"name\":\"\",\"summary\":\"x\"}],\"edge_updates\":[{\"edge_id\":\" [E1] \",\"action\":\" invalidate \",\"reason\":\" 过期 \"},{\"edge_id\":\"E2\",\"action\":\"keep\"},{\"edge_id\":3}],\"extra_out\":{\"done\":true}}",
+      "parseOk": true
+    }
+  },
+  "sidecars-after-json": {
+    "ok": {
+      "text": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"【楼道那盏声控灯，在你踩上最后一级台阶时，又\\\"啪\\\"地熄了。】\\n\\n你轻手轻脚地，推开了寝室那扇门。\",\"commands\":[]}",
+      "parseOk": true,
+      "sidecars": {
+        "短期记忆": "记下这一夜。",
+        "变量规划": "锚点+2"
+      }
+    }
+  },
+  "sidecar-inside-json-string": {
+    "ok": {
+      "text": "文中写着 不是旁路 这样",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"文中写着 <短期记忆>不是旁路</短期记忆> 这样\",\"commands\":[]}",
+      "parseOk": true,
+      "sidecars": {
+        "剧情规划": "真旁路"
+      }
+    }
+  },
+  "sidecar-unclosed": {
+    "ok": {
+      "text": "正文",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"正文\",\"commands\":[]}",
+      "parseOk": true,
+      "sidecars": {
+        "短期记忆": "断在这里"
+      }
+    }
+  },
+  "sidecar-repeated": {
+    "ok": {
+      "text": "正文",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"正文\"}",
+      "parseOk": true,
+      "sidecars": {
+        "短期记忆": "甲\n\n乙"
+      }
+    }
+  },
+  "empty": {
+    "ok": {
+      "text": "",
+      "thinking": "__undefined__",
+      "raw": "",
+      "parseOk": false
+    }
+  },
+  "whitespace-only": {
+    "ok": {
+      "text": "",
+      "thinking": "__undefined__",
+      "raw": "",
+      "parseOk": false
+    }
+  },
+  "plain-prose": {
+    "ok": {
+      "text": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。",
+      "thinking": "__undefined__",
+      "raw": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。",
+      "parseOk": false
+    }
+  },
+  "prose-with-braces": {
+    "ok": {
+      "text": "",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": {
+        "系统": "警告"
+      },
+      "thinking": "__undefined__",
+      "raw": "他念出那行字：{\"系统\":\"警告\"}，然后沉默了。",
+      "parseOk": true
+    }
+  },
+  "prose-quoting-envelope": {
+    "ok": {
+      "text": "x",
+      "commands": [],
+      "midTermMemory": "__undefined__",
+      "actionOptions": [],
+      "judgement": "__undefined__",
+      "semanticMemory": "__undefined__",
+      "knowledgeFacts": "__undefined__",
+      "settingUpdates": "__undefined__",
+      "memoryEntry": "__undefined__",
+      "customFields": "__undefined__",
+      "thinking": "__undefined__",
+      "raw": "他念出那行字：{\"text\":\"x\"}",
+      "parseOk": true
+    }
+  },
+  "unbalanced-brace-prose-envelope": {
+    "ok": {
+      "text": "藏在后面的正文",
+      "thinking": "__undefined__",
+      "raw": "好的，{\n{\"text\":\"藏在后面的正文\",\"commands\":[",
+      "parseOk": false
+    }
+  },
+  "stream-long-prose": {
+    "ok": {
+      "text": "这是一段没有任何信封的长文字，会在四十八个字之后被放行，其中夹着  和  这样的伪标签，直到结束。",
+      "thinking": "__undefined__",
+      "raw": "这是一段没有任何信封的长文字，会在四十八个字之后被放行，其中夹着 <正文> 和  这样的伪标签，直到结束。",
+      "parseOk": false,
+      "sidecars": {
+        "judge": "x"
+      }
+    }
+  },
+  "unicode-escapes-and-emoji": {
+    "ok": {
+      "text": "笑😀了你好\t/你",
+      "thinking": "__undefined__",
+      "raw": "{\"text\":\"笑😀了\\u4f60\\u597d\\t\\/\\你\"",
+      "parseOk": false
+    }
+  }
+}

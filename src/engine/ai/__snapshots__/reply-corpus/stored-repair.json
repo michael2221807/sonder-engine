@@ -1,0 +1,44 @@
+{
+  "stored-bare-envelope": {
+    "ok": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。"
+  },
+  "stored-in-tag-envelope": {
+    "ok": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。"
+  },
+  "stored-valid-json-envelope": {
+    "ok": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。"
+  },
+  "stored-plain-story": {
+    "ok": null
+  },
+  "stored-story-quotes-json": {
+    "ok": null
+  },
+  "stored-truncated-envelope": {
+    "ok": "【Nove那扇玻璃门里的暖黄灯，落在身后了。】\n\n你那颗脑子，\"嗡\"地，白了半分。"
+  },
+  "stored-escaped-twice": {
+    "ok": null
+  },
+  "stored-escaped-twice-in-tag": {
+    "ok": null
+  },
+  "stored-own-backslash": {
+    "ok": null
+  },
+  "stored-escaped-twice-raw-differs": {
+    "ok": null
+  },
+  "stored-escaped-twice-no-raw": {
+    "ok": null
+  },
+  "stored-escaped-twice-raw-not-string": {
+    "ok": null
+  },
+  "stored-empty-envelope": {
+    "ok": null
+  },
+  "stored-empty": {
+    "ok": null
+  }
+}

@@ -1,0 +1,236 @@
+{
+  "normal-full": {
+    "ok": "{\"text\":\"码头的风很凉，林月停在栈桥前。\",\"commands\":[{\"action\":\"add\",\"path\":\"世界.时间.分钟\",\"value\":20},{\"action\":\"set\",\"key\":\"角色.位置\",\"value\":\"码头\"}],\"mid_term_memory\":{\"相关角色\":[\"林月\"],\"事件时间\":\"1-01-15-08-30\",\"记忆主体\":\"带林月到码头。\"},\"action_options\":[\"靠近水边\",\"牵住她的手\",\"  换条路走  \",\"\",7],\"judgement\":{\"type\":\"力量\",\"dc\":12,\"roll\":15,\"success_rate\":60,\"grade\":\"成功\"},\"semantic_memory\":{\"long_term_memories\":[\"林月怕水\"]},\"knowledge_facts\":[{\"fact\":\"林月害怕靠近深水区域\",\"source_entity\":\"林月\",\"target_entity\":\"码头\"}],\"setting_updates\":[{\"kind\":\"character\",\"statement\":\"林月从小怕水。\",\"evidence\":\"她从小怕水\",\"anchors\":[\"林月\"],\"entities\":[\"林月\"]}],\"memoryEntry\":\"  她站在水边没有动。  \",\"plot_evaluation\":{\"stage\":\"rising\",\"note\":\"透传\"}}"
+  },
+  "normal-minimal": {
+    "ok": "{\"text\":\"码头的风很凉，林月停在栈桥前。\"}"
+  },
+  "normal-cn-aliases": {
+    "ok": "{\"叙事文本\":\"别名正文\",\"指令\":[{\"action\":\"push\",\"key\":\"背包\",\"value\":\"a\"}],\"中期记忆\":\"一句话记忆\",\"行动选项\":[\"走\",\"停\"],\"记忆条目\":\"别名记忆\"}"
+  },
+  "normal-tavern-commands": {
+    "ok": "{\"text\":\"旧键名\",\"tavern_commands\":[{\"type\":\"delete\",\"path\":\"x.y\"}]}"
+  },
+  "commands-invalid-mixed": {
+    "ok": "{\"text\":\"n\",\"commands\":[{\"action\":\"remove\",\"key\":\"a\"},{\"op\":\"set\",\"key\":\"b\",\"value\":1},{\"action\":\"update\",\"path\":\"c\",\"value\":2},{\"action\":\"set\",\"key\":\"ok\",\"value\":1},{\"action\":\"set\",\"key\":5,\"value\":1},\"str\",null]}"
+  },
+  "commands-not-array": {
+    "ok": "{\"text\":\"n\",\"commands\":{\"action\":\"set\",\"key\":\"a\",\"value\":1}}"
+  },
+  "setting-updates-variants": {
+    "ok": "{\"text\":\"n\",\"setting_updates\":[\"设定A\",{\"kind\":\"world_fact\",\"statement\":\"x\"},null,[1],{\"kind\":\"character\"}]}"
+  },
+  "memory-entry-long": {
+    "ok": "{\"text\":\"n\",\"memoryEntry\":\"字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字\"}"
+  },
+  "knowledge-facts-filter": {
+    "ok": "{\"text\":\"n\",\"knowledge_facts\":[{\"fact\":\"太短\",\"source_entity\":\"a\",\"target_entity\":\"b\"},{\"fact\":\"这是一条足够长的事实陈述\",\"source_entity\":\"a\",\"target_entity\":\"a\"},{\"fact\":\"这是一条足够长的事实陈述\",\"source_entity\":\"a\"},{\"fact\":\"这是一条足够长的事实陈述\",\"source_entity\":\" 甲 \",\"target_entity\":\" 乙 \"}]}"
+  },
+  "judgement-string": {
+    "ok": "{\"text\":\"n\",\"judgement\":\"判定内容\",\"semantic_memory\":\"not-an-object\"}"
+  },
+  "extract-keys-nested": {
+    "ok": "{\"text\":\"n\",\"semantic_memory\":{\"long_term_memories\":[\"a\",\"b\"]},\"refined\":\"精炼后的文本\",\"vectors\":[[0.1,0.2]],\"extra_out\":{\"k\":1}}"
+  },
+  "think-lower": {
+    "ok": "{\"text\":\"想完了\"}"
+  },
+  "think-upper-multiline": {
+    "ok": "{\"text\":\"大写块\"}"
+  },
+  "think-reasoning-thought-two-blocks": {
+    "ok": "{\"text\":\"两块\"}"
+  },
+  "think-unclosed": {
+    "ok": "<thinking>想到一半就断了 {\"text\":\"不会被读到\"}"
+  },
+  "think-with-half-json": {
+    "ok": "{\"text\":\"正式\",\"commands\":[{\"action\":\"set\",\"key\":\"a\",\"value\":1}]}"
+  },
+  "think-mismatched-close": {
+    "ok": "{\"text\":\"错配\"}"
+  },
+  "think-only": {
+    "ok": ""
+  },
+  "think-empty-block": {
+    "ok": "{\"text\":\"空块\"}"
+  },
+  "think-then-tag-reply": {
+    "ok": "<正文>{\"text\":\"【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。\"}</正文>"
+  },
+  "tag-whole-reply-json": {
+    "ok": "<正文>{\"text\":\"【楼道那盏声控灯，在你踩上最后一级台阶时，又\\\"啪\\\"地熄了。】\\n\\n你轻手轻脚地，推开了寝室那扇门。\",\"commands\":[{\"action\":\"set\",\"key\":\"世界.天气\",\"value\":\"晴\"}],\"action_options\":[\"走\",\"停\"]}</正文>"
+  },
+  "tag-whole-reply-loose": {
+    "ok": "<正文>{\"text\":\"【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。\"}</正文>"
+  },
+  "tag-inside-json-string": {
+    "ok": "{\"text\":\"<正文>【楼道那盏声控灯，在你踩上最后一级台阶时，又\\\"啪\\\"地熄了。】\\n\\n你轻手轻脚地，推开了寝室那扇门。</正文>\"}"
+  },
+  "tag-inside-loose-json-string": {
+    "ok": "{\"text\":\"<正文>【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。</正文>\",\"commands\":[{\"action\":\"set\",\"key\":\"x\",\"value\":1}],\"action_options\":[\"走\"]}"
+  },
+  "tag-story-then-json": {
+    "ok": "<正文>她把借来的书放回包里。</正文>\n{\"commands\":[{\"action\":\"set\",\"path\":\"draft_id\",\"value\":{}}],\"action_options\":[\"草稿选项\"]}"
+  },
+  "tag-placeholder-in-json": {
+    "ok": "<正文>【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。</正文>\n{\"text\":\"(见上方正文)\",\"commands\":[]}"
+  },
+  "tag-unclosed": {
+    "ok": "<正文>\n【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。"
+  },
+  "tag-after-stray-brace": {
+    "ok": "好的，{先看看。\n<正文>【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。</正文>"
+  },
+  "tag-fenced-reply": {
+    "ok": "<正文>```json\n{\"text\":\"【楼道那盏声控灯，在你踩上最后一级台阶时，又\\\"啪\\\"地熄了。】\\n\\n你轻手轻脚地，推开了寝室那扇门。\"}\n```</正文>"
+  },
+  "tag-prose-looks-like-json": {
+    "ok": "<正文>{\"系统\":\"警告\"}——屏幕亮了。</正文>"
+  },
+  "tag-extra-json-after": {
+    "ok": "<正文>{\"text\":\"【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。\"}</正文>\n{\"commands\":[{\"action\":\"set\",\"key\":\"x\",\"value\":1}],\"action_options\":[\"走\",\"停\",\"回头\"]}"
+  },
+  "cot-protocol-shape": {
+    "ok": "<正文>\n【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。\n</正文>\n\n<短期记忆>\n记下这一夜。\n</短期记忆>\n\n<变量规划>\n锚点+2\n</变量规划>\n\n<剧情规划>\n- 保留：会诊\n</剧情规划>"
+  },
+  "tag-in-unparseable-json": {
+    "ok": "{\"text\":\"<正文>他喊\"走\",然后又说\"快\"。\n第二段</正文>\",\"commands\":[{\"action\":\"set\",\"key\":\"x\",\"value\":1}],\"action_options\":[\"走\"]}"
+  },
+  "tag-in-string-loose-escapes": {
+    "ok": "{\"text\":\"<正文>第一段\\n他说\\\"走\\\"\\u4f60\\你\\/\\t好\n第二段</正文>\",\"commands\":[{\"action\":\"set\",\"key\":\"x\",\"value\":1}]}"
+  },
+  "cot-pseudo-tags-in-text": {
+    "ok": "{\"text\":\"<正文>开头碎片 <judge>判定</judge> < /变量规划 > 结尾\"}"
+  },
+  "truncated-envelope": {
+    "ok": "{\"text\":\"【Nove那扇玻璃门里的暖黄灯，落在身后了。】\\n\\n你那颗脑子，\\\"嗡\\\"地，白了半分。"
+  },
+  "truncated-in-commands": {
+    "ok": "{\"text\":\"正文走完了\",\"commands\":[{\"action\":\"set\",\"key\":\"a\",\"value\":"
+  },
+  "truncated-in-unicode-escape": {
+    "ok": "{\"text\":\"abc\\u4f"
+  },
+  "unescaped-quotes-in-story": {
+    "ok": "{\"text\":\"他喊\"走\",然后又说\"快\"。\",\"commands\":["
+  },
+  "raw-linebreak-in-string": {
+    "ok": "{\"text\":\"第一段\n第二段，\\\"嗡\\\"地\"}"
+  },
+  "invalid-escape-stutter": {
+    "ok": "{\"text\":\"他说\\你好\",\"commands\":[]}"
+  },
+  "invalid-escape-valid-mix": {
+    "ok": "{\"text\":\"\\\\你 \\u4f60 \\x \\q\",\"action_options\":[\"\\a\"]}"
+  },
+  "heal-quotes-evidence": {
+    "ok": "{\"commands\":[],\"setting_updates\":[{\"kind\":\"character\",\"statement\":\"林月怕水\",\"evidence\":\"玩家写道 \"她从小怕水\" 然后继续\",\"anchors\":[\"林月\"],\"entities\":[\"林月\"]}]}"
+  },
+  "loose-bare-keys-after-story": {
+    "ok": "{\"text\":\"正文\", commands:[{action:\"set\""
+  },
+  "trailing-comma-object": {
+    "ok": "{\"text\":\"正文\\\"引\\\"\" , \"commands\":[{\"action\":\"set\",}]"
+  },
+  "bare-number": {
+    "ok": "42"
+  },
+  "bare-string": {
+    "ok": "\"hello\""
+  },
+  "bare-array": {
+    "ok": "[\"a\",\"b\"]"
+  },
+  "bare-true": {
+    "ok": "true"
+  },
+  "bare-null": {
+    "ok": "null"
+  },
+  "double-encoded-envelope": {
+    "ok": "\"{\\\"text\\\":\\\"你好\\\",\\\"commands\\\":[{\\\"action\\\":\\\"set\\\",\\\"key\\\":\\\"a\\\",\\\"value\\\":1}]}\""
+  },
+  "fenced-array": {
+    "ok": "```json\n[{\"x\":1},{\"y\":2}]\n```"
+  },
+  "escaped-twice-in-json": {
+    "ok": "{\"text\":\"第一段\\\\n\\\\n他说\\\\\\\"走\\\\\\\"。\",\"commands\":[]}"
+  },
+  "escaped-twice-in-tag": {
+    "ok": "<正文>\n{\"text\":\"第一段\\\\n\\\\n他说\\\\\\\"走\\\\\\\"。\",\"commands\":[]}\n</正文>\n\n<短期记忆>\n记下这一夜。\n</短期记忆>"
+  },
+  "fence-json": {
+    "ok": "好的，下面是结果：\n```json\n{\"name\":\"末世\",\"description\":\"灰烬之地\",\"talent_cost\":3}\n```\n以上。"
+  },
+  "fence-no-language": {
+    "ok": "```\n{\"name\":\"无语言\",\"description\":\"d\"}\n```"
+  },
+  "fence-upper-json": {
+    "ok": "```JSON\n{\"text\":\"大写围栏\",\"commands\":[]}\n```"
+  },
+  "fence-unclosed": {
+    "ok": "```json\n{\"text\":\"没闭合的围栏\",\"commands\":[]}"
+  },
+  "prose-then-json": {
+    "ok": "下面是回复：\n{\"text\":\"前有散文\",\"commands\":[]}"
+  },
+  "json-then-prose": {
+    "ok": "{\"text\":\"后有散文\",\"commands\":[]}\n\n（以上为本回合内容）"
+  },
+  "multi-json-blocks-cot-then-final": {
+    "ok": "{\"name\":\"半成品\"}\n\n{\"name\":\"完整版\",\"description\":\"全部必填齐\",\"summary\":\"摘要\",\"patches\":[{\"target\":\"a.b\",\"op\":\"set-field\",\"value\":1}],\"refined\":\"r\"}"
+  },
+  "multi-json-blocks-equal-score": {
+    "ok": "{\"name\":\"早\",\"description\":\"D1\"}\n\n{\"name\":\"晚\",\"description\":\"D2\"}"
+  },
+  "multi-json-text-twice": {
+    "ok": "{\"text\":\"甲\"}\n{\"text\":\"乙\"}"
+  },
+  "assistant-payload-full": {
+    "ok": "我来调整一下。\n```json\n{\"summary\":\"改了两处\",\"patches\":[{\"target\":\"角色.名字\",\"op\":\"set-field\",\"value\":\"林月\",\"rationale\":\"统一称呼\"},{\"target\":\"背包\",\"op\":\"insert-item\",\"value\":\"x\",\"position\":{\"after\":{\"by\":\"id\",\"value\":\"k\"}}},{\"target\":\"bad\",\"op\":\"nope\"}],\"knowledge_facts\":[{\"sourceEntity\":\"A\",\"targetEntity\":\"B\",\"fact\":\"A 认识 B\"}]}\n```"
+  },
+  "loose-json-knowledge-facts": {
+    "ok": "结果如下：\n{\"knowledge_facts\":[{\"source_entity\":\"甲\",\"target_entity\":\"乙\",\"fact\":\"甲认识乙\"}],\"entity_descriptions\":[{\"name\":\"甲\",\"summary\":\"一个人\"}]}"
+  },
+  "combined-response-field-repair": {
+    "ok": "{\"commands\":[{\"action\":\"set\",\"key\":\"a\",\"value\":1},{\"action\":\"set\"},3],\"entity_descriptions\":[{\"name\":\" 甲 \",\"summary\":\" 一个人 \"},{\"name\":\"\",\"summary\":\"x\"}],\"edge_updates\":[{\"edge_id\":\" [E1] \",\"action\":\" invalidate \",\"reason\":\" 过期 \"},{\"edge_id\":\"E2\",\"action\":\"keep\"},{\"edge_id\":3}],\"extra_out\":{\"done\":true}}"
+  },
+  "sidecars-after-json": {
+    "ok": "{\"text\":\"【楼道那盏声控灯，在你踩上最后一级台阶时，又\\\"啪\\\"地熄了。】\\n\\n你轻手轻脚地，推开了寝室那扇门。\",\"commands\":[]}\n\n<短期记忆>\n记下这一夜。\n</短期记忆>\n<变量规划>锚点+2</变量规划>"
+  },
+  "sidecar-inside-json-string": {
+    "ok": "{\"text\":\"文中写着 <短期记忆>不是旁路</短期记忆> 这样\",\"commands\":[]}\n<剧情规划>真旁路</剧情规划>"
+  },
+  "sidecar-unclosed": {
+    "ok": "{\"text\":\"正文\",\"commands\":[]}\n<短期记忆>断在这里"
+  },
+  "sidecar-repeated": {
+    "ok": "<短期记忆>甲</短期记忆>{\"text\":\"正文\"}<短期记忆>乙</短期记忆>"
+  },
+  "empty": {
+    "ok": ""
+  },
+  "whitespace-only": {
+    "ok": ""
+  },
+  "plain-prose": {
+    "ok": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。"
+  },
+  "prose-with-braces": {
+    "ok": "他念出那行字：{\"系统\":\"警告\"}，然后沉默了。"
+  },
+  "prose-quoting-envelope": {
+    "ok": "他念出那行字：{\"text\":\"x\"}"
+  },
+  "unbalanced-brace-prose-envelope": {
+    "ok": "好的，{\n{\"text\":\"藏在后面的正文\",\"commands\":["
+  },
+  "stream-long-prose": {
+    "ok": "这是一段没有任何信封的长文字，会在四十八个字之后被放行，其中夹着 <正文> 和 <judge>x</judge> 这样的伪标签，直到结束。"
+  },
+  "unicode-escapes-and-emoji": {
+    "ok": "{\"text\":\"笑😀了\\u4f60\\u597d\\t\\/\\你\""
+  }
+}

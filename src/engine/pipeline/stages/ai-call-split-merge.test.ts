@@ -17,6 +17,7 @@ import { DEFAULT_ENGINE_PATHS } from '../types';
 import type { PipelineContext } from '../types';
 import type { AIService } from '../../ai/ai-service';
 import type { GenerateOptions } from '../../ai/types';
+import type { AIResponse } from '../../ai/types';
 
 void DEFAULT_ENGINE_PATHS;
 
@@ -252,5 +253,60 @@ describe('AICallStage · split-gen merge whitelist', () => {
     const out = await new AICallStage(service, new ResponseParser()).execute(ctx);
 
     expect(out.parsedResponse?.settingUpdates).toHaveLength(1);
+  });
+});
+
+/**
+ * G1 (refactor R2): where every AIResponse field of a split-gen round comes from. The merge in
+ * `executeSplitGen` is a hand-written whitelist; a field added to AIResponse that nobody classified here fails
+ * typecheck (the `satisfies` below demands every key and refuses unknown ones), so a new field cannot silently
+ * vanish in split mode only. `dropped` is today's behaviour, kept on purpose: those fields are not carried over.
+ */
+type SplitSource = 'step1' | 'step2' | 'dropped';
+const SPLIT_MERGE = {
+  text: 'step1',
+  thinking: 'step1',
+  raw: 'step1',
+  commands: 'step2',
+  midTermMemory: 'step2',
+  actionOptions: 'step2',
+  knowledgeFacts: 'step2',
+  settingUpdates: 'step2',
+  customFields: 'step2',
+  sidecars: 'step2',
+  parseOk: 'step2',
+  judgement: 'dropped',
+  semanticMemory: 'dropped',
+  memoryEntry: 'dropped',
+} satisfies Record<keyof Required<AIResponse>, SplitSource>;
+
+describe('AICallStage · split-gen merge classification (G1)', () => {
+  it('carries the step2 fields and drops exactly the classified ones', async () => {
+    const step2 = JSON.stringify({
+      commands: [{ action: 'add', path: '世界.时间.分钟', value: 20 }],
+      action_options: ['甲', '乙', '丙'],
+      mid_term_memory: '一句话记忆',
+      knowledge_facts: [{ fact: '林月害怕靠近深水区域', source_entity: '林月', target_entity: '码头' }],
+      setting_updates: [{ kind: 'character', statement: 's', evidence: 'e', anchors: ['a'], entities: ['b'] }],
+      plot_evaluation: { stage: 'x' },
+      judgement: { type: 't', dc: 1, roll: 2, success_rate: 3, grade: 'g' },
+      semantic_memory: { long_term_memories: ['m'] },
+      memoryEntry: '记忆条目',
+      parse_marker: 1,
+    });
+    const service = {
+      generate: async (opts: GenerateOptions): Promise<string> => (opts.generationId?.endsWith('_step2') ? step2 : STEP1),
+    } as unknown as AIService;
+    const merged = (await new AICallStage(service, new ResponseParser()).execute(splitCtx())).parsedResponse as AIResponse;
+    const carried = merged as unknown as Record<string, unknown>;
+    for (const [field, source] of Object.entries(SPLIT_MERGE) as Array<[string, SplitSource]>) {
+      if (source === 'dropped') expect(carried[field], field).toBeUndefined();
+    }
+    for (const field of ['commands', 'midTermMemory', 'actionOptions', 'knowledgeFacts', 'settingUpdates', 'customFields', 'parseOk']) {
+      expect(SPLIT_MERGE[field as keyof typeof SPLIT_MERGE], field).toBe('step2');
+      expect(carried[field], field).toBeDefined();
+    }
+    for (const field of ['text', 'thinking', 'raw']) expect(SPLIT_MERGE[field as keyof typeof SPLIT_MERGE], field).toBe('step1');
+    expect(Object.values(SPLIT_MERGE).filter(v => v === 'dropped')).toHaveLength(3);
   });
 });

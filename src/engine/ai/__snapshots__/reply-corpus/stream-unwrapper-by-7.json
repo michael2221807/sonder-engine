@@ -1,0 +1,877 @@
+{
+  "normal-full": {
+    "ok": {
+      "chunks": [
+        "码头的风很",
+        "凉，林月停在栈",
+        "桥前。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "normal-minimal": {
+    "ok": {
+      "chunks": [
+        "码头的风很",
+        "凉，林月停在栈",
+        "桥前。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "normal-cn-aliases": {
+    "ok": {
+      "chunks": [
+        "别名正文"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "normal-tavern-commands": {
+    "ok": {
+      "chunks": [
+        "旧键名"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "commands-invalid-mixed": {
+    "ok": {
+      "chunks": [
+        "n"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "commands-not-array": {
+    "ok": {
+      "chunks": [
+        "n"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "setting-updates-variants": {
+    "ok": {
+      "chunks": [
+        "n"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "memory-entry-long": {
+    "ok": {
+      "chunks": [
+        "n"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "knowledge-facts-filter": {
+    "ok": {
+      "chunks": [
+        "n"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "judgement-string": {
+    "ok": {
+      "chunks": [
+        "n"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "extract-keys-nested": {
+    "ok": {
+      "chunks": [
+        "n"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "think-lower": {
+    "ok": {
+      "chunks": [
+        "想完了"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "think-upper-multiline": {
+    "ok": {
+      "chunks": [
+        "大写",
+        "块"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "think-reasoning-thought-two-blocks": {
+    "ok": {
+      "chunks": [
+        "两块"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "think-unclosed": {
+    "ok": {
+      "chunks": [],
+      "flushedChunks": 0
+    }
+  },
+  "think-with-half-json": {
+    "ok": {
+      "chunks": [
+        "正式"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "think-mismatched-close": {
+    "ok": {
+      "chunks": [
+        "错配"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "think-only": {
+    "ok": {
+      "chunks": [],
+      "flushedChunks": 0
+    }
+  },
+  "think-empty-block": {
+    "ok": {
+      "chunks": [
+        "空",
+        "块"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "think-then-tag-reply": {
+    "ok": {
+      "chunks": [
+        "【楼道",
+        "那盏声控灯，在",
+        "你踩上最后一级",
+        "台阶时，又\"啪",
+        "\"地熄了。】\n",
+        "\n你轻手轻脚地",
+        "，推开了寝室那",
+        "扇门。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "tag-whole-reply-json": {
+    "ok": {
+      "chunks": [
+        "【",
+        "楼道那盏声控灯",
+        "，在你踩上最后",
+        "一级台阶时，又",
+        "\"啪\"地熄",
+        "了。】\n\n",
+        "你轻手轻脚地，",
+        "推开了寝室那扇",
+        "门。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "tag-whole-reply-loose": {
+    "ok": {
+      "chunks": [
+        "【",
+        "楼道那盏声控灯",
+        "，在你踩上最后",
+        "一级台阶时，又",
+        "\"啪\"地熄了。",
+        "】\n\n你轻手轻",
+        "脚地，推开了寝",
+        "室那扇门。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "tag-inside-json-string": {
+    "ok": {
+      "chunks": [
+        "【",
+        "楼道那盏声控灯",
+        "，在你踩上最后",
+        "一级台阶时，又",
+        "\"啪\"地熄",
+        "了。】\n\n",
+        "你轻手轻脚地，",
+        "推开了寝室那扇",
+        "门。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "tag-inside-loose-json-string": {
+    "ok": {
+      "chunks": [
+        "【",
+        "楼道那盏声控灯",
+        "，在你踩上最后",
+        "一级台阶时，又",
+        "\"啪\"地熄了。",
+        "】\n\n你轻手轻",
+        "脚地，推开了寝",
+        "室那扇门。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "tag-story-then-json": {
+    "ok": {
+      "chunks": [
+        "她把借",
+        "来的书放回包里",
+        "。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "tag-placeholder-in-json": {
+    "ok": {
+      "chunks": [
+        "【楼道",
+        "那盏声控灯，在",
+        "你踩上最后一级",
+        "台阶时，又\"啪",
+        "\"地熄了。】\n",
+        "\n你轻手轻脚地",
+        "，推开了寝室那",
+        "扇门。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "tag-unclosed": {
+    "ok": {
+      "chunks": [
+        "【楼",
+        "道那盏声控灯，",
+        "在你踩上最后一",
+        "级台阶时，又\"",
+        "啪\"地熄了。】",
+        "\n\n你轻手轻脚",
+        "地，推开了寝室",
+        "那扇门。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "tag-after-stray-brace": {
+    "ok": {
+      "chunks": [
+        "好的，{先看看。\n【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻",
+        "脚地，推开了寝",
+        "室那扇门。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "tag-fenced-reply": {
+    "ok": {
+      "chunks": [
+        "【楼道那盏声控",
+        "灯，在你踩上最",
+        "后一级台阶时，",
+        "又\"啪\"地",
+        "熄了。】\n",
+        "\n你轻手轻脚地",
+        "，推开了寝室那",
+        "扇门。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "tag-prose-looks-like-json": {
+    "ok": {
+      "chunks": [
+        "{\"系统\":\"警告\"}——屏幕亮了。"
+      ],
+      "flushedChunks": 1
+    }
+  },
+  "tag-extra-json-after": {
+    "ok": {
+      "chunks": [
+        "【",
+        "楼道那盏声控灯",
+        "，在你踩上最后",
+        "一级台阶时，又",
+        "\"啪\"地熄了。",
+        "】\n\n你轻手轻",
+        "脚地，推开了寝",
+        "室那扇门。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "cot-protocol-shape": {
+    "ok": {
+      "chunks": [
+        "【楼道那盏声控",
+        "灯，在你踩上最",
+        "后一级台阶时，",
+        "又\"啪\"地熄了",
+        "。】\n\n你轻手",
+        "轻脚地，推开了",
+        "寝室那扇门。\n"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "tag-in-unparseable-json": {
+    "ok": {
+      "chunks": [
+        "他",
+        "喊\"走\",然后",
+        "又说\"快\"。\n",
+        "第二段"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "tag-in-string-loose-escapes": {
+    "ok": {
+      "chunks": [
+        "第",
+        "一段\n他说",
+        "\"走\"",
+        "你\\你/",
+        "\t好\n第二段"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "cot-pseudo-tags-in-text": {
+    "ok": {
+      "chunks": [
+        "开",
+        "头碎片 ",
+        "判定",
+        " ",
+        " 结尾"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "truncated-envelope": {
+    "ok": {
+      "chunks": [
+        "【Nove",
+        "那扇玻璃门里的",
+        "暖黄灯，落在身",
+        "后了。】\n",
+        "\n你那颗脑子，",
+        "\"嗡\"地，",
+        "白了半分。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "truncated-in-commands": {
+    "ok": {
+      "chunks": [
+        "正文走完了"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "truncated-in-unicode-escape": {
+    "ok": {
+      "chunks": [
+        "abc"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "unescaped-quotes-in-story": {
+    "ok": {
+      "chunks": [
+        "他喊\"走",
+        "\",然后又说\"快",
+        "\"。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "raw-linebreak-in-string": {
+    "ok": {
+      "chunks": [
+        "第一段\n第",
+        "二段，\"嗡",
+        "\"地"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "invalid-escape-stutter": {
+    "ok": {
+      "chunks": [
+        "他说\\你好"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "invalid-escape-valid-mix": {
+    "ok": {
+      "chunks": [
+        "\\你 ",
+        "你 ",
+        "\\x \\q"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "heal-quotes-evidence": {
+    "ok": {
+      "chunks": [
+        "{\"commands\":[],\"setting_updates\":[{\"kind\":\"charac",
+        "ter\",\"s",
+        "tatemen",
+        "t\":\"林月怕",
+        "水\",\"evi",
+        "dence\":",
+        "\"玩家写道 \"",
+        "她从小怕水\" ",
+        "然后继续\",\"",
+        "anchors",
+        "\":[\"林月\"",
+        "],\"enti",
+        "ties\":[",
+        "\"林月\"]}]",
+        "}"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "loose-bare-keys-after-story": {
+    "ok": {
+      "chunks": [
+        "正文",
+        "\", command",
+        "s:[{act",
+        "ion:\"se",
+        "t"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "trailing-comma-object": {
+    "ok": {
+      "chunks": [
+        "正文\"引",
+        "\""
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "bare-number": {
+    "ok": {
+      "chunks": [
+        "42"
+      ],
+      "flushedChunks": 1
+    }
+  },
+  "bare-string": {
+    "ok": {
+      "chunks": [
+        "\"hello\""
+      ],
+      "flushedChunks": 1
+    }
+  },
+  "bare-array": {
+    "ok": {
+      "chunks": [
+        "[\"a\",\"b\"]"
+      ],
+      "flushedChunks": 1
+    }
+  },
+  "bare-true": {
+    "ok": {
+      "chunks": [
+        "true"
+      ],
+      "flushedChunks": 1
+    }
+  },
+  "bare-null": {
+    "ok": {
+      "chunks": [
+        "null"
+      ],
+      "flushedChunks": 1
+    }
+  },
+  "double-encoded-envelope": {
+    "ok": {
+      "chunks": [
+        "\"{\\\"text\\\":\\\"你好\\\",\\\"commands\\\":[{\\\"action\\\":\\\"set",
+        "\\\",\\\"ke",
+        "y\\\":\\\"a",
+        "\\\",\\\"va",
+        "lue\\\":1",
+        "}]}\""
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "fenced-array": {
+    "ok": {
+      "chunks": [
+        "```json\n[{\"x\":1},{\"y\":2}]\n```"
+      ],
+      "flushedChunks": 1
+    }
+  },
+  "escaped-twice-in-json": {
+    "ok": {
+      "chunks": [
+        "第一段",
+        "\n\n他说",
+        "\"走",
+        "\"。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "escaped-twice-in-tag": {
+    "ok": {
+      "chunks": [
+        "第一段",
+        "\n\n他说",
+        "\"走",
+        "\"。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "fence-json": {
+    "ok": {
+      "chunks": [
+        "好的，下面是结果：\n```json\n{\"name\":\"末世\",\"description\":\"灰烬之",
+        "地\",\"tal",
+        "ent_cos",
+        "t\":3}\n`",
+        "``\n以上。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "fence-no-language": {
+    "ok": {
+      "chunks": [
+        "```\n{\"name\":\"无语言\",\"description\":\"d\"}\n```"
+      ],
+      "flushedChunks": 1
+    }
+  },
+  "fence-upper-json": {
+    "ok": {
+      "chunks": [
+        "大写围栏"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "fence-unclosed": {
+    "ok": {
+      "chunks": [
+        "没闭合的",
+        "围栏"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "prose-then-json": {
+    "ok": {
+      "chunks": [
+        "下面是回复：\n{\"text\":\"前有散文\",\"commands\":[]}"
+      ],
+      "flushedChunks": 1
+    }
+  },
+  "json-then-prose": {
+    "ok": {
+      "chunks": [
+        "后有散文"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "multi-json-blocks-cot-then-final": {
+    "ok": {
+      "chunks": [
+        "{\"name\":\"半成品\"}\n\n{\"name\":\"完整版\",\"description\":\"全部必填",
+        "齐\",\"sum",
+        "mary\":\"",
+        "摘要\",\"pa",
+        "tches\":",
+        "[{\"targ",
+        "et\":\"a.",
+        "b\",\"op\"",
+        ":\"set-f",
+        "ield\",\"",
+        "value\":",
+        "1}],\"re",
+        "fined\":",
+        "\"r\"}"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "multi-json-blocks-equal-score": {
+    "ok": {
+      "chunks": [
+        "{\"name\":\"早\",\"description\":\"D1\"}\n\n{\"name\":\"晚\",\"des",
+        "criptio",
+        "n\":\"D2\"",
+        "}"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "multi-json-text-twice": {
+    "ok": {
+      "chunks": [
+        "甲"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "assistant-payload-full": {
+    "ok": {
+      "chunks": [
+        "我来调整一下。\n```json\n{\"summary\":\"改了两处\",\"patches\":[{\"ta",
+        "rget\":\"",
+        "角色.名字\",",
+        "\"op\":\"s",
+        "et-fiel",
+        "d\",\"val",
+        "ue\":\"林月",
+        "\",\"rati",
+        "onale\":",
+        "\"统一称呼\"}",
+        ",{\"targ",
+        "et\":\"背包",
+        "\",\"op\":",
+        "\"insert",
+        "-item\",",
+        "\"value\"",
+        ":\"x\",\"p",
+        "osition",
+        "\":{\"aft",
+        "er\":{\"b",
+        "y\":\"id\"",
+        ",\"value",
+        "\":\"k\"}}",
+        "},{\"tar",
+        "get\":\"b",
+        "ad\",\"op",
+        "\":\"nope",
+        "\"}],\"kn",
+        "owledge",
+        "_facts\"",
+        ":[{\"sou",
+        "rceEnti",
+        "ty\":\"A\"",
+        ",\"targe",
+        "tEntity",
+        "\":\"B\",\"",
+        "fact\":\"",
+        "A 认识 B\"",
+        "}]}\n```"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "loose-json-knowledge-facts": {
+    "ok": {
+      "chunks": [
+        "\n结果如下：\n{\"knowledge_facts\":[{\"source_entity\":\"甲\",\"ta",
+        "rget_en",
+        "tity\":\"",
+        "乙\",\"fac",
+        "t\":\"甲认识",
+        "乙\"}],\"e",
+        "ntity_d",
+        "escript",
+        "ions\":[",
+        "{\"name\"",
+        ":\"甲\",\"s",
+        "ummary\"",
+        ":\"一个人\"}",
+        "]}"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "combined-response-field-repair": {
+    "ok": {
+      "chunks": [
+        "{\"commands\":[{\"action\":\"set\",\"key\":\"a\",\"value\":1},{\"a",
+        "ction\":",
+        "\"set\"},",
+        "3],\"ent",
+        "ity_des",
+        "criptio",
+        "ns\":[{\"",
+        "name\":\"",
+        " 甲 \",\"s",
+        "ummary\"",
+        ":\" 一个人 ",
+        "\"},{\"na",
+        "me\":\"\",",
+        "\"summar",
+        "y\":\"x\"}",
+        "],\"edge",
+        "_update",
+        "s\":[{\"e",
+        "dge_id\"",
+        ":\" [E1]",
+        " \",\"act",
+        "ion\":\" ",
+        "invalid",
+        "ate \",\"",
+        "reason\"",
+        ":\" 过期 \"",
+        "},{\"edg",
+        "e_id\":\"",
+        "E2\",\"ac",
+        "tion\":\"",
+        "keep\"},",
+        "{\"edge_",
+        "id\":3}]",
+        ",\"extra",
+        "_out\":{",
+        "\"done\":",
+        "true}}"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "sidecars-after-json": {
+    "ok": {
+      "chunks": [
+        "【楼道那盏",
+        "声控灯，在你踩",
+        "上最后一级台阶",
+        "时，又\"啪",
+        "\"地熄了。】",
+        "\n\n你轻手轻",
+        "脚地，推开了寝",
+        "室那扇门。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "sidecar-inside-json-string": {
+    "ok": {
+      "chunks": [
+        "文中写着 ",
+        "不",
+        "是旁路",
+        " 这样"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "sidecar-unclosed": {
+    "ok": {
+      "chunks": [
+        "正文"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "sidecar-repeated": {
+    "ok": {
+      "chunks": [
+        "正文"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "empty": {
+    "ok": {
+      "chunks": [],
+      "flushedChunks": 0
+    }
+  },
+  "whitespace-only": {
+    "ok": {
+      "chunks": [
+        " \n\t "
+      ],
+      "flushedChunks": 1
+    }
+  },
+  "plain-prose": {
+    "ok": {
+      "chunks": [
+        "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。"
+      ],
+      "flushedChunks": 1
+    }
+  },
+  "prose-with-braces": {
+    "ok": {
+      "chunks": [
+        "他念出那行字：{\"系统\":\"警告\"}，然后沉默了。"
+      ],
+      "flushedChunks": 1
+    }
+  },
+  "prose-quoting-envelope": {
+    "ok": {
+      "chunks": [
+        "他念出那行字：{\"text\":\"x\"}"
+      ],
+      "flushedChunks": 1
+    }
+  },
+  "unbalanced-brace-prose-envelope": {
+    "ok": {
+      "chunks": [
+        "好的，{\n{\"text\":\"藏在后面的正文\",\"commands\":["
+      ],
+      "flushedChunks": 1
+    }
+  },
+  "stream-long-prose": {
+    "ok": {
+      "chunks": [
+        "这是一段没有任何信封的长文字，会在四十八个字之后被放行，其中夹着  和 x",
+        " 这样的伪标签",
+        "，直到结束。"
+      ],
+      "flushedChunks": 0
+    }
+  },
+  "unicode-escapes-and-emoji": {
+    "ok": {
+      "chunks": [
+        "笑😀了",
+        "你",
+        "好\t",
+        "/\\你"
+      ],
+      "flushedChunks": 0
+    }
+  }
+}

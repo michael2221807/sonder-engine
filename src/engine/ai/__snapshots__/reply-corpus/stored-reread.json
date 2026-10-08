@@ -1,0 +1,44 @@
+{
+  "stored-bare-envelope": {
+    "ok": null
+  },
+  "stored-in-tag-envelope": {
+    "ok": null
+  },
+  "stored-valid-json-envelope": {
+    "ok": null
+  },
+  "stored-plain-story": {
+    "ok": null
+  },
+  "stored-story-quotes-json": {
+    "ok": null
+  },
+  "stored-truncated-envelope": {
+    "ok": null
+  },
+  "stored-escaped-twice": {
+    "ok": "第一段\n\n他说\"走\"。"
+  },
+  "stored-escaped-twice-in-tag": {
+    "ok": "第一段\n\n他说\"走\"。"
+  },
+  "stored-own-backslash": {
+    "ok": null
+  },
+  "stored-escaped-twice-raw-differs": {
+    "ok": null
+  },
+  "stored-escaped-twice-no-raw": {
+    "ok": null
+  },
+  "stored-escaped-twice-raw-not-string": {
+    "ok": null
+  },
+  "stored-empty-envelope": {
+    "ok": null
+  },
+  "stored-empty": {
+    "ok": null
+  }
+}

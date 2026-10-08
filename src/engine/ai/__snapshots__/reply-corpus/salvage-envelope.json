@@ -1,0 +1,236 @@
+{
+  "normal-full": {
+    "ok": "码头的风很凉，林月停在栈桥前。"
+  },
+  "normal-minimal": {
+    "ok": "码头的风很凉，林月停在栈桥前。"
+  },
+  "normal-cn-aliases": {
+    "ok": "别名正文"
+  },
+  "normal-tavern-commands": {
+    "ok": "旧键名"
+  },
+  "commands-invalid-mixed": {
+    "ok": "n"
+  },
+  "commands-not-array": {
+    "ok": "n"
+  },
+  "setting-updates-variants": {
+    "ok": "n"
+  },
+  "memory-entry-long": {
+    "ok": "n"
+  },
+  "knowledge-facts-filter": {
+    "ok": "n"
+  },
+  "judgement-string": {
+    "ok": "n"
+  },
+  "extract-keys-nested": {
+    "ok": "n"
+  },
+  "think-lower": {
+    "ok": "想完了"
+  },
+  "think-upper-multiline": {
+    "ok": "大写块"
+  },
+  "think-reasoning-thought-two-blocks": {
+    "ok": "两块"
+  },
+  "think-unclosed": {
+    "ok": "不会被读到"
+  },
+  "think-with-half-json": {
+    "ok": "草稿"
+  },
+  "think-mismatched-close": {
+    "ok": "错配"
+  },
+  "think-only": {
+    "ok": null
+  },
+  "think-empty-block": {
+    "ok": "空块"
+  },
+  "think-then-tag-reply": {
+    "ok": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。"
+  },
+  "tag-whole-reply-json": {
+    "ok": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。"
+  },
+  "tag-whole-reply-loose": {
+    "ok": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。"
+  },
+  "tag-inside-json-string": {
+    "ok": "<正文>【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。</正文>"
+  },
+  "tag-inside-loose-json-string": {
+    "ok": "<正文>【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。</正文>"
+  },
+  "tag-story-then-json": {
+    "ok": null
+  },
+  "tag-placeholder-in-json": {
+    "ok": "(见上方正文)"
+  },
+  "tag-unclosed": {
+    "ok": null
+  },
+  "tag-after-stray-brace": {
+    "ok": null
+  },
+  "tag-fenced-reply": {
+    "ok": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。"
+  },
+  "tag-prose-looks-like-json": {
+    "ok": null
+  },
+  "tag-extra-json-after": {
+    "ok": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。"
+  },
+  "cot-protocol-shape": {
+    "ok": null
+  },
+  "tag-in-unparseable-json": {
+    "ok": "<正文>他喊\"走\",然后又说\"快\"。\n第二段</正文>"
+  },
+  "tag-in-string-loose-escapes": {
+    "ok": "<正文>第一段\n他说\"走\"你你/\t好\n第二段</正文>"
+  },
+  "cot-pseudo-tags-in-text": {
+    "ok": "<正文>开头碎片 <judge>判定</judge> < /变量规划 > 结尾"
+  },
+  "truncated-envelope": {
+    "ok": "【Nove那扇玻璃门里的暖黄灯，落在身后了。】\n\n你那颗脑子，\"嗡\"地，白了半分。"
+  },
+  "truncated-in-commands": {
+    "ok": "正文走完了"
+  },
+  "truncated-in-unicode-escape": {
+    "ok": "abc"
+  },
+  "unescaped-quotes-in-story": {
+    "ok": "他喊\"走\",然后又说\"快\"。"
+  },
+  "raw-linebreak-in-string": {
+    "ok": "第一段\n第二段，\"嗡\"地"
+  },
+  "invalid-escape-stutter": {
+    "ok": "他说你好"
+  },
+  "invalid-escape-valid-mix": {
+    "ok": "\\你 你 x q"
+  },
+  "heal-quotes-evidence": {
+    "ok": null
+  },
+  "loose-bare-keys-after-story": {
+    "ok": "正文"
+  },
+  "trailing-comma-object": {
+    "ok": "正文\"引\""
+  },
+  "bare-number": {
+    "ok": null
+  },
+  "bare-string": {
+    "ok": null
+  },
+  "bare-array": {
+    "ok": null
+  },
+  "bare-true": {
+    "ok": null
+  },
+  "bare-null": {
+    "ok": null
+  },
+  "double-encoded-envelope": {
+    "ok": null
+  },
+  "fenced-array": {
+    "ok": null
+  },
+  "escaped-twice-in-json": {
+    "ok": "第一段\\n\\n他说\\\"走\\\"。"
+  },
+  "escaped-twice-in-tag": {
+    "ok": "第一段\\n\\n他说\\\"走\\\"。"
+  },
+  "fence-json": {
+    "ok": null
+  },
+  "fence-no-language": {
+    "ok": null
+  },
+  "fence-upper-json": {
+    "ok": "大写围栏"
+  },
+  "fence-unclosed": {
+    "ok": "没闭合的围栏"
+  },
+  "prose-then-json": {
+    "ok": "前有散文"
+  },
+  "json-then-prose": {
+    "ok": "后有散文"
+  },
+  "multi-json-blocks-cot-then-final": {
+    "ok": null
+  },
+  "multi-json-blocks-equal-score": {
+    "ok": null
+  },
+  "multi-json-text-twice": {
+    "ok": "甲"
+  },
+  "assistant-payload-full": {
+    "ok": null
+  },
+  "loose-json-knowledge-facts": {
+    "ok": null
+  },
+  "combined-response-field-repair": {
+    "ok": null
+  },
+  "sidecars-after-json": {
+    "ok": "【楼道那盏声控灯，在你踩上最后一级台阶时，又\"啪\"地熄了。】\n\n你轻手轻脚地，推开了寝室那扇门。"
+  },
+  "sidecar-inside-json-string": {
+    "ok": "文中写着 <短期记忆>不是旁路</短期记忆> 这样"
+  },
+  "sidecar-unclosed": {
+    "ok": "正文"
+  },
+  "sidecar-repeated": {
+    "ok": "正文"
+  },
+  "empty": {
+    "ok": null
+  },
+  "whitespace-only": {
+    "ok": null
+  },
+  "plain-prose": {
+    "ok": null
+  },
+  "prose-with-braces": {
+    "ok": null
+  },
+  "prose-quoting-envelope": {
+    "ok": "x"
+  },
+  "unbalanced-brace-prose-envelope": {
+    "ok": "藏在后面的正文"
+  },
+  "stream-long-prose": {
+    "ok": null
+  },
+  "unicode-escapes-and-emoji": {
+    "ok": "笑😀了你好\t/你"
+  }
+}

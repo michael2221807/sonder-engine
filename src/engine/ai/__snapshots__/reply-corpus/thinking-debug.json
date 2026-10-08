@@ -1,0 +1,236 @@
+{
+  "normal-full": {
+    "ok": "__undefined__"
+  },
+  "normal-minimal": {
+    "ok": "__undefined__"
+  },
+  "normal-cn-aliases": {
+    "ok": "__undefined__"
+  },
+  "normal-tavern-commands": {
+    "ok": "__undefined__"
+  },
+  "commands-invalid-mixed": {
+    "ok": "__undefined__"
+  },
+  "commands-not-array": {
+    "ok": "__undefined__"
+  },
+  "setting-updates-variants": {
+    "ok": "__undefined__"
+  },
+  "memory-entry-long": {
+    "ok": "__undefined__"
+  },
+  "knowledge-facts-filter": {
+    "ok": "__undefined__"
+  },
+  "judgement-string": {
+    "ok": "__undefined__"
+  },
+  "extract-keys-nested": {
+    "ok": "__undefined__"
+  },
+  "think-lower": {
+    "ok": "先想一想"
+  },
+  "think-upper-multiline": {
+    "ok": "第一行\n第二行"
+  },
+  "think-reasoning-thought-two-blocks": {
+    "ok": "理由一\n\n念头二"
+  },
+  "think-unclosed": {
+    "ok": "__undefined__"
+  },
+  "think-with-half-json": {
+    "ok": "{\"text\": \"草稿\", \"commands\": ["
+  },
+  "think-mismatched-close": {
+    "ok": "开"
+  },
+  "think-only": {
+    "ok": "只有思考，没有正文"
+  },
+  "think-empty-block": {
+    "ok": "__undefined__"
+  },
+  "think-then-tag-reply": {
+    "ok": "先想一想"
+  },
+  "tag-whole-reply-json": {
+    "ok": "__undefined__"
+  },
+  "tag-whole-reply-loose": {
+    "ok": "__undefined__"
+  },
+  "tag-inside-json-string": {
+    "ok": "__undefined__"
+  },
+  "tag-inside-loose-json-string": {
+    "ok": "__undefined__"
+  },
+  "tag-story-then-json": {
+    "ok": "草稿变量规划"
+  },
+  "tag-placeholder-in-json": {
+    "ok": "__undefined__"
+  },
+  "tag-unclosed": {
+    "ok": "__undefined__"
+  },
+  "tag-after-stray-brace": {
+    "ok": "__undefined__"
+  },
+  "tag-fenced-reply": {
+    "ok": "__undefined__"
+  },
+  "tag-prose-looks-like-json": {
+    "ok": "__undefined__"
+  },
+  "tag-extra-json-after": {
+    "ok": "__undefined__"
+  },
+  "cot-protocol-shape": {
+    "ok": "__undefined__"
+  },
+  "tag-in-unparseable-json": {
+    "ok": "__undefined__"
+  },
+  "tag-in-string-loose-escapes": {
+    "ok": "__undefined__"
+  },
+  "cot-pseudo-tags-in-text": {
+    "ok": "__undefined__"
+  },
+  "truncated-envelope": {
+    "ok": "__undefined__"
+  },
+  "truncated-in-commands": {
+    "ok": "__undefined__"
+  },
+  "truncated-in-unicode-escape": {
+    "ok": "__undefined__"
+  },
+  "unescaped-quotes-in-story": {
+    "ok": "__undefined__"
+  },
+  "raw-linebreak-in-string": {
+    "ok": "__undefined__"
+  },
+  "invalid-escape-stutter": {
+    "ok": "__undefined__"
+  },
+  "invalid-escape-valid-mix": {
+    "ok": "__undefined__"
+  },
+  "heal-quotes-evidence": {
+    "ok": "__undefined__"
+  },
+  "loose-bare-keys-after-story": {
+    "ok": "__undefined__"
+  },
+  "trailing-comma-object": {
+    "ok": "__undefined__"
+  },
+  "bare-number": {
+    "ok": "__undefined__"
+  },
+  "bare-string": {
+    "ok": "__undefined__"
+  },
+  "bare-array": {
+    "ok": "__undefined__"
+  },
+  "bare-true": {
+    "ok": "__undefined__"
+  },
+  "bare-null": {
+    "ok": "__undefined__"
+  },
+  "double-encoded-envelope": {
+    "ok": "__undefined__"
+  },
+  "fenced-array": {
+    "ok": "__undefined__"
+  },
+  "escaped-twice-in-json": {
+    "ok": "__undefined__"
+  },
+  "escaped-twice-in-tag": {
+    "ok": "__undefined__"
+  },
+  "fence-json": {
+    "ok": "__undefined__"
+  },
+  "fence-no-language": {
+    "ok": "__undefined__"
+  },
+  "fence-upper-json": {
+    "ok": "__undefined__"
+  },
+  "fence-unclosed": {
+    "ok": "__undefined__"
+  },
+  "prose-then-json": {
+    "ok": "__undefined__"
+  },
+  "json-then-prose": {
+    "ok": "__undefined__"
+  },
+  "multi-json-blocks-cot-then-final": {
+    "ok": "__undefined__"
+  },
+  "multi-json-blocks-equal-score": {
+    "ok": "__undefined__"
+  },
+  "multi-json-text-twice": {
+    "ok": "__undefined__"
+  },
+  "assistant-payload-full": {
+    "ok": "__undefined__"
+  },
+  "loose-json-knowledge-facts": {
+    "ok": "算一下 {\"a\":1}"
+  },
+  "combined-response-field-repair": {
+    "ok": "想"
+  },
+  "sidecars-after-json": {
+    "ok": "__undefined__"
+  },
+  "sidecar-inside-json-string": {
+    "ok": "__undefined__"
+  },
+  "sidecar-unclosed": {
+    "ok": "__undefined__"
+  },
+  "sidecar-repeated": {
+    "ok": "__undefined__"
+  },
+  "empty": {
+    "ok": "__undefined__"
+  },
+  "whitespace-only": {
+    "ok": "__undefined__"
+  },
+  "plain-prose": {
+    "ok": "__undefined__"
+  },
+  "prose-with-braces": {
+    "ok": "__undefined__"
+  },
+  "prose-quoting-envelope": {
+    "ok": "__undefined__"
+  },
+  "unbalanced-brace-prose-envelope": {
+    "ok": "__undefined__"
+  },
+  "stream-long-prose": {
+    "ok": "__undefined__"
+  },
+  "unicode-escapes-and-emoji": {
+    "ok": "__undefined__"
+  }
+}
