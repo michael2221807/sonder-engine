@@ -17,7 +17,7 @@ import type { ImageAssetCache } from '../image/asset-cache';
 import type { EngramEntity } from '../memory/engram/entity-builder';
 import type { EngramEdge } from '../memory/engram/knowledge-edge';
 import { gzipCompress, sha256String } from '../sync/chunked-bundle-packer';
-import { collectAssetIdsFromTree } from '../persistence/backup-service';
+import { collectAssetIdsFromTree } from '../image/asset-refs';
 import { stripStateTreeForCard, getByPath, isRecord, collectStringsAtPath } from './card-stripper';
 import { buildDefaultCardStripPaths, type CardStripPaths } from './card-export-paths';
 import { convertCapturedBookForCard, extractCapturedBookFromTree } from './captured-settings-card';

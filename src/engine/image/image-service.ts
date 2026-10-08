@@ -23,7 +23,7 @@ import { ImageTaskQueue } from './task-queue';
 import type { ImageTask, ImageAsset, ImageBackendType, ImageSubjectType, CharacterAnchor, StylePreset, CivitaiLoraShelfItem, CivitaiLoraSnapshot, ImageReferenceInput, ImageUnderstandingRequest, ImageUnderstandingResult, SecretPartType } from './types';
 import { supportsImageToImage, supportsImageUnderstanding, clampReferencesForBackend } from './provider-capabilities';
 // 「还有谁在引用」与备份采集器同源——见 cleanupEvictedTaskAssets 的注释。
-import { collectAssetIdsFromTree } from '../persistence/backup-service';
+import { collectAssetIdsFromTree } from './asset-refs';
 import { describeImageWithGeneralLlm, getGeneralLlmInfo, type GeneralLlmInfo } from './llm-understanding';
 import type { ImageUnderstandingEngine } from './reference-types';
 import { blobToDataUrl } from './utils';
@@ -1012,95 +1012,6 @@ export class ImageService {
     for (const id of ids) {
       void this.cache.delete(id).catch(() => {/* best effort */});
     }
-  }
-
-  /**
-   * Remove IndexedDB blobs not referenced by any state-tree entry.
-   * Safe to call on demand (e.g. from settings UI) — reads all cached
-   * asset metadata, diffs against referenced IDs from the state tree,
-   * and deletes the difference.
-   */
-  async pruneOrphanedAssets(): Promise<{ deleted: number; freedIds: string[] }> {
-    const allAssets = await this.cache.listAll();
-    const allCachedIds = new Set(allAssets.map((a) => a.id));
-    if (allCachedIds.size === 0) return { deleted: 0, freedIds: [] };
-
-    const referencedIds = this.collectAllReferencedAssetIds();
-    const orphanIds: string[] = [];
-    for (const id of allCachedIds) {
-      if (!referencedIds.has(id)) orphanIds.push(id);
-    }
-    for (const id of orphanIds) {
-      void this.cache.delete(id).catch(() => {/* best effort */});
-    }
-    if (orphanIds.length > 0) {
-      console.info(`[ImageService] Pruned ${orphanIds.length} orphaned asset(s) from cache`);
-    }
-    return { deleted: orphanIds.length, freedIds: orphanIds };
-  }
-
-  private collectAllReferencedAssetIds(): Set<string> {
-    const ids = new Set<string>();
-    const addIfValid = (val: unknown) => {
-      if (typeof val === 'string' && val.trim()) ids.add(val.trim());
-    };
-    const SELECTION_FIELDS = ['已选头像图片ID', '已选立绘图片ID', '已选背景图片ID'];
-    const extractFromArchive = (archive: unknown) => {
-      if (!archive || typeof archive !== 'object' || Array.isArray(archive)) return;
-      const a = archive as Record<string, unknown>;
-      for (const f of SELECTION_FIELDS) addIfValid(a[f]);
-      addIfValid(a['最近生图结果']);
-      const history = a['生图历史'];
-      if (Array.isArray(history)) {
-        for (const entry of history) {
-          if (entry && typeof entry === 'object') addIfValid((entry as Record<string, unknown>).id);
-        }
-      }
-      const secret = a['香闺秘档'];
-      if (secret && typeof secret === 'object') {
-        for (const part of Object.values(secret as Record<string, unknown>)) {
-          if (part && typeof part === 'object') {
-            addIfValid((part as Record<string, unknown>).id);
-            addIfValid((part as Record<string, unknown>).assetId);
-          }
-        }
-      }
-    };
-
-    // Player archive
-    const playerArchive = this.stateManager.get<Record<string, unknown>>('角色.图片档案');
-    extractFromArchive(playerArchive);
-
-    // NPC archives
-    const relationships = this.stateManager.get<Array<Record<string, unknown>>>(this.paths.relationships);
-    if (Array.isArray(relationships)) {
-      for (const npc of relationships) {
-        if (npc && typeof npc === 'object') extractFromArchive(npc['图片档案']);
-      }
-    }
-
-    // Scene archive
-    const sceneArchive = this.stateManager.get<Record<string, unknown>>('系统.扩展.image.sceneArchive');
-    if (sceneArchive && typeof sceneArchive === 'object') {
-      addIfValid(sceneArchive['当前壁纸图片ID']);
-      addIfValid(sceneArchive['最近生图结果']);
-      const sceneHistory = sceneArchive['生图历史'];
-      if (Array.isArray(sceneHistory)) {
-        for (const entry of sceneHistory) {
-          if (entry && typeof entry === 'object') addIfValid((entry as Record<string, unknown>).id);
-        }
-      }
-    }
-
-    // Reference library
-    const refLib = this.stateManager.get<Array<Record<string, unknown>>>('系统.扩展.image.referenceLibrary');
-    if (Array.isArray(refLib)) {
-      for (const entry of refLib) {
-        if (entry && typeof entry === 'object') addIfValid(entry.assetId);
-      }
-    }
-
-    return ids;
   }
 
   /**

@@ -25,7 +25,7 @@
  * Engine-only: no i18n, no UI. The report carries numbers and ids; the panel words it.
  */
 import type { EnginePathConfig } from '../pipeline/types';
-import { collectAssetIdsFromTree } from './backup-service';
+import { collectAssetIdsFromTree } from '../image/asset-refs';
 import { readWorldBookBaseline } from './save-health-baseline';
 
 export type SaveHealthIssue =
