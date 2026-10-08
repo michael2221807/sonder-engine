@@ -42,6 +42,7 @@ import type { GamePack } from '../engine/types';
 import type { VectorBoardAccess } from '../features/plot-vector/board-access';
 import { i18n } from '../ui/i18n';
 import type { App as VueApp } from 'vue';
+import { provideService } from '../ui/injection-keys';
 
 /** Moved verbatim out of main.ts bootstrap() (R5 step 5). Statement order inside is behavior. */
 export function provideServices(deps: {
@@ -85,34 +86,34 @@ export function provideServices(deps: {
   const actionQueueStore = useActionQueueStore();
   actionQueueStore.loadFromLocalStorage();
 
-  app.provide('profileManager', profileManager);
-  app.provide('saveManager', saveManager);
-  app.provide('plotVectorBoard', plotVectorBoard);
-  app.provide('promptStorage', promptStorage);
-  if (plotDecomposer) app.provide('plotDecomposer', plotDecomposer);
-  if (characterVectorProposePipeline) app.provide('characterVectorPropose', characterVectorProposePipeline);
-  if (plotReviser) app.provide('plotReviser', plotReviser);
+  provideService(app, 'profileManager', profileManager);
+  provideService(app, 'saveManager', saveManager);
+  provideService(app, 'plotVectorBoard', plotVectorBoard);
+  provideService(app, 'promptStorage', promptStorage);
+  if (plotDecomposer) provideService(app, 'plotDecomposer', plotDecomposer);
+  if (characterVectorProposePipeline) provideService(app, 'characterVectorPropose', characterVectorProposePipeline);
+  if (plotReviser) provideService(app, 'plotReviser', plotReviser);
   // Lets the PlotPanel confirmation gate advance a confirmed critical node
   // immediately, instead of waiting for the next main round's evaluation pass.
-  if (plotEvaluationPipeline) app.provide('plotEvaluation', plotEvaluationPipeline);
-  app.provide('imageService', imageService);
-  app.provide('ttsService', ttsService);
-  app.provide('sttService', sttService);
-  app.provide('vectorStore', vectorStore);
-  app.provide('embedder', embedder);
-  app.provide('backupService', backupService);
-  app.provide('gameCardExportService', gameCardExportService);
-  app.provide('gameCardImportService', gameCardImportService);
+  if (plotEvaluationPipeline) provideService(app, 'plotEvaluation', plotEvaluationPipeline);
+  provideService(app, 'imageService', imageService);
+  provideService(app, 'ttsService', ttsService);
+  provideService(app, 'sttService', sttService);
+  provideService(app, 'vectorStore', vectorStore);
+  provideService(app, 'embedder', embedder);
+  provideService(app, 'backupService', backupService);
+  provideService(app, 'gameCardExportService', gameCardExportService);
+  provideService(app, 'gameCardImportService', gameCardImportService);
   // Story 7: card-export preview checks referenced images against the global cache (missing-image warning).
-  app.provide('imageAssetCache', imageAssetCacheForBackup);
-  app.provide('customPresetStore', customPresetStore);
-  app.provide('worldBookStorage', worldBookStorage);
+  provideService(app, 'imageAssetCache', imageAssetCacheForBackup);
+  provideService(app, 'customPresetStore', customPresetStore);
+  provideService(app, 'worldBookStorage', worldBookStorage);
 
   const githubSync = new GitHubSyncService(backupService);
-  app.provide('githubSync', githubSync);
+  provideService(app, 'githubSync', githubSync);
 
   const lanSync = new LanSyncService(backupService);
-  app.provide('lanSync', lanSync);
+  provideService(app, 'lanSync', lanSync);
 
   // ── 2026-04-14：AI 助手 service ──
   // 复用现有 aiService（按 usageType='assistant' 路由 API 配置）。
@@ -166,32 +167,32 @@ export function provideServices(deps: {
     locale: i18n.global.locale.value,
     maxHistoryTurns: assistantSettings.maxHistoryTurns,
   });
-  app.provide('assistantService', assistantService);
-  app.provide('worldBuilderService', worldBuilderService);
-  app.provide('engramEditor', engramEditor);
-  app.provide('engramManager', engramManager);
-  app.provide('memoryRetriever', memoryRetriever);
-  app.provide('configRegistry', configRegistry);
-  app.provide('configResolver', configResolver);
-  app.provide('eventBus', eventBus);
-  app.provide('aiService', aiService);
-  app.provide('stateManager', stateManager);
-  app.provide('promptAssembler', promptAssembler);
-  app.provide('promptRegistry', promptRegistry);
-  app.provide('responseParser', responseParser);
+  provideService(app, 'assistantService', assistantService);
+  provideService(app, 'worldBuilderService', worldBuilderService);
+  provideService(app, 'engramEditor', engramEditor);
+  provideService(app, 'engramManager', engramManager);
+  provideService(app, 'memoryRetriever', memoryRetriever);
+  provideService(app, 'configRegistry', configRegistry);
+  provideService(app, 'configResolver', configResolver);
+  provideService(app, 'eventBus', eventBus);
+  provideService(app, 'aiService', aiService);
+  provideService(app, 'stateManager', stateManager);
+  provideService(app, 'promptAssembler', promptAssembler);
+  provideService(app, 'promptRegistry', promptRegistry);
+  provideService(app, 'responseParser', responseParser);
 
   if (pack) {
-    app.provide('gamePack', pack);
+    provideService(app, 'gamePack', pack);
   }
   if (characterInitPipeline) {
-    app.provide('characterInitPipeline', characterInitPipeline);
+    provideService(app, 'characterInitPipeline', characterInitPipeline);
   }
   if (orchestrator) {
-    app.provide('gameOrchestrator', orchestrator);
+    provideService(app, 'gameOrchestrator', orchestrator);
   }
   if (npcChatPipeline) {
     // §7.2: 注入 NPC 私聊管线，供 RelationshipPanel / NpcChatModal 使用
-    app.provide('npcChatPipeline', npcChatPipeline);
+    provideService(app, 'npcChatPipeline', npcChatPipeline);
 
     // ── CR-R7: 读档/创角完成后对所有 NPC 的 `私聊历史` 做一次性回溯性 trim ──
     // 场景：旧存档里 `私聊历史` 数组可能超过当前 maxChatHistory（例如 pack 调低了上限，
