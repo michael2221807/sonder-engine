@@ -28,6 +28,7 @@ import {
 import { estimateMessagesTokens, estimateTextTokens } from '../../core/metrics-helpers';
 import { isColocatedLocation, type NpcRecord } from '../../social/npc-presence';
 import { buildSystemPrompt } from '../../prompt/system-prompt-builder';
+import { PIECE_ID } from '../../prompt/piece-ids';
 import { activeClauses, narrativeContractTraceEntry } from '../../prompt/narrative-contract';
 import { activeVectorEntries, characterVectorsTraceEntry } from '../../prompt/character-vectors';
 import { SPLIT_STEP1_FORMAT_PROMPT_ID, SPLIT_STEP2_FOLLOWUP_PROMPT_ID } from '../../prompt/builtin-slots';
@@ -399,7 +400,7 @@ export function assembleStoryRequest(
   // Insert before the tail block (player_input + start_task + optional cot_masquerade)
   if (buildResult.shortMemoryContext) {
     // Find player_input position (the assistant message with user's input)
-    const playerInputIdx = messageSources.findIndex((s) => s === 'builder:player_input');
+    const playerInputIdx = messageSources.findIndex((s) => s === `builder:${PIECE_ID.PLAYER_INPUT}`);
     const insertAt = playerInputIdx >= 0 ? playerInputIdx : Math.max(0, messages.length - 2);
     messages.splice(insertAt, 0, { role: 'assistant' as const, content: buildResult.shortMemoryContext });
     messageSources.splice(insertAt, 0, 'short_term_memory');

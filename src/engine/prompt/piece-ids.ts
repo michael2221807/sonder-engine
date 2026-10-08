@@ -1,0 +1,54 @@
+/**
+ * The ids of the pieces `buildSystemPrompt` emits (its `push` calls), as one list. The builder, the Context
+ * Compiler's "what Step 1 already sent" registry (`STEP1_PIECE_*`) and the cache-prefix sets all name pieces through
+ * these constants, so a rename cannot leave one of them behind (audit E04a-016). The string values are the ids the
+ * prompt-assembly panel, the saved traces and the tests already know: never change a value here without migrating them.
+ */
+export const PIECE_ID = {
+  ACTION_OPTIONS_OFF: 'action_options_off',
+  AI_ROLE: 'ai_role',
+  BOOKMARKED_ROUNDS: 'bookmarked_rounds',
+  ACTION_OPTIONS: 'action_options',
+  CHARACTER_VECTORS: 'character_vectors',
+  COT_CORE: 'cot_core',
+  COT_JUDGE: 'cot_judge',
+  COT_MASQUERADE: 'cot_masquerade',
+  EXTRA_PROMPT: 'extra_prompt',
+  FORMAT_PROMPT: 'format_prompt',
+  HEROINE_PLAN: 'heroine_plan',
+  JAILBREAK: 'jailbreak',
+  LENGTH_PROMPT: 'length_prompt',
+  MEMORY_ENGRAM: 'memory_engram',
+  MEMORY_IMPLICIT: 'memory_implicit',
+  MEMORY_LONG: 'memory_long',
+  MEMORY_MID: 'memory_mid',
+  NARRATIVE_CONSTRAINTS: 'narrative_constraints',
+  NARRATIVE_CONTRACT: 'narrative_contract',
+  NARRATIVE_RULES: 'narrative_rules',
+  NPC_AWAY: 'npc_away',
+  NPC_PRESENT: 'npc_present',
+  OUTPUT_PROTOCOL: 'output_protocol',
+  PERSPECTIVE_PROMPT: 'perspective_prompt',
+  PLAYER_INPUT: 'player_input',
+  PREV_THINKING: 'prev_thinking',
+  SETTING_AUTHORITY: 'setting_authority',
+  SETTING_CAPTURE: 'setting_capture',
+  START_TASK: 'start_task',
+  STATE_AGREEMENTS: 'state_agreements',
+  STATE_ENVIRONMENT: 'state_environment',
+  STATE_ROLE: 'state_role',
+  STATE_TASKS: 'state_tasks',
+  STATE_WORLD: 'state_world',
+  STORY_PLAN: 'story_plan',
+  WB_COMMAND_RULES: 'wb_command_rules',
+  WB_OUTPUT_RULES: 'wb_output_rules',
+  WB_SYSTEM_RULES: 'wb_system_rules',
+  WORLD_MAP: 'world_map',
+  WORLD_PROMPT: 'world_prompt',
+  WRITE_ANTI_CLICHE: 'write_anti_cliche',
+  WRITE_EMOTION_GUARD: 'write_emotion_guard',
+  WRITE_NO_CONTROL: 'write_no_control',
+  WRITE_STYLE: 'write_style',
+} as const;
+
+export type PieceId = (typeof PIECE_ID)[keyof typeof PIECE_ID];

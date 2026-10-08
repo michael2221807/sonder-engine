@@ -23,6 +23,7 @@ import { buildPlotFocusCorpusTexts } from '../plot/plot-corpus';
 import { withoutStatePaths } from '../plot/gauge-shadow';
 import { DEFAULT_PROMPT_SETTINGS, resolveCapturedBudgetRatio, actionOptionsOn, wordCountRangeOf, type WordCountRange } from './world-book';
 import { BUILTIN_SLOTS, STORY_STYLE_PROMPT_IDS } from './builtin-slots';
+import { PIECE_ID } from './piece-ids';
 import { DEFAULT_ENGINE_PATHS, type EnginePathConfig } from '../pipeline/types';
 import {
   buildCorpus,
@@ -55,27 +56,27 @@ export const GPROXY_CACHE_MAGIC_STRING =
  * reorder preserves each piece's original insertion order.
  */
 export const GPROXY_CACHE_STATIC_PIECE_IDS: ReadonlySet<string> = new Set([
-  'jailbreak',
-  'ai_role',
-  'write_style',
-  'write_anti_cliche',
-  'write_emotion_guard',
-  'write_no_control',
-  'perspective_prompt',
-  'length_prompt',
-  'narrative_constraints',
-  'narrative_rules',
-  'output_protocol',
-  'format_prompt',
-  'cot_core',
-  'cot_judge',
+  PIECE_ID.JAILBREAK,
+  PIECE_ID.AI_ROLE,
+  PIECE_ID.WRITE_STYLE,
+  PIECE_ID.WRITE_ANTI_CLICHE,
+  PIECE_ID.WRITE_EMOTION_GUARD,
+  PIECE_ID.WRITE_NO_CONTROL,
+  PIECE_ID.PERSPECTIVE_PROMPT,
+  PIECE_ID.LENGTH_PROMPT,
+  PIECE_ID.NARRATIVE_CONSTRAINTS,
+  PIECE_ID.NARRATIVE_RULES,
+  PIECE_ID.OUTPUT_PROTOCOL,
+  PIECE_ID.FORMAT_PROMPT,
+  PIECE_ID.COT_CORE,
+  PIECE_ID.COT_JUDGE,
 ]);
 
 /** Trailing conversation pieces that MUST stay last (the user/assistant turn). */
 const GPROXY_CACHE_TAIL_PIECE_IDS: ReadonlySet<string> = new Set([
-  'player_input',
-  'start_task',
-  'cot_masquerade',
+  PIECE_ID.PLAYER_INPUT,
+  PIECE_ID.START_TASK,
+  PIECE_ID.COT_MASQUERADE,
 ]);
 
 /** Parameters for building the system prompt */
@@ -351,10 +352,10 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   // ── 0. Jailbreak — the pack's own round flows open with it; this builder, ported from a demo without one, left it
   // out: the single call since P13 (PO 2026-10-04), split Step 1 too since 2A (PO 2026-10-05). Step 2 carries it
   // through its flow. ──
-  push('jailbreak', '破限声明', '系统', 'system', renderPackPrompt('jailbreak'));
+  push(PIECE_ID.JAILBREAK, '破限声明', '系统', 'system', renderPackPrompt('jailbreak'));
 
   // ── 1. AI Role Declaration ──
-  push('ai_role', 'AI角色声明', '系统', 'system', slot('narrator_role'));
+  push(PIECE_ID.AI_ROLE, 'AI角色声明', '系统', 'system', slot('narrator_role'));
 
   // ── 2. World Prompt (world info + world book lore) ──
   const worldSelection = stateManager.get<Record<string, unknown>>('world');
@@ -470,13 +471,13 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
     worldDesc ? `\n世界总览\n${worldDesc}` : '',
     wbResult?.worldLoreText ?? '',
   ].filter(Boolean).join('\n\n');
-  push('world_prompt', '世界观提示词', '系统', 'system', worldPrompt);
+  push(PIECE_ID.WORLD_PROMPT, '世界观提示词', '系统', 'system', worldPrompt);
 
   // ── 3. Map & Buildings ──
   const locationInfo = stateManager.get<unknown[]>(paths.locations);
   if (Array.isArray(locationInfo) && locationInfo.length > 0) {
     const mapText = `【地图与建筑】\n当前具体地点: ${currentLocation}\n地图列表:\n${locationInfo.map((l) => `- ${JSON.stringify(l)}`).join('\n')}`;
-    push('world_map', '地图与建筑', '系统', 'system', mapText);
+    push(PIECE_ID.WORLD_MAP, '地图与建筑', '系统', 'system', mapText);
   }
 
   // ── 4. Off-scene NPCs ──
@@ -491,23 +492,23 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
       const isMajor = npc[npcFields.isMajorRole] ? '是' : '否';
       return `- [${i}] 姓名: ${name}\n  性别: ${gender}\n  关系状态: ${relation}\n  好感度: ${affinity}\n  简介: ${String(desc).slice(0, 100)}\n  是否主要角色: ${isMajor}`;
     }).join('\n')}`;
-    push('npc_away', '以下为不在场角色', '系统', 'system', offSceneText);
+    push(PIECE_ID.NPC_AWAY, '以下为不在场角色', '系统', 'system', offSceneText);
   }
 
   // ── 5. Other Prompts (world book system_rule / command_rule / output_rule) ──
   if (wbResult?.systemRuleText) {
-    push('wb_system_rules', '世界书系统规则', '系统', 'system', wbResult.systemRuleText);
+    push(PIECE_ID.WB_SYSTEM_RULES, '世界书系统规则', '系统', 'system', wbResult.systemRuleText);
   }
   if (wbResult?.commandRuleText) {
-    push('wb_command_rules', '世界书命令规则', '系统', 'system', wbResult.commandRuleText);
+    push(PIECE_ID.WB_COMMAND_RULES, '世界书命令规则', '系统', 'system', wbResult.commandRuleText);
   }
 
   // ── 5b. Writing prompts (style, emotion guard, noControl) ──
-  push('write_style', '写作文风', '系统', 'system', slot('write_style'));
-  push('write_anti_cliche', '反八股文', '系统', 'system', slot('write_anti_cliche'));
-  push('write_emotion_guard', '避免极端情绪', '系统', 'system', slot('write_emotion_guard'));
+  push(PIECE_ID.WRITE_STYLE, '写作文风', '系统', 'system', slot('write_style'));
+  push(PIECE_ID.WRITE_ANTI_CLICHE, '反八股文', '系统', 'system', slot('write_anti_cliche'));
+  push(PIECE_ID.WRITE_EMOTION_GUARD, '避免极端情绪', '系统', 'system', slot('write_emotion_guard'));
   if (settings.enableNoControl) {
-    push('write_no_control', '禁止操控玩家', '系统', 'system', slot('write_no_control'));
+    push(PIECE_ID.WRITE_NO_CONTROL, '禁止操控玩家', '系统', 'system', slot('write_no_control'));
   }
 
   // ── 6. Perspective Prompt ──
@@ -517,20 +518,20 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
     '第三人称': 'write_perspective_third',
   };
   const perspectiveSlotId = perspectiveMap[settings.perspective] ?? 'write_perspective_second';
-  push('perspective_prompt', '叙事人称提示词', '系统', 'system', slot(perspectiveSlotId));
+  push(PIECE_ID.PERSPECTIVE_PROMPT, '叙事人称提示词', '系统', 'system', slot(perspectiveSlotId));
 
   // ── 7. Word Count ──
   const wordCountContent = slot('write_req') ||
     `【字数要求】\n${lengthRuleOf(lengthAsked)}\n- 正文指本回合的叙事与对白总和，不含【判定】。`;
-  push('length_prompt', '字数要求提示词', '系统', 'system', wordCountContent);
+  push(PIECE_ID.LENGTH_PROMPT, '字数要求提示词', '系统', 'system', wordCountContent);
 
   // ── 8. Long-term Memory ──
   const longTerm = stateManager.get<Array<{ content: string; category?: string }>>(paths.memoryLongTerm) ?? [];
   if (longTerm.length > 0) {
     const longText = `【长期记忆】\n${longTerm.map((e) => `${e.category ? `[${e.category}] ` : ''}${e.content}`).join('\n')}`;
-    push('memory_long', '长期记忆', '记忆', 'system', longText);
+    push(PIECE_ID.MEMORY_LONG, '长期记忆', '记忆', 'system', longText);
   } else {
-    push('memory_long', '长期记忆', '记忆', 'system', '【长期记忆】\n暂无');
+    push(PIECE_ID.MEMORY_LONG, '长期记忆', '记忆', 'system', '【长期记忆】\n暂无');
   }
 
   // ── 9. Mid-term Memory ──
@@ -542,30 +543,30 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
       const body = e['记忆主体'] ?? '';
       return `${roles}${time}${body}`;
     }).join('\n')}`;
-    push('memory_mid', '中期记忆', '记忆', 'system', midText);
+    push(PIECE_ID.MEMORY_MID, '中期记忆', '记忆', 'system', midText);
   } else {
-    push('memory_mid', '中期记忆', '记忆', 'system', '【中期记忆】\n暂无');
+    push(PIECE_ID.MEMORY_MID, '中期记忆', '记忆', 'system', '【中期记忆】\n暂无');
   }
 
   // ── 9b. Implicit Mid-term Memory ──
   if (params.implicitMidTermBlock?.trim()) {
-    push('memory_implicit', '隐式中期记忆', '记忆', 'system', `【隐式记忆（AI 标记）】\n${params.implicitMidTermBlock}`);
+    push(PIECE_ID.MEMORY_IMPLICIT, '隐式中期记忆', '记忆', 'system', `【隐式记忆（AI 标记）】\n${params.implicitMidTermBlock}`);
   }
 
   // ── 9c. Engram / Unified Retrieval ──
   if (params.engramRetrievalBlock?.trim()) {
-    push('memory_engram', 'Engram · 事实/实体/事件', '记忆', 'system', `# Engram 知识图谱检索\n${params.engramRetrievalBlock}`);
+    push(PIECE_ID.MEMORY_ENGRAM, 'Engram · 事实/实体/事件', '记忆', 'system', `# Engram 知识图谱检索\n${params.engramRetrievalBlock}`);
   }
 
   // ── 11c. Bookmarked rounds (收藏楼层) — the player's picks, one-shot, so never in the gproxy static prefix ──
   // P15 (2026-10-04): only Step 2's context carried them; the story was written without them.
   if (params.bookmarkedRoundsBlock?.trim()) {
-    push('bookmarked_rounds', '收藏楼层', '记忆', 'system', params.bookmarkedRoundsBlock);
+    push(PIECE_ID.BOOKMARKED_ROUNDS, '收藏楼层', '记忆', 'system', params.bookmarkedRoundsBlock);
   }
 
   // ── 10. Story Plan ──
   const storyPlan = stateManager.get<string>(paths.storyPlan) ?? '';
-  push('story_plan', '剧情安排', '系统', 'system',
+  push(PIECE_ID.STORY_PLAN, '剧情安排', '系统', 'system',
     storyPlan ? `【剧情安排】\n${storyPlan}` : '【剧情安排】\n暂无');
 
   // ── 11. On-scene NPCs ──
@@ -585,7 +586,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
       const memory = Array.isArray(memoryList) ? (memoryList as Array<string | Record<string, unknown>>).slice(-3).map((m) => typeof m === 'string' ? m : (m as Record<string, unknown>)['内容'] ?? m).join('\n    ') : '';
       return `- [${i}] 姓名: ${name}\n  性别: ${gender}\n  身份: ${identity}\n  关系状态: ${relation}\n  好感度: ${affinity}\n  简介: ${String(desc).slice(0, 200)}\n  核心性格特征: ${personality}\n  是否主要角色: ${isMajor}${memory ? `\n  记忆 (最近3条):\n    ${memory}` : ''}`;
     }).join('\n')}`;
-    push('npc_present', '以下为在场角色', '系统', 'system', onSceneText);
+    push(PIECE_ID.NPC_PRESENT, '以下为在场角色', '系统', 'system', onSceneText);
   }
 
   // ── 12. Heroine Plan (uses structured formatter) ──
@@ -593,7 +594,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   if (heroinePlanRaw) {
     const formattedPlan = formatHeroinePlanForContext(heroinePlanRaw);
     if (formattedPlan) {
-      push('heroine_plan', '女主剧情规划', '系统', 'system', formattedPlan);
+      push(PIECE_ID.HEROINE_PLAN, '女主剧情规划', '系统', 'system', formattedPlan);
     }
   }
 
@@ -611,7 +612,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
       if (f['名称'] && f['名称'] !== '平日') worldParts.push(`节日: ${JSON.stringify(festival)}`);
     }
     if (worldEvents.length > 0) worldParts.push(`世界事件: ${JSON.stringify(worldEvents.slice(-5))}`);
-    push('state_world', '世界', '系统', 'system',
+    push(PIECE_ID.STATE_WORLD, '世界', '系统', 'system',
       worldParts.length > 0 ? `【世界】\n${worldParts.join('\n')}` : '【世界】\n无');
   }
 
@@ -623,7 +624,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
     if (gameTime) envParts.push(`时间: ${JSON.stringify(gameTime)}`);
     envParts.push(`当前位置: ${currentLocation}`);
     if (envTags) envParts.push(`环境: ${JSON.stringify(envTags)}`);
-    push('state_environment', '当前环境', '系统', 'system', `【当前环境】\n${envParts.join('\n')}`);
+    push(PIECE_ID.STATE_ENVIRONMENT, '当前环境', '系统', 'system', `【当前环境】\n${envParts.join('\n')}`);
   }
 
   // ── 15. Player State ──
@@ -641,18 +642,18 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   if (playerAttrs) roleParts.push(`属性: ${JSON.stringify(playerAttrs)}`);
   if (playerBody) roleParts.push(`身体: ${JSON.stringify(playerBody)}`);
   if (playerEffects) roleParts.push(`效果: ${JSON.stringify(playerEffects)}`);
-  push('state_role', '用户角色数据', '系统', 'system', `【用户角色数据】\n${roleParts.join('\n')}`);
+  push(PIECE_ID.STATE_ROLE, '用户角色数据', '系统', 'system', `【用户角色数据】\n${roleParts.join('\n')}`);
 
   // ── 16. (Sect removed — not in AGA scope per user directive) ──
 
   // ── 17. Task List ──
   const tasks = stateManager.get<unknown[]>('社交.任务');
-  push('state_tasks', '任务列表', '系统', 'system',
+  push(PIECE_ID.STATE_TASKS, '任务列表', '系统', 'system',
     Array.isArray(tasks) && tasks.length > 0 ? `【任务列表】\n${JSON.stringify(tasks, null, 2)}` : '【任务列表】\n无');
 
   // ── 18. Agreement List ──
   const agreements = stateManager.get<unknown[]>('社交.约定');
-  push('state_agreements', '约定列表', '系统', 'system',
+  push(PIECE_ID.STATE_AGREEMENTS, '约定列表', '系统', 'system',
     Array.isArray(agreements) && agreements.length > 0 ? `【约定列表】\n${JSON.stringify(agreements, null, 2)}` : '【约定列表】\n无');
 
   // ── 19. Short-term Memory (即时剧情回顾) — returned separately ──
@@ -667,7 +668,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   const stylePromptId = STORY_STYLE_PROMPT_IDS[settings.storyStyle] ?? STORY_STYLE_PROMPT_IDS.general;
   const styleContent = renderPackPrompt(stylePromptId);
   const fullConstraints = [constraintsBase, styleContent ? `\n\n【剧情风格偏好】\n${styleContent}` : ''].filter(Boolean).join('');
-  push('narrative_constraints', '叙事总约束 + 风格偏好', '系统', 'system', fullConstraints);
+  push(PIECE_ID.NARRATIVE_CONSTRAINTS, '叙事总约束 + 风格偏好', '系统', 'system', fullConstraints);
 
   // A slot text that wraps a block the caller built this round: the slot's prompt as the player left it, through
   // the round's transform; a pack without the prompt sends the bare block, a prompt switched off sends nothing
@@ -683,39 +684,39 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
 
   // ── 20b. Narrative Contract (R2) — DYNAMIC, never in the gproxy static prefix ──
   if (params.narrativeContractBlock) {
-    push('narrative_contract', '叙事契约', '系统', 'system',
+    push(PIECE_ID.NARRATIVE_CONTRACT, '叙事契约', '系统', 'system',
       wrapped('narrative_contract', 'NARRATIVE_CONTRACT_BLOCK', params.narrativeContractBlock));
   }
 
   // ── 20c. Character Vectors (R2 second half) — DYNAMIC, projected per turn, never static ──
   if (params.characterVectorsBlock) {
-    push('character_vectors', '人物向量', '系统', 'system',
+    push(PIECE_ID.CHARACTER_VECTORS, '人物向量', '系统', 'system',
       wrapped('character_vectors', 'CHARACTER_VECTORS_BLOCK', params.characterVectorsBlock));
   }
 
   // ── 21. Extra Prompt ──
   if (settings.customSystemPrompt?.trim()) {
-    push('extra_prompt', '额外要求提示词', '用户', 'user', settings.customSystemPrompt.trim());
+    push(PIECE_ID.EXTRA_PROMPT, '额外要求提示词', '用户', 'user', settings.customSystemPrompt.trim());
   }
 
   // ── 22. Writing rules + Format/Output Protocol ──
   // Every request that writes the story gets the pack's writing rules (narrative purity, judgements, NPC names and
   // independence, player autonomy, plausibility): split Step 1 and the single call alike (PO 2026-10-05 3C; they
   // were half of `core`, which Step 1 never had).
-  push('narrative_rules', '写正文规则', '系统', 'system', slot('narrative_rules'));
+  push(PIECE_ID.NARRATIVE_RULES, '写正文规则', '系统', 'system', slot('narrative_rules'));
   // A single call writes the commands too: it needs the output protocol (core), which the format prompt refers to
   // as the rules above. Without it a single call wrote paths the state tree does not have (P13, PO 2026-10-04).
   if (!splitGen) {
-    push('output_protocol', '输出结构与指令协议', '系统', 'system', slot('output_protocol'));
+    push(PIECE_ID.OUTPUT_PROTOCOL, '输出结构与指令协议', '系统', 'system', slot('output_protocol'));
   }
-  push('format_prompt', '输出格式提示词', '系统', 'system', slot('format_prompt'));
+  push(PIECE_ID.FORMAT_PROMPT, '输出格式提示词', '系统', 'system', slot('format_prompt'));
   // The player turned action options off (PO 2026-10-03): the default format asks for them, so say so right after
   // it. A round-selected format (split Step 1 in the impulse mode) writes the narrative only and needs nothing.
   if (!actionOptionsOn(settings) && !params.formatPromptId) {
-    push('action_options_off', '行动选项（已关闭）', '系统', 'system', renderPackPrompt('actionOptionsOff'));
+    push(PIECE_ID.ACTION_OPTIONS_OFF, '行动选项（已关闭）', '系统', 'system', renderPackPrompt('actionOptionsOff'));
   }
   // A single call writes the options too: the module for the player's mode and pace (PO 2026-10-03).
-  if (params.actionOptionsBlock) push('action_options', '行动选项', '系统', 'system', params.actionOptionsBlock);
+  if (params.actionOptionsBlock) push(PIECE_ID.ACTION_OPTIONS, '行动选项', '系统', 'system', params.actionOptionsBlock);
 
   // ── 22a. Canon Capture (only when THIS round carries a <设定> tag) ──
   //
@@ -727,42 +728,42 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   if (params.settingCaptureActive) {
     // step1 of split-gen writes the narrative → it needs to know the tag is
     // authoritative, but must not be asked to emit structured fields.
-    push('setting_authority', '作者设定标记', '系统', 'system', slot('setting_authority'));
+    push(PIECE_ID.SETTING_AUTHORITY, '作者设定标记', '系统', 'system', slot('setting_authority'));
     if (!splitGen) {
-      push('setting_capture', '设定提取协议', '系统', 'system', slot('setting_capture'));
+      push(PIECE_ID.SETTING_CAPTURE, '设定提取协议', '系统', 'system', slot('setting_capture'));
     }
   }
 
   // ── 22b. World Book Output Rules (after format prompt) ──
   if (wbResult?.outputRuleText) {
-    push('wb_output_rules', '世界书输出规则', '系统', 'system', wbResult.outputRuleText);
+    push(PIECE_ID.WB_OUTPUT_RULES, '世界书输出规则', '系统', 'system', wbResult.outputRuleText);
   }
 
   // ── 23. CoT ──
   if (cotEnabled) {
-    push('cot_core', 'COT提示词', '系统', 'system', slot('main_cot'));
+    push(PIECE_ID.COT_CORE, 'COT提示词', '系统', 'system', slot('main_cot'));
     // Where the module asks for it ({{PREV_THINKING}}), the previous round's thinking: right after the module, as a
     // piece of its own, so the module itself stays byte-stable for the cache (PO 4A; code review H2).
     const cotModule = packPrompts[BUILTIN_SLOTS.main_cot?.defaultPromptId ?? ''] ?? '';
     if (params.prevThinking?.trim() && cotModule.includes('{{PREV_THINKING}}')) {
-      push('prev_thinking', '上一回合思考', '系统', 'system', params.prevThinking);
+      push(PIECE_ID.PREV_THINKING, '上一回合思考', '系统', 'system', params.prevThinking);
     }
     if (cotJudgeEnabled) {
-      push('cot_judge', '判定COT提示词', '系统', 'system', slot('main_cot_judge'));
+      push(PIECE_ID.COT_JUDGE, '判定COT提示词', '系统', 'system', slot('main_cot_judge'));
     }
   }
 
   // ── 24. Player Input (as assistant message) ──
-  push('player_input', '最新用户输入', '助手', 'assistant',
+  push(PIECE_ID.PLAYER_INPUT, '最新用户输入', '助手', 'assistant',
     `以下是用户最新输入内容：\n<用户输入>${userInput}</用户输入>`,
     { isUserInput: true });
 
   // ── 25. Start Task (as user message) ──
-  push('start_task', '开始任务', '用户', 'user', '开始任务');
+  push(PIECE_ID.START_TASK, '开始任务', '用户', 'user', '开始任务');
 
   // ── 26. CoT Masquerade (as assistant prefill) ──
   if (cotEnabled && cotPseudoEnabled) {
-    push('cot_masquerade', 'COT伪装历史消息', '助手', 'assistant', slot('cot_masquerade'));
+    push(PIECE_ID.COT_MASQUERADE, 'COT伪装历史消息', '助手', 'assistant', slot('cot_masquerade'));
   }
 
   // ── Build runtime prompt states ──

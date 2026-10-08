@@ -31,6 +31,7 @@
 import type { CompileTrace, CompileTraceEntry, EnginePathConfig } from '../pipeline/types';
 import { stringifySnapshotForPrompt } from '../memory/snapshot-sanitizer';
 import { estimateTextTokens } from '../core/metrics-helpers';
+import { PIECE_ID } from './piece-ids';
 
 // ─── Constants (PO decisions 2026-09-04, positioning doc §8.2) ───
 
@@ -46,8 +47,8 @@ export const WORLD_EVENT_RECENT_COUNT = 5;
 export const WORLD_EVENT_RELEVANT_COUNT = 5;
 
 /** step1 builder piece ids whose content step2 would otherwise duplicate. */
-export const STEP1_PIECE_WORLD_PROMPT = 'world_prompt';
-export const STEP1_PIECE_ENGRAM = 'memory_engram';
+export const STEP1_PIECE_WORLD_PROMPT = PIECE_ID.WORLD_PROMPT;
+export const STEP1_PIECE_ENGRAM = PIECE_ID.MEMORY_ENGRAM;
 
 /** Trace reason keys (translated by the UI; see i18n `compiler.reason.*`). */
 export const COMPILE_REASON = {
