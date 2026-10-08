@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { SUPPORTED_LOCALES, isSupportedLocale } from '../index';
 import zhCN from '../locales/zh-CN/index';
@@ -76,4 +78,20 @@ describe('locale values are non-empty', () => {
     const emptyKeys = enFlat.filter(k => getNestedValue(en, k) === '');
     expect(emptyKeys, `en empty keys: ${emptyKeys.join(', ')}`).toEqual([]);
   });
+});
+describe('locale files do not define the same key twice', () => {
+  // index.ts spreads the 24 JSON files in order, so a duplicate key is silently overridden
+  // by the later file (X03-002: debug.json vs inventory.json). Keep every key in one file.
+  for (const locale of ['zh-CN', 'en']) {
+    it(`${locale}: no key is defined in more than one JSON file`, () => {
+      const dir = resolve(__dirname, '../locales', locale);
+      const owners = new Map<string, string[]>();
+      for (const file of readdirSync(dir).filter((f) => f.endsWith('.json'))) {
+        const json = JSON.parse(readFileSync(resolve(dir, file), 'utf8')) as Record<string, unknown>;
+        for (const key of flattenKeys(json)) owners.set(key, [...(owners.get(key) ?? []), file]);
+      }
+      const dupes = [...owners].filter(([, files]) => files.length > 1).map(([key, files]) => `${key} (${files.join(', ')})`);
+      expect(dupes).toEqual([]);
+    });
+  }
 });

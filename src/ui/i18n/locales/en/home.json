@@ -37,7 +37,6 @@
   "home.github.verifying": "Verifying…",
   "home.github.connectButton": "Connect GitHub",
   "home.github.switchRepo": "Switch repository",
-  "home.github.disconnect": "Disconnect",
   "home.github.disconnectButton": "Disconnect",
   "home.github.copyTokenButton": "Copy Token",
   "home.cloudStatus.hasArchive": "Cloud save",

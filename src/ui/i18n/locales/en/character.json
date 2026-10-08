@@ -17,9 +17,7 @@
   "character.basic.fieldOccupation": "Occupation / Status",
   "character.basic.fieldLocation": "Current Location",
 
-  "character.basic.sectionIdentity": "Identity",
   "character.basic.fieldOrigin": "Origin",
-  "character.basic.fieldTalentTier": "Talent Tier",
   "character.basic.fieldTrait": "Trait",
   "character.basic.fieldTalent": "Talents",
 
@@ -214,7 +212,6 @@
   "character.toast.secretRefFailed": "{part} reference redraw failed: {error}",
   "character.toast.secretRefDone": "{part} reference redraw complete.",
 
-  "character.notLoaded": "Game data not yet loaded",
 
   "character.edit.nameRequired": "Name cannot be empty",
   "character.edit.nameConflictNpc": "Player name conflicts with an NPC name",
@@ -231,8 +228,6 @@
   "character.edit.addTalent": "Add Talent",
   "character.edit.removeTalent": "Remove Talent",
   "character.edit.confirmRemove": "Confirm removal?",
-  "character.edit.innateStats": "Innate Stats",
-  "character.edit.acquiredStats": "Acquired Stats",
   "character.edit.vitals": "Vital Stats",
   "character.edit.health": "Health",
   "character.edit.energy": "Energy",

@@ -98,8 +98,6 @@
 
   "engram.rebuild.alert": "知识边已清空。下一轮 AI 回合将自动重新迁移。",
 
-  "engram.embed.vectorizedTitle": "已向量化",
-  "engram.embed.notVectorizedTitle": "尚未向量化",
 
   "engram.arch.dataFlowStep.aiReply": "AI 回复",
   "engram.arch.dataFlowStep.eventExtract": "事件提取",
@@ -135,7 +133,6 @@
   "engram.editor.entity.create": "新建实体",
   "engram.editor.entity.edit": "编辑实体",
   "engram.editor.entity.delete": "删除实体",
-  "engram.editor.entity.rename": "重命名",
   "engram.editor.entity.name": "名称",
   "engram.editor.entity.type": "类型",
   "engram.editor.entity.summary": "描述",
@@ -143,9 +140,6 @@
   "engram.editor.entity.cancel": "取消",
   "engram.editor.entity.empty": "暂无实体，点击上方新建",
   "engram.editor.entity.coreEdges": "核心设定相关边: {count} 条",
-  "engram.editor.entity.sourceUser": "用户编辑",
-  "engram.editor.entity.sourceDerived": "系统派生",
-  "engram.editor.entity.sourceImport": "卡导入",
 
   "engram.editor.edge.create": "新建知识",
   "engram.editor.edge.edit": "编辑知识",

@@ -351,7 +351,6 @@
   "save.export.protagonist.field.appearance": "外貌",
   "save.export.protagonist.field.inventory": "初始背包",
   "save.export.protagonist.fixedEmptyName": "固定主角必须填写姓名，否则导入后 NPC 称呼会出现空白。",
-  "save.export.protagonist.blankSetupWarn": "白板模式的开场提示应保持泛化，不要写死主角细节。",
   "save.export.meta.sectionTitle": "卡信息",
   "save.export.meta.titleLabel": "标题",
   "save.export.meta.titlePlaceholder": "给你的游戏卡起个名字…",

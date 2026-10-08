@@ -223,8 +223,6 @@
   "prompt.heroine.selectCharacter": "Select character",
   "prompt.heroine.eventNamePlaceholder": "Event name",
   "prompt.heroine.eventDescPlaceholder": "Event description",
-  "prompt.heroine.statusPending": "Pending",
-  "prompt.heroine.statusDone": "Completed",
 
   "prompt.heroine.stageTitle": "Stage Progression ({count})",
   "prompt.heroine.stageGoals": "Goals",
@@ -234,7 +232,6 @@
   "prompt.worldbook.createBook": "New World Book",
   "prompt.worldbook.import": "Import",
   "prompt.worldbook.export": "Export",
-  "prompt.worldbook.noBooks": "No world books yet. Click \"New World Book\" to create one",
   "prompt.worldbook.entries": "entries",
   "prompt.worldbook.newBookTitle": "New World Book",
   "prompt.worldbook.confirmDeleteBook": "Delete this world book and all its entries?",
@@ -294,8 +291,6 @@
   "prompt.settingCapture.restore": "Restore",
   "prompt.settingCapture.delete": "Delete",
   "prompt.settingCapture.confirmDelete": "Delete this setting for good? It leaves the list and cannot be restored.",
-  "prompt.settingCapture.disable": "Disable",
-  "prompt.settingCapture.enableEntry": "Enable",
 
   "prompt.settingCapture.notInjected": "Not sent this turn",
   "prompt.settingCapture.skipReason.budget": "World-book budget is full",

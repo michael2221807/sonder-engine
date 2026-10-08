@@ -302,7 +302,6 @@
   "settings.data.clearAll.step1Continue": "Continue",
   "settings.data.clearAll.step2Text": "Final confirmation:",
   "settings.data.clearAll.step2Hint": "Please click 'Confirm Clear All Data' again to proceed.",
-  "settings.data.clearAll.step2Cancel": "Cancel",
   "settings.data.clearAll.step2Confirm": "Confirm Clear All Data",
   "settings.data.clearAll.toast": "All data cleared",
   "settings.data.clearAll.error": "Clear failed",

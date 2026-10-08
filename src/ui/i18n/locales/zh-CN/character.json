@@ -17,9 +17,7 @@
   "character.basic.fieldOccupation": "职业/地位",
   "character.basic.fieldLocation": "当前位置",
 
-  "character.basic.sectionIdentity": "身份",
   "character.basic.fieldOrigin": "出身",
-  "character.basic.fieldTalentTier": "天资",
   "character.basic.fieldTrait": "特质",
   "character.basic.fieldTalent": "天赋",
 
@@ -214,7 +212,6 @@
   "character.toast.secretRefFailed": "{part}参考重绘失败：{error}",
   "character.toast.secretRefDone": "{part}参考重绘完成。",
 
-  "character.notLoaded": "尚未加载游戏数据",
 
   "character.edit.nameRequired": "姓名不能为空",
   "character.edit.nameConflictNpc": "玩家姓名与 NPC 名称冲突",
@@ -231,8 +228,6 @@
   "character.edit.addTalent": "添加天赋",
   "character.edit.removeTalent": "删除天赋",
   "character.edit.confirmRemove": "确认删除？",
-  "character.edit.innateStats": "先天六维",
-  "character.edit.acquiredStats": "后天属性",
   "character.edit.vitals": "可变属性",
   "character.edit.health": "体力",
   "character.edit.energy": "精力",

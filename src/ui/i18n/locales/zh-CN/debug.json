@@ -5,47 +5,11 @@
 
 
 
-  "inventory.title": "背包",
-  "inventory.search.placeholder": "搜索物品…",
-  "inventory.filter.all": "全部",
-  "inventory.itemCount": "共 {count} 件物品",
-  "inventory.itemCountFiltered": "（全部 {total} 件）",
-  "inventory.noCurrency": "无货币",
-  "inventory.empty": "背包为空",
-  "inventory.noMatch": "没有匹配的物品",
-  "inventory.notLoaded": "尚未加载游戏数据",
 
-  "inventory.quality.common": "普通",
-  "inventory.quality.fine": "优良",
-  "inventory.quality.rare": "稀有",
-  "inventory.quality.epic": "史诗",
-  "inventory.quality.legendary": "传说",
-  "inventory.quality.mythical": "神话",
 
-  "inventory.badge.equipped": "已装备",
-  "inventory.action.use": "使用",
-  "inventory.action.equip": "装备",
-  "inventory.action.unequip": "卸下",
-  "inventory.action.drop": "丢弃",
 
-  "inventory.toast.useQueued": "已将「使用 {name}」加入操作队列",
-  "inventory.toast.equipQueued": "已将「{action} {name}」加入操作队列",
-  "inventory.toast.dropQueued": "已将「丢弃 {name}」加入操作队列",
-  "inventory.toast.useDesc": "使用物品「{name}」",
-  "inventory.toast.equipDesc": "{action}物品「{name}」",
-  "inventory.toast.dropDesc": "丢弃物品「{name}」",
 
-  "inventory.itemType.weapon": "武器",
-  "inventory.itemType.armor": "防具",
-  "inventory.itemType.consumable": "消耗品",
-  "inventory.itemType.material": "材料",
-  "inventory.itemType.quest": "任务",
-  "inventory.itemType.accessory": "饰品",
 
-  "inventory.currency.cash": "现金",
-  "inventory.currency.gold": "金",
-  "inventory.currency.silver": "银",
-  "inventory.currency.copper": "铜",
 
   "variable.title": "游戏变量",
   "variable.stats": "统计",
@@ -140,12 +104,10 @@
   "promptAssembly.templateVariables": "模板变量",
   "promptAssembly.noTemplateVariables": "无模板变量",
 
-  "promptAssembly.info.flowId": "Flow",
   "promptAssembly.info.round": "回合",
   "promptAssembly.info.tokens": "预估 Tokens",
   "promptAssembly.info.messages": "消息数",
   "promptAssembly.info.capturedAt": "采集时间",
-  "promptAssembly.info.generationId": "生成 ID",
   "promptAssembly.info.hasCot": "有推理",
 
   "promptAssembly.source.breakdown": "组成部件（共 {count} 条消息）",

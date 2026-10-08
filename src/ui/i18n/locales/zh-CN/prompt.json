@@ -223,8 +223,6 @@
   "prompt.heroine.selectCharacter": "选择角色",
   "prompt.heroine.eventNamePlaceholder": "事件名",
   "prompt.heroine.eventDescPlaceholder": "事件说明",
-  "prompt.heroine.statusPending": "待触发",
-  "prompt.heroine.statusDone": "已完成",
 
   "prompt.heroine.stageTitle": "阶段推进 ({count})",
   "prompt.heroine.stageGoals": "目标",
@@ -234,7 +232,6 @@
   "prompt.worldbook.createBook": "新建世界书",
   "prompt.worldbook.import": "导入",
   "prompt.worldbook.export": "导出",
-  "prompt.worldbook.noBooks": "暂无世界书，点击「新建世界书」开始创建",
   "prompt.worldbook.entries": "条目",
   "prompt.worldbook.newBookTitle": "新世界书",
   "prompt.worldbook.confirmDeleteBook": "确定删除此世界书及其所有条目？",
@@ -294,8 +291,6 @@
   "prompt.settingCapture.restore": "恢复",
   "prompt.settingCapture.delete": "删除",
   "prompt.settingCapture.confirmDelete": "彻底删除这条设定？删除后不会再出现在列表里，也无法恢复。",
-  "prompt.settingCapture.disable": "暂时停用",
-  "prompt.settingCapture.enableEntry": "重新启用",
 
   "prompt.settingCapture.notInjected": "本回合未注入",
   "prompt.settingCapture.skipReason.budget": "世界书预算已满",

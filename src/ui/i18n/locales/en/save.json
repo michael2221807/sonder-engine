@@ -351,7 +351,6 @@
   "save.export.protagonist.field.appearance": "Appearance",
   "save.export.protagonist.field.inventory": "Starting inventory",
   "save.export.protagonist.fixedEmptyName": "A fixed protagonist must have a name, or imported NPC dialogue will show blanks.",
-  "save.export.protagonist.blankSetupWarn": "Blank-mode opening setup should stay generic — don't hardcode protagonist details.",
   "save.export.meta.sectionTitle": "Card Info",
   "save.export.meta.titleLabel": "Title",
   "save.export.meta.titlePlaceholder": "Name your game card…",

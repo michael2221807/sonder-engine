@@ -59,5 +59,20 @@
   "inventory.toast.created": "物品已创建",
   "inventory.toast.updated": "物品已更新",
   "inventory.toast.deleted": "物品已删除",
-  "inventory.toast.currencyUpdated": "货币已更新"
+  "inventory.toast.currencyUpdated": "货币已更新",
+  "inventory.quality.common": "普通",
+  "inventory.quality.fine": "优良",
+  "inventory.quality.rare": "稀有",
+  "inventory.quality.epic": "史诗",
+  "inventory.quality.legendary": "传说",
+  "inventory.itemType.weapon": "武器",
+  "inventory.itemType.armor": "防具",
+  "inventory.itemType.consumable": "消耗品",
+  "inventory.itemType.material": "材料",
+  "inventory.itemType.quest": "任务",
+  "inventory.itemType.accessory": "饰品",
+  "inventory.currency.cash": "现金",
+  "inventory.currency.gold": "金",
+  "inventory.currency.silver": "银",
+  "inventory.currency.copper": "铜"
 }

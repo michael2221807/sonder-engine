@@ -5,47 +5,11 @@
 
 
 
-  "inventory.title": "Inventory",
-  "inventory.search.placeholder": "Search items...",
-  "inventory.filter.all": "All",
-  "inventory.itemCount": "{count} items total",
-  "inventory.itemCountFiltered": "({total} total)",
-  "inventory.noCurrency": "No currency",
-  "inventory.empty": "Inventory is empty",
-  "inventory.noMatch": "No matching items",
-  "inventory.notLoaded": "Game data not loaded",
 
-  "inventory.quality.common": "Common",
-  "inventory.quality.fine": "Fine",
-  "inventory.quality.rare": "Rare",
-  "inventory.quality.epic": "Epic",
-  "inventory.quality.legendary": "Legendary",
-  "inventory.quality.mythical": "Mythical",
 
-  "inventory.badge.equipped": "Equipped",
-  "inventory.action.use": "Use",
-  "inventory.action.equip": "Equip",
-  "inventory.action.unequip": "Unequip",
-  "inventory.action.drop": "Drop",
 
-  "inventory.toast.useQueued": "Added \"Use {name}\" to action queue",
-  "inventory.toast.equipQueued": "Added \"{action} {name}\" to action queue",
-  "inventory.toast.dropQueued": "Added \"Drop {name}\" to action queue",
-  "inventory.toast.useDesc": "Use item \"{name}\"",
-  "inventory.toast.equipDesc": "{action} item \"{name}\"",
-  "inventory.toast.dropDesc": "Drop item \"{name}\"",
 
-  "inventory.itemType.weapon": "Weapon",
-  "inventory.itemType.armor": "Armor",
-  "inventory.itemType.consumable": "Consumable",
-  "inventory.itemType.material": "Material",
-  "inventory.itemType.quest": "Quest",
-  "inventory.itemType.accessory": "Accessory",
 
-  "inventory.currency.cash": "Cash",
-  "inventory.currency.gold": "Gold",
-  "inventory.currency.silver": "Silver",
-  "inventory.currency.copper": "Copper",
 
   "variable.title": "Game Variables",
   "variable.stats": "Stats",
@@ -140,12 +104,10 @@
   "promptAssembly.templateVariables": "Template Variables",
   "promptAssembly.noTemplateVariables": "No template variables",
 
-  "promptAssembly.info.flowId": "Flow",
   "promptAssembly.info.round": "Round",
   "promptAssembly.info.tokens": "Token Estimate",
   "promptAssembly.info.messages": "Messages",
   "promptAssembly.info.capturedAt": "Captured At",
-  "promptAssembly.info.generationId": "Generation ID",
   "promptAssembly.info.hasCot": "Has Reasoning",
 
   "promptAssembly.source.breakdown": "Source Breakdown ({count} messages)",

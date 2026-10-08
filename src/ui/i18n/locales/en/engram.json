@@ -98,8 +98,6 @@
 
   "engram.rebuild.alert": "Fact edges cleared. Next AI round will auto-rebuild.",
 
-  "engram.embed.vectorizedTitle": "Embedded",
-  "engram.embed.notVectorizedTitle": "Not yet embedded",
 
   "engram.arch.dataFlowStep.aiReply": "AI Reply",
   "engram.arch.dataFlowStep.eventExtract": "Event Extraction",
@@ -135,7 +133,6 @@
   "engram.editor.entity.create": "New Entity",
   "engram.editor.entity.edit": "Edit Entity",
   "engram.editor.entity.delete": "Delete Entity",
-  "engram.editor.entity.rename": "Rename",
   "engram.editor.entity.name": "Name",
   "engram.editor.entity.type": "Type",
   "engram.editor.entity.summary": "Description",
@@ -143,9 +140,6 @@
   "engram.editor.entity.cancel": "Cancel",
   "engram.editor.entity.empty": "No entities yet — create one above",
   "engram.editor.entity.coreEdges": "Core edges: {count}",
-  "engram.editor.entity.sourceUser": "User edited",
-  "engram.editor.entity.sourceDerived": "System derived",
-  "engram.editor.entity.sourceImport": "Card import",
 
   "engram.editor.edge.create": "New Knowledge",
   "engram.editor.edge.edit": "Edit Knowledge",

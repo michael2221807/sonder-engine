@@ -59,5 +59,20 @@
   "inventory.toast.created": "Item created",
   "inventory.toast.updated": "Item updated",
   "inventory.toast.deleted": "Item deleted",
-  "inventory.toast.currencyUpdated": "Currency updated"
+  "inventory.toast.currencyUpdated": "Currency updated",
+  "inventory.quality.common": "Common",
+  "inventory.quality.fine": "Fine",
+  "inventory.quality.rare": "Rare",
+  "inventory.quality.epic": "Epic",
+  "inventory.quality.legendary": "Legendary",
+  "inventory.itemType.weapon": "Weapon",
+  "inventory.itemType.armor": "Armor",
+  "inventory.itemType.consumable": "Consumable",
+  "inventory.itemType.material": "Material",
+  "inventory.itemType.quest": "Quest",
+  "inventory.itemType.accessory": "Accessory",
+  "inventory.currency.cash": "Cash",
+  "inventory.currency.gold": "Gold",
+  "inventory.currency.silver": "Silver",
+  "inventory.currency.copper": "Copper"
 }

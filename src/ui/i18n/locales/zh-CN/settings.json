@@ -302,7 +302,6 @@
   "settings.data.clearAll.step1Continue": "继续",
   "settings.data.clearAll.step2Text": "最后确认：",
   "settings.data.clearAll.step2Hint": "请再次点击「确认清除所有数据」以执行。",
-  "settings.data.clearAll.step2Cancel": "取消",
   "settings.data.clearAll.step2Confirm": "确认清除所有数据",
   "settings.data.clearAll.toast": "所有数据已清除",
   "settings.data.clearAll.error": "清除失败",

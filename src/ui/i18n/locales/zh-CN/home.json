@@ -37,7 +37,6 @@
   "home.github.verifying": "验证中…",
   "home.github.connectButton": "连接 GitHub",
   "home.github.switchRepo": "更换仓库",
-  "home.github.disconnect": "断开连接",
   "home.github.disconnectButton": "断开",
   "home.github.copyTokenButton": "复制 Token",
   "home.cloudStatus.hasArchive": "云端存档",
