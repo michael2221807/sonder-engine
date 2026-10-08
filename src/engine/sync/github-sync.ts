@@ -297,9 +297,7 @@ export class GitHubSyncService {
   async detectConflict(): Promise<ConflictCheck> {
     const cloud = await this.getCloudInfo();
     if (!cloud.exists) return { conflict: false, cloud };
-    const baseline = this.getSyncBaseline();
-    const conflict = !baseline || cloud.updatedAt !== baseline;
-    return { conflict, cloud };
+    return { conflict: isConflict(cloud, this.getSyncBaseline()), cloud };
   }
 
   // ── 验证连接 ──
@@ -374,105 +372,19 @@ export class GitHubSyncService {
     // deletion uploads freely without a false alarm.
     assertUploadNotDegraded(imageIntegrity, worldBookIntegrity, opts?.force);
 
-    // Batch-fetch the existing v2/ listing up front (needed for the manifest.json
-    // SHA on the in-place manifest write, and for cleaning up old chunks after the
-    // commit). Must run BEFORE the first chunk PUT.
-    let existingFiles: Array<{ path: string; sha: string }>;
-    try {
-      existingFiles = await this.listV2Files(owner, repo);
-    } catch (err) {
-      throw stageError('读取云端文件列表', err);
-    }
-
-    // STREAMING pack + upload: compress ONE chunk, PUT it, release it, then
-    // compress the next — memory stays bounded to ~one chunk instead of holding
-    // the whole compressed set. The eager pack() held every compressed chunk in a
-    // Map and OOM-crashed the tab on 110MB+ base64-image saves; feeding the Blob
-    // (not exportBlob.text()) also keeps the decoded JSON string generator-local
-    // so the caller never holds a second ~100MB copy.
-    //
-    // ATOMICITY (2026-07-09 audit fix): each chunk is written to a per-upload,
-    // GENERATION-SUFFIXED path (v2/state-0.<genTag>.gz), never the bare path a
-    // PRIOR upload used. So a re-upload can NEVER overwrite a chunk the CURRENT
-    // cloud manifest still references. Combined with writing the manifest LAST,
-    // this makes an interrupted upload truly non-destructive: the old manifest
-    // keeps pointing at its old chunks, whose bytes are untouched (the new bytes
-    // went to fresh paths), so the previously-healthy cloud save stays
-    // downloadable. Old-generation chunks are pruned by cleanupStaleFromList only
-    // AFTER the new manifest commits. (Previously chunks were overwritten in place
-    // at stable paths, so an interrupted upload could brick the live save — the
-    // "old chunks intact" claim was false whenever a path was reused.)
-    const genTag = uploadGenTag();
-    emit('uploading', '正在压缩并上传…');
-    const gen = packChunks(exportBlob);
-    let res: IteratorResult<{ path: string; blob: Blob }, ChunkManifest>;
-    try {
-      res = await gen.next();
-    } catch (err) {
-      throw stageError(`压缩存档（约 ${approxMB}MB）`, err);
-    }
-    let uploaded = 0;
-    const genPathByOriginal = new Map<string, string>();
-    while (!res.done) {
-      const { path, blob } = res.value;
-      const genPath = withGenTag(path, genTag);
-      genPathByOriginal.set(path, genPath);
-      uploaded++;
-      emit('uploading', `正在压缩并上传分块 ${uploaded}…`);
-      try {
-        // Fresh generation path → always a NEW file → create (no SHA, never an
-        // in-place overwrite of a live-referenced chunk).
-        await this.uploadFile(owner, repo, genPath, await blobToBase64(blob), undefined);
-      } catch (err) {
-        throw stageError(`上传分块 ${genPath}`, err);
-      }
-      // Advance the generator only after the current chunk is uploaded + released,
-      // so the next chunk's compression peak never overlaps a retained prior chunk.
-      try {
-        res = await gen.next();
-      } catch (err) {
-        throw stageError(`压缩存档（约 ${approxMB}MB）`, err);
-      }
-    }
-    const manifest = res.value;
-    // Point the manifest at the generation-suffixed paths we actually wrote, so a
-    // download fetches the freshly-written chunks. (Names stay canonical —
-    // 'state'/'state-N'/'img-N' — only paths carry the generation tag.)
-    for (const c of manifest.chunks) {
-      const gp = genPathByOriginal.get(c.path);
-      if (gp) c.path = gp;
-    }
-    manifest.uploadedBy = getDeviceStamp();
-
-    // The manifest is written LAST so it is the commit point: if any chunk PUT
-    // above fails, the cloud still has the OLD manifest pointing at OLD chunks,
-    // so a partial upload can never be silently downloaded as wrong data (it
-    // fails loudly via the per-chunk SHA-256 check on download).
-    emit('uploading', '正在更新索引…');
-    try {
-      const manifestJson = JSON.stringify(manifest, null, 2);
-      await this.putManifestFresh(owner, repo, MANIFEST_PATH, utf8ToBase64(manifestJson));
-    } catch (err) {
-      throw stageError('更新云端索引', err);
-    }
-
-    // Commit point reached: the manifest now points at the freshly-written chunks,
-    // so cloud == this export. Record its createdAt as our baseline BEFORE the
-    // best-effort cleanup, so conflict detection treats a later interrupted cleanup
-    // as already-synced (the save is valid) rather than a phantom conflict.
-    this.setSyncBaseline(manifest.createdAt);
-
-    // Cleanup stale chunks — AWAITED, still inside the shared upload lock, so the
-    // NEXT upload cannot start until this cleanup finishes. That serialization is
-    // what prevents the 2026-07-13 "409 storm": previously cleanup was
-    // fire-and-forget, so back-to-back uploads' DELETEs raced each other with
-    // stale shas and every prior generation piled up as orphans. Best-effort:
-    // wrapped so a cleanup failure never fails an ALREADY-committed upload (the
-    // manifest + its chunks are safe; leftover orphans are pruned next time).
-    emit('uploading', '正在清理旧分块…');
-    try {
-      await this.cleanupStaleFromList(owner, repo, manifest, existingFiles);
-    } catch { /* best-effort — orphans are harmless and retried on the next upload */ }
+    // The shared pipeline (uploadBundleToDir) lists the existing v2/ directory first
+    // (manifest sha + stale-chunk cleanup), streams pack+PUT with generation-suffixed
+    // chunk paths, writes the manifest LAST, records the sync baseline at the commit
+    // point (BEFORE the best-effort cleanup, so an interrupted cleanup is never a
+    // phantom conflict), then prunes old generations inside the lock. The atomicity
+    // rationale (2026-07-09 audit, 2026-07-13 409 storm) lives on uploadBundleToDir.
+    // v2 passes no `decorate`: the manifest must not gain any extra key.
+    await this.uploadBundleToDir(
+      owner, repo, V2_DIR, exportBlob, emit,
+      undefined,
+      (m) => this.setSyncBaseline(m.createdAt),
+      `压缩存档（约 ${approxMB}MB）`,
+    );
 
     emit('done', '上传完成');
   }
@@ -494,27 +406,8 @@ export class GitHubSyncService {
     const { owner, repo } = this.resolveTarget();
 
     emit('downloading', '正在获取云端索引…');
-    let manifest: ChunkManifest;
-    try {
-      manifest = await this.fetchManifest(owner, repo);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 404) {
-        throw new Error('云端无存档，请先上传');
-      }
-      throw err;
-    }
-
-    const total = manifest.chunks.length;
-    const chunks = new Map<string, Blob>();
-
-    for (let i = 0; i < manifest.chunks.length; i++) {
-      const entry = manifest.chunks[i];
-      emit('downloading', `正在下载分块 ${i + 1}/${total}…`);
-      chunks.set(entry.path, await this.downloadBlob(owner, repo, entry.path));
-    }
-
-    emit('downloading', '正在校验并恢复…');
-    const json = await unpack(manifest, chunks);
+    const manifest = await this.fetchSlotManifestOr404(owner, repo, MANIFEST_PATH, '云端无存档，请先上传');
+    const json = await this.downloadAndUnpack(owner, repo, manifest, emit);
     await this.backup.importAll(new Blob([json], { type: 'application/json' }), { fromOwnSync: true });
     // Local now equals this cloud manifest. importAll's wipe preserves the
     // device-local baseline (backup-service LS_DEVICE_LOCAL_KEYS), so overwrite it
@@ -615,11 +508,7 @@ export class GitHubSyncService {
     if (slotKey !== GLOBAL_SLOT_KEY) validateSlotId(slotKey);
     const { owner, repo } = this.resolveTarget();
     try {
-      const m = await this.fetchManifestAt(owner, repo, `${slotDir(slotKey)}/manifest.json`);
-      return {
-        exists: true, updatedAt: m.createdAt, sizeKB: Math.round(m.totalSizeBytes / 1024),
-        uploadedByLabel: m.uploadedBy?.deviceLabel, uploadedByDeviceId: m.uploadedBy?.deviceId,
-      };
+      return toCloudInfo(await this.fetchManifestAt(owner, repo, `${slotDir(slotKey)}/manifest.json`));
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) return { exists: false };
       if (err instanceof ApiError) throw err; // 网络/鉴权错误上抛
@@ -634,8 +523,7 @@ export class GitHubSyncService {
   async detectSlotConflict(slotKey: string): Promise<ConflictCheck> {
     const cloud = await this.getCloudSlotInfo(slotKey);
     if (!cloud.exists) return { conflict: false, cloud };
-    const baseline = this.getSlotBaselines()[slotKey] ?? '';
-    return { conflict: !baseline || cloud.updatedAt !== baseline, cloud };
+    return { conflict: isConflict(cloud, this.getSlotBaselines()[slotKey] ?? ''), cloud };
   }
 
   // ── v3 存档插槽：上传 / 下载 / 删除 ──
@@ -933,9 +821,22 @@ export class GitHubSyncService {
   // ── v3 共享上传/下载管线 ──
 
   /**
-   * 把一份 bundle 以分块形式上传到指定目录（v3 专用；v2 的 _uploadLocked 保持
-   * 独立不动——回归面隔离）。原子性与 v2 相同：gen-tag 新路径 → manifest 最后写
-   * → 锁内 await 清理，且清理范围**仅限本目录**。
+   * 把一份 bundle 以分块形式上传到指定目录（v2 整包 `v2/` 与 v3 插槽共用）。
+   * 原子性：gen-tag 新路径 → manifest 最后写 → 提交点写基线 → 锁内 await 清理，
+   * 且清理范围**仅限本目录**。
+   *
+   * Streaming pack + upload: compress ONE chunk, PUT it, release it, then compress the
+   * next — memory stays bounded to ~one chunk (the eager pack() OOM-crashed the tab on
+   * 110MB+ base64-image saves; feeding the Blob also keeps the decoded JSON string
+   * generator-local). ATOMICITY (2026-07-09 audit): every chunk goes to a per-upload,
+   * GENERATION-SUFFIXED path, never a path the CURRENT cloud manifest still references,
+   * and the manifest is written LAST, so an interrupted upload leaves the previously
+   * healthy cloud save downloadable. Old generations are pruned only AFTER the new
+   * manifest commits — AWAITED inside the shared lock, which prevents the 2026-07-13
+   * "409 storm" (fire-and-forget cleanups racing each other with stale shas).
+   * Cleanup is best-effort: a failure never fails an already-committed upload.
+   *
+   * `compressStage`: stage label used when compression fails (v2 includes the size).
    */
   private async uploadBundleToDir(
     owner: string, repo: string, dir: string, source: Blob | string,
@@ -943,6 +844,7 @@ export class GitHubSyncService {
     decorate?: (m: SlotManifest) => void,
     /** 在 manifest PUT 成功（提交点）后、best-effort 清理**之前**调用——基线写入放这里。 */
     onCommitted?: (m: SlotManifest) => void,
+    compressStage = '压缩存档',
   ): Promise<SlotManifest> {
     let existingFiles: Array<{ path: string; sha: string }>;
     try {
@@ -960,7 +862,7 @@ export class GitHubSyncService {
     try {
       res = await gen.next();
     } catch (err) {
-      throw stageError('压缩存档', err);
+      throw stageError(compressStage, err);
     }
     let uploaded = 0;
     const genPathByOriginal = new Map<string, string>();
@@ -978,7 +880,7 @@ export class GitHubSyncService {
       try {
         res = await gen.next();
       } catch (err) {
-        throw stageError('压缩存档', err);
+        throw stageError(compressStage, err);
       }
     }
     const manifest = res.value as SlotManifest;
@@ -1045,14 +947,7 @@ export class GitHubSyncService {
   async getCloudInfo(): Promise<CloudInfo> {
     const { owner, repo } = this.resolveTarget();
     try {
-      const manifest = await this.fetchManifest(owner, repo);
-      return {
-        exists: true,
-        updatedAt: manifest.createdAt,
-        sizeKB: Math.round(manifest.totalSizeBytes / 1024),
-        uploadedByLabel: manifest.uploadedBy?.deviceLabel,
-        uploadedByDeviceId: manifest.uploadedBy?.deviceId,
-      };
+      return toCloudInfo(await this.fetchManifest(owner, repo));
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) return { exists: false };
       throw err;
@@ -1117,23 +1012,6 @@ export class GitHubSyncService {
     await this.put(`/repos/${owner}/${repo}/contents/${path}`, body);
   }
 
-  private async cleanupStaleFromList(
-    owner: string, repo: string, manifest: ChunkManifest,
-    existingFiles: Array<{ path: string; sha: string }>,
-  ): Promise<void> {
-    const validPaths = new Set([
-      MANIFEST_PATH,
-      ...manifest.chunks.map(c => c.path),
-    ]);
-    const stale = existingFiles.filter(f => !validPaths.has(f.path));
-
-    // Sequential (not Promise.all): gentler on the API and, being awaited inside
-    // the lock, no other upload is mutating v2/ meanwhile, so each sha stays fresh.
-    for (const file of stale) {
-      await this.deleteStale(owner, repo, file.path, file.sha);
-    }
-  }
-
   /**
    * Delete one stale chunk, tolerating the two benign failures: 404 (already gone)
    * and 409/422 (sha drifted — e.g. a manual upload from another tab touched it;
@@ -1154,14 +1032,6 @@ export class GitHubSyncService {
       }
       /* other errors (network etc.): swallow — best-effort */
     }
-  }
-
-  private async listV2Files(owner: string, repo: string): Promise<Array<{ path: string; sha: string }>> {
-    // 仅排除显式子目录（v2 从不建子目录；缺 type 字段的响应按文件处理，
-    // 与改造前的行为逐字一致）。
-    return (await this.listDirEntries(owner, repo, V2_DIR))
-      .filter((f) => f.type !== 'dir')
-      .map((f) => ({ path: f.path, sha: f.sha }));
   }
 
   /** 列举任意目录的条目（含子目录，type: 'file' | 'dir'）。404 ⇒ 空数组。 */
@@ -1260,6 +1130,22 @@ function uploadGenTag(): string {
 /** Insert the generation tag before the `.gz` extension: `v2/state-0.gz` → `v2/state-0.<tag>.gz`. */
 function withGenTag(path: string, tag: string): string {
   return path.replace(/\.gz$/, `.${tag}.gz`);
+}
+
+/** Existing-cloud summary of a manifest (shared by the v2 and slot queries; each keeps its own corrupt-manifest handling). */
+function toCloudInfo(m: ChunkManifest): CloudInfo {
+  return {
+    exists: true,
+    updatedAt: m.createdAt,
+    sizeKB: Math.round(m.totalSizeBytes / 1024),
+    uploadedByLabel: m.uploadedBy?.deviceLabel,
+    uploadedByDeviceId: m.uploadedBy?.deviceId,
+  };
+}
+
+/** Cloud moved on since this device's baseline (or a fresh device meets a non-empty cloud). */
+function isConflict(cloud: CloudInfo, baseline: string): boolean {
+  return !baseline || cloud.updatedAt !== baseline;
 }
 
 /** slotKey → 远端目录（GLOBAL_SLOT_KEY → global/，否则 slots/<profileId>/）。 */
