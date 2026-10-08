@@ -92,6 +92,14 @@ import {
   type RoundMetrics,
   type DisplayMetrics,
 } from '@/ui/components/panels/round-divider-helpers';
+import {
+  computeVisibleRange,
+  countFoldedBefore,
+  VISIBLE_ROUND_WINDOW,
+  LOAD_MORE_INCREMENT,
+} from '@/ui/composables/main-game/round-window';
+import { roundForMessageAt, searchMessages, type SearchHit } from '@/ui/composables/main-game/round-search';
+import { bookmarkSnippet, defaultBookmarkName, toggleBookmarkList } from '@/ui/composables/main-game/bookmarks';
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -394,10 +402,6 @@ const displayMessages = computed<ChatMessage[]>(() => {
 //   'tail'   — show the latest N rounds (default, scrolled to bottom)
 //   'pinned' — show ±2 rounds around a search target (5-round window)
 
-const VISIBLE_ROUND_WINDOW = 5;
-const VISIBLE_ROUND_HALF = 2;
-const LOAD_MORE_INCREMENT = 5;
-
 const windowMode = ref<'tail' | 'pinned'>('tail');
 const tailVisibleRounds = ref(VISIBLE_ROUND_WINDOW);
 const pinnedTargetIdx = ref(0);
@@ -411,41 +415,14 @@ const assistantPositions = computed<number[]>(() => {
   return pos;
 });
 
-const visibleRange = computed<{ start: number; end: number }>(() => {
-  const msgs = displayMessages.value;
-  if (msgs.length === 0) return { start: 0, end: 0 };
-  const aPos = assistantPositions.value;
-  if (aPos.length === 0) return { start: 0, end: msgs.length };
-
-  if (windowMode.value === 'tail') {
-    const count = tailVisibleRounds.value;
-    if (aPos.length <= count) return { start: 0, end: msgs.length };
-    const startAssistantPos = aPos.length - count;
-    const startMsgIdx = aPos[startAssistantPos];
-    const start = startMsgIdx > 0 && msgs[startMsgIdx - 1].role === 'user'
-      ? startMsgIdx - 1 : startMsgIdx;
-    return { start, end: msgs.length };
-  }
-
-  // Pinned: show ±HALF rounds around target
-  let centerPos = aPos.length - 1;
-  for (let j = 0; j < aPos.length; j++) {
-    if (aPos[j] >= pinnedTargetIdx.value) { centerPos = j; break; }
-  }
-
-  const wStart = Math.max(0, centerPos - VISIBLE_ROUND_HALF);
-  const wEnd = Math.min(aPos.length - 1, centerPos + VISIBLE_ROUND_HALF);
-
-  const startMsgIdx = aPos[wStart];
-  const start = startMsgIdx > 0 && msgs[startMsgIdx - 1].role === 'user'
-    ? startMsgIdx - 1 : startMsgIdx;
-
-  const end = wEnd < aPos.length - 1
-    ? aPos[wEnd] + 1
-    : msgs.length;
-
-  return { start, end };
-});
+const visibleRange = computed<{ start: number; end: number }>(() =>
+  computeVisibleRange(
+    displayMessages.value,
+    assistantPositions.value,
+    windowMode.value,
+    tailVisibleRounds.value,
+    pinnedTargetIdx.value,
+  ));
 
 const visibleStartIndex = computed(() => visibleRange.value.start);
 
@@ -456,11 +433,7 @@ const visibleMessages = computed<ChatMessage[]>(() => {
 
 const foldedBeforeCount = computed<number>(() => {
   const { start } = visibleRange.value;
-  let count = 0;
-  for (const pos of assistantPositions.value) {
-    if (pos < start) count++; else break;
-  }
-  return count;
+  return countFoldedBefore(assistantPositions.value, start);
 });
 
 const hasFoldedBefore = computed(() => foldedBeforeCount.value > 0);
@@ -491,26 +464,6 @@ function jumpToLatest(): void {
 
 // ─── Round search ────────────────────────────────────────────
 
-function roundForMessageAt(msgs: ReadonlyArray<ChatMessage>, idx: number): number {
-  const msg = msgs[idx];
-  if (msg?._metrics?.roundNumber) return msg._metrics.roundNumber;
-  for (let i = idx + 1; i < msgs.length; i++) {
-    if (msgs[i]._metrics?.roundNumber) return msgs[i]._metrics!.roundNumber;
-  }
-  let count = 0;
-  for (let i = 0; i <= idx; i++) {
-    if (msgs[i].role === 'assistant') count++;
-  }
-  return count || 1;
-}
-
-interface SearchHit {
-  roundNumber: number;
-  role: ChatMessage['role'];
-  snippet: string;
-  globalIndex: number;
-}
-
 const showSearch = ref(false);
 const searchFocused = ref(false);
 const searchQuery = ref('');
@@ -524,32 +477,8 @@ watch(searchQuery, (val) => {
   }, 200);
 });
 
-const searchResults = computed<SearchHit[]>(() => {
-  const q = debouncedSearchQuery.value.trim();
-  if (!q || q.length < 2) return [];
-  const msgs = displayMessages.value;
-  const results: SearchHit[] = [];
-  const qLower = q.toLowerCase();
-  for (let i = 0; i < msgs.length; i++) {
-    const msg = msgs[i];
-    if (!msg.content) continue;
-    const contentLower = msg.content.toLowerCase();
-    const matchIdx = contentLower.indexOf(qLower);
-    if (matchIdx === -1) continue;
-
-    const round = roundForMessageAt(msgs, i);
-    const start = Math.max(0, matchIdx - 30);
-    const end = Math.min(msg.content.length, matchIdx + q.length + 30);
-    const snippet =
-      (start > 0 ? '…' : '') +
-      msg.content.slice(start, end) +
-      (end < msg.content.length ? '…' : '');
-
-    results.push({ roundNumber: round, role: msg.role, snippet, globalIndex: i });
-    if (results.length >= 50) break;
-  }
-  return results;
-});
+const searchResults = computed<SearchHit[]>(() =>
+  searchMessages(() => displayMessages.value, debouncedSearchQuery.value));
 
 function jumpToSearchResult(hit: SearchHit): void {
   windowMode.value = 'pinned';
@@ -613,12 +542,6 @@ function writeBookmarks(next: BookmarkedRound[]): void {
   setValue(DEFAULT_ENGINE_PATHS.bookmarkedRounds, next);
 }
 
-/** Default name for a fresh bookmark: first ~10 non-space chars of the narrative. */
-function defaultBookmarkName(content: string): string {
-  const stripped = content.replace(/\s+/g, '');
-  return stripped.length > 10 ? stripped.slice(0, 10) : (stripped || t('mainGame.bookmark.unnamed'));
-}
-
 /**
  * Toggle bookmark for the assistant message at global index `globalIdx`.
  * Captures a content snapshot + the preceding player input so the bookmark
@@ -626,27 +549,19 @@ function defaultBookmarkName(content: string): string {
  */
 function toggleBookmarkForMessage(msg: ChatMessage, globalIdx: number): void {
   const round = roundForAssistantAt(globalIdx);
-  const existing = bookmarks.value.findIndex((b) => b.round === round);
-  if (existing >= 0) {
-    const next = bookmarks.value.slice();
-    next.splice(existing, 1);
-    writeBookmarks(next);
-    return;
-  }
-  // Snapshot exactly what the player is looking at (WYSIWYG): displayTextForAssistant
-  // honours the per-round 优化/原文 toggle, so a bookmark keeps the on-screen version.
-  const content = displayTextForAssistant(msg);
-  const bm: BookmarkedRound = {
-    id: `bm_${round}_${Date.now()}`,
-    round,
-    createdAt: Date.now(),
-    name: defaultBookmarkName(content),
-    content,
-    pending: false,
-  };
-  // Keep the list sorted by round descending (newest floors first).
-  const next = [...bookmarks.value, bm].sort((a, b) => b.round - a.round);
-  writeBookmarks(next);
+  writeBookmarks(toggleBookmarkList(bookmarks.value, round, () => {
+    // Snapshot exactly what the player is looking at (WYSIWYG): displayTextForAssistant
+    // honours the per-round 优化/原文 toggle, so a bookmark keeps the on-screen version.
+    const content = displayTextForAssistant(msg);
+    return {
+      id: `bm_${round}_${Date.now()}`,
+      round,
+      createdAt: Date.now(),
+      name: defaultBookmarkName(content, () => t('mainGame.bookmark.unnamed')),
+      content,
+      pending: false,
+    };
+  }));
 }
 
 function toggleBookmarksPanel(): void {
@@ -727,12 +642,6 @@ function jumpToBookmark(round: number): void {
  * deep-link-to-/game/memory case with no event-timing race.
  */
 const { consumeRoundJump } = useRoundJump();
-
-/** Compact preview for a bookmark row snippet. */
-function bookmarkSnippet(content: string, n = 48): string {
-  const s = content.replace(/\s+/g, ' ').trim();
-  return s.length > n ? s.slice(0, n) + '…' : s;
-}
 
 // ─── Round divider placement (Phase 2, 2026-04-19) ─────────────
 // Logic delegated to round-divider-helpers.ts so it can be unit-tested
