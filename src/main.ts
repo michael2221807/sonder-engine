@@ -53,11 +53,6 @@ import './ui/styles/mobile.css';
 })();
 
 import { eventBus } from './engine/core/event-bus';
-import { StateManager } from './engine/core/state-manager';
-import { CommandExecutor, composePushGuards, schemaNumberBounds, schemaDeclaresArray, schemaDeclaresPath } from './engine/core/command-executor';
-import { buildMemoryPushDedupGuard } from './engine/social/memory-dedup';
-import { buildRelationshipMergeGuard } from './engine/social/relationship-merge-guard';
-import { BehaviorRunner } from './engine/behaviors/behavior-runner';
 import { CharacterInitPipeline } from './engine/pipeline/sub-pipelines/character-init';
 import { MemorySummaryPipeline } from './engine/pipeline/sub-pipelines/memory-summary';
 import { MidTermRefinePipeline } from './engine/pipeline/sub-pipelines/mid-term-refine';
@@ -91,31 +86,13 @@ import { providerCatalog, measureConnectionTest } from './engine/providers';
 import { migrateImageState } from './engine/image/save-migration';
 import { NpcChatPipeline } from './engine/pipeline/sub-pipelines/npc-chat';
 import { DEFAULT_ENGINE_PATHS } from './engine/pipeline/types';
-import { TimeService, gameCalendar } from './engine/behaviors/time-service';
-import { NpcDedupModule } from './engine/behaviors/npc-dedup';
-import { NpcMainRoundUpdateModule } from './engine/behaviors/npc-main-round-update';
-import { NpcDemotionModule } from './engine/behaviors/npc-demotion';
-import { NarrativeEnvelopeRepairModule } from './engine/behaviors/narrative-envelope-repair';
-import { MemoryCompilerModule } from './engine/behaviors/memory-compiler';
-import { ComputedFieldsModule } from './engine/behaviors/computed-fields';
-import { EffectLifecycleModule } from './engine/behaviors/effect-lifecycle';
-import { ThresholdTriggersModule } from './engine/behaviors/threshold-triggers';
-import { NpcBehaviorModule } from './engine/behaviors/npc-behavior';
-import { ValidationRepairModule } from './engine/behaviors/validation-repair';
-import { ContentFilterModule } from './engine/behaviors/content-filter';
-import { CrossRefSyncModule } from './engine/behaviors/cross-ref-sync';
 import { GameOrchestrator } from './engine/core/game-orchestrator';
-import { MemoryManager } from './engine/memory/memory-manager';
-import { MemoryRetriever } from './engine/memory/memory-retriever';
-import { EngramManager } from './engine/memory/engram/engram-manager';
-import { EngramEditor } from './engine/memory/engram/engram-editor';
 import { useEngineStateStore } from './engine/stores/engine-state';
 import { AgaPlotVectorAdapter } from './features/plot-vector/aga-adapter';
 import { VectorBoardAccess } from './features/plot-vector/board-access';
 import { parseNativeRules } from './features/plot-vector/native-input';
 import { parseSupplyRules, warmSupplyRatings } from './features/plot-vector/supply';
 import { parseVectorPromptPolicy } from './features/plot-vector/prompt-policy';
-import type { ComputedFieldConfig, ThresholdTriggerConfig, IntegrityRule, EffectLifecycleConfig, NpcBehaviorConfig, ContentFilterConfig } from './engine/types';
 
 import { requestPersistentStorage } from './engine/persistence/idb-adapter';
 import { GameCardImportService } from './engine/export/game-card-import-service';
@@ -126,10 +103,6 @@ import { PayloadApplier } from './engine/services/assistant/payload-applier';
 import { PayloadValidator } from './engine/services/assistant/payload-validator';
 import { WorldBuilderService } from './engine/services/world-builder/world-builder-service';
 import { InMemoryConversationStore } from './engine/services/assistant/conversation-store';
-import { UnifiedRetriever } from './engine/memory/engram/unified-retriever';
-import { Embedder } from './engine/memory/engram/embedder';
-import { Reranker } from './engine/memory/engram/reranker';
-import { useEngramDebugStore } from './engine/stores/engram-debug';
 
 import { useActionQueueStore } from './engine/stores/engine-action-queue';
 import { usePromptDebugStore } from './engine/stores/engine-prompt';
@@ -137,6 +110,10 @@ import { createAiStack } from './bootstrap/ai-stack';
 import { createPersistenceStack } from './bootstrap/persistence-stack';
 import { loadPackAndMigrations } from './bootstrap/pack-and-migrations';
 import { createPromptStack } from './bootstrap/prompt-stack';
+import { createStateKernel } from './bootstrap/state-kernel';
+import { createMemoryStack } from './bootstrap/memory-stack';
+import { registerPackBehaviors } from './bootstrap/pack-behaviors';
+import { createEngramStack } from './bootstrap/engram-stack';
 
 async function bootstrap(): Promise<void> {
   const app = createApp(App);
@@ -161,228 +138,13 @@ async function bootstrap(): Promise<void> {
 
   const { promptRegistry, responseParser, promptAssembler } = createPromptStack({ pack, worldBookStorage });
 
-  const stateManager = new StateManager();
+  const { stateManager, commandExecutor, behaviorRunner, calendar, engineStateStore } = createStateKernel({ pack });
 
-  // §11.4: 从 pack.stateSchema 动态提取顶层 properties 作为 CommandExecutor 的路径根白名单
-  // 这能让 AI 生成的写入路径在运行时被检测为未知根段（console.warn + toast）
-  // 零硬编码：pack 更换或 schema 扩充时自动适配
-  const schemaRoots: string[] | null = pack
-    ? Object.keys(
-        ((pack.stateSchema as { properties?: Record<string, unknown> }).properties) ?? {},
-      )
-    : null;
-  const memoryFieldName = DEFAULT_ENGINE_PATHS.npcFieldNames.memory;
-  // Push 守卫组合：.记忆 近似去重（抑制）+ 社交.关系 同名 NPC 融合（合并进已有条目，
-  // 不丢数据、不打断回合 — 见 relationship-merge-guard.ts / npc-merge.ts 的合并策略）
-  const pushDedupGuard = composePushGuards(
-    buildMemoryPushDedupGuard(memoryFieldName),
-    buildRelationshipMergeGuard(
-      stateManager,
-      DEFAULT_ENGINE_PATHS.relationships,
-      DEFAULT_ENGINE_PATHS.npcFieldNames,
-    ),
-  );
-  // Numeric ranges the pack schema declares (e.g. an affinity of -100~100) bound set/add writes.
-  const commandExecutor = new CommandExecutor(stateManager, schemaRoots, pushDedupGuard,
-    pack ? (path => schemaNumberBounds(pack.stateSchema, path)) : undefined,
-    pack ? (path => schemaDeclaresArray(pack.stateSchema, path)) : undefined,
-    pack ? (path => schemaDeclaresPath(pack.stateSchema, path)) : undefined);
+  const { memoryManager, memoryRetriever } = createMemoryStack({ stateManager, behaviorRunner });
 
-  const behaviorRunner = new BehaviorRunner();
+  registerPackBehaviors({ pack, stateManager, commandExecutor, behaviorRunner, calendar });
 
-  // One calendar for every module that reads the game clock. TimeService once got only 年/月/日, so it carried
-  // fallback `hour`/`minute` fields while the real 分钟 grew without end and EffectLifecycle (which read 分钟)
-  // expired every new status at round end (2026-09-26, PO D1).
-  const calendar = gameCalendar(DEFAULT_ENGINE_PATHS);
-
-  // ── #21: 注册行为模块 ──
-  // TimeService：推进游戏内时间进位（分钟→小时→日→月→年 归一化）
-  behaviorRunner.register(new TimeService(calendar, DEFAULT_ENGINE_PATHS.characterAge));
-
-  // NpcDedupModule：社交.关系 同名 NPC 兜底融合（onRoundEnd + onGameLoad）
-  // push 级守卫（relationship-merge-guard）覆盖 CommandExecutor 路径；此模块
-  // 兜住整数组 set（助手 replace-array / GameVariablePanel 原始 JSON）与历史脏存档
-  behaviorRunner.register(new NpcDedupModule(
-    DEFAULT_ENGINE_PATHS.relationships,
-    DEFAULT_ENGINE_PATHS.npcFieldNames,
-  ));
-
-  // NpcMainRoundUpdateModule：记下主回合最后一次更新每位 NPC 的回合（心跳「遗忘回合数」按它算），
-  // 读档时给还没有记录的 NPC 补上当前回合。排在去重之后：给融合后的列表记。
-  behaviorRunner.register(new NpcMainRoundUpdateModule(
-    DEFAULT_ENGINE_PATHS.relationships,
-    DEFAULT_ENGINE_PATHS.roundNumber,
-    DEFAULT_ENGINE_PATHS.npcFieldNames,
-  ));
-
-  // NpcDemotionModule：回合结束时，超过「NPC 降级阈值」回合没被主回合更新的「重点」（或没写类型的）NPC 降为普通（demo runNpcMaintenance）。
-  // 依赖上一个模块记下的「上次主回合更新回合」。
-  behaviorRunner.register(new NpcDemotionModule(
-    DEFAULT_ENGINE_PATHS.relationships,
-    DEFAULT_ENGINE_PATHS.roundNumber,
-    DEFAULT_ENGINE_PATHS.npcDemotionThreshold,
-    DEFAULT_ENGINE_PATHS.npcTypeKey,
-    DEFAULT_ENGINE_PATHS.npcTypeExclude,
-    DEFAULT_ENGINE_PATHS.npcFieldNames,
-  ));
-
-  // ── #3: 将 Pinia tree 绑定到 StateManager 的 reactive 对象 ──
-  // 必须在 createPinia() 之后、任何 UI 读取状态之前调用。
-  // 绑定后 StateManager 的所有写操作自动反映到 Vue 响应式系统。
-  const engineStateStore = useEngineStateStore();
-  engineStateStore.linkStateManager(stateManager);
-  // 读档时分发 onGameLoad 行为钩子（npc-dedup 融合 / effect-lifecycle 清理 /
-  // validation-repair 修复）——2026-07-05 前这些钩子只在创角后触发，真实读档从不执行
-  engineStateStore.linkBehaviorRunner(behaviorRunner);
-
-  // ── #2: 实例化记忆服务 ──
-  //
-  // 2026-04-11 重构（四层记忆系统）：
-  // - shortTermCapacity = 5（降低自 8，match demo + design note）
-  // - midTermRefineThreshold = 25（in-place 精炼阈值）
-  // - longTermSummaryThreshold = 50（worldview evolution 阈值）
-  // - 隐式中期和短期 1:1 配对，由 MemoryManager.shiftAndPromoteOldest 同步 shift
-  // - MemoryRetriever 现在依赖 MemoryManager 做隐式中期的相关角色过滤
-  const memoryPathConfig = {
-    shortTermPath: DEFAULT_ENGINE_PATHS.shortTermMemory,
-    midTermPath: DEFAULT_ENGINE_PATHS.memoryMidTerm,
-    longTermPath: DEFAULT_ENGINE_PATHS.memoryLongTerm,
-    implicitMidTermPath: DEFAULT_ENGINE_PATHS.implicitMidTermMemory,
-    semanticMemoryPath: DEFAULT_ENGINE_PATHS.engramMemory,
-    // 默认值 —— 可被 localStorage `aga_memory_settings` 运行时覆盖（SettingsPanel UI）
-    shortTermCapacity: 5,
-    midTermRefineThreshold: 25,
-    longTermSummaryThreshold: 50,
-    longTermSummarizeCount: 50,
-    midTermKeep: 0,
-    longTermCap: 30,
-  };
-  const memoryManager = new MemoryManager(stateManager, memoryPathConfig);
-  // NarrativeEnvelopeRepairModule：读档时修好存成 JSON 外壳（`{"text":"…`）的回合正文、短期记忆与收藏楼层快照（2026-10-03）
-  behaviorRunner.register(new NarrativeEnvelopeRepairModule(
-    DEFAULT_ENGINE_PATHS.narrativeHistory, memoryPathConfig.shortTermPath, DEFAULT_ENGINE_PATHS.bookmarkedRounds));
-  const memoryRetriever = new MemoryRetriever(memoryPathConfig, memoryManager);
-
-  // MemoryCompilerModule：在上下文组装阶段将结构化记忆注入 prompt 变量
-  behaviorRunner.register(new MemoryCompilerModule(memoryManager));
-
-  // ── GAP_AUDIT §G1: 注册剩余行为模块（读 pack.rules 的 JSON 配置） ──
-  //
-  // 注册顺序依赖：
-  // 1. TimeService 必须在 EffectLifecycle 之前（effect 的过期判断依赖已归一化的时间）
-  // 2. ComputedFields 宜在 TimeService 之后（衍生字段可能引用时间相关值）
-  // 3. ValidationRepair 最后，在其他模块可能产生的"修复机会"之后执行收尾校验
-  //
-  // 所有模块 config 来自 Game Pack 的 rules/*.json，
-  // 不存在时模块不注册（引擎不强制依赖 pack 内容）。
-  if (pack) {
-    const rules = pack.rules as Record<string, unknown>;
-
-    // ComputedFields — onCreation / onRoundEnd / onLoad 计算派生字段
-    const computedConfig = rules['computedFields'] as { fields?: ComputedFieldConfig[] } | undefined;
-    if (computedConfig?.fields?.length) {
-      behaviorRunner.register(new ComputedFieldsModule(computedConfig.fields));
-    }
-
-    // EffectLifecycle — onRoundEnd / onGameLoad 清理过期 buff/debuff
-    const effectConfig = rules['effectLifecycle'] as EffectLifecycleConfig | undefined;
-    if (effectConfig?.effectsPath && effectConfig.effectSchema) {
-      const effectLifecycle = new EffectLifecycleModule(effectConfig, calendar);
-      behaviorRunner.register(effectLifecycle);
-      // A status written by any flow (sub-pipelines, the assistant) starts on the game clock too (PO G1).
-      commandExecutor.observeBatches(changeLog => effectLifecycle.stampWritten(stateManager, changeLog));
-    }
-
-    // ThresholdTriggers — onRoundEnd / onGameLoad 检查阈值触发事件
-    const triggerConfig = rules['thresholdTriggers'] as { triggers?: ThresholdTriggerConfig[] } | undefined;
-    if (triggerConfig?.triggers?.length) {
-      behaviorRunner.register(new ThresholdTriggersModule(triggerConfig.triggers));
-    }
-
-    // NpcBehavior — afterCommands 钩子中处理玩家移动时的 NPC 跟随/留守
-    const npcConfig = rules['npcBehavior'] as NpcBehaviorConfig | undefined;
-    if (npcConfig?.npcTypes) {
-      behaviorRunner.register(new NpcBehaviorModule(
-        npcConfig,
-        {
-          playerLocation: DEFAULT_ENGINE_PATHS.playerLocation,
-          npcList: DEFAULT_ENGINE_PATHS.npcList, // 已修正为 '社交.关系'
-        },
-      ));
-    }
-
-    // ContentFilter — onContextAssembly 钩子中按 nsfwMode 等评级开关剥离 prompt 中的敏感片段
-    const filterConfig = rules['contentFilter'] as ContentFilterConfig | undefined;
-    if (filterConfig?.contentRatings) {
-      behaviorRunner.register(new ContentFilterModule(filterConfig));
-    }
-
-    // CrossRefSync — afterCommands 钩子中维护 NPC.位置 ↔ 地点.NPC 列表双向一致
-    const syncConfig = rules['crossRefSync'] as { rules?: IntegrityRule[] } | undefined;
-    if (syncConfig?.rules?.length) {
-      behaviorRunner.register(new CrossRefSyncModule(syncConfig.rules));
-    }
-
-    // ValidationRepair — 最后注册，在其他模块执行完后做收尾的 schema 校验与字段修复
-    // 不依赖 rules/*.json，直接读 pack.stateSchema
-    behaviorRunner.register(new ValidationRepairModule(pack.stateSchema));
-  }
-
-  // E.4: 使用真实 EngramManager 代替之前的 stub
-  // 配置从 localStorage (aga_engram_config) 读取，默认 enabled=false。
-  // 用户在 Settings → Engram 开关后，下一回合立即生效，无需重启。
-  //
-  // getActiveSlot: Engram 向量存储需要 profileId+slotId 构建 IndexedDB key。
-  // 这两个值是引擎元数据（存在于 Pinia store），不在游戏状态树中。
-  // 旧版本从 stateManager.get('元数据.profileId') 读取 —— 该路径从未被写入，
-  // 导致 vectorizeAsync 永远 early return，embedding API 从不被调用。
-  const getActiveSlot = () => {
-    const p = engineStateStore.activeProfileId;
-    const s = engineStateStore.activeSlotId;
-    return p && s ? { profileId: p, slotId: s } : null;
-  };
-  const engramManager = new EngramManager(
-    aiService,
-    {
-      npcNameField: DEFAULT_ENGINE_PATHS.npcFieldNames.name,
-      npcTypeField: DEFAULT_ENGINE_PATHS.npcFieldNames.type,
-      npcTypeKey: DEFAULT_ENGINE_PATHS.npcTypeKey,
-      // M-3: NPC entity summary source fields (生平+外貌), sourced from the central path config
-      // so a future pack-level npcFieldNames override flows through to EntityBuilder.
-      npcBackgroundField: DEFAULT_ENGINE_PATHS.npcFieldNames.background,
-      npcAppearanceField: DEFAULT_ENGINE_PATHS.npcFieldNames.appearance,
-      npcDescriptionField: DEFAULT_ENGINE_PATHS.npcFieldNames.description,
-    },
-    getActiveSlot,
-  );
-
-  // Story 1: EngramEditor for user-driven entity/edge CRUD
-  const engramEditor = new EngramEditor(stateManager, engramManager, {
-    engramMemory: DEFAULT_ENGINE_PATHS.engramMemory,
-    roundNumber: DEFAULT_ENGINE_PATHS.roundNumber,
-    relationships: DEFAULT_ENGINE_PATHS.relationships,
-    locations: DEFAULT_ENGINE_PATHS.locations,
-    npcNameField: DEFAULT_ENGINE_PATHS.npcFieldNames.name,
-    npcTypeField: DEFAULT_ENGINE_PATHS.npcFieldNames.type,
-    npcTypeExclude: DEFAULT_ENGINE_PATHS.npcTypeExclude,
-    locationNameField: DEFAULT_ENGINE_PATHS.locationFieldNames.name,
-  });
-
-  // E.2/E.3: UnifiedRetriever 实例（hybrid 模式时由 ContextAssemblyStage 使用）
-  const embedder = new Embedder(aiService);
-  const reranker = new Reranker(aiService);
-  const engramDebugStore = useEngramDebugStore();
-  const unifiedRetriever = new UnifiedRetriever(
-    vectorStore,
-    embedder,
-    reranker,
-    () => {
-      const cfg = engramManager.getConfig();
-      return { embedding: cfg.embedding, rerank: cfg.rerank, shortTermWindow: cfg.shortTermWindow, maxCandidates: cfg.maxCandidates };
-    },
-    engramDebugStore,
-    getActiveSlot,
-  );
+  const { getActiveSlot, engramManager, engramEditor, embedder, unifiedRetriever } = createEngramStack({ aiService, stateManager, engineStateStore, vectorStore });
 
   // CharacterInitPipeline is created after GameOrchestrator (below) to enable
   // EnhancedOpeningPipeline injection which requires orchestrator.createStagesForOpening().
