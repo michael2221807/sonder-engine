@@ -24,6 +24,7 @@ import type { GamePack } from '../../types';
 import type { StateManager } from '../../core/state-manager';
 import type { PromptAssembler } from '../../prompt/prompt-assembler';
 import { eventBus } from '../../core/event-bus';
+import { emitPromptAssemblyDebug } from '../../core/prompt-debug';
 import { storyLines, storyText } from '../../core/narrative-brackets';
 import { stringifySnapshotForPrompt, stripTagFromMessages, NSFW_STRIP_TAG } from '../../memory/snapshot-sanitizer';
 import {
@@ -63,6 +64,14 @@ import type { WorldBook, SystemPromptBuildResult } from '../../prompt/world-book
 interface NarrativeEntry {
   role: string;
   content: string;
+}
+
+/**
+ * Fills the `{{NAME}}` placeholders of a plot prompt (plotDirective, plotEvaluationStep2) from the round's variables.
+ * A placeholder the round has no variable for becomes empty text; nothing else touches the text (no transform).
+ */
+function renderPlotTemplate(template: string, variables: Record<string, string>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_: string, key: string) => key in variables ? variables[key] : '');
 }
 
 /**
@@ -655,8 +664,7 @@ export class ContextAssemblyStage implements PipelineStage {
       if (variables['PLOT_DIRECTIVE']) {
         const plotDirectivePrompt = roundPrompts['plotDirective'] ?? '';
         if (plotDirectivePrompt) {
-          const rendered = plotDirectivePrompt.replace(/\{\{(\w+)\}\}/g,
-            (_: string, key: string) => key in variables ? variables[key] : '');
+          const rendered = renderPlotTemplate(plotDirectivePrompt, variables);
           if (rendered.trim()) {
             // Insert before the last 2 messages (player_input + start_task)
             const insertAt = Math.max(0, messages.length - 2);
@@ -668,8 +676,7 @@ export class ContextAssemblyStage implements PipelineStage {
         if (!splitGen && variables['PLOT_COMPLETION_HINT']) {
           const evalPrompt = roundPrompts['plotEvaluationStep2'] ?? '';
           if (evalPrompt) {
-            const rendered = evalPrompt.replace(/\{\{(\w+)\}\}/g,
-              (_: string, key: string) => key in variables ? variables[key] : '');
+            const rendered = renderPlotTemplate(evalPrompt, variables);
             if (rendered.trim()) {
               const insertAt = Math.max(0, messages.length - 2);
               messages.splice(insertAt, 0, { role: 'system' as const, content: rendered });
@@ -681,11 +688,7 @@ export class ContextAssemblyStage implements PipelineStage {
 
       // For split-gen step2, use the old assembler (step2后面再做)
       if (splitGen) {
-        let step2Vars: Record<string, string> = {
-          ...variables,
-          ...PlotInjector.buildStep2Variables(this.stateManager, this.paths, this.pack.engineFragments),
-          HISTORY_FRAMING_STEP2: ctx.meta.plotVectorPromptMode ? '' : '1',
-        };
+        let step2Vars: Record<string, string> = this.step2Variables(variables, ctx);
         let step2History = chatHistory;
 
         // ── Context Compiler v1 (2026-09-04) — step2 gets a projection, not the ledger ──
@@ -760,14 +763,7 @@ export class ContextAssemblyStage implements PipelineStage {
           ctx.meta['compileTrace'] = trace;
         }
 
-        const step2OverrideId = ctx.meta.step2FlowOverride as string | undefined;
-        const step2Flow = this.pack.promptFlows[step2OverrideId ?? 'splitGenMainRoundStep2'];
-        if (step2OverrideId && !this.pack.promptFlows[step2OverrideId]) {
-          if (ctx.meta.isEnhancedOpening) {
-            throw new Error(`[ContextAssembly] Required flow override '${step2OverrideId}' not found — Enhanced Opening cannot proceed`);
-          }
-          console.warn(`[ContextAssembly] step2FlowOverride '${step2OverrideId}' not found, falling back to default`);
-        }
+        const step2Flow = this.resolveFlowOverride(ctx, 'step2', 'splitGenMainRoundStep2');
         if (step2Flow) {
           const s2 = assembler.assemble(step2Flow, step2Vars, step2History);
           splitStep2Messages = s2.messages;
@@ -796,30 +792,14 @@ export class ContextAssemblyStage implements PipelineStage {
 
     } else {
       // ═══ LEGACY PATH: flow-based PromptAssembler ═══
-      const step1OverrideId = ctx.meta.step1FlowOverride as string | undefined;
-      const step2OverrideId = ctx.meta.step2FlowOverride as string | undefined;
-      const step1Flow = splitGen ? this.pack.promptFlows[step1OverrideId ?? 'splitGenMainRoundStep1'] ?? null : null;
-      const step2Flow = splitGen ? this.pack.promptFlows[step2OverrideId ?? 'splitGenMainRoundStep2'] ?? null : null;
-      if (step1OverrideId && !this.pack.promptFlows[step1OverrideId]) {
-        if (ctx.meta.isEnhancedOpening) {
-          throw new Error(`[ContextAssembly] Required flow override '${step1OverrideId}' not found — Enhanced Opening cannot proceed`);
-        }
-        console.warn(`[ContextAssembly] step1FlowOverride '${step1OverrideId}' not found, falling back to default`);
-      }
-      if (step2OverrideId && !this.pack.promptFlows[step2OverrideId]) {
-        if (ctx.meta.isEnhancedOpening) {
-          throw new Error(`[ContextAssembly] Required flow override '${step2OverrideId}' not found — Enhanced Opening cannot proceed`);
-        }
-        console.warn(`[ContextAssembly] step2FlowOverride '${step2OverrideId}' not found, falling back to default`);
-      }
+      const step1Resolved = this.resolveFlowOverride(ctx, 'step1', 'splitGenMainRoundStep1');
+      const step2Resolved = this.resolveFlowOverride(ctx, 'step2', 'splitGenMainRoundStep2');
+      const step1Flow = splitGen ? step1Resolved ?? null : null;
+      const step2Flow = splitGen ? step2Resolved ?? null : null;
 
       if (splitGen && step1Flow && step2Flow) {
         const s1 = assembler.assemble(step1Flow, variables, chatHistory);
-        const step2Vars = {
-          ...variables,
-          ...PlotInjector.buildStep2Variables(this.stateManager, this.paths, this.pack.engineFragments),
-          HISTORY_FRAMING_STEP2: ctx.meta.plotVectorPromptMode ? '' : '1',
-        };
+        const step2Vars = this.step2Variables(variables, ctx);
         const s2 = assembler.assemble(step2Flow, step2Vars, chatHistory);
         messages = s1.messages;
         messageSources = s1.messageSources;
@@ -891,7 +871,7 @@ export class ContextAssemblyStage implements PipelineStage {
     // 永远是**不完整**的 prompt —— 缺最后 2-3 条关键消息，调试价值大减。
     // 改为只 emit step1；step2 由 ai-call 在拼完整后自己 emit。
     if (!ctx.meta.plotVectorPromptMode && splitGen && splitStep2Messages) {
-      eventBus.emit('ui:debug-prompt', {
+      emitPromptAssemblyDebug({
         flow: 'splitGenMainRoundStep1',
         variables,
         messages,
@@ -901,7 +881,7 @@ export class ContextAssemblyStage implements PipelineStage {
       });
       // step2 emit 延后到 ai-call.ts，见 `executeSplitGen`
     } else if (!ctx.meta.plotVectorPromptMode) {
-      eventBus.emit('ui:debug-prompt', {
+      emitPromptAssemblyDebug({
         flow: 'mainRound',
         variables,
         messages,
@@ -951,6 +931,36 @@ export class ContextAssemblyStage implements PipelineStage {
         worldBookBudget,
       },
     };
+  }
+
+  /**
+   * The variables of the Step 2 flow: the round's variables plus the plot block of Step 2 and the history framing.
+   * Key order matters (the debug panel and the snapshots show it): round variables first, then the plot ones, then
+   * the framing flag.
+   */
+  private step2Variables(variables: Record<string, string>, ctx: PipelineContext): Record<string, string> {
+    return {
+      ...variables,
+      ...PlotInjector.buildStep2Variables(this.stateManager, this.paths, this.pack.engineFragments),
+      HISTORY_FRAMING_STEP2: ctx.meta.plotVectorPromptMode ? '' : '1',
+    };
+  }
+
+  /**
+   * Looks up the flow a split-gen step is assembled from: the override the caller named in `ctx.meta`, else the
+   * default. A named override that the pack lacks stops an enhanced opening (it cannot proceed without its own
+   * flows) and falls back to the default flow, with a warning, for every other round.
+   */
+  private resolveFlowOverride(ctx: PipelineContext, step: 'step1' | 'step2', defaultFlowId: string) {
+    const overrideId = (step === 'step1' ? ctx.meta.step1FlowOverride : ctx.meta.step2FlowOverride) as string | undefined;
+    const flow = this.pack.promptFlows[overrideId ?? defaultFlowId];
+    if (overrideId && !this.pack.promptFlows[overrideId]) {
+      if (ctx.meta.isEnhancedOpening) {
+        throw new Error(`[ContextAssembly] Required flow override '${overrideId}' not found — Enhanced Opening cannot proceed`);
+      }
+      console.warn(`[ContextAssembly] ${step}FlowOverride '${overrideId}' not found, falling back to default`);
+    }
+    return flow;
   }
 
   /**
