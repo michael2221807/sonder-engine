@@ -20,6 +20,7 @@ import type {
   AttachmentSummary,
 } from './types';
 import { normalizeStatePath } from './assistant-blocklist';
+import { DEFAULT_ENGINE_PATHS } from '../../pipeline/types';
 
 /**
  * NSFW 路径模式 —— 与 `src/engine/memory/snapshot-sanitizer.ts` 的 NSFW_STRIP_PATHS 对齐
@@ -29,8 +30,8 @@ import { normalizeStatePath } from './assistant-blocklist';
  * - 两边职责清楚，独立演进
  */
 const NSFW_STRIP_PATTERNS: readonly string[] = [
-  '社交.关系.*.私密信息',
-  '角色.身体',
+  `${DEFAULT_ENGINE_PATHS.relationships}.*.${DEFAULT_ENGINE_PATHS.npcFieldNames.privacyProfile}`,
+  DEFAULT_ENGINE_PATHS.playerBody,
 ];
 
 export interface AttachmentBuilderDeps {

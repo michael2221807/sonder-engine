@@ -32,6 +32,7 @@
  */
 
 import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
+import { SYSTEM_PATHS } from '../pipeline/system-paths';
 
 /**
  * 需要被剥离的 NSFW 路径前缀（绝对路径，从根开始）
@@ -47,9 +48,9 @@ import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 const NSFW_STRIP_PATHS: readonly string[] = [
   // 每个 NPC 对象下的 `私密信息` 字段（`社交.关系[i].私密信息`）
   // 路径使用 `.*.` 风格：`社交.关系.*.私密信息` 表示"社交.关系 下任意数组元素的 私密信息"
-  '社交.关系.*.私密信息',
+  `${DEFAULT_ENGINE_PATHS.relationships}.*.${DEFAULT_ENGINE_PATHS.npcFieldNames.privacyProfile}`,
   // 玩家法身
-  '角色.身体',
+  DEFAULT_ENGINE_PATHS.playerBody,
 ];
 
 /**
@@ -117,49 +118,49 @@ const NSFW_STRIP_PATHS: readonly string[] = [
  * 加入此数组的路径**无条件**从发给 AI 的快照中剥离（与 NSFW 开关无关）。
  */
 const PROMPT_ALWAYS_STRIP_PATHS: readonly string[] = [
-  '系统.扩展.plotVector',
-  '元数据.叙事历史',
-  '元数据.上次对话前快照',
-  '元数据.当前行动选项',
-  '元数据.推理历史',
-  '元数据.剧情规划',
-  '元数据.剧情导向',
+  DEFAULT_ENGINE_PATHS.plotVector,
+  DEFAULT_ENGINE_PATHS.narrativeHistory,
+  DEFAULT_ENGINE_PATHS.preRoundSnapshot,
+  DEFAULT_ENGINE_PATHS.currentActionOptions,
+  DEFAULT_ENGINE_PATHS.reasoningHistory,
+  DEFAULT_ENGINE_PATHS.storyPlan,
+  DEFAULT_ENGINE_PATHS.plotDirection,
   // 玩家收藏楼层：正文快照大数组，pending 项已通过 {{BOOKMARKED_ROUNDS_BLOCK}}
   // 专用块注入，不应在 GAME_STATE_JSON 里重复(去重/瘦身)。
-  '元数据.收藏楼层',
-  '记忆.短期',
-  '记忆.中期',
-  '记忆.长期',
-  '记忆.隐式中期',
-  '系统.扩展.engramMemory',
-  '系统.扩展.image',
+  DEFAULT_ENGINE_PATHS.bookmarkedRounds,
+  DEFAULT_ENGINE_PATHS.shortTermMemory,
+  DEFAULT_ENGINE_PATHS.memoryMidTerm,
+  DEFAULT_ENGINE_PATHS.memoryLongTerm,
+  DEFAULT_ENGINE_PATHS.implicitMidTermMemory,
+  DEFAULT_ENGINE_PATHS.engramMemory,
+  SYSTEM_PATHS.image.root,
   // Canon Capture: auto-captured settings reach the model through the world-book
   // budget block (deduped + budgeted). Leaving them in GAME_STATE_JSON would inject
   // every entry raw, every round, bypassing the budget entirely.
-  '系统.扩展.slotWorldBooks',
+  DEFAULT_ENGINE_PATHS.slotWorldBooks,
   // Canon Capture round telemetry for the panel banner — pure UI feedback, never
   // something the model should read back.
-  '系统.扩展.settingCaptureLast',
+  DEFAULT_ENGINE_PATHS.settingCaptureLast,
   // Save-health baseline (2026-09-10): device-side bookkeeping of which world books the
   // library held. Meaningless to the model and never something it should read.
-  '系统.扩展.storageHealth',
+  DEFAULT_ENGINE_PATHS.storageHealth,
   // Narrative Contract (R2): the player's clauses reach the model through their own
   // block (sent to both split steps, see prompt/narrative-contract.ts). Leaving the
   // raw object in GAME_STATE_JSON would duplicate it and expose `proposed` clauses
   // the player has not accepted.
-  '系统.扩展.narrativeContract',
+  DEFAULT_ENGINE_PATHS.narrativeContract,
   // Character Vectors (R2 second half): projected per turn into their own block; the raw
   // list would leak every NPC's hidden truth into GAME_STATE_JSON.
-  '系统.扩展.characterVectors',
+  DEFAULT_ENGINE_PATHS.characterVectors,
   // '系统.扩展.语义记忆' — 暂不 strip：当前无检索链路消费该路径，
   // strip 会导致旧存档 triples 静默消失。待补 retrieval 注入后再启用。
-  '系统.设置',
-  '系统.actionOptions',
-  '世界.状态.心跳',
-  '角色.图片档案',
-  '社交.关系.*.图片档案',
-  '社交.关系.*.私聊历史',
-  '社交.关系.*.总结记忆',
+  SYSTEM_PATHS.settings,
+  SYSTEM_PATHS.actionOptions,
+  DEFAULT_ENGINE_PATHS.heartbeatRoot,
+  DEFAULT_ENGINE_PATHS.playerImageArchive,
+  `${DEFAULT_ENGINE_PATHS.relationships}.*.${DEFAULT_ENGINE_PATHS.npcFieldNames.imageArchive}`,
+  `${DEFAULT_ENGINE_PATHS.relationships}.*.${DEFAULT_ENGINE_PATHS.npcFieldNames.privateChatHistory}`,
+  `${DEFAULT_ENGINE_PATHS.relationships}.*.${DEFAULT_ENGINE_PATHS.npcFieldNames.memorySummaries}`,
   // The engine's own record of the round the main round last updated each NPC (the heartbeat's 遗忘回合数):
   // bookkeeping, nothing the model should read or write.
   `${DEFAULT_ENGINE_PATHS.relationships}.*.${DEFAULT_ENGINE_PATHS.npcFieldNames.lastMainRoundUpdate}`,

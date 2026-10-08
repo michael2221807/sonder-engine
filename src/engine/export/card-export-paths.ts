@@ -14,6 +14,12 @@
  */
 import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 import type { EnginePathConfig } from '../pipeline/types';
+import { SYSTEM_PATHS } from '../pipeline/system-paths';
+import {
+  TIANMING_IMAGE_ARCHIVE_KEYS,
+  TIANMING_PROTAGONIST_EDITABLE,
+  TIANMING_VITAL_FIELDS,
+} from '../pack/tianming-coupling';
 
 export interface CardStripPaths {
   /** Gameplay-history subtrees — always deleted (never travel in a shared card). */
@@ -89,9 +95,9 @@ export function buildDefaultProtagonistPolicy(p: EnginePathConfig = DEFAULT_ENGI
   return {
     characterRoot: root,
     playerNameRelPath: p.playerName.slice(root.length + 1), // 基础信息.姓名
-    editableWhitelist: ['基础信息.姓名', '基础信息.年龄', '基础信息.性别', '基础信息.特质', '基础信息.外貌', '背包'],
-    editableBlacklist: ['属性', '可变属性', '效果', '图片档案', '身体'],
-    editableGray: ['身份.先天六维', '身份.出身', '身份.天赋'],
+    editableWhitelist: [...TIANMING_PROTAGONIST_EDITABLE.whitelist],
+    editableBlacklist: [...TIANMING_PROTAGONIST_EDITABLE.blacklist],
+    editableGray: [...TIANMING_PROTAGONIST_EDITABLE.gray],
   };
 }
 
@@ -114,9 +120,10 @@ export function buildDefaultCardStripPaths(p: EnginePathConfig = DEFAULT_ENGINE_
       p.reasoningHistory,                         // 元数据.推理历史
       p.storyPlan,                                // 元数据.剧情规划
       p.preRoundSnapshot,                         // 元数据.上次对话前快照
-      '元数据.当前行动选项',
+      DEFAULT_ENGINE_PATHS.currentActionOptions,
       p.storageHealth,                            // 系统.扩展.storageHealth — this device's store baseline, never part of a card
-      '记忆.短期', '记忆.中期', '记忆.长期', '记忆.隐式中期',
+      DEFAULT_ENGINE_PATHS.shortTermMemory, DEFAULT_ENGINE_PATHS.memoryMidTerm,
+      DEFAULT_ENGINE_PATHS.memoryLongTerm, DEFAULT_ENGINE_PATHS.implicitMidTermMemory,
       p.statusEffects,                            // 角色.效果
       p.worldEvents,                              // 社交.事件.事件记录 (OD6: 全剥离)
       npcField(rel, npc.memory),                  // 社交.关系.*.记忆
@@ -125,28 +132,28 @@ export function buildDefaultCardStripPaths(p: EnginePathConfig = DEFAULT_ENGINE_
       p.heartbeatHistory,                         // 世界.状态.心跳.历史
       p.lastHeartbeatRound,                       // 世界.状态.心跳.上次心跳回合序号
       p.heartbeatLastRun,                         // 世界.状态.心跳.上次执行时间
-      '系统.actionOptions',
-      '系统.扩展.image.tasks',                    // image task queue (runtime; positive/negative prompts may carry NSFW tags) — F3
+      SYSTEM_PATHS.actionOptions,
+      SYSTEM_PATHS.image.tasks,                    // image task queue (runtime; positive/negative prompts may carry NSFW tags) — F3
     ],
     secrets: [
-      '系统.扩展.image.config',                   // transformer apiKey/endpoint (snapshot-sanitizer.ts:87-89)
+      SYSTEM_PATHS.image.config,                  // transformer apiKey/endpoint (snapshot-sanitizer.ts:87-89)
     ],
     nsfw: [
-      '角色.身体',
+      DEFAULT_ENGINE_PATHS.playerBody,
       npcField(rel, npc.privacyProfile),          // 社交.关系.*.私密信息
-      '角色.图片档案.香闺秘档',                   // player NSFW part images
-      npcField(rel, '图片档案.香闺秘档'),         // NPC NSFW part images
+      `${DEFAULT_ENGINE_PATHS.playerImageArchive}.${TIANMING_IMAGE_ARCHIVE_KEYS.secretChamber}`, // player NSFW part images
+      npcField(rel, `${DEFAULT_ENGINE_PATHS.npcFieldNames.imageArchive}.${TIANMING_IMAGE_ARCHIVE_KEYS.secretChamber}`), // NPC NSFW part images
     ],
     generationHistory: [
-      '角色.图片档案.生图历史',
-      npcField(rel, '图片档案.生图历史'),
-      '系统.扩展.image.sceneArchive.生图历史',
+      `${DEFAULT_ENGINE_PATHS.playerImageArchive}.${TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory}`,
+      npcField(rel, `${DEFAULT_ENGINE_PATHS.npcFieldNames.imageArchive}.${TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory}`),
+      `${SYSTEM_PATHS.image.sceneArchive}.${TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory}`,
     ],
     referenceGallery: [
-      '系统.扩展.image.referenceLibrary',
+      SYSTEM_PATHS.image.referenceLibrary,
     ],
-    promptSettings: '系统.设置.prompt',
-    heroinePlan: '元数据.女主规划',
+    promptSettings: SYSTEM_PATHS.promptSettings,
+    heroinePlan: DEFAULT_ENGINE_PATHS.heroinePlan,
     plotDirection: p.plotDirection,               // 元数据.剧情导向
     engramMemory: p.engramMemory,                 // 系统.扩展.engramMemory
     capturedSettings: p.slotWorldBooks,           // 系统.扩展.slotWorldBooks
@@ -155,10 +162,10 @@ export function buildDefaultCardStripPaths(p: EnginePathConfig = DEFAULT_ENGINE_
     variableReset: {
       reputationPath: p.reputation,               // 角色.可变属性.声望
       vitalPaths: [p.vitalHealth, p.vitalEnergy], // 角色.可变属性.体力 / 精力
-      vitalCurrentField: '当前',
-      vitalCapField: '上限',
+      vitalCurrentField: TIANMING_VITAL_FIELDS.current,
+      vitalCapField: TIANMING_VITAL_FIELDS.cap,
     },
-    systemSettings: '系统.设置',
+    systemSettings: SYSTEM_PATHS.settings,
     characterRoot: p.characterBaseInfo.split('.')[0], // 角色
   };
 }
