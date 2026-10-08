@@ -67,8 +67,12 @@ interface GenerationJob {
   civitai: { subjectType: ImageSubjectType; target?: string };
   references?: ImageReferenceInput[];
   styleParamOverrides?: Record<string, unknown>;
-  /** Builds the prompt pair; runs inside the try so failures mark the task failed. */
-  compose: () => Promise<ComposedImagePrompt>;
+  /**
+   * Builds the prompt pair; runs inside the try so failures mark the task failed.
+   * May return synchronously: the redraw flow has no async work before `generating`,
+   * and awaiting a plain value would add a microtask its original code never had.
+   */
+  compose: () => ComposedImagePrompt | Promise<ComposedImagePrompt>;
   /** Writes the archive entries after the task is complete; runs inside the try. */
   archive: (ctx: {
     task: ImageTask;
@@ -787,7 +791,7 @@ export class ImageService {
       civitai: { subjectType: params.subjectType, target: params.targetCharacter },
       references: params.references,
       styleParamOverrides: params.styleParamOverrides,
-      compose: async () => {
+      compose: () => {
         const composedRaw = {
           positive: params.positivePrompt,
           negative: params.negativePrompt,
@@ -1030,7 +1034,8 @@ export class ImageService {
         eventBus.emit('image:task-update', { taskId: task.id, status: 'tokenizing' });
       }
 
-      const composedRaw = await job.compose();
+      const pending = job.compose();
+      const composedRaw = pending instanceof Promise ? await pending : pending;
 
       // Civitai LoRA preparation (no-op for non-civitai)
       const { composed, civitaiProviderParams, loraSnapshot } = this.applyCivitai(job.backend, composedRaw, job.civitai.subjectType, job.civitai.target);
