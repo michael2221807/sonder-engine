@@ -1,8 +1,7 @@
 /**
  * Character Anchor Extractor — ported
  *
- * Creates/updates CharacterAnchor records and extracts structured visual
- * features via AI. The AI analyzes NPC data and produces:
+ * Extracts structured visual features via AI. The AI analyzes NPC data and produces:
  * - positivePrompt: stable visual anchor tags (English)
  * - negativePrompt: things to visually avoid
  * - features: 10 structured feature categories (appearance/figure/bust/etc.)
@@ -19,52 +18,8 @@
  * │ See original design doc §D + §J                               │
  * └─────────────────────────────────────────────────────────────────┘
  */
-import type { CharacterAnchor, AnchorStructuredFeatures } from './types';
+import type { AnchorStructuredFeatures } from './types';
 import type { AIService } from '../ai/ai-service';
-
-function generateId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-export function createAnchor(params: {
-  characterName: string;
-  tokens: string[];
-  styleTags?: string[];
-  structuredFeatures?: AnchorStructuredFeatures;
-  entityRef?: string;
-  seed?: number;
-}): CharacterAnchor {
-  const now = Date.now();
-  return {
-    id: `anchor_${generateId()}`,
-    entityRef: params.entityRef ?? null,
-    characterName: params.characterName,
-    tokens: params.tokens,
-    styleTags: params.styleTags ?? [],
-    structuredFeatures: params.structuredFeatures,
-    seed: params.seed,
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
-export function updateAnchorTokens(
-  anchor: CharacterAnchor,
-  newTokens: string[],
-  newStyleTags?: string[],
-  newFeatures?: AnchorStructuredFeatures,
-): CharacterAnchor {
-  return {
-    ...anchor,
-    tokens: newTokens,
-    styleTags: newStyleTags ?? anchor.styleTags,
-    structuredFeatures: newFeatures ?? anchor.structuredFeatures,
-    updatedAt: Date.now(),
-  };
-}
 
 // ═══════════════════════════════════════════════════════════
 // AI-powered anchor extraction — ported

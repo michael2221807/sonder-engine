@@ -13,9 +13,6 @@
 /** Always appended to final negative — ported */
 const DEFAULT_NEGATIVE_WATERMARK = 'text, watermark, signature, username, logo, artist name, web address, url, copyright, subtitle';
 
-/** NovelAI backend default negative — ported */
-export const DEFAULT_NOVELAI_NEGATIVE = 'photorealistic, realistic, 3d, rendering, unreal engine, octane render, real life, photography, bokeh, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, artist name, border, out of frame';
-
 /** Secret part close-up exclusion — ported */
 export const DEFAULT_SECRET_PART_NEGATIVE = 'face, eyes, portrait, headshot, upper body, half body, full body, torso, abdomen, legs, arm, feet, hands, multiple people, extra legs, extra arms, extra breasts, extra nipples, extra fingers, three legs, three breasts, merged body parts, room focus, scenery focus, environment focus, background focus, wide shot, mid shot, text, watermark, speech bubble, dialogue box, blurry, low quality, bad anatomy';
 

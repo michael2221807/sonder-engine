@@ -214,15 +214,6 @@ export interface ImageProvider {
   testConnection(): Promise<boolean>;
 }
 
-/**
- * Provider constructor signature — used by the provider registry.
- */
-export type ImageProviderFactory = (config: {
-  endpoint: string;
-  apiKey: string;
-  model?: string;
-}) => ImageProvider;
-
 // ── Civitai LoRA Shelf types ──
 
 /** Intentionally distinct from ImageSubjectType — 'player' is a LoRA scope concept that maps from subjectType='character' + characterName='__player__' */
