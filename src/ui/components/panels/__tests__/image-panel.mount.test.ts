@@ -87,7 +87,9 @@ function serialize(value: unknown): string {
 }
 
 function normalizeHtml(html: string): string {
-  return html.replace(/ data-v-[0-9a-f]{8}=""/g, '').replace(/ data-v-[0-9a-f]{8}/g, '') + '\n';
+  // The html() pretty-printer picks its line ending from the input, so a CRLF checkout
+  // (core.autocrlf=true) would otherwise turn every line into CRLF.
+  return html.replace(/\r\n/g, '\n').replace(/ data-v-[0-9a-f]{8}=""/g, '').replace(/ data-v-[0-9a-f]{8}/g, '') + '\n';
 }
 
 // ── fixtures ────────────────────────────────────────────────────────────────
