@@ -133,6 +133,24 @@ const e2eRules = {
   'sonarjs/no-identical-functions': 'warn',
 };
 
+/**
+ * Path literals in engine code (refactor R4, report-only). A string or template fragment that starts a state path
+ * under 系统. / 元数据. / 记忆. should be a named constant: `SYSTEM_PATHS` (pipeline/system-paths.ts),
+ * `DEFAULT_ENGINE_PATHS` (pipeline/types.ts) or the Tianming register (pack/tianming-coupling.ts).
+ */
+const PATH_LITERAL_PREFIX = '^(系统|元数据|记忆)\\.';
+const pathLiteralRule = [
+  'warn',
+  {
+    selector: `Literal[value=/${PATH_LITERAL_PREFIX}/]`,
+    message: 'State path literal: use SYSTEM_PATHS, DEFAULT_ENGINE_PATHS or the TIANMING_* register.',
+  },
+  {
+    selector: `TemplateElement[value.raw=/${PATH_LITERAL_PREFIX}/]`,
+    message: 'State path literal: use SYSTEM_PATHS, DEFAULT_ENGINE_PATHS or the TIANMING_* register.',
+  },
+];
+
 const commonPlugins = { '@typescript-eslint': tseslint.plugin, sonarjs };
 
 export default [
@@ -151,6 +169,20 @@ export default [
     },
     plugins: commonPlugins,
     rules: { ...sharedRules, ...typedRules },
+  },
+  // Engine path literals (report-only): the three constant modules and the tests are exempt.
+  {
+    files: ['src/engine/**/*.ts'],
+    ignores: [
+      'src/**/*.test.ts',
+      'src/**/*.spec.ts',
+      'src/**/__test-utils__/**',
+      'src/**/*.d.ts',
+      'src/engine/pipeline/types.ts',
+      'src/engine/pipeline/system-paths.ts',
+      'src/engine/pack/tianming-coupling.ts',
+    ],
+    rules: { 'no-restricted-syntax': pathLiteralRule },
   },
   // .vue SFCs — shared + vue rules, no type information.
   {
