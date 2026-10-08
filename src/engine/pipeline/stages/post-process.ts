@@ -8,10 +8,10 @@
  * - 拆分会增加上下文传递的复杂度，且单独测试的收益不高
  * - 通过方法拆分（而非阶段拆分）保持内部可读性
  *
- * 执行顺序的设计考量：
- * 1. 先写入记忆（短期 → 隐式中期 → 语义）
+ * 执行顺序的设计考量（编号见 execute 里的分节注释）：
+ * 1. 先写入记忆（短期 + 隐式中期 1:1 配对）
  * 2. 再处理 Engram（依赖上一步的记忆数据）
- * 3. 再检查总结阈值（在记忆写入后才能准确判断）
+ * 3. 再处理短期溢出，把最旧的隐式中期升级为正式中期（在记忆写入后才能准确判断）
  * 4. 再运行行为钩子（TimeService 等在记忆和指令都处理完后执行）
  * 5. 再检查心跳（依赖行为钩子更新的时间数据）
  * 6. 最后追加叙事历史和自动存档（确保所有状态变更都已完成）
@@ -69,16 +69,9 @@ export function collectCanonMutations(ctx: PipelineContext): CanonMutationInput[
 export class PostProcessStage implements PipelineStage {
   name = 'PostProcess';
 
-  // 2026-04-11 CR C-02 修复：移除叙事历史 FIFO cap。
-  //
-  // 旧版本有 MAX_NARRATIVE_HISTORY = 200，长游戏（>100 回合）会永久丢失最早的叙事原文，
-  // 与小说导出需求直接冲突。用户 2026-04-11 决策：MVP 阶段不做 cap，回合数一般不会高到
-  // 需要 FIFO。ContextAssembly 仍会把全量 narrativeHistory 注入 chatHistory，但：
-  //   - 当前 MVP 回合数有限，token 可控
-  //   - 未来若真需要 prompt 层截断，应该在 ContextAssembly 里做"只发送最近 N 条给 AI"，
-  //     而 narrativeHistory 本身保持 append-only 以支持小说导出
-  //
-  // 详见 docs/status/cr-memory-refactor-2026-04-11.md §C-02 + design doc memory-system.md §8。
+  // 叙事历史不设上限（append-only，以支持小说导出）。若需要 prompt 层截断，在
+  // ContextAssembly 里只发送最近 N 条，不要裁 narrativeHistory 本身。
+  // Design: docs/design/memory-system.md §8（决策经过：docs/status/cr-memory-refactor-2026-04-11.md §C-02）。
 
   constructor(
     private stateManager: StateManager,
@@ -168,14 +161,9 @@ export class PostProcessStage implements PipelineStage {
 
     // ── 5. 短期记忆溢出 → 同步 shift + 升级隐式中期为正式中期 ──
     //
-    // 2026-04-11 重构（参照 demo + design note）：
-    //
-    // 旧版本：短期满 → 设 `pendingSummary` → orchestrator 调 `MemorySummaryPipeline`
-    // 做 AI 总结产出中期记忆。这带来不必要的 AI 调用开销，且短期 vs 隐式中期
-    // 没有配对关系，数据质量依赖 AI 二次总结。
-    //
-    // 新版本：短期和隐式中期 **1:1 配对**（每轮 AI 都输出 `mid_term_memory`
+    // 短期和隐式中期 **1:1 配对**（每轮 AI 都输出 `mid_term_memory`
     // 作为结构化总结，应用时和短期纯叙事同时 push）。短期溢出时：
+    // （不再设 pendingSummary 去调 AI 总结；Changelog: 2026-04-11 记忆重构）
     //   - Shift 最旧短期（丢弃）
     //   - Shift 最旧隐式中期 → **升级为正式中期记忆**（shape 相同，直接 move）
     //   - 无 AI 调用，无 token 开销

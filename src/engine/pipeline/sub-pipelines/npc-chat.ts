@@ -31,12 +31,11 @@
  * - `commands` 中引用其他 NPC 或玩家路径的条目会被静默丢弃（console.warn）
  * - 使用 `'npc_chat'` 独立 usageType — 用户可在 APIPanel 单独配置该功能的 API
  *
- * ### 已知 latent bug（非本管线引入）
+ * ### 路径语法
  *
- * 状态树路径语法 `社交.关系[名称=X].好感度` 依赖 lodash path 过滤器扩展，
- * 而当前 `state-manager.ts` 用的是标准 lodash-es `get/set`，**不支持** `[名称=X]` 过滤器。
- * 因此本管线通过 **read-full-array → find-by-name → modify → write-full-array**
- * 的方式绕过该问题，保证更新可靠。
+ * 状态树路径语法 `社交.关系[名称=X].好感度` 由 `state-manager.ts` 的过滤器路径解析器支持，
+ * AI 指令可以使用它（本管线会先校验指令只写当前 NPC，见 scope 校验）。
+ * 本管线自己取 NPC 时不走该语法，而是 **read-full-array → find-by-name**。
  */
 import type { StateManager } from '../../core/state-manager';
 import type { CommandExecutor } from '../../core/command-executor';
@@ -233,16 +232,12 @@ export class NpcChatPipeline {
     try {
       const assembled = this.promptAssembler.assemble(flow, variables);
 
-      // 2026-04-11 fix: post-history 追加 narratorEnforcement + 实际用户输入作为
-      // 真正的 user message。之前的 npcChat flow 用纯 system prompt 把 USER_INPUT
-      // 埋在系统消息里 —— 同主回合一样的问题：
-      //   1. messages 没有以 user 结尾 → Claude prefill
-      //   2. 反截断强化不生效
-      //   3. jailbreak 框架被前面的 system 冲淡
-      // 修复后结构：
+      // post-history 追加 narratorEnforcement + 实际用户输入，作为真正的 user message：
+      // messages 必须以 user 结尾（否则 Claude 当 prefill 续写），反截断强化和破限框架才生效。
       //   [system: npcChat prompt (含 NPC profile / history / user input 上下文)]
       //   [user: narratorEnforcement + <玩家输入>实际输入</玩家输入>]
       // enforcement 渲染和主回合用同一个 narratorEnforcement.md，保持一致。
+      // Changelog: 2026-04-11 npcChat 纯 system prompt 导致 prefill。
       const enforcement = this.promptAssembler.renderSingle('narratorEnforcement', variables);
       const finalMessages: AIMessage[] = [...assembled.messages];
       const finalSources = [...assembled.messageSources];
@@ -383,8 +378,7 @@ export class NpcChatPipeline {
   /**
    * 在 `社交.关系` 数组中按 `名称` 找 NPC
    *
-   * 不使用 `社交.关系[名称=X].*` 过滤器路径语法，因为当前
-   * state-manager 基于 lodash-es/get 不支持该语法。
+   * 直接读整个数组按名称查找，不走 `社交.关系[名称=X].*` 过滤器路径语法。
    */
   private findNpc(
     npcName: string,

@@ -35,27 +35,16 @@ export class PreProcessStage implements PipelineStage {
 
   async execute(ctx: PipelineContext): Promise<PipelineContext> {
     // 在任何状态变更（包括递增回合序号）之前，捕获本回合开始前的完整快照。
-    // PostProcessStage 会将此快照持久化到 paths.preRoundSnapshot，供 Rollback 使用。
+    // 快照在下面立即持久化到 paths.preRoundSnapshot，供 Rollback 使用。
     //
-    // 2026-04-11 critical fix: 删除捕获快照里已有的 `元数据.上次对话前快照` 字段，
-    // 防止**递归嵌套快照爆炸**。
-    //
-    // 之前的 bug 机制：
-    // - 回合 1 结束后，`元数据.上次对话前快照` = 回合 1 开始时的状态
-    // - 回合 2 开始，`toSnapshot()` 克隆整棵状态树（包含回合 1 的嵌套快照）
-    // - 回合 2 结束后，`元数据.上次对话前快照` = 包含回合 1 嵌套的回合 2 快照
-    // - 回合 N 时，快照已经嵌套了 N-1 层 —— O(N) 状态树克隆，存档体积指数级膨胀
-    //   且 prompt 里的 `GAME_STATE_JSON` 每次都多一层嵌套
-    //
-    // 修复：捕获后用 lodash `unset` 删除嵌套字段，保证 preRoundSnapshot 永远是
-    // 单层快照（当前回合开始时的状态，不含"上次的上次"）。Rollback 功能不受
-    // 影响 —— 回滚到上一回合时只需要当前快照，不需要回滚链。
+    // 捕获后先删掉快照里已有的 `元数据.上次对话前快照`，保证它永远是单层快照：
+    // 否则每回合嵌套一层，存档体积随回合数膨胀（Changelog: 2026-04-11 递归嵌套快照）。
+    // Rollback 只需要上一回合开始时的状态，不需要回滚链。
     const preRoundSnapshot = this.stateManager.toSnapshot();
     _unset(preRoundSnapshot, this.paths.preRoundSnapshot);
 
-    // 立即持久化快照到状态树（不等 PostProcess）。
-    // 如果 AI 调用失败，PostProcess 不会执行，之前快照只在 ctx 里（内存），
-    // 刷新后丢失 → 手动回退按钮读不到。提前写入保证任何时候都能回退。
+    // 立即持久化快照到状态树（不等 PostProcess）：AI 调用失败时 PostProcess 不会执行，
+    // 快照只在 ctx 里的话刷新后就丢了，手动回退读不到。提前写入保证任何时候都能回退。
     this.stateManager.set(this.paths.preRoundSnapshot, preRoundSnapshot, 'system');
 
     const consumed = this.actionQueue.consumeActions();

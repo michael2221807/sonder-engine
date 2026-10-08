@@ -522,7 +522,6 @@ function buildWorldSelectionString(ctx: PhaseContext): string {
 // ═══════════════════════════════════════════════════════════════
 
 export class EnhancedOpeningPipeline {
-  // Impl-Phase 2: will become private once Phase E/F/G code uses them internally
   readonly gameOrchestrator: { runPostRoundForOpening: (ctx: PipelineContext, sm: StateManager) => Promise<void> };
   readonly stages: OpeningStages;
 
@@ -824,7 +823,7 @@ export class EnhancedOpeningPipeline {
 
   /**
    * Phase E: manual splitGen — ContextAssembly + AICall + BodyPolish.
-   * Skips PreProcess (avoids roundNumber 0→1), ResponseRepair, ReasoningIngest, Render.
+   * Skips PreProcess (avoids roundNumber 0→1), ResponseRepair, ReasoningIngest, SettingCapture, Render.
    */
   private async executePhaseE(phaseCtx: PhaseContext): Promise<PhaseEResult> {
     const aiCallStartedAt = performance.now();

@@ -12,7 +12,7 @@
  *
  * NPC 选择策略：
  * 1. 排除与玩家同一位置的 NPC（他们已在主回合中参与互动）
- * 2. 优先选择最近未被心跳处理过的 NPC（轮转公平性）
+ * 2. 从剩余 NPC 中随机抽样（Fisher-Yates 部分洗牌，没有轮转）
  * 3. 限制每次处理的 NPC 数量（避免 AI 调用过大）
  *
  * 流程：
@@ -66,7 +66,7 @@ export class WorldHeartbeatPipeline {
   /**
    * 执行世界心跳
    *
-   * 返回 true 表示心跳产生了状态变更，false 表示跳过或无变更。
+   * 返回 true 表示心跳已执行（即使 AI 没有返回指令也是 true），false 表示跳过（无 flow / 无候选 NPC）或执行失败。
    */
   async execute(): Promise<boolean> {
     const flow = this.gamePack.promptFlows['worldHeartbeat'];

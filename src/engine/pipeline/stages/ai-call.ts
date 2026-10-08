@@ -2,8 +2,9 @@
 /**
  * AI 调用阶段 — 将组装好的消息列表发送给 AI 并解析响应
  *
- * 这是管线中唯一的外部 I/O 阶段（网络请求），也是最耗时的阶段。
- * 职责被刻意保持简单（调用 + 解析），复杂性交给 AIService 和 ResponseParser：
+ * 这是发出主叙事 AI 请求的阶段，也是最耗时的阶段（ResponseRepair、BodyPolish
+ * 等阶段需要时也会各自调用 AI）。除了调用 + 解析，本文件还包含流式接收和分步生成
+ * 的状态机；provider 细节和 JSON 解析细节交给 AIService 和 ResponseParser：
  * - AIService 处理 provider 选择、重试、超时、取消
  * - ResponseParser 处理 JSON 提取、sanitize、字段规范化
  *
@@ -88,7 +89,7 @@ export class AICallStage implements PipelineStage {
    *
    * 第1步：使用 splitGenStep1 flow 的消息（ctx.messages），流式输出正文叙事
    * 第2步：使用 splitGenStep2 flow 的消息 + 第1步响应作为上下文，非流式输出指令/选项/记忆
-   * 合并：text 取第1步，commands/actionOptions/midTermMemory/semanticMemory 取第2步
+   * 合并：text 取第1步，commands/actionOptions/midTermMemory 取第2步
    */
   private async executeSplitGen(
     ctx: PipelineContext,
@@ -130,22 +131,14 @@ export class AICallStage implements PipelineStage {
     // ── 第2步：指令 + 选项 + 记忆（非流式，结果不显示给用户） ──
     ctx.onProgress?.({ i18nKey: 'engine.progress.aiCallStep2', message: '[AICall:分步第2步]' });
     //
-    // CR-R12 修复（2026-04-11）：第2步消息必须以 user 结尾（Claude 原生 API 严格要求）。
-    // 旧版本直接把 step1 响应作为最后一条 assistant，Claude 会把它当 prefill 继续生成
-    // 正文（而非产出结构化数据）。新版本：assistant(step1) → user(指令)，构成
-    // 标准的多轮结构，模型从新的 user 指令开始生成第2步的结构化输出。
+    // 第2步消息必须以 user 结尾（Claude 原生 API 严格要求）：step1 响应作为 assistant
+    // 放在最后会被当 prefill 继续写正文。所以是 assistant(step1) → user(指令)。
+    // 指令里显式要求完整输出、不省略、直接 JSON，防止 commands/options 被截断。
     //
-    // 2026-04-11 (round 2): 加入反截断 + 输出格式铁律 —— 之前的 followup 只是
-    // "请按 step2 规范输出..."，没有反截断保护，结果 commands/options 输出半截
-    // 被切。现在显式要求完整输出 + 不允许省略 + 直接 JSON 不带解释。
-    //
-    // Canon Capture (2026-08-25): this followup is the LAST instruction the model reads,
-    // and an enumerated "必须全部给出" checklist here overrides the settingCapture system
-    // module buried tens of thousands of tokens earlier. Round-62 real-API incident: the
-    // checklist named four fields, the model emitted exactly those four, and the player's
-    // marked setting produced zero candidates (banner 0/0/0). On tagged rounds the field
-    // list MUST include setting_updates; on untagged rounds the text stays byte-identical
-    // to the pre-capture version (D6: no prompt delta when the feature is unused).
+    // 这条 followup 是模型读到的最后一条指令，它列出的必填字段会压过更早的 settingCapture
+    // 系统模块：带标记的回合，字段清单必须包含 setting_updates；没有标记的回合，文本与
+    // 引入该功能之前逐字相同（无 prompt 差异）。
+    // Changelog: 2026-04-11 CR-R12 / 反截断，2026-08-25 round-62 设定捕获。
     const captureActive = ctx.meta.settingCaptureActive === true;
     // The player's action-options switch (PO 2026-10-03): off, the last instruction the model reads must not ask
     // for them. On, the text is byte-identical to before.

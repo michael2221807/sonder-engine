@@ -330,7 +330,8 @@ export class CharacterInitPipeline {
         if (stepId.includes('.')) {
           _set(state, stepId, value);
         } else {
-          // 最小惊讶：stepId 是短名且无 statePath 时仍 dump 到根（兼容旧测试）
+          // stepId 是短名且无 statePath 时 dump 到根：天命 pack 的 world 步骤没有 statePath，
+          // 靠这条分支写出根键 `world`（即 DEFAULT_ENGINE_PATHS.worldSelection）。
           state[stepId] = value;
         }
         continue;

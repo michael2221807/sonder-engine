@@ -1,8 +1,9 @@
 /**
  * 游戏管线类型定义
  *
- * 管线是引擎的核心游戏循环，将一次玩家输入拆分为若干顺序阶段：
- * PreProcess → ContextAssembly → AICall → CommandExecution → PostProcess → Render
+ * 管线是引擎的核心游戏循环，将一次玩家输入拆分为若干顺序阶段（注册顺序见 core/stage-assembly.ts）：
+ * PreProcess → ContextAssembly → AICall → ResponseRepair → BodyPolish → ReasoningIngest →
+ * CommandExecution → SettingCapture → PostProcess → Render
  *
  * 每个阶段实现 PipelineStage 接口，通过 PipelineContext 在阶段间传递和累积数据。
  * 这种设计使得：
@@ -31,12 +32,6 @@ import { SYSTEM_PATHS } from './system-paths';
 //  管线核心类型
 // ═══════════════════════════════════════════════════════════════
 
-/**
- * 管线执行上下文 — 在各 Stage 间传递和累积数据
- *
- * 采用不可变风格：每个 Stage 返回新的 context 对象（浅拷贝 + 修改字段），
- * 避免跨阶段的隐式副作用。Runner 用返回值替换 ctx 引用。
- */
 /**
  * 阶段间临时数据袋（`PipelineContext.meta`）。
  *
@@ -188,6 +183,12 @@ export interface CompileTrace {
   savedTokens: number;
 }
 
+/**
+ * 管线执行上下文 — 在各 Stage 间传递和累积数据
+ *
+ * 采用不可变风格：每个 Stage 返回新的 context 对象（浅拷贝 + 修改字段），
+ * 避免跨阶段的隐式副作用。Runner 用返回值替换 ctx 引用。
+ */
 export interface PipelineContext {
   /** 用户输入文本（PreProcessStage 可能 prepend 了 action queue 内容） */
   userInput: string;
@@ -271,7 +272,8 @@ export interface PipelineContext {
   promptMetrics?: PromptMetrics;
   /**
    * 本回合开始前的状态树深拷贝（由 PreProcessStage 在递增回合序号前捕获）
-   * PostProcessStage 将其写入 `paths.preRoundSnapshot`，用于 Rollback 功能
+   * PreProcessStage 捕获后立即写入 `paths.preRoundSnapshot`（不等 PostProcess），用于 Rollback 功能；
+   * 这里是同一份的内存副本
    */
   preRoundSnapshot?: Record<string, unknown>;
   /**
@@ -521,7 +523,8 @@ export interface IUnifiedRetriever {
  * 但这些路径由 Game Pack 的 state-schema 定义（可能是中文、英文或任意命名）。
  * 通过此配置将路径外部化，引擎代码不再包含硬编码的 Game Pack 路径。
  *
- * Game Pack 在 manifest.enginePaths（或 rules/engine-paths.json）中提供这些映射。
+ * 这些路径是引擎与 Game Pack 之间的静态契约：由本文件的 DEFAULT_ENGINE_PATHS 在代码中声明，
+ * pack 不覆写（`rules/engine-paths.json` 只是空占位，引擎不读取，见其 $comment）。
  */
 export interface EnginePathConfig {
   /** 回合序号（如 "元数据.回合序号"） */
@@ -635,7 +638,7 @@ export interface EnginePathConfig {
    * `gameTime` 路径指向的是一个 `{年, 月, 日, 小时, 分钟}` 对象。世界书 timeline
    * 过滤需要把它格式化为 `YYYY:MM:DD:HH:MM` 字符串，而 `src/engine/` 不得硬编码
    * 中文字段名（CLAUDE.md §4 引擎/内容分离），因此和 `npcFieldNames` 一样通过
-   * 此映射注入。Game Pack 可通过 manifest 的 enginePaths 覆写。
+   * 此映射注入（静态契约，不由 pack 覆写）。
    */
   gameTimeFieldNames: EngineGameTimeFieldNames;
   /** 上次对话前快照路径（用于 Rollback，如 "元数据.上次对话前快照"） */
@@ -798,8 +801,8 @@ export interface EnginePathConfig {
 
   /**
    * Root key of the creation-flow world selection object (`world.name` / `world.description`).
-   * Read by SystemPromptBuilder for `world_prompt`; stripped from step2 by the Context Compiler
-   * because step1 already carries it.
+   * SystemPromptBuilder builds `world_prompt` from it but reads the literal `'world'`, not this path;
+   * the Context Compiler strips it from step2 because step1 already carries it.
    */
   worldSelection: string;
 
@@ -856,20 +859,6 @@ export interface BookmarkedRound {
 }
 
 /**
- * NPC 对象上各字段的 key 名称映射
- *
- * 值是 NPC 对象内的 key（**不是**从根起的完整 dot-path）。与 `relationships`
- * (`'社交.关系'`) 配合使用：引擎代码通过 `npc[paths.npcFieldNames.memory]` 访问
- * `npc.记忆`，不直接写 `npc['记忆']`。
- *
- * **命名约定**：
- * - camelCase 英文 key 在引擎侧暴露（通用、国际化中立）
- * - 默认值在 `DEFAULT_ENGINE_PATHS.npcFieldNames` 中给出（中文字段名，与天命 pack
- *   的 state-schema 对齐）
- * - 若未来 Game Pack 需要不同字段名，通过 pack manifest 的 `enginePaths.npcFieldNames`
- *   覆写（目前与其他路径一致：静态契约，`engine-paths.json` 暂未启用覆写）
- */
-/**
  * 游戏时间对象的字段 key 映射。
  *
  * 默认值在 `DEFAULT_ENGINE_PATHS.gameTimeFieldNames` 中给出（中文字段名，与天命 pack
@@ -888,6 +877,20 @@ export interface EngineGameTimeFieldNames {
   minute: string;
 }
 
+/**
+ * NPC 对象上各字段的 key 名称映射
+ *
+ * 值是 NPC 对象内的 key（**不是**从根起的完整 dot-path）。与 `relationships`
+ * (`'社交.关系'`) 配合使用：引擎代码通过 `npc[paths.npcFieldNames.memory]` 访问
+ * `npc.记忆`，不直接写 `npc['记忆']`。
+ *
+ * **命名约定**：
+ * - camelCase 英文 key 在引擎侧暴露（通用、国际化中立）
+ * - 默认值在 `DEFAULT_ENGINE_PATHS.npcFieldNames` 中给出（中文字段名，与天命 pack
+ *   的 state-schema 对齐）
+ * - 若未来 Game Pack 需要不同字段名，通过 pack manifest 的 `enginePaths.npcFieldNames`
+ *   覆写（目前与其他路径一致：静态契约，`engine-paths.json` 暂未启用覆写）
+ */
 export interface EngineNpcFieldNames {
   /** NPC 名称字段 key（默认 '名称'） */
   name: string;
@@ -947,8 +950,7 @@ export interface EngineNpcFieldNames {
    * per-NPC 总结记忆数组 key（默认 '总结记忆'）
    *
    * 当 memory 数组长度超过 `rules/npc-memory.json.threshold` 时由
-   * 未来的 NpcMemorySummaryPipeline (Sprint Social-5) 生成批量摘要 push 入此数组。
-   * Social-1 只建立 schema + path 契约，不启用总结逻辑。
+   * `social/npc-memory-summarizer.ts` 的 NpcMemorySummarizer 生成批量摘要 push 入此数组。
    */
   memorySummaries: string;
   /**
@@ -969,8 +971,8 @@ export interface EngineNpcFieldNames {
    * 是否在场 boolean key（默认 '是否在场'）
    *
    * Sprint Social-2 起由 `NpcPresenceService` 读写；AI 通过
-   * `set 社交.关系[名称=X].是否在场 = true/false` 切换。Social-1 仅建立 schema
-   * 字段，未启用行为。
+   * `set 社交.关系[名称=X].是否在场 = true/false` 切换；`presenceEnabled` 开启时
+   * PostProcessStage 每回合还会按同地点规则同步该字段。
    */
   isPresent: string;
   /**

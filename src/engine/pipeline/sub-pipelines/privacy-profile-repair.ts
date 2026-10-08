@@ -18,7 +18,7 @@
  *
  * 关键设计：
  * - 使用独立的 `'privacy_repair'` usageType，用户可在 APIPanel 单独给它配置 API（通常不绑定到主回合 API）
- * - 重试次数由 `aga_ai_settings.privacyRepairRetries` 配置（默认 1 次，允许 0-3 次）
+ * - 重试次数由 `aga_ai_settings.privacyRepairRetries` 配置（默认 1 次，允许 0-5 次）
  * - 每次重试用的 prompt 只包含"仍缺失"的实体，避免重复 token 浪费
  * - 每次调用都 emit `ui:debug-prompt`，供 PromptAssemblyPanel 调试可见
  *

@@ -12,7 +12,7 @@
  *      2026-10-03）；读出的正文不是 JSON 原文才用。这避免 body polish 把一整团
  *      JSON 源码当成叙事去优化，也不再把整个包进 `<正文>` 的 JSON 回复放回正文。
  *   2. **结构救援**（AI 调用）：针对 commands / mid_term_memory /
- *      action_options / semantic_memory 再发一次请求，让模型只输出这几个
+ *      action_options 再发一次请求，让模型只输出这几个
  *      字段的合法 JSON。成功的话合入 parsedResponse，失败就算了——保持
  *      parseOk=false 让下游至少看到 narrative 不崩。
  *

@@ -76,11 +76,8 @@ export class LongTermCompactPipeline {
     // 计算压缩窗口：溢出量 + WINDOW_EXTRA
     // 典型：cap=30，实际 32 条 → 溢出 2 → 窗口 7 → 精炼最旧 7 条为 1-2 条
     //
-    // 2026-04-11 CR M-03 修复：硬上限 MAX_COMPACT_WINDOW
-    // - 旧版本 windowSize = Math.min(overflow + WINDOW_EXTRA, allLong.length)
-    //   在 allLong.length=100, cap=30 时会一次压缩 75 条 → token 爆炸
-    // - 新版本 windowSize = Math.min(overflow + WINDOW_EXTRA, MAX_COMPACT_WINDOW, allLong.length)
-    //   单次最多 15 条，剩余下一回合再来，避免 AI token 超限 + 避免全量丢失
+    // 硬上限 MAX_COMPACT_WINDOW：单次最多压缩 15 条，剩余下一回合再来，
+    // 避免一次送入几十条导致 AI token 超限。
     const overflow = allLong.length - cap;
     const windowSize = Math.min(
       overflow + WINDOW_EXTRA,

@@ -1,14 +1,9 @@
 /**
- * 长期记忆 worldview evolution 子管线 — 2026-04-11 完整重构
+ * 长期记忆 worldview evolution 子管线
  *
- * 类名保留 `MemorySummaryPipeline`（避免重命名污染），但**语义已变**：
+ * 类名保留 `MemorySummaryPipeline`（避免重命名污染），但它不再做"短期记忆 → 中期记忆"
+ * 的总结（那条旧路径已废弃，短期与隐式中期改为 1:1 配对；Changelog: 2026-04-11 记忆重构）：
  *
- * ### 旧版本（已废弃）
- * - 触发：短期记忆满 → `pendingSummary` 标记
- * - 功能：AI 把最旧 70% 短期记忆总结为 1 条中期记忆
- * - 问题：浪费 AI 调用（每 8 回合一次），且和"隐式中期"不配对
- *
- * ### 新版本（本文件）
  * - 触发：中期记忆达到 `longTermSummaryThreshold`（默认 50 条）
  * - 功能：AI 分析旧中期记忆 → 产出"**世界观进化**"长期记忆（1-3 条）
  *   - 世界的宏观变化（局部格局/势力/规则/环境）
@@ -58,8 +53,8 @@ export class MemorySummaryPipeline {
     /** 2026-04-11 新增：读取游戏状态概要注入 prompt 供 AI 分析 */
     private stateManager?: StateManager,
     /**
-     * 2026-04-11 CR M-09 修复：通过 EnginePathConfig 读取状态路径，不再硬编码
-     * 天命 pack 的路径，兼容未来多 gamePack 支持。未提供时降级到无状态摘要。
+     * 通过 EnginePathConfig 读取状态路径，不硬编码 pack 的路径。生产环境总会提供；
+     * 未提供时降级到无状态摘要（主要给单测用）。
      */
     private paths?: EnginePathConfig,
   ) {}

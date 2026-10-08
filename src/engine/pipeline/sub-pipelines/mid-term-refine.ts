@@ -1,17 +1,13 @@
 /**
- * 中期记忆 in-place 精炼子管线 — 2026-04-11 完整重构
+ * 中期记忆 in-place 精炼子管线
  *
  * 触发时机：
  * 中期记忆条目数达到 `midTermRefineThreshold`（默认 25）时，由
  * `game-orchestrator.runPostRoundSubPipelines` 触发（if-else 二选一，优先级
  * 低于长期汇总 `longTermSummaryThreshold=50`）。
  *
- * 精炼语义（**重大变更**）：
- *
- * 旧版本（已废弃）：把最旧 50% 中期记忆 "消费" 到长期记忆（但目标 flow 从未
- * 注册过，默默失败）。
- *
- * 新版本（参照 demo `AIBidirectionalSystem.triggerMidTermRefine` + design note）：
+ * 精炼语义（参照 demo `AIBidirectionalSystem.triggerMidTermRefine` + design note；
+ * 旧的"消费到长期记忆"路径已废弃，Changelog: 2026-04-11 记忆重构）：
  *   1. **分离已精炼和未精炼条目**：已精炼的 permanent 条目不送 AI
  *   2. **AI 调用**只处理未精炼的新条目 —— 去重合并、不删减记忆点
  *   3. AI 返回 `refined` 数组，全部标记为 `已精炼: true`
@@ -83,12 +79,7 @@ export class MidTermRefinePipeline {
       return true;
     }
 
-    // 2026-04-11 CR M-07 修复：bestResult 模式
-    //
-    // 旧版本用单变量 `newlyRefined` 循环赋值，若首次得到空数组不 break，第二次
-    // 抛异常时 newlyRefined 会保持上次的空数组（但更糟的是若第二次恰好赋值为
-    // 其他退化值会覆盖首次结果）。现在用 bestResult：只在得到非空结果时更新，
-    // 异常路径永不覆盖已有的好结果。
+    // bestResult 模式：只在得到非空结果时更新，重试中的异常或退化结果永不覆盖已有的好结果。
     let bestResult: MidTermEntry[] = [];
     let lastErr: unknown = null;
     for (let attempt = 0; attempt <= MAX_RETRY; attempt++) {
