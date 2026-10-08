@@ -10,7 +10,7 @@ import { ref, computed, inject, onMounted, onUnmounted, watch, type Ref } from '
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import type { ImageService } from '@/engine/image/image-service';
-import type { ImageBackendType, ImageTask, ArtistPreset, ImageAsset, SecretPartType, StylePreset } from '@/engine/image/types';
+import type { ImageBackendType, ImageTask, ImageAsset, StylePreset } from '@/engine/image/types';
 import { generateReferenceId } from '@/engine/image/utils';
 import { listConfiguredImageBackends, extractLoraSnapshot, copyAssetToReferenceLibrary } from '@/ui/composables/image/image-backends';
 import type { GameTime, SceneNpcDetail } from '@/engine/image/scene-context';
@@ -37,13 +37,27 @@ import { useGameState } from '@/ui/composables/useGameState';
 import { useBackdropClose } from '@/ui/composables/useBackdropClose';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import { eventBus } from '@/engine/core/event-bus';
-import { extractAnchorViaAI } from '@/engine/image/anchor-extractor';
 import { providerCatalog } from '@/engine/providers';
 import type { AIService } from '@/engine/ai/ai-service';
 import { useAPIManagementStore } from '@/engine/stores/engine-api';
 import { getDefaultPresets, getDefaultModelBundles } from '@/engine/image/transformer-presets';
 import { SCENE_PORTRAIT_SIZE_OPTIONS, SCENE_LANDSCAPE_SIZE_OPTIONS, sizeOptionsToSelectOptions } from '@/engine/image/image-size-options';
-import type { TransformerPromptPreset, ModelTransformerBundle, TransformerDefaultsData } from '@/engine/image/transformer-presets';
+import type { TransformerDefaultsData } from '@/engine/image/transformer-presets';
+import { useArtistPresets } from '@/ui/composables/image/artist-presets';
+import { useUnderstanding } from '@/ui/composables/image/understanding';
+import { useReferenceLibrary } from '@/ui/composables/image/reference-library';
+import { useAnchors } from '@/ui/composables/image/anchors';
+import { useTransformerPresets } from '@/ui/composables/image/transformers';
+import { useModelRulesets } from '@/ui/composables/image/model-rulesets';
+import { useRuleTemplates } from '@/ui/composables/image/rule-templates';
+import { useCombinedHistory } from '@/ui/composables/image/combined-history';
+import { useGallery } from '@/ui/composables/image/gallery';
+import type { CharacterAnchor } from '@/ui/composables/image/anchors';
+import type { GalleryImage } from '@/ui/composables/image/gallery';
+import type { CombinedHistoryEntry } from '@/ui/composables/image/combined-history';
+import type { ModelRuleset } from '@/ui/composables/image/model-rulesets';
+import type { RuleTemplate } from '@/ui/composables/image/rule-templates';
+import { reconcileBuiltins, mergeRulesetLocale, mergeTemplateLocale, enginePresetToRuleTemplate, engineBundleToModelRuleset } from '@/ui/composables/image/preset-seeding';
 
 const { t } = useI18n();
 const imageService = inject<ImageService>('imageService');
@@ -447,7 +461,6 @@ const backendOptions = computed<SelectOption[]>(() => {
   if (available.size === 0) return [{ label: t('image.backend.placeholder'), value: '' }];
   return ALL_IMAGE_BACKENDS.value.filter((o) => available.has(o.value));
 });
-
 
 const civitaiSchedulerOptions: SelectOption[] = [
   { label: 'Euler A', value: 'EulerA' },
@@ -1274,7 +1287,6 @@ const currentWallpaperId = computed(() => {
   return typeof v === 'string' && v ? v : null;
 });
 
-
 // Scene generation state
 const selectedScenePreset = ref('');
 const selectedScenePngPreset = ref('');
@@ -1737,1155 +1749,188 @@ async function runCivitaiWhatif() {
   }
 }
 
-// History state
-const historyFilter = ref('all');
-const historyFilterOptions = computed<SelectOption[]>(() => [
-  { label: t('common.actions.all'), value: 'all' },
-  { label: t('image.lora.scope.character'), value: 'character' },
-  { label: t('image.lora.scope.scene'), value: 'scene' },
-  { label: t('image.queue.status.complete'), value: 'complete' },
-  { label: t('image.queue.status.failed'), value: 'failed' },
-]);
-// Preset management state
-const presetScope = ref<'npc' | 'scene'>('npc');
-const selectedPresetId = ref('');
-const newPresetName = ref('');
-const newPresetPositive = ref('');
-const newPresetNegative = ref('');
-const newPresetArtist = ref('');
-
-// ArtistPreset type imported from '@/engine/image/types' (promoted from UI-local in Phase 1)
-
-const artistPresets = computed<ArtistPreset[]>(() => {
-  const raw = get('系统.扩展.image.artistPresets');
-  return Array.isArray(raw) ? raw as ArtistPreset[] : [];
+const {
+  presetScope,
+  selectedPresetId,
+  newPresetName,
+  newPresetPositive,
+  newPresetNegative,
+  newPresetArtist,
+  artistPresets,
+  pngPresets,
+  artistOnlyPresets,
+  npcArtistPresets,
+  selectedPreset,
+  selectedPresetParamPreview,
+  createPreset,
+  savePreset,
+  deletePreset,
+  exportArtistPresets,
+  importArtistPresets,
+  pngImporting,
+  pngImportStatus,
+  importPng,
+  loadPresetIntoEditor,
+  toggleReplicateParams,
+} = useArtistPresets({
+  get,
+  setValue,
+  t,
+  backend,
+  configuredModelFor,
+  openUnderstandingForFile: (file) => openUnderstandingForFile(file),
 });
 
-
-// Split presets: PNG presets vs artist-only presets
-const pngPresets = computed(() =>
-  artistPresets.value.filter((p) => (p.id.startsWith('png_') || p.id.startsWith('img_')))
-);
-const artistOnlyPresets = computed(() =>
-  artistPresets.value.filter((p) => p.scope === presetScope.value && !(p.id.startsWith('png_') || p.id.startsWith('img_')))
-);
-
-// Always NPC-scoped presets (for Manual + Secret sections, independent of Presets tab scope)
-const npcArtistPresets = computed(() =>
-  artistPresets.value.filter((p) => p.scope === 'npc' && !(p.id.startsWith('png_') || p.id.startsWith('img_')))
-);
-
-const selectedPreset = computed(() =>
-  artistPresets.value.find((p) => p.id === selectedPresetId.value) ?? null
-);
-
-const selectedPresetParamPreview = computed(() => {
-  const p = selectedPreset.value;
-  if (!p) return null;
-  const bk = (backend.value as import('@/engine/image/types').ImageBackendType) || 'novelai';
-  return resolveStyleParams(p, bk, configuredModelFor(bk));
+const {
+  understandingMode,
+  understandingFile,
+  understandingCoverDataUrl,
+  understandingTask,
+  understandingExtra,
+  understandingEngine,
+  understandingCivitaiAvailable,
+  understandingLlmInfo,
+  UNDERSTANDING_MODEL_PRESETS,
+  understandingCivitaiModel,
+  applyUnderstandingModel,
+  understandingEngineOptions,
+  understandingNoEngine,
+  understandingLoading,
+  understandingResult,
+  understandingEditDraft,
+  understandingError,
+  openUnderstandingForFile,
+  runUnderstanding,
+  saveUnderstandingAsPreset,
+  importImageForUnderstanding,
+} = useUnderstanding({
+  imageService,
+  aiService,
+  apiStore,
+  get,
+  setValue,
+  t,
+  artistPresets,
+  selectedPresetId,
+  loadPresetIntoEditor,
+  validateUploadSize,
 });
 
-function createPreset() {
-  const name = newPresetName.value.trim() || t('image.preset.defaultName', { id: Date.now() });
-  const preset: ArtistPreset = {
-    id: `preset_${Date.now()}`,
-    name,
-    scope: presetScope.value,
-    artistString: '',
-    positive: '',
-    negative: '',
-  };
-  const list = [...artistPresets.value, preset];
-  setValue('系统.扩展.image.artistPresets', list);
-  selectedPresetId.value = preset.id;
-  newPresetName.value = '';
-}
+const { referenceLibrary, refLibThumbnails, loadRefLibThumbnail, deleteReferenceEntry } = useReferenceLibrary({ imageService, t });
 
-function savePreset() {
-  if (!selectedPreset.value) return;
-  const updatedName = newPresetName.value.trim() || selectedPreset.value.name;
-  const list = artistPresets.value.map((p) =>
-    p.id === selectedPresetId.value
-      ? { ...p, name: updatedName, positive: newPresetPositive.value, negative: newPresetNegative.value, artistString: newPresetArtist.value }
-      : p
-  );
-  setValue('系统.扩展.image.artistPresets', list);
-}
-
-function deletePreset() {
-  const list = artistPresets.value.filter((p) => p.id !== selectedPresetId.value);
-  setValue('系统.扩展.image.artistPresets', list);
-  selectedPresetId.value = '';
-}
-
-// Artist preset import/export (§2.7-A)
-function exportArtistPresets() {
-  const data = artistPresets.value.filter((p) => p.scope === presetScope.value);
-  if (data.length === 0) {
-    eventBus.emit('ui:toast', { type: 'info', message: t('image.toast.noPresetsToExport'), duration: 1500 });
-    return;
-  }
-  const json = JSON.stringify(data, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `artist-presets-${presetScope.value}-${Date.now()}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  eventBus.emit('ui:toast', { type: 'success', message: t('image.toast.presetsExported', { n: data.length }), duration: 1500 });
-}
-
-function importArtistPresets(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const parsed = JSON.parse(reader.result as string);
-      const items: ArtistPreset[] = (Array.isArray(parsed) ? parsed : [parsed])
-        .filter((p: unknown): p is ArtistPreset =>
-          typeof p === 'object' && p !== null && 'name' in p
-        )
-        .map((p: ArtistPreset) => ({
-          ...p,
-          id: `import_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-          scope: p.scope === 'scene' ? 'scene' : 'npc',
-        }));
-      if (items.length === 0) {
-        eventBus.emit('ui:toast', { type: 'error', message: t('image.toast.noValidPresetData'), duration: 2000 });
-        return;
-      }
-      const list = [...artistPresets.value, ...items];
-      setValue('系统.扩展.image.artistPresets', list);
-      eventBus.emit('ui:toast', { type: 'success', message: t('image.toast.presetsImported', { n: items.length }), duration: 1500 });
-    } catch {
-      eventBus.emit('ui:toast', { type: 'error', message: t('image.toast.importFailedInvalidJson'), duration: 2000 });
-    }
-    input.value = '';
-  };
-  reader.readAsText(file);
-}
-
-// Load selected preset content into editor
-// PNG import
-const pngImporting = ref(false);
-const pngImportStatus = ref('');
-
-// Image understanding (提炼) state
-const understandingMode = ref(false);
-const understandingFile = ref<File | null>(null);
-const understandingCoverDataUrl = ref<string | null>(null);
-const understandingTask = ref<'tags' | 'caption' | 'both'>('both');
-// 额外要求（可选）：原样附加到提炼提示词末尾，用来指定关注点/提醒细节/解释易误读的画面。
-// 刻意**不随新图片清空**——连续提炼同一批图时同一条要求通常要复用（与 understandingEngine
-// 的「会话内记忆」同类）。
-const understandingExtra = ref('');
-// 提炼引擎（重建 epic D1）：默认取设置值，面板内可切换，会话内记忆
-const understandingEngine = ref<import('@/engine/image/types').ImageUnderstandingEngine>(
-  imageService?.getUnderstandingConfig().defaultEngine ?? 'civitai_vlm',
-);
-
-// 能力门控（参照 c1c3463 重绘幅度先例：不可用 = 禁用 + 说明，不留死控件）
-const understandingCivitaiAvailable = computed(() => {
-  apiStore.apiConfigs; apiStore.apiAssignments; // reactivity deps
-  return Boolean(aiService?.getImageConfigForBackend('civitai'));
-});
-// D3B「必须标明」：通用 LLM 引擎复用主对话配置，选项与设置区都显示当前模型名
-const understandingLlmInfo = computed(() => {
-  apiStore.apiConfigs; apiStore.apiAssignments; // reactivity deps
-  return imageService?.getGeneralLlmInfo();
-});
-// Civitai 视觉模型速查清单（设置区「支持哪些模型？」）。
-// 模型 id 是 API 标识符，不翻译；备注走 i18n。三项均为 2026-08-27 真实探测过的
-// 名字，计量差异见 docs/status/image-understanding-api-verification-2026-08-27.md。
-const UNDERSTANDING_MODEL_PRESETS: ReadonlyArray<{ id: string; noteKey: string }> = [
-  { id: 'claude-sonnet-5', noteKey: 'image.settings.understandingModelNoteSonnet' },
-  { id: 'gpt-4o-mini', noteKey: 'image.settings.understandingModelNoteGpt' },
-  { id: 'gemini-2.5-flash', noteKey: 'image.settings.understandingModelNoteGemini' },
-];
-
-const understandingCivitaiModel = computed(() =>
-  String(get('系统.扩展.image.config.understanding.civitaiModel') ?? 'claude-sonnet-5'));
-
-function applyUnderstandingModel(id: string): void {
-  setValue('系统.扩展.image.config.understanding.civitaiModel', id);
-}
-
-const understandingEngineOptions = computed<Array<{
-  label: string;
-  value: import('@/engine/image/types').ImageUnderstandingEngine;
-  disabled: boolean;
-}>>(() => [
-  {
-    label: t('image.presets.engineCivitai'),
-    value: 'civitai_vlm',
-    disabled: !understandingCivitaiAvailable.value,
-  },
-  {
-    label: understandingLlmInfo.value?.available
-      ? t('image.presets.engineGeneralLlm', { model: understandingLlmInfo.value.model })
-      : t('image.presets.engineGeneralLlmBare'),
-    value: 'general_llm',
-    disabled: !understandingLlmInfo.value?.available,
-  },
-]);
-const understandingNoEngine = computed(() =>
-  understandingEngineOptions.value.every((o) => o.disabled));
-// 选中引擎失效时自动落到另一个可用引擎。apiStore 若在挂载后一拍才水合，
-// 本 watch 会随选项重算再次触发并自我纠正（瞬时切换不产生请求，无用户可见影响）
-watch(understandingEngineOptions, (opts) => {
-  const current = opts.find((o) => o.value === understandingEngine.value);
-  if (current?.disabled) {
-    const fallback = opts.find((o) => !o.disabled);
-    if (fallback) understandingEngine.value = fallback.value;
-  }
-}, { immediate: true });
-const understandingLoading = ref(false);
-const understandingResult = ref<import('@/engine/image/types').ImageUnderstandingResult | null>(null);
-const understandingEditDraft = ref('');
-const understandingError = ref('');
-
-async function openUnderstandingForFile(file: File) {
-  understandingFile.value = file;
-  understandingMode.value = true;
-  understandingResult.value = null;
-  understandingError.value = '';
-  understandingEditDraft.value = '';
-  try {
-    const img = new Image();
-    const objUrl = URL.createObjectURL(file);
-    await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = () => reject(); img.src = objUrl; });
-    const canvas = document.createElement('canvas');
-    canvas.width = 80; canvas.height = 56;
-    const ctx = canvas.getContext('2d');
-    if (ctx) { ctx.drawImage(img, 0, 0, 80, 56); understandingCoverDataUrl.value = canvas.toDataURL('image/jpeg', 0.6); }
-    URL.revokeObjectURL(objUrl);
-  } catch { understandingCoverDataUrl.value = null; }
-}
-
-async function runUnderstanding() {
-  if (!imageService || !understandingFile.value) return;
-  understandingLoading.value = true;
-  understandingError.value = '';
-  try {
-    const reader = new FileReader();
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error('read'));
-      reader.readAsDataURL(understandingFile.value!);
-    });
-    const result = await imageService.analyzeImage({
-      engine: understandingEngine.value,
-      image: { id: generateReferenceId(), role: 'source', source: 'data_url', dataUrl },
-      task: understandingTask.value,
-      prompt: understandingExtra.value.trim() || undefined,
-    });
-    understandingResult.value = result;
-    understandingEditDraft.value = result.positiveDraft;
-    // 结构化解析降级：要标签却没标签 = 模型没按 JSON 出（原文已落 caption）
-    if (understandingTask.value !== 'caption' && !result.tags?.length && result.caption) {
-      eventBus.emit('ui:toast', { type: 'warning', message: t('image.toast.tagsNotParsed'), duration: 4000 });
-    }
-  } catch (err) {
-    understandingError.value = classifyUnderstandingError((err as Error).message);
-  } finally {
-    understandingLoading.value = false;
-  }
-}
-
-// 四类错误的 i18n 呈现（design §5.1）：引擎层错误是中文硬编码（引擎禁 import
-// vue-i18n），UI 层按稳定标记分类映射到 zh/en 文案；未识别的原样透出
-function classifyUnderstandingError(message: string): string {
-  if (message.includes('拒绝分析')) return t('image.understanding.error.refused');
-  if (message.includes('空响应（204')) return t('image.understanding.error.emptyResponse');
-  if (message.includes('未将图片送达模型')) return t('image.understanding.error.imageDropped');
-  return message;
-}
-
-function saveUnderstandingAsPreset(scope: 'npc' | 'scene') {
-  if (!understandingResult.value) return;
-  const preset: ArtistPreset = {
-    id: `img_${Date.now()}`,
-    name: understandingFile.value?.name?.replace(/\.\w+$/, '') ?? t('image.preset.defaultUnderstandingName'),
-    scope,
-    artistString: '',
-    positive: understandingEditDraft.value || understandingResult.value.positiveDraft,
-    negative: understandingResult.value.negativeDraft ?? '',
-    pngMeta: {
-      // vlm_ / llm_ 前缀（重建 epic §4）；历史 civitai_ 前缀数据保留可读
-      source: `${understandingResult.value.provider === 'general_llm' ? 'llm' : 'vlm'}_${understandingResult.value.task}`,
-      originalPrompt: understandingResult.value.positiveDraft,
-      rawText: JSON.stringify(understandingResult.value.raw ?? {}),
-      coverDataUrl: understandingCoverDataUrl.value ?? undefined,
-      replicateParams: false,
-    },
-  };
-  const list = [...artistPresets.value, preset];
-  setValue('系统.扩展.image.artistPresets', list);
-  selectedPresetId.value = preset.id;
-  understandingMode.value = false;
-  loadPresetIntoEditor();
-  eventBus.emit('ui:toast', { type: 'success', message: scope === 'npc' ? t('image.toast.savedAsStylePresetNpc') : t('image.toast.savedAsStylePresetScene'), duration: 2000 });
-}
-
-function importImageForUnderstanding(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
-  input.value = '';
-  if (!validateUploadSize(file)) return;
-  void openUnderstandingForFile(file);
-}
-
-// ── Reference Library (P1-8) ──
-const referenceLibrary = computed(() => imageService?.state.getReferenceLibrary() ?? []);
-const refLibThumbnails = ref<Record<string, string>>({});
-
-async function loadRefLibThumbnail(assetId: string): Promise<string | null> {
-  if (assetId in refLibThumbnails.value) return refLibThumbnails.value[assetId] || null;
-  if (!imageService) return null;
-  try {
-    const entry = await imageService.getAssetCache().retrieve(assetId);
-    if (!entry) {
-      refLibThumbnails.value = { ...refLibThumbnails.value, [assetId]: '' };
-      return null;
-    }
-    const img = new Image();
-    const objUrl = URL.createObjectURL(entry.blob);
-    await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = () => reject(); img.src = objUrl; });
-    const canvas = document.createElement('canvas'); canvas.width = 60; canvas.height = 42;
-    const ctx = canvas.getContext('2d');
-    let thumb = '';
-    if (ctx) { ctx.drawImage(img, 0, 0, 60, 42); thumb = canvas.toDataURL('image/jpeg', 0.5); }
-    URL.revokeObjectURL(objUrl);
-    refLibThumbnails.value = { ...refLibThumbnails.value, [assetId]: thumb || '' };
-    return thumb || null;
-  } catch {
-    refLibThumbnails.value = { ...refLibThumbnails.value, [assetId]: '' };
-    return null;
-  }
-}
-
-async function deleteReferenceEntry(id: string) {
-  if (!imageService) return;
-  const lib = imageService.state.getReferenceLibrary();
-  const entry = lib.find((e) => e.id === id);
-  imageService.state.removeReferenceEntry(id);
-  // 仍被生图任务引用的图片**本体不能删**：任务归档里的 sourceAssetIds 不会跟着
-  // 消失，删了会让备份「引用数 > 导出数」，进而被云同步退化守卫永久硬阻断
-  //（CRITICAL 修复 2026-08-29）。条目本身照删——那只是用户的素材清单。
-  const stillUsed = entry?.assetId ? imageService.state.isAssetReferencedByTasks(entry.assetId) : false;
-  if (entry?.assetId && !stillUsed) {
-    try { await imageService.getAssetCache().delete(entry.assetId); } catch { /* best effort */ }
-    const { [entry.assetId]: _, ...rest } = refLibThumbnails.value;
-    refLibThumbnails.value = rest;
-  }
-  eventBus.emit('ui:toast', {
-    type: 'info',
-    message: stillUsed ? t('image.toast.deletedReferenceKept') : t('image.toast.deletedReference'),
-    duration: stillUsed ? 3500 : 1500,
-  });
-}
-
-async function importPng(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
-
-  pngImporting.value = true;
-  pngImportStatus.value = t('image.png.parsing', { name: file.name });
-
-  try {
-    const { extractPngMetadata } = await import('@/engine/image/png-metadata');
-    const metadata = await extractPngMetadata(file);
-
-    if (!metadata.positive && !metadata.rawText) {
-      pngImportStatus.value = t('image.png.noMetadata');
-      pngImporting.value = false;
-      void openUnderstandingForFile(file);
-      return;
-    }
-
-    // Generate small cover thumbnail (80x56)
-    let coverDataUrl: string | undefined;
-    try {
-      const img = new Image();
-      const objectUrl = URL.createObjectURL(file);
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error('load'));
-        img.src = objectUrl;
-      });
-      const canvas = document.createElement('canvas');
-      canvas.width = 80;
-      canvas.height = 56;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, 80, 56);
-        coverDataUrl = canvas.toDataURL('image/jpeg', 0.6);
-      }
-      URL.revokeObjectURL(objectUrl);
-    } catch { /* cover is optional */ }
-
-    const parsedParams: Record<string, unknown> = {};
-    if (metadata.params?.sampler) parsedParams.sampler = metadata.params.sampler;
-    if (metadata.params?.steps) parsedParams.steps = metadata.params.steps;
-    if (metadata.params?.cfgScale) parsedParams.cfgScale = metadata.params.cfgScale;
-    if (metadata.params?.seed) parsedParams.seed = metadata.params.seed;
-    if (metadata.params?.model) parsedParams.model = metadata.params.model;
-    if (metadata.params?.width) parsedParams.width = metadata.params.width;
-    if (metadata.params?.height) parsedParams.height = metadata.params.height;
-
-    const preset: ArtistPreset = {
-      id: `png_${Date.now()}`,
-      name: file.name.replace(/\.png$/i, ''),
-      scope: presetScope.value,
-      artistString: '',
-      positive: metadata.positive ?? '',
-      negative: metadata.negative ?? '',
-      pngMeta: {
-        source: metadata.source,
-        originalPrompt: metadata.positive ?? '',
-        rawText: metadata.rawText ?? '',
-        parsedParams: Object.keys(parsedParams).length > 0 ? parsedParams : undefined,
-        replicateParams: false,
-        coverDataUrl,
-      },
-    };
-
-    const list = [...artistPresets.value, preset];
-    setValue('系统.扩展.image.artistPresets', list);
-    selectedPresetId.value = preset.id;
-    loadPresetIntoEditor();
-    pngImportStatus.value = t('image.png.imported', { name: preset.name });
-  } catch (err) {
-    pngImportStatus.value = t('image.png.parseFailed', { error: (err as Error).message });
-  } finally {
-    pngImporting.value = false;
-    input.value = '';
-  }
-}
-
-function loadPresetIntoEditor() {
-  if (selectedPreset.value) {
-    newPresetName.value = selectedPreset.value.name;
-    newPresetPositive.value = selectedPreset.value.positive;
-    newPresetNegative.value = selectedPreset.value.negative;
-    newPresetArtist.value = selectedPreset.value.artistString;
-  }
-}
-
-function toggleReplicateParams(value: boolean) {
-  if (!selectedPreset.value?.pngMeta) return;
-  const list = artistPresets.value.map((p) =>
-    p.id === selectedPresetId.value
-      ? { ...p, pngMeta: { ...p.pngMeta!, replicateParams: value } }
-      : p
-  );
-  setValue('系统.扩展.image.artistPresets', list);
-}
-
-// Character anchor management
-interface CharacterAnchor {
-  id: string;
-  name: string;
-  npcName: string;
-  enabled: boolean;
-  defaultAppend: boolean;
-  sceneLink: boolean;
-  positive: string;
-  negative: string;
-  structuredFeatures?: import('@/engine/image/types').AnchorStructuredFeatures;
-  source?: string;
-  model?: string;
-}
-
-const selectedAnchorId = ref('');
-const anchorExtractRequirements = ref('');
-const anchorExtracting = ref(false);
-const anchorExtractMessage = ref('');
-const anchorExtractStage = ref<'idle' | 'extracting' | 'done' | 'error'>('idle');
-
-const characterAnchors = computed<CharacterAnchor[]>(() => {
-  const raw = get('系统.扩展.image.characterAnchors');
-  return Array.isArray(raw) ? raw as CharacterAnchor[] : [];
+const {
+  selectedAnchorId,
+  anchorExtractRequirements,
+  anchorExtracting,
+  anchorExtractMessage,
+  anchorExtractStage,
+  characterAnchors,
+  selectedAnchor,
+  editAnchorName,
+  editAnchorNpc,
+  editAnchorPositive,
+  editAnchorNegative,
+  selectAnchor,
+  extractAnchor,
+  saveAnchor,
+  deleteAnchor,
+  toggleAnchorProp,
+} = useAnchors({
+  get,
+  setValue,
+  t,
+  aiService,
+  relationships,
 });
 
-const selectedAnchor = computed(() =>
-  characterAnchors.value.find((a) => a.id === selectedAnchorId.value) ?? null
-);
-
-// Editor state for anchor
-const editAnchorName = ref('');
-const editAnchorNpc = ref('');
-const editAnchorPositive = ref('');
-const editAnchorNegative = ref('');
-
-function selectAnchor(id: string) {
-  selectedAnchorId.value = id;
-  const a = characterAnchors.value.find((x) => x.id === id);
-  if (a) {
-    editAnchorName.value = a.name;
-    editAnchorNpc.value = a.npcName;
-    editAnchorPositive.value = a.positive;
-    editAnchorNegative.value = a.negative;
-  }
-}
-
-async function extractAnchor() {
-  if (!editAnchorNpc.value || !aiService) {
-    anchorExtractStage.value = 'error';
-    anchorExtractMessage.value = !aiService ? t('image.toast.anchorAiNotReady') : t('image.toast.anchorSelectNpcFirst');
-    return;
-  }
-  anchorExtracting.value = true;
-  anchorExtractStage.value = 'extracting';
-  anchorExtractMessage.value = t('image.toast.anchorExtracting', { name: editAnchorNpc.value });
-  try {
-    const npc = (relationships.value as Array<Record<string, unknown>>)?.find(
-      (n) => n['名称'] === editAnchorNpc.value
-    );
-    if (!npc) throw new Error('NPC not found');
-
-    const npcData: Record<string, unknown> = { 姓名: editAnchorNpc.value };
-    const pick = (key: string) => { const v = npc[key]; return typeof v === 'string' && v.trim() ? v.trim() : undefined; };
-    if (pick('性别')) npcData['性别'] = pick('性别');
-    if (npc['年龄']) npcData['年龄'] = npc['年龄'];
-    if (pick('描述')) npcData['描述'] = pick('描述');
-    if (pick('外貌描述')) npcData['外貌描述'] = pick('外貌描述');
-    if (pick('身材描写')) npcData['身材描写'] = pick('身材描写');
-    if (pick('衣着风格')) npcData['衣着风格'] = pick('衣着风格');
-    if (Array.isArray(npc['性格特征'])) npcData['性格特征'] = npc['性格特征'];
-
-    const result = await extractAnchorViaAI(
-      aiService,
-      JSON.stringify(npcData, null, 2),
-      {
-        displayName: editAnchorNpc.value,
-        extraRequirements: anchorExtractRequirements.value.trim() || undefined,
-      },
-    );
-
-    const anchor: CharacterAnchor = {
-      id: `anchor_${Date.now()}`,
-      name: t('image.anchor.defaultName', { name: editAnchorNpc.value }),
-      npcName: editAnchorNpc.value,
-      enabled: true,
-      defaultAppend: true,
-      sceneLink: false,
-      positive: result.positivePrompt,
-      negative: result.negativePrompt,
-      structuredFeatures: result.structuredFeatures,
-      source: t('image.anchor.sourceAI'),
-    };
-    const list = [...characterAnchors.value.filter((a) => a.npcName !== editAnchorNpc.value), anchor];
-    setValue('系统.扩展.image.characterAnchors', list);
-    selectAnchor(anchor.id);
-    anchorExtractStage.value = 'done';
-    anchorExtractMessage.value = t('image.toast.anchorExtracted', { name: anchor.name });
-  } catch (err) {
-    anchorExtractStage.value = 'error';
-    anchorExtractMessage.value = t('image.toast.anchorExtractFailed', { error: (err as Error).message });
-  } finally {
-    anchorExtracting.value = false;
-  }
-}
-
-function saveAnchor() {
-  if (!selectedAnchor.value) return;
-  const list = characterAnchors.value.map((a) =>
-    a.id === selectedAnchorId.value
-      ? { ...a, name: editAnchorName.value, positive: editAnchorPositive.value, negative: editAnchorNegative.value }
-      : a
-  );
-  setValue('系统.扩展.image.characterAnchors', list);
-  eventBus.emit('ui:toast', { type: 'success', message: t('image.toast.anchorSaved'), duration: 1500 });
-}
-
-function deleteAnchor() {
-  const list = characterAnchors.value.filter((a) => a.id !== selectedAnchorId.value);
-  setValue('系统.扩展.image.characterAnchors', list);
-  selectedAnchorId.value = '';
-}
-
-function toggleAnchorProp(prop: 'enabled' | 'defaultAppend' | 'sceneLink', value: boolean) {
-  const list = characterAnchors.value.map((a) =>
-    a.id === selectedAnchorId.value ? { ...a, [prop]: value } : a
-  );
-  setValue('系统.扩展.image.characterAnchors', list);
-}
-
-// Transformer preset CRUD state (§2.7-C)
-interface TransformerPreset {
-  id: string;
-  name: string;
-  scope: 'npc' | 'scene' | 'secret';
-  prompt: string;
-}
-
-const transformerScope = ref<'npc' | 'scene' | 'secret'>('npc');
-const selectedTransformerId = ref('');
-const newTransformerName = ref('');
-const editTransformerPrompt = ref('');
-
-const transformerPresets = computed<TransformerPreset[]>(() => {
-  const raw = get('系统.扩展.image.transformerPresets');
-  return Array.isArray(raw) ? raw as TransformerPreset[] : [];
+const {
+  transformerScope,
+  selectedTransformerId,
+  newTransformerName,
+  editTransformerPrompt,
+  transformerPresets,
+  scopedTransformers,
+  selectedTransformer,
+  loadTransformerIntoEditor,
+  createTransformerPreset,
+  saveTransformerPreset,
+  deleteTransformerPreset,
+} = useTransformerPresets({
+  get,
+  setValue,
+  t,
 });
 
-const scopedTransformers = computed(() =>
-  transformerPresets.value.filter((p) => p.scope === transformerScope.value)
-);
-
-const selectedTransformer = computed(() =>
-  transformerPresets.value.find((p) => p.id === selectedTransformerId.value) ?? null
-);
-
-function loadTransformerIntoEditor() {
-  if (selectedTransformer.value) {
-    editTransformerPrompt.value = selectedTransformer.value.prompt;
-  }
-}
-
-function createTransformerPreset() {
-  const name = newTransformerName.value.trim() || t('image.transformer.defaultName', { id: Date.now() });
-  const preset: TransformerPreset = {
-    id: `tf_${Date.now()}`,
-    name,
-    scope: transformerScope.value,
-    prompt: '',
-  };
-  const list = [...transformerPresets.value, preset];
-  setValue('系统.扩展.image.transformerPresets', list);
-  selectedTransformerId.value = preset.id;
-  newTransformerName.value = '';
-  editTransformerPrompt.value = '';
-}
-
-function saveTransformerPreset() {
-  if (!selectedTransformer.value) return;
-  const list = transformerPresets.value.map((p) =>
-    p.id === selectedTransformerId.value
-      ? { ...p, prompt: editTransformerPrompt.value }
-      : p
-  );
-  setValue('系统.扩展.image.transformerPresets', list);
-  eventBus.emit('ui:toast', { type: 'success', message: t('image.toast.transformerPresetSaved'), duration: 1500 });
-}
-
-function deleteTransformerPreset() {
-  const list = transformerPresets.value.filter((p) => p.id !== selectedTransformerId.value);
-  setValue('系统.扩展.image.transformerPresets', list);
-  selectedTransformerId.value = '';
-  editTransformerPrompt.value = '';
-}
-
-// Model rulesets
-interface ModelRuleset {
-  id: string;
-  name: string;
-  enabled: boolean;
-  compatMode: boolean;
-  baseModelRule: string;
-  anchorModeModelRule: string;
-  serializationStrategy: string;
-  npcTemplateId: string;
-  sceneTemplateId: string;
-  judgeTemplateId: string;
-}
-
-const modelRulesetExpanded = ref(false);
-const editingModelRulesetId = ref('');
-const editModelRulesetName = ref('');
-const editModelRulesetBase = ref('');
-const editModelRulesetAnchor = ref('');
-
-const modelRulesets = computed<ModelRuleset[]>(() => {
-  const raw = get('系统.扩展.image.modelRulesets');
-  return Array.isArray(raw) ? raw as ModelRuleset[] : [];
+const {
+  modelRulesetExpanded,
+  editingModelRulesetId,
+  editModelRulesetName,
+  editModelRulesetBase,
+  editModelRulesetAnchor,
+  modelRulesets,
+  editingModelRuleset,
+  activeModelRuleset,
+  modelRulesetOptions,
+  selectModelRuleset,
+  createModelRuleset,
+  saveModelRuleset,
+  deleteModelRuleset,
+  toggleModelRulesetEnabled,
+  toggleModelRulesetCompat,
+  exportModelRulesets,
+  importModelRulesets,
+} = useModelRulesets({
+  get,
+  setValue,
+  t,
 });
 
-const editingModelRuleset = computed(() =>
-  modelRulesets.value.find((r) => r.id === editingModelRulesetId.value) ?? null
-);
-
-const activeModelRuleset = computed(() =>
-  modelRulesets.value.find((r) => r.enabled) ?? null
-);
-
-const modelRulesetOptions = computed<SelectOption[]>(() =>
-  modelRulesets.value.map((r) => ({ label: `${r.name}${r.enabled ? t('image.rules.enabledSuffix') : ''}`, value: r.id }))
-);
-
-// Auto-select the enabled model ruleset when rulesets are seeded
-watch(modelRulesets, (list) => {
-  if (editingModelRulesetId.value) return;
-  const enabled = list.find((r) => r.enabled);
-  if (enabled) selectModelRuleset(enabled.id);
-}, { immediate: true });
-
-function selectModelRuleset(id: string) {
-  editingModelRulesetId.value = id;
-  const r = modelRulesets.value.find((x) => x.id === id);
-  if (r) {
-    editModelRulesetName.value = r.name;
-    editModelRulesetBase.value = r.baseModelRule;
-    editModelRulesetAnchor.value = r.anchorModeModelRule;
-  }
-}
-
-function createModelRuleset() {
-  const ruleset: ModelRuleset = {
-    id: `mrs_${Date.now()}`,
-    name: t('image.rules.rulesetDefaultName', { n: modelRulesets.value.length + 1 }),
-    enabled: false,
-    compatMode: false,
-    baseModelRule: '',
-    anchorModeModelRule: '',
-    serializationStrategy: 'nai_character_segments',
-    npcTemplateId: '',
-    sceneTemplateId: '',
-    judgeTemplateId: '',
-  };
-  const list = [...modelRulesets.value, ruleset];
-  setValue('系统.扩展.image.modelRulesets', list);
-  selectModelRuleset(ruleset.id);
-}
-
-function saveModelRuleset() {
-  if (!editingModelRuleset.value) return;
-  const list = modelRulesets.value.map((r) =>
-    r.id === editingModelRulesetId.value
-      ? { ...r, name: editModelRulesetName.value, baseModelRule: editModelRulesetBase.value, anchorModeModelRule: editModelRulesetAnchor.value }
-      : r
-  );
-  setValue('系统.扩展.image.modelRulesets', list);
-  eventBus.emit('ui:toast', { type: 'success', message: t('image.toast.modelRulesetSaved'), duration: 1500 });
-}
-
-function deleteModelRuleset() {
-  const list = modelRulesets.value.filter((r) => r.id !== editingModelRulesetId.value);
-  setValue('系统.扩展.image.modelRulesets', list);
-  editingModelRulesetId.value = '';
-}
-
-function toggleModelRulesetEnabled(value: boolean) {
-  // Only one ruleset can be enabled — disable others first
-  const list = modelRulesets.value.map((r) => ({
-    ...r,
-    enabled: r.id === editingModelRulesetId.value ? value : (value ? false : r.enabled),
-  }));
-  setValue('系统.扩展.image.modelRulesets', list);
-}
-
-function toggleModelRulesetCompat(value: boolean) {
-  const list = modelRulesets.value.map((r) =>
-    r.id === editingModelRulesetId.value ? { ...r, compatMode: value } : r
-  );
-  setValue('系统.扩展.image.modelRulesets', list);
-}
-
-function exportModelRulesets() {
-  const data = modelRulesets.value;
-  if (data.length === 0) {
-    eventBus.emit('ui:toast', { type: 'info', message: t('image.toast.noModelRulesetsToExport'), duration: 1500 });
-    return;
-  }
-  const json = JSON.stringify(data, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `model-rulesets-${Date.now()}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  eventBus.emit('ui:toast', { type: 'success', message: t('image.toast.modelRulesetsExported', { n: data.length }), duration: 1500 });
-}
-
-function importModelRulesets(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const parsed = JSON.parse(reader.result as string);
-      const items = (Array.isArray(parsed) ? parsed : [parsed]).filter(
-        (r: unknown): r is ModelRuleset => typeof r === 'object' && r !== null && 'name' in r
-      ).map((r) => ({
-        ...r,
-        id: `mrs_import_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-        enabled: false,
-      }));
-      if (items.length === 0) {
-        eventBus.emit('ui:toast', { type: 'error', message: t('image.toast.noValidRulesetData'), duration: 2000 });
-        return;
-      }
-      setValue('系统.扩展.image.modelRulesets', [...modelRulesets.value, ...items]);
-      eventBus.emit('ui:toast', { type: 'success', message: t('image.toast.modelRulesetsImported', { n: items.length }), duration: 1500 });
-    } catch {
-      eventBus.emit('ui:toast', { type: 'error', message: t('image.toast.importFailedInvalidJson'), duration: 2000 });
-    }
-    input.value = '';
-  };
-  reader.readAsText(file);
-}
-
-// Rules state — full CRUD
-interface RuleTemplate {
-  id: string;
-  name: string;
-  scope: 'npc' | 'scene' | 'judge';
-  baseRule: string;
-  anchorRule: string;
-  noAnchorFallback: string;
-  outputFormat: string;
-  transformerPresetId: string;
-}
-
-const ruleScope = ref<'npc' | 'scene' | 'judge'>('npc');
-
-const ruleTemplates = computed<RuleTemplate[]>(() => {
-  const raw = get('系统.扩展.image.ruleTemplates');
-  return Array.isArray(raw) ? raw as RuleTemplate[] : [];
+const {
+  ruleScope,
+  currentActiveRuleId,
+  editingRuleId,
+  editingRule,
+  editRuleName,
+  editBaseRule,
+  editAnchorRule,
+  editNoAnchorFallback,
+  editOutputFormat,
+  editRuleTransformerId,
+  activeRuleOptions,
+  editRuleOptions,
+  currentTransformerOptions,
+  selectEditRule,
+  createRuleTemplate,
+  saveRuleTemplate,
+  deleteRuleTemplate,
+  saveActiveRules,
+  exportRules,
+  importRules,
+} = useRuleTemplates({
+  get,
+  setValue,
+  t,
+  transformerPresets,
+  modelRulesets,
 });
 
-const scopedRuleTemplates = computed(() =>
-  ruleTemplates.value.filter((r) => r.scope === ruleScope.value)
-);
-
-// "当前生效" — which rule is active per scope
-const activeNpcRuleId = ref(String(get('系统.扩展.image.rules.activeNpcRule') ?? ''));
-const activeSceneRuleId = ref(String(get('系统.扩展.image.rules.activeSceneRule') ?? ''));
-const activeJudgeRuleId = ref(String(get('系统.扩展.image.rules.activeJudgeRule') ?? ''));
-
-const currentActiveRuleId = computed({
-  get: () => ruleScope.value === 'npc' ? activeNpcRuleId.value : ruleScope.value === 'scene' ? activeSceneRuleId.value : activeJudgeRuleId.value,
-  set: (v: string) => {
-    if (ruleScope.value === 'npc') activeNpcRuleId.value = v;
-    else if (ruleScope.value === 'scene') activeSceneRuleId.value = v;
-    else activeJudgeRuleId.value = v;
-  },
+const {
+  historyFilter,
+  historyFilterOptions,
+  filteredHistory,
+  clearAllNpcHistory,
+  clearAllSceneHistory,
+} = useCombinedHistory({
+  t,
+  imageService,
+  relationships,
+  imageUpdateTick,
+  extractProviderMeta,
+  getPlayerArchiveHistory: () => getPlayerArchiveHistory(),
+  getPlayerName: () => playerName.value,
+  sceneArchiveHistory,
+  clearSceneHistory,
 });
-
-// "当前编辑" — which rule is being edited
-const editingRuleId = ref('');
-
-const editingRule = computed(() =>
-  ruleTemplates.value.find((r) => r.id === editingRuleId.value) ?? null
-);
-
-// Editor fields
-const editRuleName = ref('');
-const editBaseRule = ref('');
-const editAnchorRule = ref('');
-const editNoAnchorFallback = ref('');
-const editOutputFormat = ref('');
-const editRuleTransformerId = ref('');
-
-const activeRuleOptions = computed<SelectOption[]>(() => [
-  { label: t('image.presets.notUsed'), value: '' },
-  ...scopedRuleTemplates.value.map((r) => ({ label: r.name, value: r.id })),
-]);
-
-const editRuleOptions = computed<SelectOption[]>(() =>
-  scopedRuleTemplates.value.map((r) => ({ label: r.name, value: r.id }))
-);
-
-const npcTransformerOptions = computed<SelectOption[]>(() => [
-  { label: t('image.presets.notUsed'), value: '' },
-  ...transformerPresets.value.filter((p) => p.scope === 'npc').map((p) => ({ label: p.name, value: p.id })),
-]);
-const sceneTransformerOptions = computed<SelectOption[]>(() => [
-  { label: t('image.presets.notUsed'), value: '' },
-  ...transformerPresets.value.filter((p) => p.scope === 'scene').map((p) => ({ label: p.name, value: p.id })),
-]);
-
-const currentTransformerOptions = computed(() =>
-  ruleScope.value === 'npc' ? npcTransformerOptions.value : sceneTransformerOptions.value
-);
-
-function loadRuleIntoEditor() {
-  if (editingRule.value) {
-    editRuleName.value = editingRule.value.name;
-    editBaseRule.value = editingRule.value.baseRule;
-    editAnchorRule.value = editingRule.value.anchorRule;
-    editNoAnchorFallback.value = editingRule.value.noAnchorFallback;
-    editOutputFormat.value = editingRule.value.outputFormat;
-    editRuleTransformerId.value = editingRule.value.transformerPresetId;
-  }
-}
-
-function selectEditRule(id: string) {
-  editingRuleId.value = id;
-  loadRuleIntoEditor();
-}
-
-// Auto-select first rule template when scope changes and nothing is selected
-watch([scopedRuleTemplates, ruleScope], ([templates]) => {
-  if (editingRuleId.value && templates.some((t: RuleTemplate) => t.id === editingRuleId.value)) return;
-  if (templates.length > 0) {
-    selectEditRule(templates[0].id);
-  }
-}, { immediate: true });
-
-function createRuleTemplate() {
-  const rule: RuleTemplate = {
-    id: `rule_${Date.now()}`,
-    name: (ruleScope.value === 'npc' ? t('image.rules.npcRuleName', { n: scopedRuleTemplates.value.length + 1 }) : ruleScope.value === 'scene' ? t('image.rules.sceneRuleName', { n: scopedRuleTemplates.value.length + 1 }) : t('image.rules.judgeRuleName', { n: scopedRuleTemplates.value.length + 1 })),
-    scope: ruleScope.value,
-    baseRule: '', anchorRule: '', noAnchorFallback: '', outputFormat: '',
-    transformerPresetId: '',
-  };
-  const list = [...ruleTemplates.value, rule];
-  setValue('系统.扩展.image.ruleTemplates', list);
-  editingRuleId.value = rule.id;
-  loadRuleIntoEditor();
-}
-
-function saveRuleTemplate() {
-  if (!editingRule.value) return;
-  const list = ruleTemplates.value.map((r) =>
-    r.id === editingRuleId.value
-      ? { ...r, name: editRuleName.value, baseRule: editBaseRule.value, anchorRule: editAnchorRule.value, noAnchorFallback: editNoAnchorFallback.value, outputFormat: editOutputFormat.value, transformerPresetId: editRuleTransformerId.value }
-      : r
-  );
-  setValue('系统.扩展.image.ruleTemplates', list);
-  eventBus.emit('ui:toast', { type: 'success', message: t('image.toast.ruleSaved'), duration: 1500 });
-}
-
-function deleteRuleTemplate() {
-  const list = ruleTemplates.value.filter((r) => r.id !== editingRuleId.value);
-  setValue('系统.扩展.image.ruleTemplates', list);
-  // Clear active if deleted
-  if (currentActiveRuleId.value === editingRuleId.value) {
-    currentActiveRuleId.value = '';
-  }
-  editingRuleId.value = '';
-}
-
-function saveActiveRules() {
-  const existing = (get('系统.扩展.image.rules') as Record<string, unknown>) ?? {};
-  setValue('系统.扩展.image.rules', {
-    ...existing,
-    activeNpcRule: activeNpcRuleId.value,
-    activeSceneRule: activeSceneRuleId.value,
-    activeJudgeRule: activeJudgeRuleId.value,
-  });
-  eventBus.emit('ui:toast', { type: 'success', message: t('image.toast.activeRulesUpdated'), duration: 1500 });
-}
-
-// Rules import/export
-function exportRules() {
-  const data = {
-    ruleTemplates: ruleTemplates.value,
-    modelRulesets: modelRulesets.value,
-    rules: get('系统.扩展.image.rules'),
-  };
-  const json = JSON.stringify(data, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `image-rules-${Date.now()}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  eventBus.emit('ui:toast', { type: 'success', message: t('image.toast.rulesExported'), duration: 1500 });
-}
-
-function importRules(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const data = JSON.parse(reader.result as string);
-      if (Array.isArray(data.ruleTemplates)) {
-        setValue('系统.扩展.image.ruleTemplates', data.ruleTemplates);
-      }
-      if (Array.isArray(data.modelRulesets)) {
-        setValue('系统.扩展.image.modelRulesets', data.modelRulesets);
-      }
-      if (data.rules && typeof data.rules === 'object') {
-        setValue('系统.扩展.image.rules', data.rules);
-      }
-      eventBus.emit('ui:toast', { type: 'success', message: t('image.toast.rulesImported'), duration: 1500 });
-    } catch {
-      eventBus.emit('ui:toast', { type: 'error', message: t('image.toast.importFailedInvalidJson'), duration: 2000 });
-    }
-    input.value = '';
-  };
-  reader.readAsText(file);
-}
-
-// Combined history: NPC archives + scene archives + task queue, sorted by time
-interface CombinedHistoryEntry {
-  key: string;
-  type: 'character' | 'scene';
-  timestamp: number;
-  id: string;
-  name: string;
-  status: string;
-  positivePrompt?: string;
-  negativePrompt?: string;
-  composition?: string;
-  model?: string;
-  apiConfigName?: string;
-  artStyle?: string;
-  error?: string;
-  assetId?: string;
-  taskId?: string;
-  /** Captured output dimensions + backend — used by "生成同款" to replay. */
-  width?: number;
-  height?: number;
-  backend?: ImageBackendType;
-  part?: 'breast' | 'vagina' | 'anus';
-  providerMeta?: { civitai?: CivitaiLoraSnapshot; reference?: { mode: string; sourceAssetIds?: string[]; sourceAssetId?: string; denoiseStrength?: number; provider?: string } };
-}
-
-const combinedHistory = computed<CombinedHistoryEntry[]>(() => {
-  void imageUpdateTick.value;
-  const entries: CombinedHistoryEntry[] = [];
-
-  // NPC archives
-  if (Array.isArray(relationships.value)) {
-    for (const npc of relationships.value) {
-      const name = String(npc['名称'] ?? '');
-      const archive = npc['图片档案'] as Record<string, unknown> | undefined;
-      if (!archive) continue;
-      const history = archive['生图历史'];
-      if (!Array.isArray(history)) continue;
-      for (const record of history as Array<Record<string, unknown>>) {
-        entries.push({
-          key: `npc_${name}_${record.id ?? record.createdAt}`,
-          type: 'character',
-          timestamp: Number(record.createdAt ?? record['生成时间'] ?? 0),
-          id: String(record.id ?? ''),
-          name,
-          status: String(record.status ?? 'complete'),
-          positivePrompt: String(record.positivePrompt ?? record['最终正向提示词'] ?? ''),
-          negativePrompt: String(record.negativePrompt ?? record['最终负向提示词'] ?? ''),
-          composition: String(record.composition ?? ''),
-          model: String(record.model ?? record['使用模型'] ?? ''),
-          apiConfigName: typeof record.apiConfigName === 'string' ? record.apiConfigName : undefined,
-          artStyle: String(record.artStyle ?? record['画风'] ?? ''),
-          assetId: String(record.id ?? ''),
-          width: Number(record.width) || undefined,
-          height: Number(record.height) || undefined,
-          backend: (record.backend as ImageBackendType | undefined) ?? undefined,
-          part: record.part as 'breast' | 'vagina' | 'anus' | undefined,
-          providerMeta: extractProviderMeta(record),
-        });
-      }
-    }
-  }
-
-  // Player archive
-  for (const record of getPlayerArchiveHistory()) {
-    entries.push({
-      key: `player_${record.id ?? record.createdAt}`,
-      type: 'character',
-      timestamp: Number(record.createdAt ?? 0),
-      id: String(record.id ?? ''),
-      name: playerName.value ?? t('image.scene.playerFallback'),
-      status: String(record.status ?? 'complete'),
-      positivePrompt: String(record.positivePrompt ?? ''),
-      negativePrompt: String(record.negativePrompt ?? ''),
-      composition: String(record.composition ?? ''),
-      model: record.model ?? undefined,
-      apiConfigName: record.apiConfigName ?? undefined,
-      assetId: String(record.id ?? ''),
-      width: Number(record.width) || undefined,
-      height: Number(record.height) || undefined,
-      backend: record.backend ?? undefined,
-      part: record.part ?? undefined,
-      providerMeta: extractProviderMeta(record as unknown as Record<string, unknown>),
-    });
-  }
-
-  // Scene archives
-  for (const record of sceneArchiveHistory.value) {
-    entries.push({
-      key: `scene_${record.id ?? record.createdAt}`,
-      type: 'scene',
-      timestamp: Number(record.createdAt ?? record['生成时间'] ?? 0),
-      id: String(record.id ?? ''),
-      name: t('image.history.typeScene'),
-      status: String(record.status ?? 'complete'),
-      positivePrompt: String(record.positivePrompt ?? record['最终正向提示词'] ?? ''),
-      negativePrompt: String(record.negativePrompt ?? record['最终负向提示词'] ?? ''),
-      model: String(record.model ?? record['使用模型'] ?? ''),
-      apiConfigName: typeof record.apiConfigName === 'string' ? record.apiConfigName : undefined,
-      assetId: String(record.id ?? ''),
-      taskId: String(record.taskId ?? ''),
-      width: Number(record.width) || undefined,
-      height: Number(record.height) || undefined,
-      backend: (record.backend as ImageBackendType | undefined) ?? undefined,
-      providerMeta: extractProviderMeta(record),
-    });
-  }
-
-  // Sort by timestamp descending (newest first)
-  entries.sort((a, b) => b.timestamp - a.timestamp);
-  return entries;
-});
-
-const filteredHistory = computed(() => {
-  let entries = combinedHistory.value;
-  const f = historyFilter.value;
-  if (f === 'character') entries = entries.filter((e) => e.type === 'character');
-  else if (f === 'scene') entries = entries.filter((e) => e.type === 'scene');
-  else if (f === 'complete') entries = entries.filter((e) => e.status === 'complete');
-  else if (f === 'failed') entries = entries.filter((e) => e.status === 'failed');
-  return entries;
-});
-
-function clearAllNpcHistory() {
-  if (!imageService || !Array.isArray(relationships.value)) return;
-  for (const npc of relationships.value) {
-    const name = String(npc['名称'] ?? '');
-    if (name) imageService.clearNpcHistory(name);
-  }
-  eventBus.emit('ui:toast', { type: 'info', message: t('image.toast.clearedAllNpcHistory'), duration: 1500 });
-}
-
-function clearAllSceneHistory() {
-  clearSceneHistory();
-}
-// Convert engine TransformerPromptPreset → UI RuleTemplate
-function enginePresetToRuleTemplate(p: TransformerPromptPreset): RuleTemplate {
-  const scopeMap: Record<string, 'npc' | 'scene' | 'judge'> = { npc: 'npc', scene: 'scene', scene_judge: 'judge' };
-  return {
-    id: p.id,
-    name: p.name,
-    scope: scopeMap[p.scope] ?? 'npc',
-    baseRule: p.prompt,
-    anchorRule: p.scope === 'scene' ? (p.sceneAnchorModePrompt ?? p.anchorModePrompt ?? '') : (p.anchorModePrompt ?? ''),
-    noAnchorFallback: p.noAnchorFallbackPrompt ?? '',
-    outputFormat: p.outputFormatPrompt ?? '',
-    transformerPresetId: '',
-  };
-}
-
-// Convert engine ModelTransformerBundle → UI ModelRuleset
-function engineBundleToModelRuleset(b: ModelTransformerBundle): ModelRuleset {
-  return {
-    id: b.id,
-    name: b.name,
-    enabled: b.enabled,
-    compatMode: false,
-    baseModelRule: b.modelPrompt,
-    anchorModeModelRule: b.anchorModeModelPrompt,
-    serializationStrategy: b.serializationStrategy,
-    npcTemplateId: b.npcPresetId,
-    sceneTemplateId: b.scenePresetId,
-    judgeTemplateId: b.sceneJudgePresetId,
-  };
-}
 
 onMounted(() => {
   const npcQuery = route.query.npc;
@@ -2900,272 +1945,53 @@ onMounted(() => {
   const packDefaults: TransformerDefaultsData | undefined = imageService?.getTransformerDefaults();
   const localeDefRulesets = getDefaultModelBundles(packDefaults).map(engineBundleToModelRuleset);
   const localeDefTemplates = getDefaultPresets(packDefaults).map(enginePresetToRuleTemplate);
-  const defaultRulesetIds = new Set(localeDefRulesets.map(r => r.id));
-  const defaultTemplateIds = new Set(localeDefTemplates.map(r => r.id));
 
-  const existingRulesets = get('系统.扩展.image.modelRulesets') as ModelRuleset[] | undefined;
-  if (!Array.isArray(existingRulesets) || existingRulesets.length === 0) {
-    setValue('系统.扩展.image.modelRulesets', localeDefRulesets);
-  } else {
-    const existingIds = new Set(existingRulesets.map(r => r.id));
-    const localeMap = new Map(localeDefRulesets.map(r => [r.id, r]));
-    const updated = existingRulesets.map(r => {
-      const localeVer = localeMap.get(r.id);
-      if (localeVer && defaultRulesetIds.has(r.id)) {
-        return { ...r, name: localeVer.name, baseModelRule: localeVer.baseModelRule, anchorModeModelRule: localeVer.anchorModeModelRule };
-      }
-      return r;
-    });
-    const missing = localeDefRulesets.filter(r => !existingIds.has(r.id));
-    if (missing.length > 0 || packDefaults) {
-      setValue('系统.扩展.image.modelRulesets', [...updated, ...missing]);
-    }
-  }
+  const rulesetPlan = reconcileBuiltins(get('系统.扩展.image.modelRulesets') as ModelRuleset[] | undefined, localeDefRulesets, packDefaults, mergeRulesetLocale);
+  if (rulesetPlan.write) setValue('系统.扩展.image.modelRulesets', rulesetPlan.value);
 
-  const existingTemplates = get('系统.扩展.image.ruleTemplates') as RuleTemplate[] | undefined;
-  if (!Array.isArray(existingTemplates) || existingTemplates.length === 0) {
-    setValue('系统.扩展.image.ruleTemplates', localeDefTemplates);
-  } else {
-    const existingIds = new Set(existingTemplates.map(r => r.id));
-    const localeMap = new Map(localeDefTemplates.map(r => [r.id, r]));
-    const updated = existingTemplates.map(r => {
-      const localeVer = localeMap.get(r.id);
-      if (localeVer && defaultTemplateIds.has(r.id)) {
-        return { ...r, name: localeVer.name, baseRule: localeVer.baseRule, anchorRule: localeVer.anchorRule, noAnchorFallback: localeVer.noAnchorFallback, outputFormat: localeVer.outputFormat };
-      }
-      return r;
-    });
-    const missing = localeDefTemplates.filter(r => !existingIds.has(r.id));
-    if (missing.length > 0 || packDefaults) {
-      setValue('系统.扩展.image.ruleTemplates', [...updated, ...missing]);
-    }
-  }
+  const templatePlan = reconcileBuiltins(get('系统.扩展.image.ruleTemplates') as RuleTemplate[] | undefined, localeDefTemplates, packDefaults, mergeTemplateLocale);
+  if (templatePlan.write) setValue('系统.扩展.image.ruleTemplates', templatePlan.value);
 });
 
-// Gallery state
-const galleryNpc = ref('');
-
-interface GalleryImage {
-  id: string;
-  createdAt: number | string;
-  composition?: string;
-  artStyle?: string;
-  model?: string;
-  apiConfigName?: string;
-  status?: 'complete' | 'failed' | 'generating' | 'pending' | 'tokenizing';
-  positivePrompt?: string;
-  negativePrompt?: string;
-  /** Populated for secret-part records so regen targets the right archive. */
-  part?: 'breast' | 'vagina' | 'anus';
-  /** Captured output dimensions — used to replay the same size on regen. */
-  width?: number;
-  height?: number;
-  /** Backend that produced the record; initial value when opening the regen modal. */
-  backend?: ImageBackendType;
-  providerMeta?: { civitai?: CivitaiLoraSnapshot; reference?: { mode: string; sourceAssetIds?: string[]; sourceAssetId?: string; denoiseStrength?: number; provider?: string } };
-}
-
-// Player archive for Gallery/History integration (__player__ pseudo-NPC)
-const PLAYER_ID = '__player__';
-const playerArchiveRaw = useValue<Record<string, unknown>>('角色.图片档案');
-const playerName = useValue<string>(DEFAULT_ENGINE_PATHS.playerName);
-
-function getArchiveHistory(npc: Record<string, unknown>): GalleryImage[] {
-  const archive = npc['图片档案'] as Record<string, unknown> | undefined;
-  if (!archive) return [];
-  const history = archive['生图历史'];
-  return Array.isArray(history) ? history as GalleryImage[] : [];
-}
-
-function getPlayerArchiveHistory(): GalleryImage[] {
-  const raw = playerArchiveRaw.value;
-  if (!raw || typeof raw !== 'object') return [];
-  const history = raw['生图历史'];
-  return Array.isArray(history) ? history as GalleryImage[] : [];
-}
-
-const npcsWithImages = computed(() => {
-  void imageUpdateTick.value;
-  const list = relationships.value;
-  const result: Array<Record<string, unknown>> = [];
-
-  // Include player as virtual NPC if they have images
-  if (getPlayerArchiveHistory().length > 0) {
-    result.push({ '名称': PLAYER_ID, '性别': '', '是否主要角色': true, '图片档案': playerArchiveRaw.value });
-  }
-
-  if (Array.isArray(list)) {
-    result.push(...list.filter((npc) => getArchiveHistory(npc).length > 0));
-  }
-  return result;
+const {
+  galleryNpc,
+  playerName,
+  getArchiveHistory,
+  getPlayerArchiveHistory,
+  npcsWithImages,
+  galleryImages,
+  galleryNpcData,
+  isCurrentAvatar,
+  isCurrentPortrait,
+  isCurrentBackground,
+  setAsAvatar,
+  setAsPortrait,
+  clearAvatar,
+  clearPortrait,
+  setAsBackground,
+  clearBackground,
+  setPersistentWallpaper,
+  clearPersistentWallpaper,
+  isPersistentWallpaper,
+  canSelectAvatar,
+  canSelectPortrait,
+  canSelectBackground,
+  canSelectSecretPart,
+  isCurrentSecretPart,
+  setAsSecretPart,
+  clearSecretPart,
+  deleteImage,
+  deleteNpcHistoryEntry,
+  clearNpcImages,
+} = useGallery({
+  useValue,
+  get,
+  t,
+  imageService,
+  relationships,
+  imageUpdateTick,
 });
 
-const galleryImages = computed(() => {
-  void imageUpdateTick.value;
-  if (!galleryNpc.value) return [];
-  if (galleryNpc.value === PLAYER_ID) {
-    return [...getPlayerArchiveHistory()].reverse();
-  }
-  if (!Array.isArray(relationships.value)) return [];
-  const npc = relationships.value.find((n) => n['名称'] === galleryNpc.value);
-  if (!npc) return [];
-  return [...getArchiveHistory(npc)].reverse();
-});
-
-const galleryNpcData = computed(() => {
-  if (!galleryNpc.value) return null;
-  if (galleryNpc.value === PLAYER_ID) {
-    return { '名称': playerName.value ?? t('image.scene.playerFallback'), '性别': '', '是否主要角色': true, '图片档案': playerArchiveRaw.value } as Record<string, unknown>;
-  }
-  if (!Array.isArray(relationships.value)) return null;
-  return relationships.value.find((n) => n['名称'] === galleryNpc.value) ?? null;
-});
-
-function getCurrentArchive(): Record<string, unknown> | undefined {
-  if (!galleryNpc.value) return undefined;
-  if (galleryNpc.value === PLAYER_ID) {
-    const raw = playerArchiveRaw.value;
-    return raw && typeof raw === 'object' ? raw as Record<string, unknown> : undefined;
-  }
-  if (!Array.isArray(relationships.value)) return undefined;
-  const npc = relationships.value.find((n) => n['名称'] === galleryNpc.value);
-  return npc?.['图片档案'] as Record<string, unknown> | undefined;
-}
-
-function isCurrentAvatar(assetId: string): boolean {
-  return getCurrentArchive()?.['已选头像图片ID'] === assetId;
-}
-
-function isCurrentPortrait(assetId: string): boolean {
-  return getCurrentArchive()?.['已选立绘图片ID'] === assetId;
-}
-
-function isCurrentBackground(assetId: string): boolean {
-  return getCurrentArchive()?.['已选背景图片ID'] === assetId;
-}
-
-function setAsAvatar(assetId: string) {
-  if (!imageService || !galleryNpc.value) return;
-  imageService.setNpcAvatar(galleryNpc.value, assetId);
-}
-
-function setAsPortrait(assetId: string) {
-  if (!imageService || !galleryNpc.value) return;
-  imageService.setNpcPortrait(galleryNpc.value, assetId);
-}
-
-function clearAvatar() {
-  if (!imageService || !galleryNpc.value) return;
-  imageService.clearNpcAvatar(galleryNpc.value);
-}
-
-function clearPortrait() {
-  if (!imageService || !galleryNpc.value) return;
-  imageService.clearNpcPortrait(galleryNpc.value);
-}
-
-function setAsBackground(assetId: string) {
-  if (!imageService || !galleryNpc.value) return;
-  imageService.setNpcBackground(galleryNpc.value, assetId);
-}
-
-function clearBackground() {
-  if (!imageService || !galleryNpc.value) return;
-  imageService.clearNpcBackground(galleryNpc.value);
-}
-
-function setPersistentWallpaper(assetId: string) {
-  if (!imageService) return;
-  imageService.state.setPersistentWallpaper(assetId);
-  eventBus.emit('ui:toast', { type: 'success', message: t('image.toast.setPersistentWallpaper'), duration: 1500 });
-}
-
-function clearPersistentWallpaper() {
-  if (!imageService) return;
-  imageService.state.clearPersistentWallpaper();
-  eventBus.emit('ui:toast', { type: 'info', message: t('image.toast.clearedPersistentWallpaper'), duration: 1500 });
-}
-
-const persistentWallpaperRaw = useValue<string>('系统.扩展.image.persistentWallpaper');
-const persistentWallpaper = computed(() => persistentWallpaperRaw.value ?? '');
-
-function isPersistentWallpaper(assetId: string): boolean {
-  const pw = persistentWallpaper.value;
-  return Boolean(pw && pw === assetId);
-}
-
-// Selection button eligibility.
-//
-// Previously gated on composition (portrait → avatar only; half-body/full-length
-// → portrait only). That blocked the "generate 同款 then swap avatar" flow:
-// when the regen uses a different composition (or composition wasn't recorded
-// on the original), the new image had no button, and the currently-set card's
-// cancel button also disappeared because its composition didn't match the new
-// gate. We now accept any complete non-secret image — secret-part images are
-// still excluded because they're close-ups and make poor avatars.
-//
-// The composition field stays on the record for display/badging; it just no
-// longer blocks the selection actions.
-function canSelectAvatar(img: GalleryImage): boolean {
-  return img.status === 'complete' && img.composition !== 'secret_part';
-}
-
-function canSelectPortrait(img: GalleryImage): boolean {
-  return img.status === 'complete' && img.composition !== 'secret_part';
-}
-
-function canSelectBackground(img: GalleryImage): boolean {
-  return img.status === 'complete';
-}
-
-function canSelectSecretPart(img: GalleryImage): boolean {
-  if (img.status !== 'complete') return false;
-  if (get('系统.nsfwMode') !== true) return false;
-  const npcData = galleryNpcData.value;
-  if (!npcData) return false;
-  const gender = String(npcData['性别'] ?? '');
-  return !gender.includes('男');
-}
-
-function isCurrentSecretPart(assetId: string, part: SecretPartType): boolean {
-  void imageUpdateTick.value;
-  const archive = getCurrentArchive();
-  const secretArchive = archive?.['香闺秘档'] as Record<string, unknown> | undefined;
-  if (!secretArchive) return false;
-  const cnKey = part === 'breast' ? '胸部' : part === 'vagina' ? '小穴' : '屁穴';
-  const entry = secretArchive[cnKey] as Record<string, unknown> | undefined;
-  return typeof entry?.id === 'string' && entry.id === assetId;
-}
-
-function setAsSecretPart(assetId: string, part: SecretPartType) {
-  if (!imageService || !galleryNpc.value) return;
-  imageService.setNpcSecretPart(galleryNpc.value, part, assetId);
-  imageUpdateTick.value++;
-  const label = part === 'breast' ? t('image.gallery.action.partBreast') : part === 'vagina' ? t('image.gallery.action.partVagina') : t('image.gallery.action.partAnus');
-  eventBus.emit('ui:toast', { type: 'success', message: t('image.gallery.toast.setSecretPart', { part: label }), duration: 1500 });
-}
-
-function clearSecretPart(part: SecretPartType) {
-  if (!imageService || !galleryNpc.value) return;
-  imageService.clearNpcSecretPart(galleryNpc.value, part);
-  imageUpdateTick.value++;
-}
-
-function deleteImage(assetId: string) {
-  if (!galleryNpc.value || !imageService) return;
-  imageService.deleteNpcImage(galleryNpc.value, assetId);
-}
-
-function deleteNpcHistoryEntry(npcName: string, imageId: string) {
-  if (!imageService) return;
-  imageService.deleteNpcImage(npcName, imageId);
-}
-
-function clearNpcImages() {
-  if (!galleryNpc.value || !imageService) return;
-  imageService.clearNpcHistory(galleryNpc.value);
-  eventBus.emit('ui:toast', { type: 'info', message: t('image.toast.clearedNpcImages', { name: galleryNpc.value }), duration: 1500 });
-}
 </script>
 
 <template>
