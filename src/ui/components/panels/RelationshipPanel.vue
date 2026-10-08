@@ -27,7 +27,11 @@ import { eventBus } from '@/engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import { formatMemoryEntry } from '@/engine/social/npc-memory-format';
 import NpcMemoryTimeline from '@/ui/components/shared/NpcMemoryTimeline.vue';
-import type { MemorySummary } from '@/ui/components/shared/NpcMemoryTimeline.vue';
+import {
+  npcToEditForm, emptyEditForm, newEditForm, editFormToNpcData,
+  type NpcRelation, type NpcEditForm,
+} from '@/ui/composables/relationship/npc-edit-form';
+import { compareBySortMode, type SortMode } from '@/ui/composables/relationship/npc-roster';
 import ImageDisplay from '@/ui/components/image/ImageDisplay.vue';
 import ImageViewer from '@/ui/components/image/ImageViewer.vue';
 import { useRouter, useRoute } from 'vue-router';
@@ -36,72 +40,6 @@ import { useNpcEditor } from '@/ui/composables/editors';
 const { t } = useI18n();
 const { isLoaded, useValue, get } = useGameState();
 const npcEditor = useNpcEditor();
-
-/** 身体部位条目 */
-interface BodyPartEntry {
-  部位名称?: string;
-  敏感度?: number;
-  开发度?: number;
-  特征描述?: string;
-  特殊印记?: string;
-  已选背景图片ID?: string;
-}
-
-/** NPC 私密信息子对象 */
-interface PrivacyProfile {
-  '是否为处女/处男'?: boolean;
-  身体部位?: BodyPartEntry[];
-  性格倾向?: string;
-  性取向?: string;
-  性癖好?: string[];
-  性渴望程度?: number;
-  当前性状态?: string;
-  体液分泌状态?: string;
-  性交总次数?: number;
-  性伴侣名单?: string[];
-  最近一次性行为时间?: string;
-  特殊体质?: string[];
-  /** 初夜夺取者（非处女/处男时必填）— 人名或 '未知'/情境描述 */
-  初夜夺取者?: string;
-  /** 初夜时间（非处女/处男时必填）— 游戏内时间戳或自然描述 */
-  初夜时间?: string;
-  /** 初夜描述（非处女/处男时必填）— 50-200 字情境描写 */
-  初夜描述?: string;
-  [key: string]: unknown;
-}
-
-/** 私聊历史条目（与 NpcChatMessage 对齐） */
-interface ChatHistoryEntry {
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: number;
-}
-
-/** NPC relationship entry shape */
-interface NpcRelation {
-  名称: string;
-  类型?: string;
-  好感度?: number;
-  位置?: string;
-  描述?: string;
-  外貌描述?: string;
-  身材描写?: string;
-  衣着风格?: string;
-  性别?: string;
-  年龄?: number;
-  背景?: string;
-  内心想法?: string;
-  在做事项?: string;
-  性格特征?: string[];
-  记忆?: string[];
-  私密信息?: PrivacyProfile;
-  私聊历史?: ChatHistoryEntry[];
-  图片档案?: Record<string, string | undefined>;
-  总结记忆?: MemorySummary[];
-  关注?: boolean;
-  心跳锁定?: boolean;
-  [key: string]: unknown;
-}
 
 /** NSFW 是否开启（读状态树） */
 const nsfwEnabled = computed(() => get<boolean>('系统.nsfwMode') === true);
@@ -112,7 +50,6 @@ const relationships = useValue<NpcRelation[]>(DEFAULT_ENGINE_PATHS.relationships
 
 const searchQuery = ref('');
 
-type SortMode = 'name' | 'affinity' | 'gender' | 'importance' | 'recent' | 'location' | 'presence';
 const SORT_KEY = 'aga_rel_sort';
 const SORT_DIR_KEY = 'aga_rel_sort_dir';
 
@@ -144,56 +81,13 @@ function setSortMode(mode: SortMode): void {
   localStorage.setItem(SORT_DIR_KEY, sortAsc.value ? 'asc' : 'desc');
 }
 
-function compareBySortMode(a: NpcRelation, b: NpcRelation): number {
-  switch (sortMode.value) {
-    case 'affinity':
-      return (b.好感度 ?? 0) - (a.好感度 ?? 0);
-    case 'gender': {
-      const ga = a.性别 ?? '';
-      const gb = b.性别 ?? '';
-      if (ga !== gb) return ga.localeCompare(gb);
-      return (a.名称 ?? '').localeCompare(b.名称 ?? '');
-    }
-    case 'importance': {
-      const am = a['是否主要角色'] ? 1 : 0;
-      const bm = b['是否主要角色'] ? 1 : 0;
-      if (am !== bm) return bm - am;
-      return (a.名称 ?? '').localeCompare(b.名称 ?? '');
-    }
-    case 'recent': {
-      const ta = a['最后互动时间'] as string | undefined;
-      const tb = b['最后互动时间'] as string | undefined;
-      if (ta && !tb) return -1;
-      if (!ta && tb) return 1;
-      if (ta && tb) return tb.localeCompare(ta);
-      return (a.名称 ?? '').localeCompare(b.名称 ?? '');
-    }
-    case 'location': {
-      const la = (a.位置 ?? '') as string;
-      const lb = (b.位置 ?? '') as string;
-      if (la && !lb) return -1;
-      if (!la && lb) return 1;
-      if (la !== lb) return la.localeCompare(lb);
-      return (a.名称 ?? '').localeCompare(b.名称 ?? '');
-    }
-    case 'presence': {
-      const pa = a['是否在场'] ? 1 : 0;
-      const pb = b['是否在场'] ? 1 : 0;
-      if (pa !== pb) return pb - pa;
-      return (a.名称 ?? '').localeCompare(b.名称 ?? '');
-    }
-    default:
-      return (a.名称 ?? '').localeCompare(b.名称 ?? '');
-  }
-}
-
 const filteredRelations = computed<NpcRelation[]>(() => {
   const list = Array.isArray(relationships.value) ? [...relationships.value] : [];
   const dir = sortAsc.value ? 1 : -1;
   list.sort((a, b) => {
     if (a.关注 && !b.关注) return -1;
     if (!a.关注 && b.关注) return 1;
-    return compareBySortMode(a, b) * dir;
+    return compareBySortMode(sortMode.value, a, b) * dir;
   });
   if (!searchQuery.value.trim()) return list;
   const q = searchQuery.value.trim().toLowerCase();
@@ -347,50 +241,6 @@ watch(() => route.query.npc, (name) => {
 const showChatModal = ref(false);
 const chatNpc = ref<NpcRelation | null>(null);
 
-interface RelationNetworkEntry {
-  对象: string;
-  关系: string;
-  备注: string;
-}
-
-interface MemorySummaryEntry {
-  摘要: string;
-  涵盖范围: string;
-  生成时间: string;
-}
-
-interface NpcEditForm {
-  名称: string;
-  类型: string;
-  好感度: number;
-  位置: string;
-  描述: string;
-  外貌描述: string;
-  身材描写: string;
-  衣着风格: string;
-  性别: string;
-  年龄: number;
-  背景: string;
-  内心想法: string;
-  在做事项: string;
-  性格特征: string[];
-  记忆: string[];
-  关注: boolean;
-  心跳锁定: boolean;
-  私密信息: PrivacyProfile;
-  核心性格特征: string;
-  关系状态: string;
-  好感度突破条件: string;
-  关系突破条件: string;
-  关系网变量: RelationNetworkEntry[];
-  总结记忆: MemorySummaryEntry[];
-}
-
-function clonePrivacy(p?: PrivacyProfile): PrivacyProfile {
-  if (!p) return {};
-  return JSON.parse(JSON.stringify(p)) as PrivacyProfile;
-}
-
 /** The 4 mandatory body-part names (matches PrivacyProfileValidator contract). */
 const REQUIRED_BODY_PARTS = ['嘴', '胸部', '小穴', '屁穴'] as const;
 
@@ -452,32 +302,7 @@ function isNonVirgin(): boolean {
   return editForm.value.私密信息['是否为处女/处男'] === false;
 }
 
-const editForm = ref<NpcEditForm>({
-  名称: '',
-  类型: '',
-  好感度: 50,
-  位置: '',
-  描述: '',
-  外貌描述: '',
-  身材描写: '',
-  衣着风格: '',
-  性别: '',
-  年龄: 20,
-  背景: '',
-  内心想法: '',
-  在做事项: '',
-  性格特征: [],
-  记忆: [],
-  关注: false,
-  心跳锁定: false,
-  私密信息: {},
-  核心性格特征: '',
-  关系状态: '',
-  好感度突破条件: '',
-  关系突破条件: '',
-  关系网变量: [],
-  总结记忆: [],
-});
+const editForm = ref<NpcEditForm>(emptyEditForm());
 const editIndex = ref<number>(-1);
 
 /** 新增性格特征输入缓冲 — UI 独立字段，不存入 form */
@@ -489,36 +314,7 @@ function openEdit(npc: NpcRelation, _filteredIdx: number): void {
   selectedNpc.value = npc;
   const rawList = Array.isArray(relationships.value) ? relationships.value : [];
   editIndex.value = rawList.findIndex((r) => r.名称 === npc.名称);
-  editForm.value = {
-    名称: npc.名称 ?? '',
-    类型: npc.类型 ?? '',
-    好感度: typeof npc.好感度 === 'number' ? npc.好感度 : 50,
-    位置: npc.位置 ?? '',
-    描述: npc.描述 ?? '',
-    外貌描述: npc.外貌描述 ?? '',
-    身材描写: npc.身材描写 ?? '',
-    衣着风格: npc.衣着风格 ?? '',
-    性别: npc.性别 ?? '',
-    年龄: typeof npc.年龄 === 'number' ? npc.年龄 : 20,
-    背景: npc.背景 ?? '',
-    内心想法: npc.内心想法 ?? '',
-    在做事项: npc.在做事项 ?? '',
-    性格特征: Array.isArray(npc.性格特征) ? [...npc.性格特征] : [],
-    记忆: Array.isArray(npc.记忆) ? [...npc.记忆] : [],
-    关注: npc.关注 === true,
-    心跳锁定: npc.心跳锁定 === true,
-    私密信息: clonePrivacy(npc.私密信息),
-    核心性格特征: (npc[npcFields.corePersonality] as string) ?? '',
-    关系状态: (npc[npcFields.relationshipStatus] as string) ?? '',
-    好感度突破条件: (npc[npcFields.affinityBreakthrough] as string) ?? '',
-    关系突破条件: (npc[npcFields.relationshipBreakthrough] as string) ?? '',
-    关系网变量: Array.isArray(npc[npcFields.relationshipNetwork])
-      ? (npc[npcFields.relationshipNetwork] as RelationNetworkEntry[]).map(e => ({ ...e, 备注: e.备注 ?? '' }))
-      : [],
-    总结记忆: Array.isArray(npc[npcFields.memorySummaries])
-      ? (npc[npcFields.memorySummaries] as MemorySummaryEntry[]).map(e => ({ ...e }))
-      : [],
-  };
+  editForm.value = npcToEditForm(npc, npcFields);
   if (nsfwEnabled.value) seedRequiredBodyParts();
   newTraitInput.value = '';
   newMemoryInput.value = '';
@@ -528,32 +324,7 @@ function openEdit(npc: NpcRelation, _filteredIdx: number): void {
 function openAddNew(): void {
   selectedNpc.value = null;
   editIndex.value = -1;
-  editForm.value = {
-    名称: '',
-    类型: '普通',
-    好感度: 50,
-    位置: '',
-    描述: '',
-    外貌描述: '',
-    身材描写: '',
-    衣着风格: '',
-    性别: '',
-    年龄: 20,
-    背景: '',
-    内心想法: '',
-    在做事项: '',
-    性格特征: [],
-    记忆: [],
-    关注: false,
-    心跳锁定: false,
-    私密信息: {},
-    核心性格特征: '',
-    关系状态: '',
-    好感度突破条件: '',
-    关系突破条件: '',
-    关系网变量: [],
-    总结记忆: [],
-  };
+  editForm.value = newEditForm();
   if (nsfwEnabled.value) seedRequiredBodyParts();
   newTraitInput.value = '';
   newMemoryInput.value = '';
@@ -562,32 +333,7 @@ function openAddNew(): void {
 
 function saveNpc(): void {
   const f = editForm.value;
-  const formData: Record<string, unknown> = {
-    名称: f.名称,
-    类型: f.类型,
-    好感度: f.好感度,
-    位置: f.位置,
-    描述: f.描述,
-    外貌描述: f.外貌描述,
-    身材描写: f.身材描写,
-    衣着风格: f.衣着风格,
-    性别: f.性别,
-    年龄: f.年龄,
-    背景: f.背景,
-    内心想法: f.内心想法,
-    在做事项: f.在做事项,
-    性格特征: f.性格特征,
-    记忆: f.记忆,
-    关注: f.关注,
-    心跳锁定: f.心跳锁定,
-    私密信息: f.私密信息,
-    [npcFields.corePersonality]: f.核心性格特征,
-    [npcFields.relationshipStatus]: f.关系状态,
-    [npcFields.affinityBreakthrough]: f.好感度突破条件,
-    [npcFields.relationshipBreakthrough]: f.关系突破条件,
-    [npcFields.relationshipNetwork]: f.关系网变量,
-    [npcFields.memorySummaries]: f.总结记忆,
-  };
+  const formData = editFormToNpcData(f, npcFields);
   const result = npcEditor.save(editIndex.value, formData as import('@/ui/composables/editors').NpcFormData);
   if (result.ok) {
     showEditModal.value = false;
