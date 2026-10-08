@@ -18,6 +18,8 @@
  * 对应 STEP-03B M3.6 Engram 数据流（EntityBuilder 阶段）。
  */
 import type { EngramEventNode, EngramStateReader } from './event-builder';
+import { DEFAULT_ENGINE_PATHS } from '../../pipeline/types';
+import { TIANMING_LEGACY_NPC_KEYS } from '../../pack/tianming-coupling';
 
 // ─── 类型定义 ───
 
@@ -126,6 +128,7 @@ export class EntityBuilder {
     options?: { includeAllNpcTypes?: boolean },
   ): EngramEntity[] {
     const entityMap: EntityMap = new Map();
+    const F = DEFAULT_ENGINE_PATHS.npcFieldNames;
 
     // ── 1. 玩家 ──
     const playerName = stateManager.get<string>(paths.playerName) || '玩家';
@@ -136,13 +139,14 @@ export class EntityBuilder {
     if (Array.isArray(relationships)) {
       for (const npc of relationships) {
         if (!npc || typeof npc !== 'object') continue;
-        const name = typeof npc.名称 === 'string' ? npc.名称.trim() : '';
+        const rawName = npc[F.name];
+        const name = typeof rawName === 'string' ? rawName.trim() : '';
         if (!name) continue;
-        if (!options?.includeAllNpcTypes && npc.类型 === '普通') continue;
+        if (!options?.includeAllNpcTypes && npc[F.type] === DEFAULT_ENGINE_PATHS.npcTypeExclude) continue;
         const description = this.buildNpcDescription(npc, paths.npcDescriptionFields);
         this.upsertEntity(entityMap, name, 'npc', 0, description, {
-          relationToPlayer: npc.关系状态 ?? npc.与玩家关系,
-          location: npc.位置,
+          relationToPlayer: npc[F.relationshipStatus] ?? npc[TIANMING_LEGACY_NPC_KEYS.relationToPlayer],
+          location: npc[F.location],
           source: 'relationship',
         });
       }

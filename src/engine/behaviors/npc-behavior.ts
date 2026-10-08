@@ -33,6 +33,7 @@
 import type { BehaviorModule } from './types';
 import type { StateManager } from '../core/state-manager';
 import type { ChangeLog, NpcBehaviorConfig } from '../types';
+import { TIANMING_LEGACY_NPC_KEYS } from '../pack/tianming-coupling';
 
 /** NPC 行为配置的路径扩展 — 玩家位置和 NPC 列表由外部注入 */
 interface NpcBehaviorPathConfig {
@@ -110,7 +111,7 @@ export class NpcBehaviorModule implements BehaviorModule {
 
     for (let i = 0; i < npcs.length; i++) {
       const npc = npcs[i];
-      const npcLocation = String(npc['当前位置'] ?? npc['currentLocation'] ?? '');
+      const npcLocation = String(npc[TIANMING_LEGACY_NPC_KEYS.locationAlias] ?? npc['currentLocation'] ?? '');
 
       // 只处理在玩家旧位置的 NPC
       if (npcLocation !== oldLocation) continue;
@@ -121,7 +122,7 @@ export class NpcBehaviorModule implements BehaviorModule {
       if (!typeConfig) continue;
 
       const npcName = String(npc['名称'] ?? npc['name'] ?? `NPC_${i}`);
-      const locationField = npc['当前位置'] !== undefined ? '当前位置' : 'currentLocation';
+      const locationField = npc[TIANMING_LEGACY_NPC_KEYS.locationAlias] !== undefined ? TIANMING_LEGACY_NPC_KEYS.locationAlias : 'currentLocation';
       const npcPath = `${npcListPath}[${i}].${locationField}`;
 
       switch (typeConfig.onPlayerLeave) {

@@ -108,6 +108,7 @@ import type { TtsService } from '../tts/tts-service';
 import type { PrivacyIncompleteReport } from '../validators/privacy-profile-validator';
 import type { OpeningStages } from '../pipeline/sub-pipelines/enhanced-opening';
 import { SYSTEM_PATHS } from '../pipeline/system-paths';
+import { TIANMING_GENDER_VALUES, TIANMING_IMAGE_ARCHIVE_KEYS, TIANMING_LEGACY_NPC_KEYS } from '../pack/tianming-coupling';
 
 /**
  * 子管线包 — 由 main.ts 在 bootstrap 期间构造并注入 GameOrchestrator。
@@ -990,18 +991,18 @@ export class GameOrchestrator {
             const isMajor = npc[npcFields.isMajorRole] === true;
             if (importanceFilter === 'major' && !isMajor) continue;
             const gender = String(npc[npcFields.gender] ?? '');
-            if (genderFilter === 'male' && gender !== '男') continue;
-            if (genderFilter === 'female' && gender !== '女') continue;
+            if (genderFilter === 'male' && gender !== TIANMING_GENDER_VALUES.male) continue;
+            if (genderFilter === 'female' && gender !== TIANMING_GENDER_VALUES.female) continue;
 
-            const archive = npc['图片档案'] as Record<string, unknown> | undefined;
-            const hasAvatar = !!archive?.['已选头像图片ID'];
+            const archive = npc[DEFAULT_ENGINE_PATHS.npcFieldNames.imageArchive] as Record<string, unknown> | undefined;
+            const hasAvatar = !!archive?.[TIANMING_IMAGE_ARCHIVE_KEYS.selectedAvatarId];
             if (hasAvatar) continue;
 
             // No avatar yet — auto-generate
             this.subPipelines.imageService.generateCharacterImage({
               characterName: name,
-              description: String(npc['描述'] ?? ''),
-              appearance: String(npc['外貌描写'] ?? npc['描述'] ?? ''),
+              description: String(npc[DEFAULT_ENGINE_PATHS.npcFieldNames.description] ?? ''),
+              appearance: String(npc[TIANMING_LEGACY_NPC_KEYS.appearanceAlias] ?? npc[DEFAULT_ENGINE_PATHS.npcFieldNames.description] ?? ''),
               backend: defaultBackend,
               artStyle: npcArtStyle,
             }).then(() => {

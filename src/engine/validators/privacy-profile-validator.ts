@@ -23,6 +23,7 @@ import type { StateManager } from '../core/state-manager';
 import type { EnginePathConfig } from '../pipeline/types';
 import { SYSTEM_PATHS } from '../pipeline/system-paths';
 import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
+import { TIANMING_GENDER_VALUES, TIANMING_PLAYER_BODY_REQUIRED_FIELDS, TIANMING_PLAYER_BODY_SHAPE, TIANMING_PRIVACY_BODY_PARTS, TIANMING_PRIVACY_NON_VIRGIN_FIELDS, TIANMING_PRIVACY_PARTNER_LIST_FIELD, TIANMING_PRIVACY_PLACEHOLDERS, TIANMING_PRIVACY_REQUIRED_FIELDS, TIANMING_PRIVACY_REQUIRED_PART_NAMES, TIANMING_PRIVACY_VIRGIN_FIELD } from '../pack/tianming-coupling';
 
 /** 性别过滤器类型 — 与 demo nsfw.ts NsfwGenderFilter 同义 */
 export type NsfwGenderFilter = 'all' | 'male' | 'female';
@@ -43,16 +44,7 @@ export interface PrivacyIncompleteReport {
  * 注意：`身体部位` 是数组，空数组视为不完整；`性伴侣名单` 允许空数组
  * （当 是否为处女/处男=true 时是合规的空状态）。
  */
-const NPC_REQUIRED_FIELDS = [
-  '是否为处女/处男',
-  '身体部位',
-  '性格倾向',
-  '性取向',
-  '性癖好',
-  '性渴望程度',
-  '性交总次数',
-  '性伴侣名单',
-] as const;
+const NPC_REQUIRED_FIELDS = TIANMING_PRIVACY_REQUIRED_FIELDS;
 
 /**
  * 身体部位数组中必须包含的 4 个固定部位名称（精确匹配）。
@@ -61,7 +53,7 @@ const NPC_REQUIRED_FIELDS = [
  * `generateSecretPartImage` 的稳定查找键，必须存在。PrivacyProfileRepairPipeline
  * 会在缺失时重新生成。
  */
-const REQUIRED_BODY_PART_NAMES = ['嘴', '胸部', '小穴', '屁穴'] as const;
+const REQUIRED_BODY_PART_NAMES = TIANMING_PRIVACY_REQUIRED_PART_NAMES;
 
 /**
  * 非处女/处男时追加必填的 3 个初夜字段。
@@ -69,20 +61,13 @@ const REQUIRED_BODY_PART_NAMES = ['嘴', '胸部', '小穴', '屁穴'] as const;
  * 条件逻辑：`是否为处女/处男 === false` → 这 3 个字段都必须非空。
  * `true` 时这些字段可缺失或为空。
  */
-const NON_VIRGIN_REQUIRED_FIELDS = [
-  '初夜夺取者',
-  '初夜时间',
-  '初夜描述',
-] as const;
+const NON_VIRGIN_REQUIRED_FIELDS = TIANMING_PRIVACY_NON_VIRGIN_FIELDS;
 
 /** 玩家 角色.身体 必填字段 */
-const PLAYER_BODY_REQUIRED_FIELDS = [
-  '身高',
-  '体重',
-  '三围',
-  '敏感点',
-  '开发度',
-] as const;
+const PLAYER_BODY_REQUIRED_FIELDS = TIANMING_PLAYER_BODY_REQUIRED_FIELDS;
+
+/** Sub-keys of the three-size object, in the order the checks ran. */
+const [SIZE_BUST_KEY, SIZE_WAIST_KEY, SIZE_HIP_KEY] = TIANMING_PLAYER_BODY_SHAPE.sizeKeys;
 
 /**
  * 判断一个 `私密信息` 对象是否完整
@@ -114,25 +99,25 @@ export function isPrivacyProfileComplete(obj: unknown): boolean {
       if (Number.isNaN(val)) return false;
     } else if (Array.isArray(val)) {
       // 性伴侣名单允许空数组（处女/处男状态）
-      if (val.length === 0 && field !== '性伴侣名单') return false;
+      if (val.length === 0 && field !== TIANMING_PRIVACY_PARTNER_LIST_FIELD) return false;
     }
   }
 
   // 身体部位必须包含 4 个固定部位名称（嘴/胸部/小穴/屁穴）。
   // AI 可追加更多条目；此处仅保证固定 4 项存在且其 '特征描述' 非空/占位。
-  const parts = data['身体部位'];
+  const parts = data[TIANMING_PRIVACY_BODY_PARTS.field];
   if (!Array.isArray(parts)) return false;
   for (const requiredName of REQUIRED_BODY_PART_NAMES) {
     const match = parts.find((p) =>
-      p && typeof p === 'object' && (p as Record<string, unknown>)['部位名称'] === requiredName,
+      p && typeof p === 'object' && (p as Record<string, unknown>)[TIANMING_PRIVACY_BODY_PARTS.nameKey] === requiredName,
     ) as Record<string, unknown> | undefined;
     if (!match) return false;
-    const desc = match['特征描述'];
+    const desc = match[TIANMING_PRIVACY_BODY_PARTS.descriptionKey];
     if (typeof desc !== 'string' || desc.trim() === '' || isPlaceholder(desc)) return false;
   }
 
   // 非处女/处男时，初夜 3 字段必填。处女/处男时可缺失。
-  if (data['是否为处女/处男'] === false) {
+  if (data[TIANMING_PRIVACY_VIRGIN_FIELD] === false) {
     for (const field of NON_VIRGIN_REQUIRED_FIELDS) {
       const val = data[field];
       if (typeof val !== 'string') return false;
@@ -159,15 +144,15 @@ export function isPlayerBodyComplete(obj: unknown): boolean {
     const val = data[field];
     if (val === undefined || val === null) return false;
 
-    if (field === '三围') {
+    if (field === TIANMING_PLAYER_BODY_SHAPE.sizes) {
       if (typeof val !== 'object' || Array.isArray(val)) return false;
       const size = val as Record<string, unknown>;
-      if (typeof size['胸围'] !== 'number' || Number.isNaN(size['胸围'] as number)) return false;
-      if (typeof size['腰围'] !== 'number' || Number.isNaN(size['腰围'] as number)) return false;
-      if (typeof size['臀围'] !== 'number' || Number.isNaN(size['臀围'] as number)) return false;
-    } else if (field === '敏感点') {
+      if (typeof size[SIZE_BUST_KEY] !== 'number' || Number.isNaN(size[SIZE_BUST_KEY] as number)) return false;
+      if (typeof size[SIZE_WAIST_KEY] !== 'number' || Number.isNaN(size[SIZE_WAIST_KEY] as number)) return false;
+      if (typeof size[SIZE_HIP_KEY] !== 'number' || Number.isNaN(size[SIZE_HIP_KEY] as number)) return false;
+    } else if (field === TIANMING_PLAYER_BODY_SHAPE.sensitivePoints) {
       if (!Array.isArray(val) || val.length === 0) return false;
-    } else if (field === '开发度') {
+    } else if (field === TIANMING_PLAYER_BODY_SHAPE.development) {
       if (typeof val !== 'object' || Array.isArray(val)) return false;
       if (Object.keys(val as Record<string, unknown>).length === 0) return false;
     } else if (typeof val === 'string') {
@@ -188,9 +173,9 @@ function npcMatchesGenderFilter(
   filter: NsfwGenderFilter,
 ): boolean {
   if (filter === 'all') return true;
-  const gender = String(npc['性别'] ?? '');
-  if (filter === 'female') return gender === '女' || gender.toLowerCase() === 'female';
-  if (filter === 'male') return gender === '男' || gender.toLowerCase() === 'male';
+  const gender = String(npc[DEFAULT_ENGINE_PATHS.npcFieldNames.gender] ?? '');
+  if (filter === 'female') return gender === TIANMING_GENDER_VALUES.female || gender.toLowerCase() === 'female';
+  if (filter === 'male') return gender === TIANMING_GENDER_VALUES.male || gender.toLowerCase() === 'male';
   return false;
 }
 
@@ -256,9 +241,9 @@ export function findIncompletePrivacy(
       if (!npc || typeof npc !== 'object') continue;
       if (!npcMatchesGenderFilter(npc, genderFilter)) continue;
 
-      const privacy = npc['私密信息'];
+      const privacy = npc[DEFAULT_ENGINE_PATHS.npcFieldNames.privacyProfile];
       if (!isPrivacyProfileComplete(privacy)) {
-        const name = String(npc['名称'] ?? '').trim();
+        const name = String(npc[DEFAULT_ENGINE_PATHS.npcFieldNames.name] ?? '').trim();
         if (name) npcNames.push(name);
       }
     }
@@ -288,7 +273,7 @@ export function findIncompletePrivacy(
  * 这里的名单基于 demo 提示词明确禁止的词。
  */
 function isPlaceholder(s: string): boolean {
-  const PLACEHOLDERS = ['待生成', '待ai生成', '暂无', '无', '未知', '未定义', 'tbd', 'todo', 'placeholder'];
+  const PLACEHOLDERS: readonly string[] = TIANMING_PRIVACY_PLACEHOLDERS;
   const lower = s.toLowerCase().trim();
   return PLACEHOLDERS.includes(lower);
 }

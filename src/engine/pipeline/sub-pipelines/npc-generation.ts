@@ -36,6 +36,7 @@ import {
   extractThinkingFromRaw,
 } from '../../core/prompt-debug';
 import { SYSTEM_PATHS } from '../system-paths';
+import { TIANMING_LEGACY_NPC_KEYS } from '../../pack/tianming-coupling';
 
 export class NpcGenerationPipeline {
   constructor(
@@ -140,7 +141,7 @@ export class NpcGenerationPipeline {
     const globalNpcs = this.findGlobalNpcList();
     if (globalNpcs) {
       const hasNpcAtLocation = globalNpcs.some((npc) => {
-        const npcLoc = String(npc['当前位置'] ?? npc['currentLocation'] ?? '');
+        const npcLoc = String(npc[TIANMING_LEGACY_NPC_KEYS.locationAlias] ?? npc['currentLocation'] ?? '');
         return npcLoc === locationName;
       });
       if (hasNpcAtLocation) return true;
