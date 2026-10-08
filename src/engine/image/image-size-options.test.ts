@@ -3,7 +3,6 @@ import {
   COMMON_SIZE_OPTIONS,
   SCENE_PORTRAIT_SIZE_OPTIONS,
   SCENE_LANDSCAPE_SIZE_OPTIONS,
-  COMPOSITION_DEFAULT_SIZES,
   parseSizeString,
   sizeOptionsToSelectOptions,
 } from './image-size-options';
@@ -62,16 +61,6 @@ describe('image-size-options', () => {
           expect(opt.width).toBeGreaterThanOrEqual(opt.height);
         }
       }
-    });
-  });
-
-  describe('COMPOSITION_DEFAULT_SIZES', () => {
-    it('has entries for all standard compositions', () => {
-      expect(COMPOSITION_DEFAULT_SIZES.portrait).toEqual({ width: 1024, height: 1024 });
-      expect(COMPOSITION_DEFAULT_SIZES['half-body']).toEqual({ width: 768, height: 1024 });
-      expect(COMPOSITION_DEFAULT_SIZES['full-length']).toEqual({ width: 832, height: 1216 });
-      expect(COMPOSITION_DEFAULT_SIZES.scene).toEqual({ width: 1024, height: 576 });
-      expect(COMPOSITION_DEFAULT_SIZES.secret_part).toEqual({ width: 1024, height: 1024 });
     });
   });
 

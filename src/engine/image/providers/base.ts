@@ -1,10 +1,8 @@
 // App doc: docs/user-guide/pages/game-image.md §后台生成保护机制（请求超时保护）
 /**
- * Base image provider — abstract stub for Sprint Image-1.
- *
- * Each concrete provider (NovelAI, OpenAI DALL-E, SD-WebUI, ComfyUI) extends
- * this class. In Image-1 all methods throw NotImplementedError; real
- * implementations arrive in Image-5.
+ * Base image provider — abstract base for every concrete image backend
+ * (NovelAI, OpenAI, SD-WebUI, ComfyUI, Civitai, Volcengine). Each subclass
+ * implements generate() and testConnection().
  */
 import type { ImageProvider, ImageBackendType } from '../types';
 
@@ -18,13 +16,6 @@ import type { ImageProvider, ImageBackendType } from '../types';
 export const IMAGE_GENERATE_TIMEOUT_MS = 300_000;
 export const IMAGE_DOWNLOAD_TIMEOUT_MS = 60_000;
 
-export class NotImplementedError extends Error {
-  constructor(backend: string, method: string) {
-    super(`[Image] ${backend}.${method}() is not implemented yet (Sprint Image-5)`);
-    this.name = 'NotImplementedError';
-  }
-}
-
 export abstract class BaseImageProvider implements ImageProvider {
   abstract readonly backend: ImageBackendType;
 
@@ -34,17 +25,13 @@ export abstract class BaseImageProvider implements ImageProvider {
     protected model?: string,
   ) {}
 
-  async generate(
-    _prompt: string,
-    _negative: string,
-    _width: number,
-    _height: number,
-    _options?: Record<string, unknown>,
-  ): Promise<Blob> {
-    throw new NotImplementedError(this.backend, 'generate');
-  }
+  abstract generate(
+    prompt: string,
+    negative: string,
+    width: number,
+    height: number,
+    options?: Record<string, unknown>,
+  ): Promise<Blob>;
 
-  async testConnection(): Promise<boolean> {
-    throw new NotImplementedError(this.backend, 'testConnection');
-  }
+  abstract testConnection(): Promise<boolean>;
 }

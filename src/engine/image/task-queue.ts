@@ -72,10 +72,6 @@ export class ImageTaskQueue {
     return this.tasks.get(taskId);
   }
 
-  getPending(): ImageTask[] {
-    return [...this.tasks.values()].filter((t) => t.status === 'pending');
-  }
-
   getAll(): ImageTask[] {
     return [...this.tasks.values()].sort((a, b) => b.createdAt - a.createdAt);
   }

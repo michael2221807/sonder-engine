@@ -120,19 +120,6 @@ export const SCENE_LANDSCAPE_SIZE_OPTIONS: ImageSizeOption[] = pickByOrder([
   '768x512',
 ]);
 
-// ═══════════════════════════════════════════════════════════
-// §3 — Per-composition defaults
-// ═══════════════════════════════════════════════════════════
-
-export const COMPOSITION_DEFAULT_SIZES: Record<string, { width: number; height: number }> = {
-  portrait: { width: 1024, height: 1024 },
-  'half-body': { width: 768, height: 1024 },
-  'full-length': { width: 832, height: 1216 },
-  scene: { width: 1024, height: 576 },
-  secret_part: { width: 1024, height: 1024 },
-  custom: { width: 1024, height: 1024 },
-};
-
 /**
  * Parse a "WxH" string into width/height numbers.
  * Returns null if format is invalid.

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ImageProviderRegistry } from '@/engine/image/provider-registry';
-import { NovelAIImageProvider } from '@/engine/image/providers';
+import { NovelAIImageProvider } from '@/engine/image/providers/novelai';
 
 describe('ImageProviderRegistry', () => {
   it('registers and resolves a provider', () => {

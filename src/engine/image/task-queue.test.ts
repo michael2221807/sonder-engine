@@ -51,21 +51,13 @@ describe('ImageTaskQueue', () => {
     });
   });
 
-  describe('getAll / getPending', () => {
+  describe('getAll', () => {
     it('returns all tasks', () => {
       const q = createQueue();
       q.create({ subjectType: 'character', width: 512, height: 512, backend: 'openai' });
       q.create({ subjectType: 'scene', width: 1024, height: 576, backend: 'novelai' });
       const all = q.getAll();
       expect(all).toHaveLength(2);
-    });
-
-    it('getPending only returns pending tasks', () => {
-      const q = createQueue();
-      q.create({ subjectType: 'character', width: 512, height: 512, backend: 'openai' });
-      const t2 = q.create({ subjectType: 'scene', width: 1024, height: 576, backend: 'novelai' });
-      q.updateStatus(t2.id, 'complete');
-      expect(q.getPending()).toHaveLength(1);
     });
   });
 
