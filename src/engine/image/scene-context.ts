@@ -225,7 +225,7 @@ function normalizeWeatherForScene(weather: unknown): string {
  * Returning empty for 平日 is the correct signal: 平日 means "no special
  * festive atmosphere" → tokenizer should NOT add lantern / crowd tokens.
  *
- * **Note**: parallel logic exists at `src/ui/components/panels/environment-helpers.ts`
+ * **Note**: parallel logic exists at `src/ui/components/panels/environment/environment-helpers.ts`
  * `isFestivalVisible` (same `平日`-is-default rule). Engine and UI both need
  * this predicate but cannot share code (engine must not import from UI).
  * Any future change to the "default festival" semantics must be applied in

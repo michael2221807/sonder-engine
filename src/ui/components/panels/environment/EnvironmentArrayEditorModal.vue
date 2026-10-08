@@ -18,7 +18,7 @@ import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import {
   buildReplaceEnvironmentAttachment,
   type EnvTag,
-} from './assistant-env-attachments';
+} from '../assistant-env-attachments';
 
 const { t } = useI18n();
 

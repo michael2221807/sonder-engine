@@ -11,7 +11,7 @@ import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import {
   buildSetFestivalAttachment,
   type EnvTag,
-} from './assistant-env-attachments';
+} from '../assistant-env-attachments';
 
 const props = defineProps<{
   modelValue: boolean;

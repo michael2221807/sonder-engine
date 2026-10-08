@@ -7,7 +7,7 @@ import {
   isFestivalVisible,
   normalizeFestival,
   normalizeWeather,
-} from '@/ui/components/panels/environment-helpers';
+} from '@/ui/components/panels/environment/environment-helpers';
 
 describe('isValidTag', () => {
   it('accepts complete tag', () => {

@@ -31,7 +31,7 @@ import { useEngineStateStore } from '@/engine/stores/engine-state';
 import Modal from '@/ui/components/shared/Modal.vue';
 import APIPanel from '@/ui/components/panels/APIPanel.vue';
 import SettingsPanel from '@/ui/components/panels/SettingsPanel.vue';
-import CardImportFlow from '@/ui/components/panels/CardImportFlow.vue';
+import CardImportFlow from '@/ui/components/panels/card/CardImportFlow.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import type { SyncStatus, CloudFormat } from '@/engine/sync/github-sync';

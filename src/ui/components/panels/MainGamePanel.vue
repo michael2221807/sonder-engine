@@ -50,16 +50,16 @@ import { actionOptionsOn, type PromptSettings } from '@/engine/prompt/world-book
 import Modal from '@/ui/components/shared/Modal.vue';
 import FormattedText from '@/ui/components/shared/FormattedText.vue';
 import SettingTaggedText from '@/ui/components/shared/SettingTaggedText.vue';
-import RoundDivider from '@/ui/components/panels/RoundDivider.vue';
+import RoundDivider from '@/ui/components/panels/round/RoundDivider.vue';
 import GameComposer from '@/ui/components/panels/GameComposer.vue';
 import SaveHealthGateModal from '@/ui/components/shared/SaveHealthGateModal.vue';
-import ThinkingViewer from '@/ui/components/panels/ThinkingViewer.vue';
-import CommandsViewer from '@/ui/components/panels/CommandsViewer.vue';
-import RawResponseViewer from '@/ui/components/panels/RawResponseViewer.vue';
-import EngramRoundViewer from '@/ui/components/panels/EngramRoundViewer.vue';
-import WeatherBadge from '@/ui/components/panels/WeatherBadge.vue';
-import EnvironmentChips from '@/ui/components/panels/EnvironmentChips.vue';
-import FestivalChip from '@/ui/components/panels/FestivalChip.vue';
+import ThinkingViewer from '@/ui/components/panels/round/ThinkingViewer.vue';
+import CommandsViewer from '@/ui/components/panels/round/CommandsViewer.vue';
+import RawResponseViewer from '@/ui/components/panels/round/RawResponseViewer.vue';
+import EngramRoundViewer from '@/ui/components/panels/engram/EngramRoundViewer.vue';
+import WeatherBadge from '@/ui/components/panels/environment/WeatherBadge.vue';
+import EnvironmentChips from '@/ui/components/panels/environment/EnvironmentChips.vue';
+import FestivalChip from '@/ui/components/panels/environment/FestivalChip.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import VoiceQuickSwitch from '@/ui/components/panels/VoiceQuickSwitch.vue';
 import PlotVectorTable from '@/ui/components/plot-vector/PlotVectorTable.vue';
@@ -74,7 +74,7 @@ import {
   truncate,
   type RoundMetrics,
   type DisplayMetrics,
-} from '@/ui/components/panels/round-divider-helpers';
+} from '@/ui/components/panels/round/round-divider-helpers';
 import {
   computeVisibleRange,
   countFoldedBefore,

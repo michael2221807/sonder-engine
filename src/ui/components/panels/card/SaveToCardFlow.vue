@@ -9,8 +9,8 @@
  * target save coordinates — all data flow stays inside this wrapper.
  */
 import { ref, watch } from 'vue';
-import CardExportFlow from '@/ui/components/panels/CardExportFlow.vue';
-import EdgeClassifyPanel from '@/ui/components/panels/EdgeClassifyPanel.vue';
+import CardExportFlow from '@/ui/components/panels/card/CardExportFlow.vue';
+import EdgeClassifyPanel from '@/ui/components/panels/engram/EdgeClassifyPanel.vue';
 
 const props = defineProps<{
   modelValue: boolean;
