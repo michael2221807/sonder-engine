@@ -25,7 +25,6 @@ import { getDeviceStamp } from './device-identity';
 // ─── 常量 ───
 
 const API = 'https://api.github.com';
-const SAVE_PATH = 'backup.json';
 const MANIFEST_PATH = 'v2/manifest.json';
 const V2_DIR = 'v2';
 const LS_TOKEN = 'aga_github_sync_token';
@@ -270,6 +269,22 @@ export class GitHubSyncService {
   isSyncing(): boolean { return this._syncInFlight; }
 
   /**
+   * Run `fn` under the single in-flight guard. Public callers must invoke this in
+   * their first synchronous segment (no `await` before it): the check-and-set below
+   * then happens in the same tick, so two concurrent calls can never both pass.
+   * The rejection (SyncInProgressError) surfaces as a rejected promise, as before.
+   */
+  private async withLock<T>(fn: () => Promise<T>): Promise<T> {
+    if (this._syncInFlight) throw new SyncInProgressError();
+    this._syncInFlight = true;
+    try {
+      return await fn();
+    } finally {
+      this._syncInFlight = false;
+    }
+  }
+
+  /**
    * Compare the current cloud save against this device's sync baseline.
    *
    * conflict === true means the cloud moved on since we last synced — either a
@@ -328,13 +343,7 @@ export class GitHubSyncService {
    * `createdAt` as this device's sync baseline (feeds conflict detection).
    */
   async upload(onStatus?: (s: SyncStatus) => void, opts?: { force?: boolean }): Promise<void> {
-    if (this._syncInFlight) throw new SyncInProgressError();
-    this._syncInFlight = true;
-    try {
-      await this._uploadLocked(onStatus, opts);
-    } finally {
-      this._syncInFlight = false;
-    }
+    await this.withLock(() => this._uploadLocked(onStatus, opts));
   }
 
   private async _uploadLocked(onStatus?: (s: SyncStatus) => void, opts?: { force?: boolean }): Promise<void> {
@@ -468,79 +477,6 @@ export class GitHubSyncService {
     emit('done', '上传完成');
   }
 
-  // ── v1 上传方法（保留供紧急回退，当前不调用）──
-
-  // @ts-expect-error kept for emergency rollback
-  private async uploadViaContentsApi(
-    owner: string, repo: string, b64: string,
-    emit: (stage: SyncStatus['stage'], message: string) => void,
-  ): Promise<void> {
-    emit('uploading', '正在上传…');
-    const sha = await this.getFileSha(owner, repo, SAVE_PATH);
-    const body: Record<string, string> = {
-      message: `sync ${new Date().toISOString().slice(0, 19)}`,
-      content: b64,
-    };
-    if (sha) body.sha = sha;
-    await this.put(`/repos/${owner}/${repo}/contents/${SAVE_PATH}`, body);
-  }
-
-  // @ts-expect-error kept for emergency rollback
-  private async uploadViaGitDataApi(
-    owner: string, repo: string, b64: string,
-    emit: (stage: SyncStatus['stage'], message: string) => void,
-  ): Promise<void> {
-    const commitMsg = `sync ${new Date().toISOString().slice(0, 19)}`;
-
-    const repoInfo = await this.get<{ default_branch: string }>(`/repos/${owner}/${repo}`);
-    const branch = repoInfo.default_branch;
-
-    emit('uploading', '正在上传存档数据…');
-    const blobRes = await this.post<{ sha: string }>(
-      `/repos/${owner}/${repo}/git/blobs`,
-      { content: b64, encoding: 'base64' },
-    );
-
-    emit('uploading', '正在同步仓库状态…');
-    const refRes = await this.get<{ object: { sha: string } }>(
-      `/repos/${owner}/${repo}/git/refs/heads/${branch}`,
-    );
-    const parentSha = refRes.object.sha;
-
-    const commitInfo = await this.get<{ tree: { sha: string } }>(
-      `/repos/${owner}/${repo}/git/commits/${parentSha}`,
-    );
-
-    emit('uploading', '正在构建提交…');
-    const treeRes = await this.post<{ sha: string }>(
-      `/repos/${owner}/${repo}/git/trees`,
-      {
-        base_tree: commitInfo.tree.sha,
-        tree: [{
-          path: SAVE_PATH,
-          mode: '100644',
-          type: 'blob',
-          sha: blobRes.sha,
-        }],
-      },
-    );
-
-    const newCommit = await this.post<{ sha: string }>(
-      `/repos/${owner}/${repo}/git/commits`,
-      {
-        message: commitMsg,
-        tree: treeRes.sha,
-        parents: [parentSha],
-      },
-    );
-
-    emit('uploading', '正在更新分支…');
-    await this.patch(
-      `/repos/${owner}/${repo}/git/refs/heads/${branch}`,
-      { sha: newCommit.sha, force: false },
-    );
-  }
-
   // ── 下载存档（v2 分块管道）──
 
   /**
@@ -550,13 +486,7 @@ export class GitHubSyncService {
    * so a subsequent auto-upload of unchanged data raises no false conflict.
    */
   async download(onStatus?: (s: SyncStatus) => void): Promise<void> {
-    if (this._syncInFlight) throw new SyncInProgressError();
-    this._syncInFlight = true;
-    try {
-      await this._downloadLocked(onStatus);
-    } finally {
-      this._syncInFlight = false;
-    }
+    await this.withLock(() => this._downloadLocked(onStatus));
   }
 
   private async _downloadLocked(onStatus?: (s: SyncStatus) => void): Promise<void> {
@@ -590,28 +520,6 @@ export class GitHubSyncService {
     // device-local baseline (backup-service LS_DEVICE_LOCAL_KEYS), so overwrite it
     // here with the cloud's createdAt — a later unchanged auto-upload sees no conflict.
     this.setSyncBaseline(manifest.createdAt);
-    emit('done', '下载并恢复完成');
-  }
-
-  // ── v1 下载（保留供紧急回退，当前不调用）──
-
-  // @ts-expect-error kept for emergency rollback
-  private async downloadV1(onStatus?: (s: SyncStatus) => void): Promise<void> {
-    const emit = (stage: SyncStatus['stage'], message: string) => onStatus?.({ stage, message });
-    const { owner, repo } = this.resolveTarget();
-
-    emit('downloading', '正在获取文件信息…');
-    const meta = await this.get<{ sha: string }>(`/repos/${owner}/${repo}/contents/${SAVE_PATH}`);
-
-    emit('downloading', '正在下载存档…');
-    const blob = await this.get<{ content: string; encoding: string }>(
-      `/repos/${owner}/${repo}/git/blobs/${meta.sha}`,
-    );
-    if (blob.encoding !== 'base64') throw new Error(`Blob API 返回了非预期编码: ${blob.encoding}`);
-
-    emit('downloading', '正在恢复本地数据…');
-    const json = base64ToUtf8(blob.content);
-    await this.backup.importAll(new Blob([json], { type: 'application/json' }), { fromOwnSync: true });
     emit('done', '下载并恢复完成');
   }
 
@@ -738,13 +646,7 @@ export class GitHubSyncService {
    * generation-tag 新路径 + manifest 最后写（原子）、锁内 await 的**本目录内**清理。
    */
   async uploadSlot(profileId: string, onStatus?: (s: SyncStatus) => void, opts?: { force?: boolean }): Promise<SlotManifest> {
-    if (this._syncInFlight) throw new SyncInProgressError();
-    this._syncInFlight = true;
-    try {
-      return await this._uploadSlotLocked(profileId, onStatus, opts);
-    } finally {
-      this._syncInFlight = false;
-    }
+    return this.withLock(() => this._uploadSlotLocked(profileId, onStatus, opts));
   }
 
   private async _uploadSlotLocked(profileId: string, onStatus?: (s: SyncStatus) => void, opts?: { force?: boolean }): Promise<SlotManifest> {
@@ -780,13 +682,7 @@ export class GitHubSyncService {
    * **内容未变则跳过**（设置极少变化，避免每回合白传 + 多设备写热点）。
    */
   async uploadGlobal(onStatus?: (s: SyncStatus) => void): Promise<{ skipped: boolean; manifest?: SlotManifest }> {
-    if (this._syncInFlight) throw new SyncInProgressError();
-    this._syncInFlight = true;
-    try {
-      return await this._uploadGlobalLocked(onStatus);
-    } finally {
-      this._syncInFlight = false;
-    }
+    return this.withLock(() => this._uploadGlobalLocked(onStatus));
   }
 
   private async _uploadGlobalLocked(onStatus?: (s: SyncStatus) => void): Promise<{ skipped: boolean; manifest?: SlotManifest }> {
@@ -834,13 +730,7 @@ export class GitHubSyncService {
    * 只动该档案，绝不触碰其他档案与全局设置）。
    */
   async downloadSlot(profileId: string, onStatus?: (s: SyncStatus) => void): Promise<void> {
-    if (this._syncInFlight) throw new SyncInProgressError();
-    this._syncInFlight = true;
-    try {
-      await this._downloadSlotLocked(profileId, onStatus);
-    } finally {
-      this._syncInFlight = false;
-    }
+    await this.withLock(() => this._downloadSlotLocked(profileId, onStatus));
   }
 
   private async _downloadSlotLocked(profileId: string, onStatus?: (s: SyncStatus) => void): Promise<void> {
@@ -858,13 +748,7 @@ export class GitHubSyncService {
 
   /** 下载全局设置插槽并替换本地全局区（BackupService.importGlobal 路径）。 */
   async downloadGlobal(onStatus?: (s: SyncStatus) => void): Promise<void> {
-    if (this._syncInFlight) throw new SyncInProgressError();
-    this._syncInFlight = true;
-    try {
-      await this._downloadGlobalLocked(onStatus);
-    } finally {
-      this._syncInFlight = false;
-    }
+    await this.withLock(() => this._downloadGlobalLocked(onStatus));
   }
 
   private async _downloadGlobalLocked(onStatus?: (s: SyncStatus) => void): Promise<void> {
@@ -890,13 +774,7 @@ export class GitHubSyncService {
    * 先删 manifest（提交点先失效，残余块立即成为无害孤儿），再逐块清理。
    */
   async deleteCloudSlot(profileId: string, onStatus?: (s: SyncStatus) => void): Promise<void> {
-    if (this._syncInFlight) throw new SyncInProgressError();
-    this._syncInFlight = true;
-    try {
-      await this._deleteCloudSlotLocked(profileId, onStatus);
-    } finally {
-      this._syncInFlight = false;
-    }
+    await this.withLock(() => this._deleteCloudSlotLocked(profileId, onStatus));
   }
 
   private async _deleteCloudSlotLocked(profileId: string, onStatus?: (s: SyncStatus) => void): Promise<void> {
@@ -949,13 +827,7 @@ export class GitHubSyncService {
     onStatus?: (s: SyncStatus) => void,
     onSlotProgress?: (p: { slotKey: string; phase: 'uploading' | 'verifying' | 'verified' }) => void,
   ): Promise<MigrationResult> {
-    if (this._syncInFlight) throw new SyncInProgressError();
-    this._syncInFlight = true;
-    try {
-      return await this._migrateLocked(onStatus, onSlotProgress);
-    } finally {
-      this._syncInFlight = false;
-    }
+    return this.withLock(() => this._migrateLocked(onStatus, onSlotProgress));
   }
 
   private async _migrateLocked(
@@ -1195,26 +1067,22 @@ export class GitHubSyncService {
 
   /** 读取任意路径的 manifest JSON（v2 与 v3 插槽共用）。 */
   private async fetchManifestAt(owner: string, repo: string, path: string): Promise<ChunkManifest> {
+    const json = new TextDecoder().decode(await this.fetchFileBytes(owner, repo, path));
+    return JSON.parse(json) as ChunkManifest;
+  }
+
+  private async downloadBlob(owner: string, repo: string, path: string): Promise<Blob> {
+    return new Blob([await this.fetchFileBytes(owner, repo, path)]);
+  }
+
+  /** Contents-API lookup (for the blob sha) + git-blob fetch, decoded to raw bytes. */
+  private async fetchFileBytes(owner: string, repo: string, path: string): Promise<Uint8Array> {
     const meta = await this.get<{ sha: string }>(`/repos/${owner}/${repo}/contents/${path}`);
     const blob = await this.get<{ content: string; encoding: string }>(
       `/repos/${owner}/${repo}/git/blobs/${meta.sha}`,
     );
     if (blob.encoding !== 'base64') throw new Error(`Unexpected blob encoding: ${blob.encoding}`);
-    const json = base64ToUtf8(blob.content);
-    return JSON.parse(json) as ChunkManifest;
-  }
-
-  private async downloadBlob(owner: string, repo: string, path: string): Promise<Blob> {
-    const meta = await this.get<{ sha: string }>(`/repos/${owner}/${repo}/contents/${path}`);
-    const blobRes = await this.get<{ content: string; encoding: string }>(
-      `/repos/${owner}/${repo}/git/blobs/${meta.sha}`,
-    );
-    if (blobRes.encoding !== 'base64') throw new Error(`Unexpected blob encoding: ${blobRes.encoding}`);
-    const cleaned = blobRes.content.replace(/\s/g, '');
-    const bin = atob(cleaned);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return new Blob([bytes]);
+    return base64ToBytes(blob.content);
   }
 
   // ── v2 上传辅助 ──
@@ -1338,42 +1206,23 @@ export class GitHubSyncService {
   }
 
   private async put<T>(path: string, body: unknown): Promise<T> {
-    const res = await fetch(`${API}${path}`, {
-      method: 'PUT',
-      headers: this.headers(),
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) throw new ApiError(res.status, await safeBody(res));
-    return res.json() as Promise<T>;
-  }
-
-  private async post<T>(path: string, body: unknown): Promise<T> {
-    const res = await fetch(`${API}${path}`, {
-      method: 'POST',
-      headers: this.headers(),
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) throw new ApiError(res.status, await safeBody(res));
-    return res.json() as Promise<T>;
-  }
-
-  private async patch<T = unknown>(path: string, body: unknown): Promise<T> {
-    const res = await fetch(`${API}${path}`, {
-      method: 'PATCH',
-      headers: this.headers(),
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) throw new ApiError(res.status, await safeBody(res));
+    const res = await this.send('PUT', path, body);
     return res.json() as Promise<T>;
   }
 
   private async del(path: string, body: unknown): Promise<void> {
+    await this.send('DELETE', path, body);
+  }
+
+  /** Shared write request (PUT / DELETE with a JSON body); throws {@link ApiError} on a non-2xx reply. */
+  private async send(method: 'PUT' | 'DELETE', path: string, body: unknown): Promise<Response> {
     const res = await fetch(`${API}${path}`, {
-      method: 'DELETE',
+      method,
       headers: this.headers(),
       body: JSON.stringify(body),
     });
     if (!res.ok) throw new ApiError(res.status, await safeBody(res));
+    return res;
   }
 
   private headers(): Record<string, string> {
@@ -1499,7 +1348,10 @@ function stageError(stage: string, err: unknown): Error {
 }
 
 function utf8ToBase64(str: string): string {
-  const bytes = new TextEncoder().encode(str);
+  return bytesToBase64(new TextEncoder().encode(str));
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
   const CHUNK = 8192;
   let bin = '';
   for (let i = 0; i < bytes.length; i += CHUNK) {
@@ -1508,13 +1360,12 @@ function utf8ToBase64(str: string): string {
   return btoa(bin);
 }
 
-
-function base64ToUtf8(b64: string): string {
+function base64ToBytes(b64: string): Uint8Array {
   const cleaned = b64.replace(/\s/g, '');
   const bin = atob(cleaned);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return new TextDecoder().decode(bytes);
+  return bytes;
 }
 
 async function safeBody(res: Response): Promise<string> {
@@ -1522,11 +1373,5 @@ async function safeBody(res: Response): Promise<string> {
 }
 
 async function blobToBase64(blob: Blob): Promise<string> {
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  const CHUNK = 8192;
-  let bin = '';
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    bin += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-  }
-  return btoa(bin);
+  return bytesToBase64(new Uint8Array(await blob.arrayBuffer()));
 }
