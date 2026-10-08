@@ -17,7 +17,7 @@
  * Design: `docs/design/canon-ledger-setting-capture.md` §8.
  */
 import type { EngramEdge } from './knowledge-edge';
-import { isEdgeCurrentlyValid } from './knowledge-edge';
+import { isEdgeCurrentlyValid, markEdgeInvalid } from './knowledge-edge';
 import type { KnowledgeFact } from './fact-builder';
 
 /**
@@ -97,8 +97,7 @@ export function invalidateEdgesForEntries(
   for (const edge of edges) {
     if (!edge.canonEntryId || !wanted.has(edge.canonEntryId)) continue;
     if (!isEdgeCurrentlyValid(edge)) continue;
-    edge.invalidAtRound = currentRound;
-    edge.temporalStatus = 'superseded';
+    markEdgeInvalid(edge, currentRound, 'superseded');
     touched.push(edge.id);
   }
   return touched;

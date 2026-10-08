@@ -54,6 +54,19 @@ export function isEdgeCurrentlyValid(edge: EngramEdge): boolean {
   return edge.invalidAtRound == null && edge.invalidatedAtRound == null;
 }
 
+/**
+ * Mark an edge as no longer true. Writes invalidAtRound FIRST, then temporalStatus:
+ * the key insertion order of a fresh edge is part of the persisted bytes.
+ */
+export function markEdgeInvalid(
+  edge: EngramEdge,
+  round: number,
+  status: NonNullable<EngramEdge['temporalStatus']>,
+): void {
+  edge.invalidAtRound = round;
+  edge.temporalStatus = status;
+}
+
 export function engramEdgeId(source: string, target: string, fact: string): string {
   const factSlug = fact.toLowerCase().replace(/\s+/g, '').slice(0, 40);
   return `${source.toLowerCase()}|${target.toLowerCase()}|${factSlug}`;

@@ -178,6 +178,27 @@ export interface MemorySettingsOverride {
   longTermCap?: number;
 }
 
+/**
+ * Default memory thresholds. `createMemoryStack` (bootstrap) spreads these into the
+ * `MemoryPathConfig`; localStorage `aga_memory_settings` overrides them at run time.
+ */
+export const DEFAULT_MEMORY_SETTINGS: Pick<
+  MemoryPathConfig,
+  | 'shortTermCapacity'
+  | 'midTermRefineThreshold'
+  | 'longTermSummaryThreshold'
+  | 'longTermSummarizeCount'
+  | 'midTermKeep'
+  | 'longTermCap'
+> = {
+  shortTermCapacity: 5,
+  midTermRefineThreshold: 25,
+  longTermSummaryThreshold: 50,
+  longTermSummarizeCount: 50,
+  midTermKeep: 0,
+  longTermCap: 30,
+};
+
 /** localStorage key for user memory settings override */
 export const MEMORY_SETTINGS_KEY = 'aga_memory_settings';
 
@@ -544,7 +565,7 @@ export class MemoryManager {
    * 2. 旧格式字符串 —— 包装为 `{相关角色:[], 事件时间:'', 记忆主体:str}`
    * 3. 英文字段旧对象 `{characters, gameTime, content}` — 字段名映射
    */
-  private normalizeImplicitEntry(
+  normalizeImplicitEntry(
     entry: ImplicitMidTermEntry | string | Record<string, unknown>,
   ): ImplicitMidTermEntry | null {
     if (typeof entry === 'string') {

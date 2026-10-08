@@ -10,6 +10,8 @@
 import type { EngramEdge } from './knowledge-edge';
 import { engramEdgeId, isEdgeCurrentlyValid } from './knowledge-edge';
 import type { EngramEntity } from './entity-builder';
+import { isSentenceLikeName } from './entity-builder';
+import { EDGE_CAPACITY_DEFAULT, MIN_FACT_LENGTH } from './engram-types';
 import type { VectorStore } from './vector-store';
 
 /**
@@ -113,14 +115,13 @@ export function buildFacts(
 
   for (const kf of knowledgeFacts) {
     // Step 1: Pre-filter
-    if (kf.fact.length < 10 && !kf.provenance?.exemptFromLengthFilter) continue;
+    if (kf.fact.length < MIN_FACT_LENGTH && !kf.provenance?.exemptFromLengthFilter) continue;
     // Both entities unknown → reject
     if (!entityNames.has(kf.sourceEntity) && !entityNames.has(kf.targetEntity)) continue;
     // Reject descriptive phrases masquerading as entity names
     // Heuristic: unknown entity + contains sentence-like markers (commas, verbs, particles)
-    const isSentenceLike = (s: string) => s.length > 6 && /[，。了的被在过着得让把将与从]/.test(s);
-    if (!entityNames.has(kf.sourceEntity) && isSentenceLike(kf.sourceEntity)) continue;
-    if (!entityNames.has(kf.targetEntity) && isSentenceLike(kf.targetEntity)) continue;
+    if (!entityNames.has(kf.sourceEntity) && isSentenceLikeName(kf.sourceEntity)) continue;
+    if (!entityNames.has(kf.targetEntity) && isSentenceLikeName(kf.targetEntity)) continue;
 
     const id = engramEdgeId(kf.sourceEntity, kf.targetEntity, kf.fact);
 
@@ -274,7 +275,7 @@ export function buildFacts(
 export function pruneEdgesV2(
   edges: EngramEdge[],
   currentRound: number,
-  capacity: number = 800,
+  capacity: number = EDGE_CAPACITY_DEFAULT,
 ): EngramEdge[] {
   // Invalidated edges decay faster
   const scored = edges.map((e) => {

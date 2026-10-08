@@ -83,27 +83,7 @@ export class VectorStore {
     model: string,
     storage: StorageIdentifier,
   ): Promise<void> {
-    const data = await this.load(storage.profileId, storage.slotId);
-
-    // 模型变更 → 清空旧数据（向量空间不兼容）
-    if (data.model && data.model !== model) {
-      data.eventVectors = {};
-      data.entityVectors = {};
-      data.edgeVectors = {};
-    }
-
-    data.model = model;
-    data.dim = vectors[0]?.length ?? 0;
-
-    for (let i = 0; i < events.length; i++) {
-      const event = events[i];
-      const vector = vectors[i];
-      if (event && vector) {
-        data.eventVectors[event.id] = vector;
-      }
-    }
-
-    await this.save(storage.profileId, storage.slotId, data);
+    await this.mergeVectors('eventVectors', events, (e) => e.id, vectors, model, storage);
   }
 
   /**
@@ -117,26 +97,7 @@ export class VectorStore {
     model: string,
     storage: StorageIdentifier,
   ): Promise<void> {
-    const data = await this.load(storage.profileId, storage.slotId);
-
-    if (data.model && data.model !== model) {
-      data.eventVectors = {};
-      data.entityVectors = {};
-      data.edgeVectors = {};
-    }
-
-    data.model = model;
-    data.dim = vectors[0]?.length ?? 0;
-
-    for (let i = 0; i < entities.length; i++) {
-      const entity = entities[i];
-      const vector = vectors[i];
-      if (entity && vector) {
-        data.entityVectors[entity.name] = vector;
-      }
-    }
-
-    await this.save(storage.profileId, storage.slotId, data);
+    await this.mergeVectors('entityVectors', entities, (e) => e.name, vectors, model, storage);
   }
 
   /**
@@ -230,16 +191,7 @@ export class VectorStore {
     profileId: string,
     slotId: string,
   ): Promise<void> {
-    if (ids.length === 0) return;
-    const data = await this.load(profileId, slotId);
-    let changed = false;
-    for (const id of ids) {
-      if (data.edgeVectors[id]) {
-        delete data.edgeVectors[id];
-        changed = true;
-      }
-    }
-    if (changed) await this.save(profileId, slotId, data);
+    await this.deleteKeys('edgeVectors', ids, profileId, slotId);
   }
 
   async deleteEntityVectorsByNames(
@@ -247,20 +199,27 @@ export class VectorStore {
     profileId: string,
     slotId: string,
   ): Promise<void> {
-    if (names.length === 0) return;
-    const data = await this.load(profileId, slotId);
-    let changed = false;
-    for (const name of names) {
-      if (data.entityVectors[name]) {
-        delete data.entityVectors[name];
-        changed = true;
-      }
-    }
-    if (changed) await this.save(profileId, slotId, data);
+    await this.deleteKeys('entityVectors', names, profileId, slotId);
   }
 
   async mergeEdgeVectors(
     edges: Array<{ id: string }>,
+    vectors: number[][],
+    model: string,
+    storage: StorageIdentifier,
+  ): Promise<void> {
+    await this.mergeVectors('edgeVectors', edges, (e) => e.id, vectors, model, storage);
+  }
+
+  /**
+   * Shared body of the three merge*Vectors methods. `items[i]` pairs with `vectors[i]`;
+   * a falsy item or missing vector is skipped.
+   * A different embedding model wipes all three tables first (vector spaces differ).
+   */
+  private async mergeVectors<T extends object>(
+    kind: 'eventVectors' | 'entityVectors' | 'edgeVectors',
+    items: T[],
+    keyOf: (item: T) => string,
     vectors: number[][],
     model: string,
     storage: StorageIdentifier,
@@ -276,15 +235,34 @@ export class VectorStore {
     data.model = model;
     data.dim = vectors[0]?.length ?? 0;
 
-    for (let i = 0; i < edges.length; i++) {
-      const edge = edges[i];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
       const vector = vectors[i];
-      if (edge && vector) {
-        data.edgeVectors[edge.id] = vector;
+      if (item && vector) {
+        data[kind][keyOf(item)] = vector;
       }
     }
 
     await this.save(storage.profileId, storage.slotId, data);
+  }
+
+  /** Shared body of the two delete-by-key methods (truthy-vector check preserved). */
+  private async deleteKeys(
+    kind: 'entityVectors' | 'edgeVectors',
+    keys: string[],
+    profileId: string,
+    slotId: string,
+  ): Promise<void> {
+    if (keys.length === 0) return;
+    const data = await this.load(profileId, slotId);
+    let changed = false;
+    for (const key of keys) {
+      if (data[kind][key]) {
+        delete data[kind][key];
+        changed = true;
+      }
+    }
+    if (changed) await this.save(profileId, slotId, data);
   }
 
   /** 生成 IndexedDB 存储键 */

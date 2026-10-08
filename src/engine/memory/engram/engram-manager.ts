@@ -25,7 +25,7 @@ import { EventBuilder } from './event-builder';
 import type { EngramEventNode } from './event-builder';
 import { EntityBuilder } from './entity-builder';
 import type { EngramEntity } from './entity-builder';
-import { inferEntityType } from './entity-builder';
+import { inferEntityType, isSentenceLikeName, makeFactStubEntity } from './entity-builder';
 import type { EngramRelation } from './engram-types';
 import { VectorStore } from './vector-store';
 import { Embedder } from './embedder';
@@ -73,7 +73,8 @@ export type {
   EngramWriteSnapshot,
 } from './engram-types';
 export { DEFAULT_ENGRAM_CONFIG } from './engram-types';
-import { ENGRAM_SCHEMA_VERSION } from './engram-types';
+import { ENGRAM_SCHEMA_VERSION, EDGE_CAPACITY_DEFAULT, normalizeEngramBlock } from './engram-types';
+import type { EngramStateData } from './engram-types';
 import type {
   EngramConfig,
   EngramTrimConfig,
@@ -81,25 +82,6 @@ import type {
   EngramWriteEventDetail,
   EngramWriteEntityDelta,
 } from './engram-types';
-
-/**
- * Engram 状态数据结构
- * 存储在状态树 "系统.扩展.engramMemory" 路径下。
- */
-interface EngramStateData {
-  events: EngramEventNode[];
-  entities: EngramEntity[];
-  relations: EngramRelation[];
-  v2Edges: EngramEdge[];
-  meta: {
-    lastUpdated: number;
-    eventCount: number;
-    embeddedEventCount: number;
-    embeddedEntityCount: number;
-    schemaVersion: number;
-    v2PendingReview?: Array<{ newFact: string; oldEdgeId: string; similarity: number }> | null;
-  };
-}
 
 /** 修剪后的数据集 */
 interface PrunedData {
@@ -283,24 +265,13 @@ export class EngramManager {
       // pipeline would have rejected as sentence-like could sneak a garbage node into the
       // graph via the restore path — the same setting behaving differently depending on
       // which path it took.
-      const isSentenceLike = (s: string) => s.length > 6 && /[，。了的被在过着得让把将与从]/.test(s);
       for (const fact of facts) {
         for (const name of [fact.sourceEntity, fact.targetEntity]) {
           if (!name || entityNames.has(name)) continue;
-          if (isSentenceLike(name)) continue;
-          engram.entities.push({
-            name,
-            type: inferEntityType(name, new Set(
-              engram.entities.filter((e) => e.type === 'location').map((e) => e.name),
-            )),
-            summary: '',
-            attributes: {},
-            firstSeen: round,
-            lastSeen: round,
-            mentionCount: 1,
-            is_embedded: false,
-            _pendingEnrichment: true,
-          });
+          if (isSentenceLikeName(name)) continue;
+          engram.entities.push(makeFactStubEntity(name, inferEntityType(name, new Set(
+            engram.entities.filter((e) => e.type === 'location').map((e) => e.name),
+          )), round));
           entityNames.add(name);
         }
       }
@@ -514,7 +485,6 @@ export class EngramManager {
       const knownLocationNames = new Set(
         entities.filter((e) => e.type === 'location').map((e) => e.name),
       );
-      const isSentenceLike = (s: string) => s.length > 6 && /[，。了的被在过着得让把将与从]/.test(s);
       // Scans `combinedFacts`, so a captured relationship whose entity does not exist yet
       // gets the same stub treatment as an AI-produced one. Without this the fact would
       // be rejected outright (`buildFacts` drops facts with two unknown endpoints) and
@@ -523,18 +493,8 @@ export class EngramManager {
       for (const kf of combinedFacts) {
         for (const name of [kf.sourceEntity, kf.targetEntity]) {
           if (!name || entityNames.has(name)) continue;
-          if (isSentenceLike(name)) continue;
-          entities.push({
-            name,
-            type: inferEntityType(name, knownLocationNames),
-            summary: '',
-            attributes: {},
-            firstSeen: currentRound,
-            lastSeen: currentRound,
-            mentionCount: 1,
-            is_embedded: false,
-            _pendingEnrichment: true,
-          });
+          if (isSentenceLikeName(name)) continue;
+          entities.push(makeFactStubEntity(name, inferEntityType(name, knownLocationNames), currentRound));
           entityNames.add(name);
         }
       }
@@ -594,7 +554,7 @@ export class EngramManager {
 
       const allEdges = [...engram.v2Edges, ...result.newEdges];
       const beforePruneCount = allEdges.length;
-      engram.v2Edges = pruneEdgesV2(allEdges, currentRound, config.edgeCapacity ?? 800);
+      engram.v2Edges = pruneEdgesV2(allEdges, currentRound, config.edgeCapacity ?? EDGE_CAPACITY_DEFAULT);
       edgesPrunedCount = beforePruneCount - engram.v2Edges.length;
 
       if (result.pendingReviewPairs.length > 0) {
@@ -848,24 +808,7 @@ export class EngramManager {
   }
 
   private loadEngram(stateManager: StateManager): EngramStateData {
-    const raw = stateManager.get<Partial<EngramStateData>>(this.engramPath);
-    if (raw && Array.isArray(raw.events)) {
-      return {
-        events: raw.events,
-        entities: Array.isArray(raw.entities) ? raw.entities : [],
-        relations: Array.isArray(raw.relations) ? raw.relations : [],
-        v2Edges: Array.isArray(raw.v2Edges) ? raw.v2Edges : [],
-        meta: {
-          lastUpdated: raw.meta?.lastUpdated ?? 0,
-          eventCount: raw.meta?.eventCount ?? raw.events.length,
-          embeddedEventCount: raw.meta?.embeddedEventCount ?? 0,
-          embeddedEntityCount: raw.meta?.embeddedEntityCount ?? 0,
-          schemaVersion: raw.meta?.schemaVersion ?? 1,
-          v2PendingReview: raw.meta?.v2PendingReview ?? null,
-        },
-      };
-    }
-    return this.createEmpty();
+    return normalizeEngramBlock(stateManager.get<unknown>(this.engramPath)) ?? this.createEmpty();
   }
 
   /**

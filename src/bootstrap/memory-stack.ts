@@ -2,7 +2,7 @@ import type { BehaviorRunner } from '../engine/behaviors/behavior-runner';
 import { MemoryCompilerModule } from '../engine/behaviors/memory-compiler';
 import { NarrativeEnvelopeRepairModule } from '../engine/behaviors/narrative-envelope-repair';
 import type { StateManager } from '../engine/core/state-manager';
-import { MemoryManager } from '../engine/memory/memory-manager';
+import { DEFAULT_MEMORY_SETTINGS, MemoryManager } from '../engine/memory/memory-manager';
 import { MemoryRetriever } from '../engine/memory/memory-retriever';
 import { DEFAULT_ENGINE_PATHS } from '../engine/pipeline/types';
 
@@ -27,12 +27,7 @@ export function createMemoryStack(deps: {
     implicitMidTermPath: DEFAULT_ENGINE_PATHS.implicitMidTermMemory,
     semanticMemoryPath: DEFAULT_ENGINE_PATHS.engramMemory,
     // 默认值 —— 可被 localStorage `aga_memory_settings` 运行时覆盖（SettingsPanel UI）
-    shortTermCapacity: 5,
-    midTermRefineThreshold: 25,
-    longTermSummaryThreshold: 50,
-    longTermSummarizeCount: 50,
-    midTermKeep: 0,
-    longTermCap: 30,
+    ...DEFAULT_MEMORY_SETTINGS,
   };
   const memoryManager = new MemoryManager(stateManager, memoryPathConfig);
   // NarrativeEnvelopeRepairModule：读档时修好存成 JSON 外壳（`{"text":"…`）的回合正文、短期记忆与收藏楼层快照（2026-10-03）

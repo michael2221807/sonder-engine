@@ -179,3 +179,32 @@ function containsKey(obj: unknown, key: string): boolean {
   }
   return false;
 }
+
+/**
+ * Tolerant JSON extraction shared across batch AI pipelines (Story 4 solidify,
+ * Story 7 card edge classify): scan candidate '{' start positions from the END
+ * of the raw response and return the first JSON.parse-able value accepted by
+ * `accept`. Survives thinking tags, prose preambles and code fences.
+ */
+export function parseLooseJson<T>(raw: string, accept: (v: unknown) => v is T): T | null {
+  const openBraces: number[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    if (raw[i] === '{') openBraces.push(i);
+  }
+
+  for (let i = openBraces.length - 1; i >= 0; i--) {
+    const candidate = raw.slice(openBraces[i]);
+    const closeIdx = candidate.lastIndexOf('}');
+    if (closeIdx < 0) continue;
+
+    const parsed = parseJsonWithRepairs(candidate.slice(0, closeIdx + 1), 'none');
+    if (parsed === undefined) continue;
+    try {
+      if (accept(parsed)) return parsed;
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}

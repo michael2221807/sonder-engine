@@ -333,6 +333,36 @@ export class EntityBuilder {
   }
 }
 
+/**
+ * Junk-name guard for knowledge-fact endpoints: a name that reads like a clause
+ * (comma/verb/particle markers) is a descriptive phrase, not an entity.
+ */
+export function isSentenceLikeName(s: string): boolean {
+  return s.length > 6 && /[，。了的被在过着得让把将与从]/.test(s);
+}
+
+/**
+ * Auto-stub for a fact endpoint that has no entity yet (pending enrichment).
+ * Key order is part of the persisted bytes — do not reorder.
+ */
+export function makeFactStubEntity(
+  name: string,
+  type: EngramEntity['type'],
+  round: number,
+): EngramEntity {
+  return {
+    name,
+    type,
+    summary: '',
+    attributes: {},
+    firstSeen: round,
+    lastSeen: round,
+    mentionCount: 1,
+    is_embedded: false,
+    _pendingEnrichment: true,
+  };
+}
+
 export function inferEntityType(
   name: string,
   knownLocations?: ReadonlySet<string>,

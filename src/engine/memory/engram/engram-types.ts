@@ -8,12 +8,22 @@
  * 应从本文件导入类型，不再直接依赖 engram-manager.ts 的类型导出。
  */
 
+import type { EngramEventNode } from './event-builder';
+import type { EngramEntity } from './entity-builder';
+import type { EngramEdge } from './knowledge-edge';
+
 /**
  * Engram 状态 schema 版本 —— 单一事实来源。
  * engram-manager 与 Story 6 卡导入（engram-import）共用，避免魔法数漂移。
  * 注：bump 时 `EngramManager` 会在 solidify 时 `Math.max` 兜底，loadEngram 缺省回退 1。
  */
 export const ENGRAM_SCHEMA_VERSION = 5;
+
+/** Default cap on live EngramEdge entries (pruneEdgesV2 + DEFAULT_ENGRAM_CONFIG.edgeCapacity). */
+export const EDGE_CAPACITY_DEFAULT = 800;
+
+/** Minimum length of a knowledge-fact sentence (fact-builder pre-filter, editor validation). */
+export const MIN_FACT_LENGTH = 10;
 
 /** Engram 检索模式 */
 export type EngramRetrievalMode = 'legacy' | 'hybrid';
@@ -110,7 +120,7 @@ export interface EngramConfig {
   /** Maximum total review pairs sent to AI per combine-repair round (default 40) */
   edgeReviewGlobalCap?: number;
   /** NPC relevance filter: tiers NPC prompt injection by Engram relevance to reduce token waste */
-  npcRelevanceFilter?: import('../../social/npc-relevance-scorer').NpcRelevanceConfig & { enabled: boolean };
+  npcRelevanceFilter?: import('../../social/npc-relevance-types').NpcRelevanceConfig & { enabled: boolean };
 }
 
 /**
@@ -308,10 +318,74 @@ export const DEFAULT_ENGRAM_CONFIG: EngramConfig = {
   knowledgeEdgeMode: 'off',
   recencyDecayBase: 0.997,
   recencyDecayFloor: 0.05,
-  edgeCapacity: 800,
+  edgeCapacity: EDGE_CAPACITY_DEFAULT,
   shortTermWindow: 5,
   maxCandidates: 20,
   edgeReviewThreshold: 0.65,
   edgeReviewPerFactCap: 5,
   edgeReviewGlobalCap: 40,
 };
+
+/**
+ * Engram 状态数据结构
+ * 存储在状态树 "系统.扩展.engramMemory" 路径下（manager / editor 共用）。
+ */
+export interface EngramStateData {
+  events: EngramEventNode[];
+  entities: EngramEntity[];
+  relations: EngramRelation[];
+  v2Edges: EngramEdge[];
+  meta: {
+    lastUpdated: number;
+    eventCount: number;
+    embeddedEventCount: number;
+    embeddedEntityCount: number;
+    schemaVersion: number;
+    v2PendingReview?: Array<{ newFact: string; oldEdgeId: string; similarity: number }> | null;
+  };
+}
+
+/**
+ * Normalize a raw engramMemory block read from the state tree.
+ *
+ * Returns the normalized block when raw is an object with an events array, otherwise
+ * null - each caller supplies its own empty structure (the manager's has no
+ * v2PendingReview key, the editor's has v2PendingReview: null; the persisted shapes differ,
+ * so the two empties are intentionally NOT shared).
+ */
+export function normalizeEngramBlock(rawValue: unknown): EngramStateData | null {
+  const raw =
+    rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)
+      ? (rawValue as Partial<EngramStateData>)
+      : undefined;
+  if (raw && Array.isArray(raw.events)) {
+    return {
+      events: raw.events,
+      entities: Array.isArray(raw.entities) ? raw.entities : [],
+      relations: Array.isArray(raw.relations) ? raw.relations : [],
+      v2Edges: Array.isArray(raw.v2Edges) ? raw.v2Edges : [],
+      meta: {
+        lastUpdated: raw.meta?.lastUpdated ?? 0,
+        eventCount: raw.meta?.eventCount ?? raw.events.length,
+        embeddedEventCount: raw.meta?.embeddedEventCount ?? 0,
+        embeddedEntityCount: raw.meta?.embeddedEntityCount ?? 0,
+        schemaVersion: raw.meta?.schemaVersion ?? 1,
+        v2PendingReview: raw.meta?.v2PendingReview ?? null,
+      },
+    };
+  }
+  return null;
+}
+
+/**
+ * Normalize location data - 世界.地点信息 can be an Array or Record<id, LocationItem>.
+ * Production data is an array; Record shape supported for legacy compatibility.
+ */
+export function normalizeLocationRecords(raw: unknown): Array<Record<string, unknown>> {
+  if (Array.isArray(raw)) return raw.filter(x => x && typeof x === 'object');
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    return Object.values(raw as Record<string, unknown>)
+      .filter((v): v is Record<string, unknown> => v != null && typeof v === 'object' && !Array.isArray(v));
+  }
+  return [];
+}

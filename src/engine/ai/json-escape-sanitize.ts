@@ -188,7 +188,7 @@ export function sanitizeJsonEscapes(src: string): string {
  *
  * | depth              | tries, in order                                   | call sites                                              |
  * |--------------------|----------------------------------------------------|---------------------------------------------------------|
- * | 'none'             | the source as is                                   | parseLooseJson (batch-solidify-pipeline), assistant payload blocks and preset blocks (scanJsonObjectBlocks) |
+ * | 'none'             | the source as is                                   | parseLooseJson (ai/json-extract), assistant payload blocks and preset blocks (scanJsonObjectBlocks) |
  * | 'escapes'          | as is, then sanitizeJsonEscapes                    | extractJsonObjectByKey (json-extract)                  |
  * | 'escapes+quotes'   | as is, then sanitizeJsonEscapes, then healUnescapedQuotes on the sanitized text | tryParseWithSanitizer (response-parser) |
  *

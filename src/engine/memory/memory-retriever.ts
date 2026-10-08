@@ -170,8 +170,7 @@ export class MemoryRetriever {
    */
   private normalizeImplicitFallback(value: unknown): ImplicitMidTermEntry | null {
     if (this.memoryManager) {
-      return (this.memoryManager as unknown as { normalizeImplicitEntry(e: unknown): ImplicitMidTermEntry | null })
-        .normalizeImplicitEntry(value);
+      return this.memoryManager.normalizeImplicitEntry(value as ImplicitMidTermEntry | string | Record<string, unknown>);
     }
     if (typeof value === 'string') {
       return value.trim() ? { 相关角色: [], 事件时间: '', 记忆主体: value.trim() } : null;

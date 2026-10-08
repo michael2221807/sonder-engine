@@ -16,12 +16,14 @@ import type { StateManager } from '../../core/state-manager';
 import type { AIService } from '../../ai/ai-service';
 import type { AIMessage } from '../../ai/types';
 import type { EngramEdge } from './knowledge-edge';
+import { markEdgeInvalid } from './knowledge-edge';
 import type { EngramEntity } from './entity-builder';
 import type { EngramEditor, NewKnowledgeEdge } from './engram-editor';
 import type { EngramManager } from './engram-manager';
 import type { IMemoryRetriever } from '../../pipeline/types';
 import { loadEngramConfig } from './engram-config';
-import { parseJsonWithRepairs } from '../../ai/json-escape-sanitize';
+import { normalizeLocationRecords } from './engram-types';
+import { parseLooseJson } from '../../ai/json-extract';
 import { stringifySnapshotForPrompt } from '../../memory/snapshot-sanitizer';
 import { SUB_PIPELINE_HISTORY_PAIRS } from '../../prompt/context-compiler';
 import { SYSTEM_PATHS } from '../../pipeline/system-paths';
@@ -39,27 +41,6 @@ export interface MissingReport {
   existingEntityCount: number;
   existingEdgeSummary: string;
   hasMissing: boolean;
-}
-
-// ─── Extended CoverageStats ───
-
-export interface ExtendedCoverageStats {
-  totalNpcs: number;
-  npcsWithEntity: number;
-  missingNpcNames: string[];
-  coveragePercent: number;
-  totalLocations: number;
-  locationsWithEntity: number;
-  missingLocationNames: string[];
-  locationCoveragePercent: number;
-  totalEdges: number;
-  edgesBySource: {
-    opening: number;
-    user: number;
-    'batch-sync': number;
-    'card-import': number;
-    legacy: number;
-  };
 }
 
 // ─── Pipeline result ───
@@ -98,19 +79,6 @@ export interface BatchSolidifyPaths {
 
 const MAX_EDGE_SUMMARY_ITEMS = 200;
 const MIN_FACT_LENGTH = 15;
-
-/**
- * Normalize location data — 世界.地点信息 can be an Array or Record<id, LocationItem>.
- * Production data is an array; Record shape supported for legacy compatibility.
- */
-function normalizeLocations(raw: unknown): Array<Record<string, unknown>> {
-  if (Array.isArray(raw)) return raw.filter(x => x && typeof x === 'object');
-  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-    return Object.values(raw as Record<string, unknown>)
-      .filter((v): v is Record<string, unknown> => v != null && typeof v === 'object' && !Array.isArray(v));
-  }
-  return [];
-}
 
 // ─── detect function (UNCHANGED from original) ───
 
@@ -152,7 +120,7 @@ export function detectMissingEngramData(
   );
 
   const rawLocations = stateManager.get<unknown>(paths.locations);
-  const locationRecords = normalizeLocations(rawLocations);
+  const locationRecords = normalizeLocationRecords(rawLocations);
 
   const locationNames: string[] = [];
   for (const loc of locationRecords) {
@@ -215,35 +183,6 @@ interface ParsedEntityDesc {
 interface ParsedAIOutput {
   facts: ParsedFact[];
   descriptions: ParsedEntityDesc[];
-}
-
-/**
- * Tolerant JSON extraction shared across batch AI pipelines (Story 4 solidify,
- * Story 7 card edge classify): scan candidate '{' start positions from the END
- * of the raw response and return the first JSON.parse-able value accepted by
- * `accept`. Survives thinking tags, prose preambles and code fences.
- */
-export function parseLooseJson<T>(raw: string, accept: (v: unknown) => v is T): T | null {
-  const openBraces: number[] = [];
-  for (let i = 0; i < raw.length; i++) {
-    if (raw[i] === '{') openBraces.push(i);
-  }
-
-  for (let i = openBraces.length - 1; i >= 0; i--) {
-    const candidate = raw.slice(openBraces[i]);
-    const closeIdx = candidate.lastIndexOf('}');
-    if (closeIdx < 0) continue;
-
-    const parsed = parseJsonWithRepairs(candidate.slice(0, closeIdx + 1), 'none');
-    if (parsed === undefined) continue;
-    try {
-      if (accept(parsed)) return parsed;
-    } catch {
-      continue;
-    }
-  }
-
-  return null;
 }
 
 function parseAIResponse(raw: string): ParsedAIOutput {
@@ -345,7 +284,7 @@ export class EngramBatchSolidifyPipeline {
 
     const knownDescriptions = this.buildKnownDescriptions();
     const locationNameSet = new Set<string>();
-    for (const loc of normalizeLocations(stateManager.get<unknown>(paths.locations))) {
+    for (const loc of normalizeLocationRecords(stateManager.get<unknown>(paths.locations))) {
       const n = loc[paths.locationNameField];
       if (typeof n === 'string' && n.trim()) locationNameSet.add(n.trim());
     }
@@ -379,8 +318,7 @@ export class EngramBatchSolidifyPipeline {
         const srcGone = !stateTreeNames.has(edge.sourceEntity);
         const tgtGone = !stateTreeNames.has(edge.targetEntity);
         if (srcGone || tgtGone) {
-          edge.invalidAtRound = currentRound;
-          edge.temporalStatus = 'historical';
+          markEdgeInvalid(edge, currentRound, 'historical');
           changed = true;
         }
       }
@@ -634,7 +572,7 @@ export class EngramBatchSolidifyPipeline {
       }
     }
 
-    for (const loc of normalizeLocations(stateManager.get<unknown>(paths.locations))) {
+    for (const loc of normalizeLocationRecords(stateManager.get<unknown>(paths.locations))) {
       const n = loc[paths.locationNameField];
       if (typeof n === 'string' && n.trim()) {
         const locDesc = loc[paths.locationDescriptionField];
@@ -804,7 +742,7 @@ export class EngramBatchSolidifyPipeline {
       }
     }
     // State tree location names
-    for (const loc of normalizeLocations(stateManager.get<unknown>(paths.locations))) {
+    for (const loc of normalizeLocationRecords(stateManager.get<unknown>(paths.locations))) {
       const name = loc[paths.locationNameField];
       if (typeof name === 'string' && name.trim()) validNames.add(name.trim());
     }

@@ -20,11 +20,10 @@ import {
   rereadStoredNarrative,
   salvageEnvelopeText,
 } from './response-parser';
-import { extractJsonObjectByKey, findBalancedJsonBlocks, stripMarkdownFences } from './json-extract';
+import { extractJsonObjectByKey, findBalancedJsonBlocks, parseLooseJson, stripMarkdownFences } from './json-extract';
 import { healUnescapedQuotes, sanitizeJsonEscapes } from './json-escape-sanitize';
 import { parseAssistantPayload } from '../services/assistant/payload-parser';
 import { PresetAIGenerator } from '../services/preset-ai-generator';
-import { parseLooseJson } from '../memory/engram/batch-solidify-pipeline';
 import { FieldRepairPipeline } from '../pipeline/sub-pipelines/field-repair';
 import { extractThinkingFromRaw } from '../core/prompt-debug';
 import { createJsonTextStreamUnwrapper } from '../pipeline/stages/ai-call';

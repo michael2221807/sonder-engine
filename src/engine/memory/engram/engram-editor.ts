@@ -17,8 +17,8 @@ import type { EngramEdge } from './knowledge-edge';
 import { engramEdgeId } from './knowledge-edge';
 import type { EngramEntity } from './entity-builder';
 import { inferEntityType } from './entity-builder';
-import type { EngramRelation } from './engram-types';
-import type { EngramEventNode } from './event-builder';
+import { ENGRAM_SCHEMA_VERSION, MIN_FACT_LENGTH, normalizeEngramBlock, normalizeLocationRecords } from './engram-types';
+import type { EngramStateData } from './engram-types';
 import { DEFAULT_ENGINE_PATHS } from '../../pipeline/types';
 
 // ─── Minimal interface for EngramManager methods we depend on ───
@@ -30,23 +30,6 @@ export interface EngramManagerLike {
   vectorizePending(stateManager: StateManager): Promise<{ vectorized: number }>;
   deleteEdgeVectors(edgeIds: string[]): Promise<void>;
   deleteEntityVectors(names: string[]): Promise<void>;
-}
-
-// ─── Engram state shape (matches engram-manager.ts private interface) ───
-
-interface EngramStateData {
-  events: EngramEventNode[];
-  entities: EngramEntity[];
-  relations: EngramRelation[];
-  v2Edges: EngramEdge[];
-  meta: {
-    lastUpdated: number;
-    eventCount: number;
-    embeddedEventCount: number;
-    embeddedEntityCount: number;
-    schemaVersion: number;
-    v2PendingReview?: Array<{ newFact: string; oldEdgeId: string; similarity: number }> | null;
-  };
 }
 
 // ─── Error codes ───
@@ -120,17 +103,6 @@ export interface CoverageStats {
 }
 
 // ─── Constants ───
-
-const MIN_FACT_LENGTH = 10;
-
-function normalizeLocationRecords(raw: unknown): Array<Record<string, unknown>> {
-  if (Array.isArray(raw)) return raw.filter(x => x && typeof x === 'object');
-  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-    return Object.values(raw as Record<string, unknown>)
-      .filter((v): v is Record<string, unknown> => v != null && typeof v === 'object' && !Array.isArray(v));
-  }
-  return [];
-}
 
 /** Dot-path read over a plain tree (no StateManager) — for save-agnostic analytics. */
 function readTreePath(root: unknown, path: string): unknown {
@@ -212,8 +184,7 @@ export class EngramEditor {
       };
 
       engram.entities.push(created);
-      engram.meta.lastUpdated = Date.now();
-      this.saveEngram(engram);
+      this.touchAndSave(engram);
 
       return created;
     });
@@ -249,8 +220,7 @@ export class EngramEditor {
       entity.userEditedAtRound = this.getCurrentRound();
 
       engram.entities[idx] = entity;
-      engram.meta.lastUpdated = Date.now();
-      this.saveEngram(engram);
+      this.touchAndSave(engram);
 
       return entity;
     });
@@ -310,8 +280,7 @@ export class EngramEditor {
         is_embedded: false,
       };
       engram.entities[idx] = entity;
-      engram.meta.lastUpdated = Date.now();
-      this.saveEngram(engram);
+      this.touchAndSave(engram);
 
       // Clean old edge vectors + the stale old-name entity vector.
       if (oldEdgeIds.length > 0) {
@@ -359,8 +328,7 @@ export class EngramEditor {
         }
       }
 
-      engram.meta.lastUpdated = Date.now();
-      this.saveEngram(engram);
+      this.touchAndSave(engram);
 
       if (removedEdgeIds.length > 0) {
         await this.engramManager.deleteEdgeVectors(removedEdgeIds);
@@ -431,8 +399,7 @@ export class EngramEditor {
       };
 
       engram.v2Edges.push(edge);
-      engram.meta.lastUpdated = Date.now();
-      this.saveEngram(engram);
+      this.touchAndSave(engram);
 
       return {
         edge,
@@ -492,8 +459,7 @@ export class EngramEditor {
       };
 
       engram.v2Edges[idx] = edge;
-      engram.meta.lastUpdated = Date.now();
-      this.saveEngram(engram);
+      this.touchAndSave(engram);
 
       // Clean old vectors if identity changed
       if (oldId) {
@@ -519,8 +485,7 @@ export class EngramEditor {
         );
       }
 
-      engram.meta.lastUpdated = Date.now();
-      this.saveEngram(engram);
+      this.touchAndSave(engram);
 
       await this.engramManager.deleteEdgeVectors([edgeId]);
     });
@@ -538,8 +503,7 @@ export class EngramEditor {
       };
 
       engram.v2Edges[idx] = edge;
-      engram.meta.lastUpdated = Date.now();
-      this.saveEngram(engram);
+      this.touchAndSave(engram);
 
       return edge;
     });
@@ -587,8 +551,7 @@ export class EngramEditor {
       }
 
       if (created.length > 0) {
-        engram.meta.lastUpdated = Date.now();
-        this.saveEngram(engram);
+        this.touchAndSave(engram);
       }
 
       return { created, skipped };
@@ -662,8 +625,7 @@ export class EngramEditor {
       }
 
       if (created.length > 0) {
-        engram.meta.lastUpdated = Date.now();
-        this.saveEngram(engram);
+        this.touchAndSave(engram);
       }
 
       return { created, skipped };
@@ -692,8 +654,7 @@ export class EngramEditor {
       }
 
       if (updated > 0) {
-        engram.meta.lastUpdated = Date.now();
-        this.saveEngram(engram);
+        this.touchAndSave(engram);
       }
 
       return { updated, notFound };
@@ -820,26 +781,8 @@ export class EngramEditor {
   }
 
   private normalizeEngram(rawValue: unknown): EngramStateData {
-    const raw =
-      rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)
-        ? (rawValue as Partial<EngramStateData>)
-        : undefined;
-    if (raw && Array.isArray(raw.events)) {
-      return {
-        events: raw.events,
-        entities: Array.isArray(raw.entities) ? raw.entities : [],
-        relations: Array.isArray(raw.relations) ? raw.relations : [],
-        v2Edges: Array.isArray(raw.v2Edges) ? raw.v2Edges : [],
-        meta: {
-          lastUpdated: raw.meta?.lastUpdated ?? 0,
-          eventCount: raw.meta?.eventCount ?? raw.events.length,
-          embeddedEventCount: raw.meta?.embeddedEventCount ?? 0,
-          embeddedEntityCount: raw.meta?.embeddedEntityCount ?? 0,
-          schemaVersion: raw.meta?.schemaVersion ?? 1,
-          v2PendingReview: raw.meta?.v2PendingReview ?? null,
-        },
-      };
-    }
+    const normalized = normalizeEngramBlock(rawValue);
+    if (normalized) return normalized;
     return {
       events: [],
       entities: [],
@@ -850,7 +793,9 @@ export class EngramEditor {
         eventCount: 0,
         embeddedEventCount: 0,
         embeddedEntityCount: 0,
-        schemaVersion: 5,
+        // Tracks ENGRAM_SCHEMA_VERSION (the value was the literal 5 here): bumping the
+        // constant now also bumps the editor's empty block, by design.
+        schemaVersion: ENGRAM_SCHEMA_VERSION,
         v2PendingReview: null,
       },
     };
@@ -858,6 +803,12 @@ export class EngramEditor {
 
   private saveEngram(engram: EngramStateData): void {
     this.stateManager.set(this.engramPath, engram, 'system');
+  }
+
+  /** Stamp meta.lastUpdated and persist - the tail of every write operation. */
+  private touchAndSave(engram: EngramStateData): void {
+    engram.meta.lastUpdated = Date.now();
+    this.saveEngram(engram);
   }
 
   private makeStubEntity(name: string, round: number): EngramEntity {

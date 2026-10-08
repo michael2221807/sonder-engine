@@ -26,7 +26,7 @@ import type { PromptAssembler } from '../prompt/prompt-assembler';
 import type { EngramEdge } from '../memory/engram/knowledge-edge';
 import type { EngramEntity } from '../memory/engram/entity-builder';
 import type { ProgressPayload } from '../services/assistant/types';
-import { parseLooseJson } from '../memory/engram/batch-solidify-pipeline';
+import { parseLooseJson } from '../ai/json-extract';
 
 /** Mirrors the edgeReview globalCap precedent (engram-types.ts) — one LLM call per batch. */
 const BATCH_SIZE = 40;

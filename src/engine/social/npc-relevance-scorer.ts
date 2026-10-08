@@ -17,16 +17,8 @@ import type { EngramReadSnapshot, ScoredCandidateTrace } from '../memory/engram/
 import type { EngramEdge } from '../memory/engram/knowledge-edge';
 import type { EngramEntity } from '../memory/engram/entity-builder';
 
-export interface NpcRelevanceConfig {
-  /** Signal 2: rounds within which a player↔NPC edge counts as "recent" */
-  recentRoundWindow: number;
-  /** Signal 3: BFS hop count along NPC↔NPC edges */
-  bfsHops: number;
-  /** Skip filtering entirely when total NPC count is below this */
-  minNpcCountForFilter: number;
-  /** Additional player name aliases to exclude from BFS (pack-specific, e.g. ['玩家']) */
-  playerAliases?: string[];
-}
+import type { NpcRelevanceConfig } from './npc-relevance-types';
+export type { NpcRelevanceConfig } from './npc-relevance-types';
 
 export const DEFAULT_NPC_RELEVANCE_CONFIG: NpcRelevanceConfig = {
   recentRoundWindow: 5,
