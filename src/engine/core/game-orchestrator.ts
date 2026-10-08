@@ -19,37 +19,8 @@ import { PipelineRunner } from '../pipeline/pipeline-runner';
 import { RoundOwnership, type RoundSlot } from './round-ownership';
 import { runPostRound } from './post-round';
 import { addRoundStages, buildOpeningStages } from './stage-assembly';
+import { readAISettings, generateId } from './round-settings';
 
-/** 从 localStorage 读取 AI 生成设置（每回合调用，确保设置变更立即生效） */
-function readAISettings(): { streaming: boolean; splitGen: boolean; contextCompiler: boolean } {
-  try {
-    const raw = localStorage.getItem(AI_SETTINGS_STORAGE_KEY);
-    if (!raw) return { streaming: true, splitGen: false, contextCompiler: true };
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    return {
-      streaming: parsed.streaming !== false,
-      splitGen: parsed.splitGen === true,
-      // Context Compiler v1 (2026-09-04): default ON (PO decision Q2); absent key = on.
-      contextCompiler: parsed.contextCompiler !== false,
-    };
-  } catch {
-    return { streaming: true, splitGen: false, contextCompiler: true };
-  }
-}
-
-/** UUID v4 — 兼容 HTTP 本地开发环境（crypto.randomUUID 需要 secure context） */
-function generateId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  // Polyfill: crypto.getRandomValues 在 http://localhost 也可用
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (typeof crypto !== 'undefined' && crypto.getRandomValues)
-      ? (crypto.getRandomValues(new Uint8Array(1))[0] & 0xf)
-      : Math.floor(Math.random() * 16);
-    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-  });
-}
 import { eventBus } from './event-bus';
 import { useEngineStateStore } from '../stores/engine-state';
 import { useActionQueueStore } from '../stores/engine-action-queue';
@@ -59,7 +30,6 @@ import type { StateManager } from './state-manager';
 import type { CommandExecutor } from './command-executor';
 import type { BehaviorRunner } from '../behaviors/behavior-runner';
 import type { AIService } from '../ai/ai-service';
-import { AI_SETTINGS_STORAGE_KEY } from '../ai/ai-service';
 import type { ResponseParser } from '../ai/response-parser';
 import type { PromptAssembler } from '../prompt/prompt-assembler';
 import type { SaveManager } from '../persistence/save-manager';
@@ -136,18 +106,9 @@ export interface SubPipelineBundle {
 
 export interface PreRoundSnapshotOptions {
   /**
-   * The live round number captured immediately BEFORE `PipelineRunner.run()`.
-   *
-   * Correlation guard (code review 2026-08-21): the snapshot at
-   * `paths.preRoundSnapshot` survives across rounds, so "a snapshot exists" is NOT
-   * proof that *this* attempt dirtied anything. `PreProcessStage` writes the snapshot
-   * and THEN increments the round number, so:
-   *   - round unchanged  → PreProcess did not complete → nothing to roll back, and the
-   *                        stored snapshot may belong to an EARLIER round; rolling back
-   *                        to it would silently discard a completed round's state.
-   *   - round advanced   → PreProcess completed this attempt → the stored snapshot is
-   *                        definitionally the one it just wrote.
-   * Omit to skip the guard (used by callers that already know a round was started).
+   * Live round number captured immediately BEFORE `PipelineRunner.run()`. The stored snapshot
+   * survives across rounds, so it is only trusted when the round number advanced this attempt
+   * (PreProcess writes the snapshot, then increments). Omit to skip the guard.
    */
   roundBefore?: number;
   /** Fallback source for callers that genuinely hold a populated context. */
@@ -155,22 +116,11 @@ export interface PreRoundSnapshotOptions {
 }
 
 /**
- * Resolve the pre-round snapshot used by the pipeline's error auto-rollback.
+ * Resolve the snapshot used by the pipeline's error auto-rollback (B0-1).
+ * The runner copies the context, so `initialCtx.preRoundSnapshot` is always empty: the state tree
+ * (`paths.preRoundSnapshot`, written by PreProcess before the round increment) is the primary source.
  *
- * B0-1 (2026-08-20) — the invariant this encodes:
- * `PipelineRunner.run()` copies the context (`let ctx = { ...initialContext }`)
- * and every stage returns a NEW object, so the caller's `initialCtx` is never
- * written back. Reading `initialCtx.preRoundSnapshot` therefore always yielded
- * `undefined` and the auto-rollback branch never ran — a mid-pipeline throw left
- * the already-incremented round number behind as dirty state.
- *
- * `PreProcessStage` persists the snapshot into `paths.preRoundSnapshot` BEFORE it
- * increments the round number, so the state tree is the authoritative source.
- * The ctx fallback is kept only for callers that do hold a populated context
- * (e.g. future in-process reuse); it must never be the primary source.
- *
- * @returns the snapshot to roll back to, or `null` when this attempt left nothing
- *          dirty (see {@link PreRoundSnapshotOptions.roundBefore}).
+ * @returns the snapshot to roll back to, or `null` when this attempt left nothing dirty.
  */
 export function resolvePreRoundSnapshot(
   stateManager: Pick<StateManager, 'get'>,
@@ -499,10 +449,7 @@ export class GameOrchestrator {
       ? (stateManager.get<string>(paths.playerLocation) ?? null)
       : null;
 
-    // B0-1 correlation guard: remember the round number BEFORE the pipeline starts, so
-    // the error path can tell "PreProcess advanced the round this attempt" (roll back)
-    // from "PreProcess never completed" (nothing dirty — a stale snapshot from an
-    // earlier round must NOT be applied). See resolvePreRoundSnapshot().
+    // B0-1 guard: round number before the run, so a stale snapshot is never applied (see resolvePreRoundSnapshot).
     const roundBefore = stateManager.get<number>(this._paths.roundNumber) ?? 0;
 
     const initialCtx: PipelineContext = {
@@ -537,9 +484,7 @@ export class GameOrchestrator {
       // 自动回滚：PreProcess 在 AI 调用前已递增 roundNumber，不回滚会留下脏状态。
       // preRoundSnapshot 在递增前捕获，回滚后 roundNumber 恢复到正确值。
       //
-      // B0-1 修复（2026-08-20）：快照必须从**状态树**读，不能读 `initialCtx` —
-      // 详见 `resolvePreRoundSnapshot()` 的注释（Runner 值传递 → initialCtx 恒为空 →
-      // 这个分支此前从未执行过，报错回合会留下已递增的 `元数据.回合序号`）。
+      // 快照必须从状态树读，不能读 `initialCtx`（见 resolvePreRoundSnapshot）。
       const recoveryAllowed = !ownership.saved && ownership.isCurrent();
       const snapshot = resolvePreRoundSnapshot(stateManager, this._paths, {
         roundBefore,
@@ -560,12 +505,7 @@ export class GameOrchestrator {
       if (!finalCtx) await this.flushRequestedSave();
     }
 
-    // Phase 4 (2026-04-19): the old post-pipeline BodyPolish block was removed.
-    // Polish now runs INSIDE the pipeline as `BodyPolishStage` between AICall and
-    // ReasoningIngest, so PostProcess sees the polished text and persists it
-    // correctly. The previous post-pipeline block was silently broken — it
-    // mutated `finalCtx.parsedResponse.text` in memory but the narrative entry
-    // had already been pushed with the original text.
+    // Body polish runs inside the pipeline (BodyPolishStage), not here.
 
     // ── GAP_AUDIT §G2: 消费主管线设置的 pending 标记，触发对应子管线 ──
     if (finalCtx) {
