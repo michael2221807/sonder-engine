@@ -14,6 +14,13 @@ export const LOAD_MORE_INCREMENT = 5;
 
 export type WindowMode = 'tail' | 'pinned';
 
+/** A value, or a getter read only when the value is needed. */
+export type Lazy<T> = T | (() => T);
+
+function read<T>(v: Lazy<T>): T {
+  return typeof v === 'function' ? (v as () => T)() : v;
+}
+
 /** Minimal message shape the window maths needs. */
 export interface WindowMessage {
   role: string;
@@ -25,19 +32,24 @@ export interface WindowMessage {
  * @param mode  'tail' or 'pinned'
  * @param tail  how many rounds 'tail' mode shows (may be Infinity)
  * @param pinnedIdx  message index the pinned window centres on
+ *
+ * The last four may be getters. A computed that passes getters reads each source only
+ * where the original inline code did (aPos after the empty check, `tail` only in tail
+ * mode, `pinnedIdx` only in pinned mode), so its reactive dependencies stay the same.
  */
 export function computeVisibleRange(
   msgs: ReadonlyArray<WindowMessage>,
-  aPos: ReadonlyArray<number>,
-  mode: WindowMode,
-  tail: number,
-  pinnedIdx: number,
+  aPosIn: Lazy<ReadonlyArray<number>>,
+  modeIn: Lazy<WindowMode>,
+  tailIn: Lazy<number>,
+  pinnedIdxIn: Lazy<number>,
 ): { start: number; end: number } {
   if (msgs.length === 0) return { start: 0, end: 0 };
+  const aPos = read(aPosIn);
   if (aPos.length === 0) return { start: 0, end: msgs.length };
 
-  if (mode === 'tail') {
-    const count = tail;
+  if (read(modeIn) === 'tail') {
+    const count = read(tailIn);
     if (aPos.length <= count) return { start: 0, end: msgs.length };
     const startAssistantPos = aPos.length - count;
     const startMsgIdx = aPos[startAssistantPos];
@@ -49,7 +61,7 @@ export function computeVisibleRange(
   // Pinned: show ±HALF rounds around target
   let centerPos = aPos.length - 1;
   for (let j = 0; j < aPos.length; j++) {
-    if (aPos[j] >= pinnedIdx) { centerPos = j; break; }
+    if (aPos[j] >= read(pinnedIdxIn)) { centerPos = j; break; }
   }
 
   const wStart = Math.max(0, centerPos - VISIBLE_ROUND_HALF);

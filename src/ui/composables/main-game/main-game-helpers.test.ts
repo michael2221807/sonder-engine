@@ -24,6 +24,24 @@ describe('round window constants', () => {
 });
 
 describe('computeVisibleRange', () => {
+  it('reads getter sources only where the original inline computed did', () => {
+    const getters = () => ({ aPos: vi.fn(() => [1, 3]), mode: vi.fn(() => 'tail' as const), tail: vi.fn(() => 5), pinned: vi.fn(() => 0) });
+
+    const empty = getters();
+    computeVisibleRange([], empty.aPos, empty.mode, empty.tail, empty.pinned);
+    expect([empty.aPos, empty.mode, empty.tail, empty.pinned].map((g) => g.mock.calls.length)).toEqual([0, 0, 0, 0]);
+
+    const tail = getters();
+    expect(computeVisibleRange(conversation(2), tail.aPos, tail.mode, tail.tail, tail.pinned)).toEqual({ start: 0, end: 4 });
+    expect(tail.pinned).not.toHaveBeenCalled();
+
+    const pinned = getters();
+    pinned.mode.mockReturnValue('pinned' as never);
+    computeVisibleRange(conversation(2), pinned.aPos, pinned.mode, pinned.tail, pinned.pinned);
+    expect(pinned.tail).not.toHaveBeenCalled();
+    expect(pinned.pinned).toHaveBeenCalled();
+  });
+
   it('empty history and history without assistants', () => {
     expect(computeVisibleRange([], [], 'tail', 5, 0)).toEqual({ start: 0, end: 0 });
     const onlyUser = [{ role: 'user' }, { role: 'user' }];

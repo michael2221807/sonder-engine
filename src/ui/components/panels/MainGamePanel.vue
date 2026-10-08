@@ -408,10 +408,10 @@ const assistantPositions = computed<number[]>(() => {
 const visibleRange = computed<{ start: number; end: number }>(() =>
   computeVisibleRange(
     displayMessages.value,
-    assistantPositions.value,
-    windowMode.value,
-    tailVisibleRounds.value,
-    pinnedTargetIdx.value,
+    () => assistantPositions.value,
+    () => windowMode.value,
+    () => tailVisibleRounds.value,
+    () => pinnedTargetIdx.value,
   ));
 
 const visibleStartIndex = computed(() => visibleRange.value.start);
