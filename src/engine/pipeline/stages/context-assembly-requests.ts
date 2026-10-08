@@ -36,6 +36,7 @@ import { PlotInjector } from '../../plot/plot-injector';
 import type { SystemPromptBuildResult } from '../../prompt/world-book';
 import type { RawPromptTransform } from '../../prompt/raw-prompt-transform';
 import type { RoundPromptInputs } from './context-assembly-inputs';
+import { DEFAULT_ENGINE_PATHS } from '../types';
 
 export interface RequestDeps {
   stateManager: StateManager;
@@ -129,7 +130,7 @@ function resolveFlowOverride(deps: RequestDeps, ctx: PipelineContext, step: 'ste
 
 /** The implicit mid-term memory as the builder reads it: one line per entry, timestamped when it has a time. */
 function buildImplicitMidBlock(stateManager: StateManager): string {
-  const implicitMidRaw = stateManager.get<unknown[]>('记忆.隐式中期') ?? [];
+  const implicitMidRaw = stateManager.get<unknown[]>(DEFAULT_ENGINE_PATHS.implicitMidTermMemory) ?? [];
   return implicitMidRaw
     .filter((e): e is Record<string, unknown> => e != null && typeof e === 'object' && !Array.isArray(e))
     .filter((e) => e['记忆主体'] && String(e['记忆主体']).trim())

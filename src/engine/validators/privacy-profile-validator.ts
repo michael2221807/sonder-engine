@@ -21,6 +21,8 @@
  */
 import type { StateManager } from '../core/state-manager';
 import type { EnginePathConfig } from '../pipeline/types';
+import { SYSTEM_PATHS } from '../pipeline/system-paths';
+import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 
 /** 性别过滤器类型 — 与 demo nsfw.ts NsfwGenderFilter 同义 */
 export type NsfwGenderFilter = 'all' | 'male' | 'female';
@@ -204,8 +206,8 @@ export function readNsfwSettings(stateManager: StateManager): {
   nsfwMode: boolean;
   nsfwGenderFilter: NsfwGenderFilter;
 } {
-  const stateMode = stateManager.get<unknown>('系统.nsfwMode');
-  const stateFilter = stateManager.get<unknown>('系统.nsfwGenderFilter');
+  const stateMode = stateManager.get<unknown>(SYSTEM_PATHS.nsfwMode);
+  const stateFilter = stateManager.get<unknown>(SYSTEM_PATHS.nsfwGenderFilter);
 
   let lsMode: boolean | undefined;
   let lsFilter: NsfwGenderFilter | undefined;
@@ -262,7 +264,7 @@ export function findIncompletePrivacy(
     }
   }
 
-  const playerBody = stateManager.get<unknown>('角色.身体');
+  const playerBody = stateManager.get<unknown>(DEFAULT_ENGINE_PATHS.playerBody);
   const playerBodyMissing = !isPlayerBodyComplete(playerBody);
 
   // 去重 + 排序，保证幂等

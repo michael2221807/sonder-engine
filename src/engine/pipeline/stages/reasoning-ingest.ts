@@ -19,6 +19,7 @@
  */
 import type { PipelineStage, PipelineContext, EnginePathConfig } from '../types';
 import type { StateManager } from '../../core/state-manager';
+import { SYSTEM_PATHS } from '../system-paths';
 
 const DEFAULT_RING_SIZE = 3;
 
@@ -56,7 +57,7 @@ export class ReasoningIngestStage implements PipelineStage {
   }
 
   private readRingSize(): number {
-    const raw = this.stateManager.get<number>('系统.设置.cot.reasoningRingSize');
+    const raw = this.stateManager.get<number>(SYSTEM_PATHS.cotReasoningRingSize);
     if (typeof raw === 'number' && raw >= 1 && raw <= 10) return raw;
     return DEFAULT_RING_SIZE;
   }

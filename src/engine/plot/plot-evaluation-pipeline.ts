@@ -39,6 +39,7 @@ import {
 import { collectActiveGauges, evaluateThreadActivation } from './thread-trigger';
 import { readGameTimeStamp } from './game-time-stamp';
 import _cloneDeep from 'lodash-es/cloneDeep';
+import { SYSTEM_PATHS } from '../pipeline/system-paths';
 
 const DEFAULT_CONFIDENCE_THRESHOLD = 0.7;
 const DEFAULT_OPPORTUNITY_MAX_TIER = 3;
@@ -73,7 +74,7 @@ export class PlotEvaluationPipeline {
   ) {}
 
   private getSettings(): PlotSettingsFromState {
-    return this.stateManager.get<PlotSettingsFromState>('系统.设置.plot') ?? {};
+    return this.stateManager.get<PlotSettingsFromState>(SYSTEM_PATHS.plotSettings) ?? {};
   }
 
   async execute(): Promise<boolean> {

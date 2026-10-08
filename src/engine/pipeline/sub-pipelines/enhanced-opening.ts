@@ -37,6 +37,7 @@ import {
   formatSettledPlayerProfile,
   formatWorldContext,
 } from '../../creation/creation-prompt-formatter';
+import { DEFAULT_ENGINE_PATHS } from '../types';
 
 // ═══════════════════════════════════════════════════════════════
 //  Public types
@@ -670,7 +671,7 @@ export class EnhancedOpeningPipeline {
       phasesCompleted.push('G');
       effectiveOptions.onProgress('phaseG', 100);
 
-      const actionOpts = this.stateManager.get<string[]>('元数据.当前行动选项') ?? [];
+      const actionOpts = this.stateManager.get<string[]>(DEFAULT_ENGINE_PATHS.currentActionOptions) ?? [];
 
       return {
         success: true,
@@ -799,7 +800,7 @@ export class EnhancedOpeningPipeline {
       phasesCompleted.push('G');
       effectiveOptions.onProgress('phaseG', 100);
 
-      const actionOpts = this.stateManager.get<string[]>('元数据.当前行动选项') ?? [];
+      const actionOpts = this.stateManager.get<string[]>(DEFAULT_ENGINE_PATHS.currentActionOptions) ?? [];
       return { success: true, phasesCompleted, actionOptions: actionOpts };
     } catch (err) {
       this.stateManager.loadTree(baselineSnapshot);

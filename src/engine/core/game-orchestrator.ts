@@ -107,6 +107,7 @@ import type { ImageService } from '../image/image-service';
 import type { TtsService } from '../tts/tts-service';
 import type { PrivacyIncompleteReport } from '../validators/privacy-profile-validator';
 import type { OpeningStages } from '../pipeline/sub-pipelines/enhanced-opening';
+import { SYSTEM_PATHS } from '../pipeline/system-paths';
 
 /**
  * 子管线包 — 由 main.ts 在 bootstrap 期间构造并注入 GameOrchestrator。
@@ -338,7 +339,7 @@ export class GameOrchestrator {
         isEnabled: () => {
           const settings: PromptSettings = {
             ...DEFAULT_PROMPT_SETTINGS,
-            ...(stateManager.get<Partial<PromptSettings>>('系统.设置.prompt') ?? {}),
+            ...(stateManager.get<Partial<PromptSettings>>(SYSTEM_PATHS.promptSettings) ?? {}),
           };
           // The world-book master switch gates BOTH extraction and injection; the
           // feature switch gates extraction only (existing entries keep working).
@@ -479,7 +480,7 @@ export class GameOrchestrator {
   private rollbackLastRound(stateManager: StateManager): void {
     if (this.abortController || this._subPipelineActive || this.subPipelines.stateEditInProgress?.()) return; // Do not race an editor's atomic save.
 
-    const snapshotPath = '元数据.上次对话前快照';
+    const snapshotPath = DEFAULT_ENGINE_PATHS.preRoundSnapshot;
     const snapshot = stateManager.get<Record<string, unknown>>(snapshotPath);
     if (!snapshot) {
       // R-05: 无快照时给用户明确反馈（连续第二次回退、或第一回合回退）
@@ -919,13 +920,13 @@ export class GameOrchestrator {
     // ── Auto scene generation (post-round) ──
     // D27: Skip ImageService during enhanced opening
     if (this.subPipelines.imageService && !ctx.meta?.isEnhancedOpening) {
-      const autoScene = stateManager.get<boolean>('系统.扩展.image.config.autoSceneOnRound') === true;
-      const imageEnabled = stateManager.get<boolean>('系统.扩展.image.enabled') === true;
+      const autoScene = stateManager.get<boolean>(`${SYSTEM_PATHS.image.config}.autoSceneOnRound`) === true;
+      const imageEnabled = stateManager.get<boolean>(SYSTEM_PATHS.image.enabled) === true;
       if (autoScene && imageEnabled && ctx.parsedResponse?.text) {
         try {
           const paths = this.subPipelines.paths;
-          const location = stateManager.get<string>(paths?.playerLocation ?? '角色.基础信息.当前位置') ?? '';
-          const defaultBackend = (stateManager.get<string>('系统.扩展.image.config.defaultBackend') ?? 'novelai') as ImageBackendType;
+          const location = stateManager.get<string>(paths?.playerLocation ?? DEFAULT_ENGINE_PATHS.playerLocation) ?? '';
+          const defaultBackend = (stateManager.get<string>(`${SYSTEM_PATHS.image.config}.defaultBackend`) ?? 'novelai') as ImageBackendType;
           eventBus.emit('ui:toast', { type: 'info', i18nKey: 'engine.toast.autoSceneGenStart', message: '正在自动生成场景图…', duration: 2000 });
           // P3 env-tags port (2026-04-19): forward env state so auto-gen scene
           // images reflect current weather/festival/environment (same plumbing
@@ -934,15 +935,15 @@ export class GameOrchestrator {
           // Consume the auto-scene settings the Settings tab writes (they were
           // previously dead controls): resolution → preset width/height,
           // composition → pure_landscape / story_snapshot.
-          const autoResolution = parseSizeString(stateManager.get<string>('系统.扩展.image.config.auto.sceneResolution') ?? '');
-          const autoOrientation = stateManager.get<string>('系统.扩展.image.config.auto.sceneOrientation') === 'portrait' ? 'portrait' : 'landscape';
+          const autoResolution = parseSizeString(stateManager.get<string>(`${SYSTEM_PATHS.image.config}.auto.sceneResolution`) ?? '');
+          const autoOrientation = stateManager.get<string>(`${SYSTEM_PATHS.image.config}.auto.sceneOrientation`) === 'portrait' ? 'portrait' : 'landscape';
           const fallbackSize = autoOrientation === 'portrait' ? { width: 576, height: 1024 } : { width: 1024, height: 576 };
           const autoSize = autoResolution ?? fallbackSize;
           const autoScenePreset: StylePreset = {
             id: 'auto_scene', name: 'auto scene', positivePrefix: '', positiveSuffix: '', negative: '',
             source: 'auto', width: autoSize.width, height: autoSize.height,
           };
-          const autoComposition = stateManager.get<string>('系统.扩展.image.config.auto.sceneComposition') === 'snapshot'
+          const autoComposition = stateManager.get<string>(`${SYSTEM_PATHS.image.config}.auto.sceneComposition`) === 'snapshot'
             ? 'story_snapshot' as const : 'pure_landscape' as const;
           this.subPipelines.imageService.generateSceneImage({
             sceneDescription: ctx.parsedResponse.text.slice(0, 800),
@@ -968,19 +969,19 @@ export class GameOrchestrator {
     // ── Auto NPC portrait (first appearance) ──
     // D27: Skip ImageService during enhanced opening (same guard as auto scene above)
     if (this.subPipelines.imageService && !ctx.meta?.isEnhancedOpening) {
-      const autoPortrait = stateManager.get<boolean>('系统.扩展.image.config.autoPortraitForMajorNpcs') === true;
-      const imageEnabled = stateManager.get<boolean>('系统.扩展.image.enabled') === true;
+      const autoPortrait = stateManager.get<boolean>(`${SYSTEM_PATHS.image.config}.autoPortraitForMajorNpcs`) === true;
+      const imageEnabled = stateManager.get<boolean>(SYSTEM_PATHS.image.enabled) === true;
       if (autoPortrait && imageEnabled) {
         try {
           const portraitPaths = this.subPipelines.paths ?? DEFAULT_ENGINE_PATHS;
           const npcFields = portraitPaths.npcFieldNames;
           const relations = stateManager.get<Array<Record<string, unknown>>>(portraitPaths.relationships) ?? [];
-          const genderFilter = stateManager.get<string>('系统.扩展.image.config.auto.genderFilter') ?? 'all';
-          const importanceFilter = stateManager.get<string>('系统.扩展.image.config.auto.importanceFilter') ?? 'major';
-          const defaultBackend = (stateManager.get<string>('系统.扩展.image.config.defaultBackend') ?? 'novelai') as ImageBackendType;
+          const genderFilter = stateManager.get<string>(`${SYSTEM_PATHS.image.config}.auto.genderFilter`) ?? 'all';
+          const importanceFilter = stateManager.get<string>(`${SYSTEM_PATHS.image.config}.auto.importanceFilter`) ?? 'major';
+          const defaultBackend = (stateManager.get<string>(`${SYSTEM_PATHS.image.config}.defaultBackend`) ?? 'novelai') as ImageBackendType;
           // Consume the "NPC 默认画风" setting (was a dead control): stored as a
           // style KEY ('generic'|'anime'|'realistic'|'chinese') → prompt label.
-          const npcStyleKey = stateManager.get<string>('系统.扩展.image.config.auto.npcStyle') ?? 'generic';
+          const npcStyleKey = stateManager.get<string>(`${SYSTEM_PATHS.image.config}.auto.npcStyle`) ?? 'generic';
           const npcArtStyle = ART_STYLE_PROMPT_LABELS[npcStyleKey] ?? ART_STYLE_PROMPT_LABELS.generic;
 
           for (const npc of relations) {
@@ -1024,7 +1025,7 @@ export class GameOrchestrator {
         this.subPipelines.ttsService.clearRoundAudio();
         const ttsSettings = this.subPipelines.ttsService.getSettings();
         if (ttsSettings.enabled && ttsSettings.autoNarrateOnRound && ctx.parsedResponse?.text) {
-          const roundNo = stateManager.get<number>(this.subPipelines.paths?.roundNumber ?? '元数据.回合序号') ?? 0;
+          const roundNo = stateManager.get<number>(this.subPipelines.paths?.roundNumber ?? DEFAULT_ENGINE_PATHS.roundNumber) ?? 0;
           // fire-and-forget — do NOT await (post-round pipeline must not block on TTS)
           void this.subPipelines.ttsService.speak(ctx.parsedResponse.text, `round-${roundNo}`);
         }

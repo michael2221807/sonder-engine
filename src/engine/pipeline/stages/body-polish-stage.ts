@@ -41,6 +41,7 @@ import {
   extractThinkingFromRaw,
 } from '../../core/prompt-debug';
 import { eventBus } from '../../core/event-bus';
+import { SYSTEM_PATHS } from '../system-paths';
 
 /**
  * Extract the polished body from the AI response.
@@ -82,7 +83,7 @@ export class BodyPolishStage implements PipelineStage {
   ) {}
 
   async execute(ctx: PipelineContext): Promise<PipelineContext> {
-    const enabled = this.stateManager.get<boolean>('系统.设置.bodyPolish') === true;
+    const enabled = this.stateManager.get<boolean>(SYSTEM_PATHS.bodyPolish) === true;
     if (!enabled) return ctx;
 
     const originalText = ctx.parsedResponse?.text ?? '';

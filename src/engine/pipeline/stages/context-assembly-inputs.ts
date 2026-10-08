@@ -31,6 +31,8 @@ import { buildEnvironmentBlock } from '../../prompt/environment-block';
 import { PlotInjector } from '../../plot/plot-injector';
 import { plotGaugeNames, findGaugeShadowPaths } from '../../plot/gauge-shadow';
 import { schemaDeclaresPath } from '../../core/command-executor';
+import { SYSTEM_PATHS } from '../system-paths';
+import { DEFAULT_ENGINE_PATHS } from '../types';
 
 /** 状态树中叙事历史条目的结构 — 从 "元数据.叙事历史" 读取 */
 export interface NarrativeEntry {
@@ -123,7 +125,7 @@ export async function collectRoundInputs(deps: RoundInputDeps, ctx: PipelineCont
     // 读取短期记忆用于单独注入（参照 ming: 短期记忆作为独立 assistant 消息注入 chat history 末端）
     // 路径来自 memoryPathConfig，默认 '记忆.短期'
     const shortTermEntries = deps.stateManager.get<Array<{ summary: string; round?: number }>>(
-      '记忆.短期'
+      DEFAULT_ENGINE_PATHS.shortTermMemory
     ) ?? [];
     const shortTermJoined = shortTermEntries.map((e) => story(typeof e === 'string' ? e : (e.summary ?? ''))).join('\n');
     const shortTermTemplate = deps.pack.engineFragments?.shortTermMemoryHeader
@@ -136,8 +138,8 @@ export async function collectRoundInputs(deps: RoundInputDeps, ctx: PipelineCont
     // ── NSFW 脱敏 — §11.2 C ──
     // nsfwMode=false 时从发给 AI 的 JSON 快照剥离 私密信息 和 角色.身体，
     // 原始状态树保持不变（存档完整，UI 可继续显示）。
-    const nsfwMode = deps.stateManager.get<boolean>('系统.nsfwMode') === true;
-    const presenceEnabled = deps.stateManager.get<boolean>('系统.设置.social.presenceEnabled') === true;
+    const nsfwMode = deps.stateManager.get<boolean>(SYSTEM_PATHS.nsfwMode) === true;
+    const presenceEnabled = deps.stateManager.get<boolean>(SYSTEM_PATHS.presenceEnabled) === true;
     // 2026-04-11 token 节省：
     // 1. 去重：叙事历史 / 记忆 / engramMemory / 上次对话前快照 **无条件**从 JSON 剥离
     //    （它们通过 chatHistory + MEMORY_BLOCK 等专用渠道独立注入，不应再在
@@ -152,7 +154,7 @@ export async function collectRoundInputs(deps: RoundInputDeps, ctx: PipelineCont
     const gaugeShadowPaths = schema
       ? findGaugeShadowPaths(stateSnapshot, gaugeNames, (path) => schemaDeclaresPath(schema, path), deps.paths.plotDirection)
       : [];
-    const stateStripPaths = [...(presenceEnabled ? ['社交.关系'] : []), ...gaugeShadowPaths];
+    const stateStripPaths = [...(presenceEnabled ? [DEFAULT_ENGINE_PATHS.relationships] : []), ...gaugeShadowPaths];
     const gameStateJson = stringifySnapshotForPrompt(
       stateSnapshot, nsfwMode, 0,
       stateStripPaths.length > 0 ? stateStripPaths : undefined,
@@ -174,9 +176,9 @@ export async function collectRoundInputs(deps: RoundInputDeps, ctx: PipelineCont
     // Fallback：状态树未设置时默认 'action' + 'fast'（保持之前的行为导向行为）
     // Anything but the two known values (a damaged save, an imported card's typo) reads as the default, so the
     // options never go missing while the switch is on.
-    const actionMode: 'action' | 'story' = deps.stateManager.get<unknown>('系统.actionOptions.mode') === 'story' ? 'story' : 'action';
-    const actionPace: 'fast' | 'slow' = deps.stateManager.get<unknown>('系统.actionOptions.pace') === 'slow' ? 'slow' : 'fast';
-    const customActionPrompt = deps.stateManager.get<string>('系统.actionOptions.customPrompt') ?? '';
+    const actionMode: 'action' | 'story' = deps.stateManager.get<unknown>(SYSTEM_PATHS.actionOptionsMode) === 'story' ? 'story' : 'action';
+    const actionPace: 'fast' | 'slow' = deps.stateManager.get<unknown>(SYSTEM_PATHS.actionOptionsPace) === 'slow' ? 'slow' : 'fast';
+    const customActionPrompt = deps.stateManager.get<string>(SYSTEM_PATHS.actionOptionsCustomPrompt) ?? '';
     // D7: author opening-style hint (card import Phase E only; absent for every other call).
     const openingSetupHint = typeof ctx.meta['openingSetupHint'] === 'string'
       ? (ctx.meta['openingSetupHint'] as string).trim()
@@ -269,9 +271,9 @@ export async function collectRoundInputs(deps: RoundInputDeps, ctx: PipelineCont
     }
 
     // ── CoT flags (Sprint CoT-2) — read once, freeze into ctx.meta ──
-    const cotEnabled = deps.stateManager.get<boolean>('系统.设置.cot.enabled') === true;
-    const cotJudgeEnabled = cotEnabled && deps.stateManager.get<boolean>('系统.设置.cot.judgeEnabled') === true;
-    const cotInjectStep2 = cotEnabled && deps.stateManager.get<boolean>('系统.设置.cot.injectStep2') !== false;
+    const cotEnabled = deps.stateManager.get<boolean>(SYSTEM_PATHS.cotEnabled) === true;
+    const cotJudgeEnabled = cotEnabled && deps.stateManager.get<boolean>(SYSTEM_PATHS.cotJudgeEnabled) === true;
+    const cotInjectStep2 = cotEnabled && deps.stateManager.get<boolean>(SYSTEM_PATHS.cotInjectStep2) !== false;
     console.debug('[ContextAssembly] CoT flags:', { cotEnabled, cotJudgeEnabled, cotInjectStep2 });
     console.debug('[ContextAssembly] Short-term entries:', shortTermEntries.length, 'Memory block length:', memoryBlock.length);
 
@@ -329,7 +331,7 @@ export async function collectRoundInputs(deps: RoundInputDeps, ctx: PipelineCont
     // at all, so the prompt and the gate can never disagree about what round this is.
     const promptSettings: PromptSettings = {
       ...DEFAULT_PROMPT_SETTINGS,
-      ...(deps.stateManager.get<Partial<PromptSettings>>('系统.设置.prompt') ?? {}),
+      ...(deps.stateManager.get<Partial<PromptSettings>>(SYSTEM_PATHS.promptSettings) ?? {}),
     };
     const actionOptionsEnabled = actionOptionsOn(promptSettings);
     const lengthAsked = wordCountRangeOf(promptSettings);
@@ -572,7 +574,7 @@ export function buildFlowVariables(deps: FlowVariableDeps, ctx: PipelineContext,
 
     // ── 4.5 Plot Direction System variables (Sprint Plot-1 P2) ──
     {
-      const plotEnabled = deps.stateManager.get<boolean>('系统.设置.plot.enabled');
+      const plotEnabled = deps.stateManager.get<boolean>(SYSTEM_PATHS.plotEnabled);
       if (plotEnabled !== false) {
         const splitGen = ctx.meta['splitGen'] === true;
         const plotVars = splitGen

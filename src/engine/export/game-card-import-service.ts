@@ -70,6 +70,7 @@ import type {
   ImportErrorCode,
   PackVersionDrift,
 } from './game-card-import.types';
+import { SYSTEM_PATHS } from '../pipeline/system-paths';
 
 /** Successful Stage-1 outcome — validated bundle + merged tree, ready for persistence. */
 export interface ValidatedCard {
@@ -403,7 +404,7 @@ export class GameCardImportService {
       //    narrative empty but the save is still created (first main-round will fill it).
       let openingDegraded = false;
       if (d.runOpening) {
-        const nsfwMode = d.stateManager.get<boolean>('系统.nsfwMode') === true;
+        const nsfwMode = d.stateManager.get<boolean>(SYSTEM_PATHS.nsfwMode) === true;
         try {
           await d.runOpening({
             nsfwMode,

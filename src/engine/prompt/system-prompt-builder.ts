@@ -34,6 +34,7 @@ import {
   formatGameTimeForWorldBook,
   type WorldBookInjectionResult,
 } from './world-book-selector';
+import { SYSTEM_PATHS } from '../pipeline/system-paths';
 
 /**
  * gproxy magic-cache trigger string (1-hour TTL variant). Embedded at the end of
@@ -305,7 +306,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   } = params;
 
   // Read prompt settings from state tree
-  const rawSettings = stateManager.get<Partial<PromptSettings>>('系统.设置.prompt');
+  const rawSettings = stateManager.get<Partial<PromptSettings>>(SYSTEM_PATHS.promptSettings);
   const settings: PromptSettings = { ...DEFAULT_PROMPT_SETTINGS, ...rawSettings };
 
   const lengthAsked = wordCountRangeOf(settings);
@@ -590,7 +591,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   }
 
   // ── 12. Heroine Plan (uses structured formatter) ──
-  const heroinePlanRaw = stateManager.get<HeroinePlan>('元数据.女主规划');
+  const heroinePlanRaw = stateManager.get<HeroinePlan>(DEFAULT_ENGINE_PATHS.heroinePlan);
   if (heroinePlanRaw) {
     const formattedPlan = formatHeroinePlanForContext(heroinePlanRaw);
     if (formattedPlan) {
@@ -632,7 +633,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
   const hidden = params.hiddenStatePaths ?? [];
   const playerAttrs = withoutStatePaths(stateManager.get<Record<string, unknown>>(paths.characterAttributes),
     paths.characterAttributes, hidden) as Record<string, unknown> | undefined;
-  const playerBody = withoutStatePaths(stateManager.get<unknown>('角色.身体'), '角色.身体', hidden);
+  const playerBody = withoutStatePaths(stateManager.get<unknown>(DEFAULT_ENGINE_PATHS.playerBody), DEFAULT_ENGINE_PATHS.playerBody, hidden);
   const playerEffects = stateManager.get<unknown>(paths.statusEffects);
   const roleParts = [];
   roleParts.push(`姓名: ${playerName}`);
@@ -657,7 +658,7 @@ export function buildSystemPrompt(params: SystemPromptBuildParams): SystemPrompt
     Array.isArray(agreements) && agreements.length > 0 ? `【约定列表】\n${JSON.stringify(agreements, null, 2)}` : '【约定列表】\n无');
 
   // ── 19. Short-term Memory (即时剧情回顾) — returned separately ──
-  const shortTerm = stateManager.get<Array<{ summary: string; round?: number }>>('记忆.短期') ?? [];
+  const shortTerm = stateManager.get<Array<{ summary: string; round?: number }>>(DEFAULT_ENGINE_PATHS.shortTermMemory) ?? [];
   const recent = (text: string) => (params.historyText ? params.historyText(text) : text);
   const shortMemoryContext = shortTerm.length > 0
     ? `【即时剧情回顾】\n${shortTerm.map((e) => recent(typeof e === 'string' ? e : (e.summary ?? ''))).join('\n')}`

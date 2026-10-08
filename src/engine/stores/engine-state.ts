@@ -5,6 +5,7 @@ import type { GameStateTree, StatePath } from '../types';
 import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 import type { StateManager } from '../core/state-manager';
 import { eventBus } from '../core/event-bus';
+import { SYSTEM_PATHS } from '../pipeline/system-paths';
 
 /**
  * Primary game state store — reactive GameStateTree for Vue + Pinia
@@ -78,7 +79,7 @@ export const useEngineStateStore = defineStore('engineState', () => {
   });
 
   /** Current round number */
-  const roundNumber = computed(() => get<number>('元数据.回合序号') ?? 0);
+  const roundNumber = computed(() => get<number>(P.roundNumber) ?? 0);
 
   /** 体力 {当前, 上限} */
   const vitalHealth = computed(() =>
@@ -182,11 +183,11 @@ export const useEngineStateStore = defineStore('engineState', () => {
       if (!raw) return;
       const parsed = JSON.parse(raw) as { nsfwMode?: boolean; nsfwGenderFilter?: string };
       if (typeof parsed.nsfwMode === 'boolean') {
-        setValue('系统.nsfwMode', parsed.nsfwMode);
+        setValue(SYSTEM_PATHS.nsfwMode, parsed.nsfwMode);
       }
       const validFilters = ['all', 'male', 'female'];
       if (typeof parsed.nsfwGenderFilter === 'string' && validFilters.includes(parsed.nsfwGenderFilter)) {
-        setValue('系统.nsfwGenderFilter', parsed.nsfwGenderFilter);
+        setValue(SYSTEM_PATHS.nsfwGenderFilter, parsed.nsfwGenderFilter);
       }
     } catch { /* no-op */ }
   }
@@ -206,8 +207,8 @@ export const useEngineStateStore = defineStore('engineState', () => {
       const raw = localStorage.getItem('aga_heartbeat_settings');
       if (raw) {
         const parsed = JSON.parse(raw) as { enabled?: boolean; period?: number };
-        if (typeof parsed.enabled === 'boolean') setValue('世界.状态.心跳.配置.enabled', parsed.enabled);
-        if (typeof parsed.period === 'number' && parsed.period > 0) setValue('世界.状态.心跳.配置.period', parsed.period);
+        if (typeof parsed.enabled === 'boolean') setValue(P.heartbeatEnabled, parsed.enabled);
+        if (typeof parsed.period === 'number' && parsed.period > 0) setValue(P.heartbeatPeriod, parsed.period);
       }
     } catch { /* no-op */ }
 
@@ -216,9 +217,9 @@ export const useEngineStateStore = defineStore('engineState', () => {
       const raw = localStorage.getItem('aga_action_options_settings');
       if (raw) {
         const parsed = JSON.parse(raw) as { mode?: string; pace?: string; customPrompt?: string };
-        if (parsed.mode === 'action' || parsed.mode === 'story') setValue('系统.actionOptions.mode', parsed.mode);
-        if (parsed.pace === 'fast' || parsed.pace === 'slow') setValue('系统.actionOptions.pace', parsed.pace);
-        if (typeof parsed.customPrompt === 'string') setValue('系统.actionOptions.customPrompt', parsed.customPrompt);
+        if (parsed.mode === 'action' || parsed.mode === 'story') setValue(SYSTEM_PATHS.actionOptionsMode, parsed.mode);
+        if (parsed.pace === 'fast' || parsed.pace === 'slow') setValue(SYSTEM_PATHS.actionOptionsPace, parsed.pace);
+        if (typeof parsed.customPrompt === 'string') setValue(SYSTEM_PATHS.actionOptionsCustomPrompt, parsed.customPrompt);
       }
     } catch { /* no-op */ }
 
@@ -227,10 +228,10 @@ export const useEngineStateStore = defineStore('engineState', () => {
       const raw = localStorage.getItem('aga_cot_settings');
       if (raw) {
         const parsed = JSON.parse(raw) as { enabled?: boolean; judgeEnabled?: boolean; injectStep2?: boolean; ringSize?: number };
-        if (typeof parsed.enabled === 'boolean') setValue('系统.设置.cot.enabled', parsed.enabled);
-        if (typeof parsed.judgeEnabled === 'boolean') setValue('系统.设置.cot.judgeEnabled', parsed.judgeEnabled);
-        if (typeof parsed.injectStep2 === 'boolean') setValue('系统.设置.cot.injectStep2', parsed.injectStep2);
-        if (typeof parsed.ringSize === 'number' && parsed.ringSize >= 1) setValue('系统.设置.cot.reasoningRingSize', parsed.ringSize);
+        if (typeof parsed.enabled === 'boolean') setValue(SYSTEM_PATHS.cotEnabled, parsed.enabled);
+        if (typeof parsed.judgeEnabled === 'boolean') setValue(SYSTEM_PATHS.cotJudgeEnabled, parsed.judgeEnabled);
+        if (typeof parsed.injectStep2 === 'boolean') setValue(SYSTEM_PATHS.cotInjectStep2, parsed.injectStep2);
+        if (typeof parsed.ringSize === 'number' && parsed.ringSize >= 1) setValue(SYSTEM_PATHS.cotReasoningRingSize, parsed.ringSize);
       }
     } catch { /* no-op */ }
 
@@ -239,7 +240,7 @@ export const useEngineStateStore = defineStore('engineState', () => {
       const raw = localStorage.getItem('aga_body_polish_settings');
       if (raw) {
         const parsed = JSON.parse(raw) as { enabled?: boolean };
-        if (typeof parsed.enabled === 'boolean') setValue('系统.设置.bodyPolish', parsed.enabled);
+        if (typeof parsed.enabled === 'boolean') setValue(SYSTEM_PATHS.bodyPolish, parsed.enabled);
       }
     } catch { /* no-op */ }
 
@@ -248,7 +249,7 @@ export const useEngineStateStore = defineStore('engineState', () => {
       const raw = localStorage.getItem('aga_presence_settings');
       if (raw) {
         const parsed = JSON.parse(raw) as { presenceEnabled?: boolean };
-        if (typeof parsed.presenceEnabled === 'boolean') setValue('系统.设置.social.presenceEnabled', parsed.presenceEnabled);
+        if (typeof parsed.presenceEnabled === 'boolean') setValue(SYSTEM_PATHS.presenceEnabled, parsed.presenceEnabled);
       }
     } catch { /* no-op */ }
 
@@ -257,14 +258,14 @@ export const useEngineStateStore = defineStore('engineState', () => {
       const raw = localStorage.getItem('aga_image_gen_settings');
       if (raw) {
         const parsed = JSON.parse(raw) as { enabled?: boolean };
-        if (typeof parsed.enabled === 'boolean') setValue('系统.扩展.image.enabled', parsed.enabled);
+        if (typeof parsed.enabled === 'boolean') setValue(SYSTEM_PATHS.image.enabled, parsed.enabled);
       }
     } catch { /* no-op */ }
 
     // Prompt settings — ensure defaults exist in state tree
     // (PromptPanel reads/writes to 系统.设置.prompt; SystemPromptBuilder reads it)
-    if (!get('系统.设置.prompt')) {
-      setValue('系统.设置.prompt', {
+    if (!get(SYSTEM_PATHS.promptSettings)) {
+      setValue(SYSTEM_PATHS.promptSettings, {
         perspective: '第二人称',
         wordCountRequirement: 650,
         storyStyle: 'general',
@@ -277,8 +278,8 @@ export const useEngineStateStore = defineStore('engineState', () => {
     }
 
     // Heroine plan — ensure default structure exists
-    if (!get('元数据.女主规划')) {
-      setValue('元数据.女主规划', {
+    if (!get(P.heroinePlan)) {
+      setValue(P.heroinePlan, {
         stageProgression: [],
         heroineEntries: [],
         interactionEvents: [],

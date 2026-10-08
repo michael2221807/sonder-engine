@@ -36,6 +36,8 @@ import { deduplicateLocations } from '../../behaviors/location-dedup';
 import { isColocatedLocation } from '../../social/npc-presence';
 import { estimateMessagesTokens, estimateTextTokens } from '../../core/metrics-helpers';
 import { extractPlotEvaluations } from '../../plot/types';
+import { SYSTEM_PATHS } from '../system-paths';
+import { DEFAULT_ENGINE_PATHS } from '../types';
 
 /**
  * Pull this round's accepted captures out of `ctx.meta` in the shape the graph needs.
@@ -285,9 +287,9 @@ export class PostProcessStage implements PipelineStage {
     // (RenderStage applies the same rule to what it shows).
     const actionOpts = ctx.meta.actionOptionsEnabled === false ? [] : ctx.parsedResponse?.actionOptions;
     if (Array.isArray(actionOpts) && actionOpts.length > 0) {
-      this.stateManager.set('元数据.当前行动选项', actionOpts, 'system');
+      this.stateManager.set(DEFAULT_ENGINE_PATHS.currentActionOptions, actionOpts, 'system');
     } else {
-      this.stateManager.set('元数据.当前行动选项', [], 'system');
+      this.stateManager.set(DEFAULT_ENGINE_PATHS.currentActionOptions, [], 'system');
     }
 
     // Enhanced opening has no user input — skip the fake user entry (I1)
@@ -469,7 +471,7 @@ export class PostProcessStage implements PipelineStage {
    * 仅在 presenceEnabled 开启时执行。
    */
   private syncPresence(): void {
-    const enabled = this.stateManager.get<boolean>('系统.设置.social.presenceEnabled');
+    const enabled = this.stateManager.get<boolean>(SYSTEM_PATHS.presenceEnabled);
     if (!enabled) return;
 
     const playerLoc = this.stateManager.get<string>(this.paths.playerLocation) ?? '';

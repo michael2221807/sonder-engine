@@ -16,13 +16,14 @@ import type { StateManager } from '../core/state-manager';
 import type { EnginePathConfig } from '../pipeline/types';
 import type { PlotDirectionState } from './types';
 import { resolveFocusArc } from './types';
+import { SYSTEM_PATHS } from '../pipeline/system-paths';
 
 /** Texts describing the focus thread's active node, or [] when there is none / plot is disabled. */
 export function buildPlotFocusCorpusTexts(
   stateManager: Pick<StateManager, 'get'>,
   paths: Pick<EnginePathConfig, 'plotDirection'>,
 ): string[] {
-  if (stateManager.get<boolean>('系统.设置.plot.enabled') === false) return [];
+  if (stateManager.get<boolean>(SYSTEM_PATHS.plotEnabled) === false) return [];
   const state = stateManager.get<PlotDirectionState>(paths.plotDirection);
   const arc = resolveFocusArc(state);
   if (!arc) return [];

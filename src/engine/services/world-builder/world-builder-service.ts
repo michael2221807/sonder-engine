@@ -27,6 +27,7 @@ import { PayloadValidator } from '../assistant/payload-validator';
 import { appendMessageWithFifoTrim } from '../assistant/conversation-store';
 
 import type { AssistantMessage, PayloadDraft } from '../assistant/types';
+import { SYSTEM_PATHS } from '../../pipeline/system-paths';
 
 export interface WorldBuilderLabels {
   messagePrefix: string;
@@ -278,7 +279,7 @@ export class WorldBuilderService {
     const genNpcs = npcCount > 0;
     const genItems = task.config?.generateItems !== false;
     const itemCount = Math.max(0, task.config?.itemCount ?? 3);
-    const nsfwMode = this.deps.stateManager.get<boolean>('系统.nsfwMode') === true;
+    const nsfwMode = this.deps.stateManager.get<boolean>(SYSTEM_PATHS.nsfwMode) === true;
 
     // Apply conditional sections BEFORE user instruction to prevent marker injection
     const prompt = applyRegionConditionals(promptTemplate, { genNpcs, npcCount, genItems, itemCount, nsfwMode })

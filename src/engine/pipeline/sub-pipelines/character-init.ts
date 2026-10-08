@@ -45,6 +45,8 @@ import { readStatFields } from '../../pack/stat-section-reader';
 import { settleCreationAttributes } from '../../creation/creation-attributes';
 import { formatCreationPromptContext } from '../../creation/creation-prompt-formatter';
 import { validateFinalCreationChoices } from '../../creation/creation-budget';
+import { SYSTEM_PATHS } from '../system-paths';
+import { DEFAULT_ENGINE_PATHS } from '../types';
 
 /** 创角结果 — 返回给调用方的完整创建信息 */
 export interface CharacterInitResult {
@@ -152,10 +154,10 @@ export class CharacterInitPipeline {
         if (nsfwRaw) {
           const nsfwParsed = JSON.parse(nsfwRaw) as Record<string, unknown>;
           if (typeof nsfwParsed.nsfwMode === 'boolean') {
-            this.stateManager.set('系统.nsfwMode', nsfwParsed.nsfwMode, 'system');
+            this.stateManager.set(SYSTEM_PATHS.nsfwMode, nsfwParsed.nsfwMode, 'system');
           }
           if (typeof nsfwParsed.nsfwGenderFilter === 'string') {
-            this.stateManager.set('系统.nsfwGenderFilter', nsfwParsed.nsfwGenderFilter, 'system');
+            this.stateManager.set(SYSTEM_PATHS.nsfwGenderFilter, nsfwParsed.nsfwGenderFilter, 'system');
           }
         }
       } catch { /* localStorage unavailable */ }
@@ -174,7 +176,7 @@ export class CharacterInitPipeline {
         const result = await this.enhancedOpeningPipeline.execute({
           choices,
           settings: options.enhancedOpeningSettings ?? DEFAULT_ENHANCED_OPENING_SETTINGS,
-          nsfwMode: this.stateManager.get<boolean>('系统.nsfwMode') === true,
+          nsfwMode: this.stateManager.get<boolean>(SYSTEM_PATHS.nsfwMode) === true,
           abortSignal: options.abortSignal ?? new AbortController().signal,
           onProgress: options.onProgress ?? (() => {}),
           onStreamChunk: options.onStreamChunk,
@@ -773,7 +775,7 @@ export class CharacterInitPipeline {
    */
   private extractCharacterName(choices: CreationChoices): string {
     const candidates = [
-      choices.formValues?.['角色.基础信息.姓名'],
+      choices.formValues?.[DEFAULT_ENGINE_PATHS.playerName],
       choices.formValues?.['名字'],
       choices.formValues?.['name'],
       choices.formValues?.['角色名'],

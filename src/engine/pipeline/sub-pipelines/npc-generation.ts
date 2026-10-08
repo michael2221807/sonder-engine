@@ -35,6 +35,7 @@ import {
   emitPromptResponseDebug,
   extractThinkingFromRaw,
 } from '../../core/prompt-debug';
+import { SYSTEM_PATHS } from '../system-paths';
 
 export class NpcGenerationPipeline {
   constructor(
@@ -146,7 +147,7 @@ export class NpcGenerationPipeline {
     }
 
     // 策略 3: 检查已生成标记
-    const generated = this.stateManager.get<string[]>('系统.已生成NPC地点') ?? [];
+    const generated = this.stateManager.get<string[]>(SYSTEM_PATHS.generatedNpcLocations) ?? [];
     return generated.includes(locationName);
   }
 
@@ -201,7 +202,7 @@ export class NpcGenerationPipeline {
 
   /** 标记地点已生成 NPC */
   private markLocationGenerated(locationName: string): void {
-    this.stateManager.push('系统.已生成NPC地点', locationName, 'system');
+    this.stateManager.push(SYSTEM_PATHS.generatedNpcLocations, locationName, 'system');
   }
 
   /** 查找全局 NPC 列表 */

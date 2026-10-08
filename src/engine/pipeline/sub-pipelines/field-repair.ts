@@ -50,6 +50,8 @@ import {
   formatMissingFieldsSummary,
   type FieldRepairReport,
 } from '../../validators/field-completeness-validator';
+import { SYSTEM_PATHS } from '../system-paths';
+import { DEFAULT_ENGINE_PATHS } from '../types';
 
 /** Narrative history entry shape — mirrors the local type in context-assembly. */
 interface NarrativeEntry {
@@ -187,7 +189,7 @@ export class FieldRepairPipeline {
 
   async execute(): Promise<FieldRepairResult> {
     const config = readRequiredFieldsConfig(this.gamePack.rules);
-    const nsfwMode = this.stateManager.get<boolean>('系统.nsfwMode') === true;
+    const nsfwMode = this.stateManager.get<boolean>(SYSTEM_PATHS.nsfwMode) === true;
     let report = findIncompleteFields(this.stateManager, this.paths, config, { nsfwMode });
 
     const engramConfig = loadEngramConfig();
@@ -876,7 +878,7 @@ export class FieldRepairPipeline {
   /** Snapshot the state tree — sanitized (strips narrative history, memory, engram, etc.). */
   private buildGameStateJson(): string {
     try {
-      const nsfwMode = this.stateManager.get<boolean>('系统.nsfwMode') === true;
+      const nsfwMode = this.stateManager.get<boolean>(SYSTEM_PATHS.nsfwMode) === true;
       return stringifySnapshotForPrompt(this.stateManager.toSnapshot(), nsfwMode, 0);
     } catch {
       return '{}';
@@ -897,7 +899,7 @@ export class FieldRepairPipeline {
         // swallow — fall through to short-term fallback
       }
     }
-    const shortTerm = this.stateManager.get<unknown[]>('记忆.短期') ?? [];
+    const shortTerm = this.stateManager.get<unknown[]>(DEFAULT_ENGINE_PATHS.shortTermMemory) ?? [];
     if (!Array.isArray(shortTerm) || shortTerm.length === 0) return '（暂无短期记忆）';
     return shortTerm
       .slice(-8)

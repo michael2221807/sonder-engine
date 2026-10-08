@@ -21,6 +21,7 @@ import type {
 } from './types';
 import { normalizeStatePath } from './assistant-blocklist';
 import { DEFAULT_ENGINE_PATHS } from '../../pipeline/types';
+import { SYSTEM_PATHS } from '../../pipeline/system-paths';
 
 /**
  * NSFW 路径模式 —— 与 `src/engine/memory/snapshot-sanitizer.ts` 的 NSFW_STRIP_PATHS 对齐
@@ -72,7 +73,7 @@ export class AttachmentBuilder {
     const cloned = JSON.parse(JSON.stringify(rawValue)) as unknown;
 
     // NSFW 剥离（仅当 nsfwMode=false）
-    const nsfwMode = this.deps.stateManager.get<unknown>('系统.nsfwMode') === true;
+    const nsfwMode = this.deps.stateManager.get<unknown>(SYSTEM_PATHS.nsfwMode) === true;
     let nsfwStripped = false;
     let snapshot = cloned;
     if (!nsfwMode) {

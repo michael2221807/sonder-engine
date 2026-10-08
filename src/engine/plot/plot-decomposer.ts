@@ -30,6 +30,7 @@ import { buildEnvironmentBlock } from '../prompt/environment-block';
 import { buildNarrativeContractFromState } from '../prompt/narrative-contract';
 import { buildCharacterVectorsFromState } from '../prompt/character-vectors';
 import { readGameTimeStamp } from './game-time-stamp';
+import { SYSTEM_PATHS } from '../pipeline/system-paths';
 
 export interface DecomposeResult {
   nodes: Omit<PlotNode, 'id' | 'arcId' | 'status' | 'consecutiveReachedCount' | 'activatedAtRound' | 'completedAtRound'>[];
@@ -240,7 +241,7 @@ export class PlotDecomposer {
 
   private async callModel(promptContent: string, outline: string, opts: DecomposeOptions): Promise<Record<string, unknown> | null> {
     const maxActive = opts.maxActiveThreads
-      ?? this.stateManager.get<number>('系统.设置.plot.maxActiveThreads')
+      ?? this.stateManager.get<number>(SYSTEM_PATHS.plotMaxActiveThreads)
       ?? DEFAULT_MAX_ACTIVE_THREADS;
     return this.invoke(promptContent, outline, {
       PLOT_OUTLINE: outline,
