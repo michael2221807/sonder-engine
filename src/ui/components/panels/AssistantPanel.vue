@@ -20,7 +20,7 @@ import { ref, computed, nextTick, watch, onActivated } from 'vue';
 import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import AttachmentPickerModal from '@/ui/components/assistant/AttachmentPickerModal.vue';
 import PayloadPreviewModal from '@/ui/components/assistant/PayloadPreviewModal.vue';
 import WeatherPickerModal from '@/ui/components/panels/WeatherPickerModal.vue';
@@ -42,7 +42,7 @@ import type {
 } from '@/engine/services/assistant/types';
 import type { WorldBuilderPaths } from '@/engine/services/world-builder/world-builder-service';
 import BatchSummaryView from '@/ui/components/assistant/BatchSummaryView.vue';
-import CustomSelect from '@/ui/components/common/CustomSelect.vue';
+import CustomSelect from '@/ui/components/shared/CustomSelect.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 

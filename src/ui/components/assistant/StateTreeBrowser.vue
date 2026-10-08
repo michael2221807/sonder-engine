@@ -15,7 +15,7 @@ import { useI18n } from 'vue-i18n';
 import { useGameState } from '@/ui/composables/useGameState';
 import { useConfig } from '@/ui/composables/useConfig';
 import { useStateTreeNavigation } from '@/ui/composables/useStateTreeNavigation';
-import SearchInput from '@/ui/components/common/SearchInput.vue';
+import SearchInput from '@/ui/components/shared/SearchInput.vue';
 
 const { t, locale } = useI18n();
 

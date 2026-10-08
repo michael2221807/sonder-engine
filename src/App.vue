@@ -6,9 +6,9 @@
  * 必须在此常驻挂载，否则子路由切换后无容器接收通知。
  * 遵循项目错误处理规范：错误/提示不吞、需对用户可见。
  */
-import Toast from '@/ui/components/common/Toast.vue';
+import Toast from '@/ui/components/shared/Toast.vue';
 import CloudSyncManager from '@/ui/components/cloud/CloudSyncManager.vue';
-import CapturedSettingNotifier from '@/ui/components/common/CapturedSettingNotifier.vue';
+import CapturedSettingNotifier from '@/ui/components/shared/CapturedSettingNotifier.vue';
 </script>
 
 <template>

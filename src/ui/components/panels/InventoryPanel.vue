@@ -27,7 +27,7 @@ import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import { useInventoryEditor, changedItemFields } from '@/ui/composables/editors';
 import { useRouter } from 'vue-router';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import { eventBus } from '@/engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 

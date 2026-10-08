@@ -14,7 +14,7 @@ import { usePlotStore } from '@/engine/plot/plot-store';
 import type { PlotArc } from '@/engine/plot/types';
 import type { ReviseResult, ReviseNodeChainItem } from '@/engine/plot/plot-reviser';
 import { previewRevise, commitRevise, type CommitReviseReport } from '@/engine/plot/plot-revise-commit';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import AgaLoader from '@/ui/components/shared/AgaLoader.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 

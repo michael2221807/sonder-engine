@@ -19,7 +19,7 @@
 import { ref, watch, computed } from 'vue';
 import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import type { CustomPresetSchema } from '@/engine/types';
 import { PresetAIGenerator } from '@/engine/services/preset-ai-generator';
 import { eventBus } from '@/engine/core/event-bus';

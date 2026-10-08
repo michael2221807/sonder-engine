@@ -21,7 +21,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useLocale } from '@/ui/composables/useLocale';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import { eventBus } from '@/engine/core/event-bus';
 import {

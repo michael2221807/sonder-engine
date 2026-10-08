@@ -18,7 +18,7 @@ import { useI18n } from 'vue-i18n';
 import { useGameState } from '@/ui/composables/useGameState';
 import { useLocale } from '@/ui/composables/useLocale';
 import { useCloudAutoSyncToggle } from '@/ui/composables/useCloudAutoSyncToggle';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import CardExportFlow from '@/ui/components/panels/CardExportFlow.vue';
 import SaveToCardFlow from '@/ui/components/panels/SaveToCardFlow.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';

@@ -12,7 +12,7 @@
  */
 import { ref, watch, computed, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import {

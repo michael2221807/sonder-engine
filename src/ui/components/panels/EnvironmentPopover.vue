@@ -16,7 +16,7 @@
  * ESC / backdrop click close (inherited from Modal.vue).
  * No keyboard navigation between entries per user Q&A.
  */
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import type { EnvironmentTag } from './environment-helpers';
 
 defineProps<{

@@ -21,7 +21,7 @@ import type { EngramEventNode } from '@/engine/memory/engram/event-builder';
 import type { EngramEntity } from '@/engine/memory/engram/entity-builder';
 import type { EngramRelation } from '@/engine/memory/engram/engram-types';
 import type { EngramEdge } from '@/engine/memory/engram/knowledge-edge';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';

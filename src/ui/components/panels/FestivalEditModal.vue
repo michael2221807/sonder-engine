@@ -6,7 +6,7 @@
  * the validated `{名称,描述,效果}` object via `apply` event.
  */
 import { ref, watch, nextTick } from 'vue';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import {
   buildSetFestivalAttachment,

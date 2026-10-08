@@ -191,7 +191,7 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useEngineStateStore } from '@/engine/stores/engine-state';
 import { eventBus } from '@/engine/core/event-bus';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import SessionModeBadge from '@/ui/components/shared/SessionModeBadge.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import { useSessionMode } from '@/ui/composables/useSessionMode';

@@ -13,7 +13,7 @@
  */
 import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import StateTreeBrowser from './StateTreeBrowser.vue';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';

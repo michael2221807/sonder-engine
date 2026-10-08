@@ -10,7 +10,7 @@
  * Principle: the modal only *displays* — no editing.
  */
 import { useI18n } from 'vue-i18n';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 
 const { t } = useI18n();
 

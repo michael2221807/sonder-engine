@@ -3,7 +3,7 @@
 // App doc: docs/user-guide/pages/game-plot.md §时间线视图 · 开始条件弹窗
 import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
 import type { PlotArc, ThreadActivation, ThreadTrigger, GaugeOperator } from '@/engine/plot/types';
 

@@ -48,7 +48,7 @@ import StepConfirmation from '@/ui/components/creation/StepConfirmation.vue';
 import EnhancedOpeningProgress from '@/ui/components/creation/EnhancedOpeningProgress.vue';
 import EnhancedOpeningFailDialog from '@/ui/components/creation/EnhancedOpeningFailDialog.vue';
 import type { PhaseErrorAction, PhaseErrorInfo, EnhancedOpeningSettings } from '@/engine/pipeline/sub-pipelines/enhanced-opening';
-import LoadingOverlay from '@/ui/components/common/LoadingOverlay.vue';
+import LoadingOverlay from '@/ui/components/shared/LoadingOverlay.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import { eventBus } from '@/engine/core/event-bus';

@@ -12,7 +12,7 @@
  */
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 
 interface Props {
   modelValue: boolean;

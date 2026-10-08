@@ -19,7 +19,7 @@ import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useGameState } from '@/ui/composables/useGameState';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import ProtagonistModeSelector from '@/ui/components/panels/ProtagonistModeSelector.vue';
 import CardExportChecklist from '@/ui/components/panels/CardExportChecklist.vue';
 import CardStripPreview from '@/ui/components/panels/CardStripPreview.vue';

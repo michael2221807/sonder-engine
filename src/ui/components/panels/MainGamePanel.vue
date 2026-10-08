@@ -47,12 +47,12 @@ import { useRouter } from 'vue-router';
 import type { SaveHealthReport } from '@/engine/persistence/save-health';
 import { DEFAULT_ENGINE_PATHS, type BookmarkedRound } from '@/engine/pipeline/types';
 import { actionOptionsOn, type PromptSettings } from '@/engine/prompt/world-book';
-import Modal from '@/ui/components/common/Modal.vue';
-import FormattedText from '@/ui/components/common/FormattedText.vue';
-import SettingTaggedText from '@/ui/components/common/SettingTaggedText.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
+import FormattedText from '@/ui/components/shared/FormattedText.vue';
+import SettingTaggedText from '@/ui/components/shared/SettingTaggedText.vue';
 import RoundDivider from '@/ui/components/panels/RoundDivider.vue';
 import GameComposer from '@/ui/components/panels/GameComposer.vue';
-import SaveHealthGateModal from '@/ui/components/common/SaveHealthGateModal.vue';
+import SaveHealthGateModal from '@/ui/components/shared/SaveHealthGateModal.vue';
 import ThinkingViewer from '@/ui/components/panels/ThinkingViewer.vue';
 import CommandsViewer from '@/ui/components/panels/CommandsViewer.vue';
 import RawResponseViewer from '@/ui/components/panels/RawResponseViewer.vue';
@@ -191,7 +191,7 @@ async function downloadTtsForMessage(round: number): Promise<void> {
  */
 const narrativeHistory = useValue<ChatMessage[]>(DEFAULT_ENGINE_PATHS.narrativeHistory);
 
-import type { NpcBrief } from '@/ui/components/common/FormattedText.vue';
+import type { NpcBrief } from '@/ui/components/shared/FormattedText.vue';
 import PlotGaugeStrip from '@/ui/components/panels/plot/PlotGaugeStrip.vue';
 
 const relationships = useValue<NpcBrief[]>(DEFAULT_ENGINE_PATHS.relationships);

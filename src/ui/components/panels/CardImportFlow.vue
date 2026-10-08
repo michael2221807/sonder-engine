@@ -15,7 +15,7 @@ import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { get as _get } from 'lodash-es';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import { getBootstrapGamePack } from '@/engine/bootstrap-pack';
 import { decodeAndValidateCard, type ValidatedCard } from '@/engine/export/game-card-import-service';

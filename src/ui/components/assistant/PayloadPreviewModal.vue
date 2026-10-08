@@ -19,7 +19,7 @@
 import { ref, computed, watch, nextTick } from 'vue';
 import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import JsonEditor from '@/ui/components/editing/JsonEditor.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 

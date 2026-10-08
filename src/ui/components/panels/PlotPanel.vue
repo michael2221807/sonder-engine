@@ -16,7 +16,7 @@ import { toGameTimeStamp } from '@/engine/plot/game-time-stamp';
 import type { PlotDirectionState, PlotArc, PlotNode } from '@/engine/plot/types';
 import type { MultiDecomposeResult, DecomposedThread } from '@/engine/plot/plot-decomposer';
 import { commitDecomposedThreads, unresolvedThreadRefs, overCapThreadTitles } from '@/engine/plot/plot-threads-commit';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import GaugeBar from './plot/GaugeBar.vue';
 import PlotNodeList from './plot/PlotNodeList.vue';
 import PlotScheduler from './plot/PlotScheduler.vue';

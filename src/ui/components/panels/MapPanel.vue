@@ -25,7 +25,7 @@ const { t } = useI18n();
 
 cytoscape.use(fcose);
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
 import type { SelectOption } from '@/ui/components/shared/AgaSelect.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';

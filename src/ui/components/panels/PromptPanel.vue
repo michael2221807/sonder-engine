@@ -19,7 +19,7 @@ import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import { injectService } from '@/ui/injection-keys';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import AgaToggle from '@/ui/components/shared/AgaToggle.vue';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';

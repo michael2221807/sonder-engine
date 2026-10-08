@@ -18,7 +18,7 @@ import { SYSTEM_PATHS } from '@/engine/pipeline/system-paths';
 import { useI18n } from 'vue-i18n';
 import { useGameState } from '@/ui/composables/useGameState';
 import { useMobile } from '@/ui/composables/useMobile';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import NpcChatModal from '@/ui/components/shared/NpcChatModal.vue';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
 import type { SelectOption } from '@/ui/components/shared/AgaSelect.vue';

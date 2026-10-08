@@ -11,7 +11,7 @@ import { eventBus } from '@/engine/core/event-bus';
 import { DEFAULT_ENGINE_PATHS, type BookmarkedRound } from '@/engine/pipeline/types';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
-import FormattedText from '@/ui/components/common/FormattedText.vue';
+import FormattedText from '@/ui/components/shared/FormattedText.vue';
 
 const { t } = useI18n();
 const { locale } = useLocale();

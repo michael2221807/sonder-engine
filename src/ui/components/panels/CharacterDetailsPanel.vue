@@ -16,7 +16,7 @@ import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useGameState } from '@/ui/composables/useGameState';
 import { useConfig } from '@/ui/composables/useConfig';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import SchemaForm from '@/ui/components/editing/SchemaForm.vue';
 import ImageDisplay from '@/ui/components/image/ImageDisplay.vue';
 import RegenerateSameModal from '@/ui/components/image/RegenerateSameModal.vue';

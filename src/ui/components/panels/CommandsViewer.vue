@@ -15,8 +15,8 @@
  */
 import { ref, watch, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import Modal from '@/ui/components/common/Modal.vue';
-import DeltaViewer, { type DeltaChange } from '@/ui/components/common/DeltaViewer.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
+import DeltaViewer, { type DeltaChange } from '@/ui/components/shared/DeltaViewer.vue';
 import {
   computeCommandStats,
   formatCommandValue,

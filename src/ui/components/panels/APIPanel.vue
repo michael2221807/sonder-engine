@@ -13,7 +13,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { injectService } from '@/ui/injection-keys';
 import { useI18n } from 'vue-i18n';
 import { useAPIManagementStore } from '@/engine/stores/engine-api';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import AgaSelect from '@/ui/components/shared/AgaSelect.vue';
 import type { SelectOption } from '@/ui/components/shared/AgaSelect.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';

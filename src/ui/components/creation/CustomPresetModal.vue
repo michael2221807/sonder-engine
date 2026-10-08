@@ -17,7 +17,7 @@
  */
 import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import type { CustomPresetSchema } from '@/engine/types';
 import {

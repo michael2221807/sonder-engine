@@ -6,7 +6,7 @@
  * italic-green effect) but only one tag to render. Title defaults to
  * "节日详情" to distinguish from the multi-entry env popover.
  */
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import type { EnvironmentTag } from './environment-helpers';
 
 defineProps<{

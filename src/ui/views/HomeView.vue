@@ -28,7 +28,7 @@ import { useI18n } from 'vue-i18n';
 import type { GamePackManifest } from '@/engine/types/game-pack';
 import type { ProfileMeta, SaveSlotMeta } from '@/engine/types/persistence';
 import { useEngineStateStore } from '@/engine/stores/engine-state';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import APIPanel from '@/ui/components/panels/APIPanel.vue';
 import SettingsPanel from '@/ui/components/panels/SettingsPanel.vue';
 import CardImportFlow from '@/ui/components/panels/CardImportFlow.vue';

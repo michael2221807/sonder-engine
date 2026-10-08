@@ -12,7 +12,7 @@ import { injectService } from '@/ui/injection-keys';
 import { useRouter, useRoute } from 'vue-router';
 import { eventBus } from '@/engine/core/event-bus';
 import { AI_SETTINGS_STORAGE_KEY } from '@/engine/ai/ai-service';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import EngramSettingsSection from '../settings/EngramSettingsSection.vue';
 import TtsSettingsSection from '../settings/TtsSettingsSection.vue';
 import SttSettingsSection from '../settings/SttSettingsSection.vue';

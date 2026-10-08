@@ -13,7 +13,7 @@ import { useI18n } from 'vue-i18n';
 import { usePromptDebugStore } from '@/engine/stores/engine-prompt';
 import { contentToDebugText, messagesToDebugSafe } from '@/engine/ai/content-blocks';
 import { eventBus } from '@/engine/core/event-bus';
-import Modal from '@/ui/components/common/Modal.vue';
+import Modal from '@/ui/components/shared/Modal.vue';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 

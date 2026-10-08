@@ -26,7 +26,7 @@ import { useGameState } from '@/ui/composables/useGameState';
 import { useLocale } from '@/ui/composables/useLocale';
 import { DEFAULT_ENGINE_PATHS } from '@/engine/pipeline/types';
 import { eventBus } from '@/engine/core/event-bus';
-import FormattedText from '@/ui/components/common/FormattedText.vue';
+import FormattedText from '@/ui/components/shared/FormattedText.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
 import MicInputButton from '@/ui/components/shared/MicInputButton.vue';
 import type { NpcChatMessage } from '@/engine/pipeline/sub-pipelines/npc-chat';
