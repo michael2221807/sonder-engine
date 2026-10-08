@@ -147,6 +147,7 @@ class SttStreamController implements SttStreamHandle {
         this.stream = this.config.stream;
         this.ownStream = false;
       } else {
+        // mediaDevices is undefined on insecure origins (typings say it always exists): keep the optional chain.
         if (!navigator.mediaDevices?.getUserMedia) throw new Error('NO_MEDIA_DEVICES');
         this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         this.ownStream = true;

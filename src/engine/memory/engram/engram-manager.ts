@@ -213,7 +213,7 @@ export class EngramManager {
     return this.withWriteLock(async () => {
       const engram = this.loadEngram(stateManager);
       const round = stateManager.get<number>(this.roundNumberPath) ?? 0;
-      const touched = invalidateEdgesForEntries(engram.v2Edges ?? [], entryIds, round);
+      const touched = invalidateEdgesForEntries(engram.v2Edges, entryIds, round);
       if (touched.length > 0) stateManager.set(this.engramPath, engram, 'system');
       return { invalidated: touched.length };
     });
@@ -241,7 +241,7 @@ export class EngramManager {
     return this.withWriteLock(async () => {
       const engram = this.loadEngram(stateManager);
       const round = stateManager.get<number>(this.roundNumberPath) ?? 0;
-      const edges = engram.v2Edges ?? [];
+      const edges = engram.v2Edges;
 
       // Old projection goes first, whether or not a new one follows: an edit that turns a
       // relationship into a plain character trait must not leave the old edge alive.
@@ -329,7 +329,7 @@ export class EngramManager {
     );
 
     // V2: trim orphaned edge vectors on rollback (always run, even if v2Edges is empty)
-    const keptEdgeIds = new Set((engram.v2Edges ?? []).map((e) => e.id));
+    const keptEdgeIds = new Set(engram.v2Edges.map((e) => e.id));
     await this.vectorStore.trimEdgeVectors(keptEdgeIds, slot.profileId, slot.slotId);
   }
 
@@ -628,7 +628,7 @@ export class EngramManager {
     let edgeVectors: Record<string, number[]> = {};
     let newFactVectors = new Map<string, number[]>();
     const slot = this.getActiveSlot();
-    const hasExistingEdges = (engram.v2Edges ?? []).length > 0;
+    const hasExistingEdges = engram.v2Edges.length > 0;
     if (slot?.profileId && slot?.slotId && hasExistingEdges) {
       try {
         const vectorData = await this.vectorStore.load(slot.profileId, slot.slotId);
@@ -654,7 +654,7 @@ export class EngramManager {
     options?.guard?.();
     const result = buildFacts(
       { knowledgeFacts: kfacts, entities, currentEventId: newEvents[0]?.id ?? null, currentRound },
-      engram.v2Edges ?? [],
+      engram.v2Edges,
       this.vectorStore,
       edgeVectors,
       newFactVectors,
