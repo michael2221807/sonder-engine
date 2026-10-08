@@ -30,6 +30,8 @@ import { blobToDataUrl } from './utils';
 import { prepareCivitaiLora, resolveLoraScope, validateShelfForGeneration } from './civitai-lora';
 import { joinPromptFragments } from './style-preset-injection';
 import { normalizeSingleCharacterOutput, processTransformerOutput, type SerializationStrategy } from './output-processor';
+import { SYSTEM_PATHS } from '../pipeline/system-paths';
+import { TIANMING_IMAGE_ARCHIVE_KEYS, TIANMING_SECRET_PART_CN } from '../pack/tianming-coupling';
 
 const VALID_STRATEGIES: ReadonlySet<SerializationStrategy> = new Set([
   'flat', 'nai_character_segments', 'gemini_structured', 'grok_structured', 'sd_danbooru', 'seedream_narrative',
@@ -106,7 +108,7 @@ export class ImageService {
     this.state = new ImageStateManager(stateManager, paths);
     this.queue = new ImageTaskQueue({
       onPersist: (tasks) => {
-        stateManager.set('系统.扩展.image.tasks', tasks, 'system');
+        stateManager.set(SYSTEM_PATHS.image.tasks, tasks, 'system');
         eventBus.emit('engine:request-save');
         // Notify UI to re-render the queue list on ANY queue mutation
         // (create/update/remove/clear). The task queue is an in-memory Map
@@ -153,7 +155,7 @@ export class ImageService {
 
   /** Restore task queue from state tree (called after game load) */
   restoreTasksFromState(): void {
-    const savedTasks = this.stateManager.get<ImageTask[]>('系统.扩展.image.tasks');
+    const savedTasks = this.stateManager.get<ImageTask[]>(SYSTEM_PATHS.image.tasks);
     // Always restore (even to empty): ImageService is a singleton that survives
     // game loads, so skipping the empty case would leak the previous game's
     // tasks into the newly-loaded save (they'd be re-persisted on the next
@@ -192,7 +194,7 @@ export class ImageService {
   }
 
   private get enabled(): boolean {
-    return this.stateManager.get<boolean>('系统.扩展.image.enabled') === true;
+    return this.stateManager.get<boolean>(SYSTEM_PATHS.image.enabled) === true;
   }
 
   /**
@@ -212,7 +214,7 @@ export class ImageService {
 
     if (presentNames.length === 0) return { presentNpcs: [], roleAnchors: [] };
 
-    const anchors = this.stateManager.get<Array<Record<string, unknown>>>('系统.扩展.image.characterAnchors');
+    const anchors = this.stateManager.get<Array<Record<string, unknown>>>(`${SYSTEM_PATHS.image.root}.characterAnchors`);
     if (!Array.isArray(anchors) || anchors.length === 0) return { presentNpcs: presentNames, roleAnchors: [] };
 
     const roleAnchors: Array<{ name: string; positive: string }> = [];
@@ -256,8 +258,8 @@ export class ImageService {
     customBundles?: ModelTransformerBundle[];
     transformerDefaults?: TransformerDefaultsData;
   } {
-    const ruleTemplates = this.stateManager.get<Array<Record<string, unknown>>>('系统.扩展.image.ruleTemplates');
-    const modelRulesets = this.stateManager.get<Array<Record<string, unknown>>>('系统.扩展.image.modelRulesets');
+    const ruleTemplates = this.stateManager.get<Array<Record<string, unknown>>>(`${SYSTEM_PATHS.image.root}.ruleTemplates`);
+    const modelRulesets = this.stateManager.get<Array<Record<string, unknown>>>(`${SYSTEM_PATHS.image.root}.modelRulesets`);
 
     const options: {
       customPresets?: TransformerPromptPreset[];
@@ -884,9 +886,9 @@ export class ImageService {
     part: import('./types').SecretPartType,
   ): Record<string, unknown> | undefined {
     const PART_TO_CN: Record<import('./types').SecretPartType, string> = {
-      breast: '胸部',
-      vagina: '小穴',
-      anus: '屁穴',
+      breast: TIANMING_SECRET_PART_CN.breast,
+      vagina: TIANMING_SECRET_PART_CN.vagina,
+      anus: TIANMING_SECRET_PART_CN.anus,
     };
     const targetName = PART_TO_CN[part];
     if (!targetName) return undefined;
@@ -993,13 +995,13 @@ export class ImageService {
     const idsToDelete = new Set(history.map((r) => String(r.id ?? '')).filter(Boolean));
     const archive = this.state.getNpcArchive(npcName);
     if (archive) {
-      for (const f of ['已选头像图片ID', '已选立绘图片ID', '已选背景图片ID']) {
+      for (const f of [TIANMING_IMAGE_ARCHIVE_KEYS.selectedAvatarId, '已选立绘图片ID', '已选背景图片ID']) {
         const v = String(archive[f] ?? '').trim();
         if (v) idsToDelete.add(v);
       }
-      const secretArchive = archive['香闺秘档'] as Record<string, unknown> | undefined;
+      const secretArchive = archive[TIANMING_IMAGE_ARCHIVE_KEYS.secretChamber] as Record<string, unknown> | undefined;
       if (secretArchive) {
-        for (const partKey of ['胸部', '小穴', '屁穴']) {
+        for (const partKey of [TIANMING_SECRET_PART_CN.breast, TIANMING_SECRET_PART_CN.vagina, TIANMING_SECRET_PART_CN.anus]) {
           const entry = secretArchive[partKey] as Record<string, unknown> | undefined;
           const id = typeof entry?.id === 'string' ? entry.id : '';
           if (id) idsToDelete.add(id);
@@ -1142,13 +1144,13 @@ export class ImageService {
   }
 
   private getCivitaiProviderParams(): Record<string, unknown> {
-    const base = '系统.扩展.image.config.civitai';
+    const base = `${SYSTEM_PATHS.image.config}.civitai`;
     return this.readCivitaiProviderParams(this.stateManager.get<string>(`${base}.additionalNetworksJson`) ?? undefined);
   }
 
   /** Civitai provider params from the state tree; the merged-networks JSON is supplied by the caller. */
   private readCivitaiProviderParams(additionalNetworksJson: string | undefined): Record<string, unknown> {
-    const base = '系统.扩展.image.config.civitai';
+    const base = `${SYSTEM_PATHS.image.config}.civitai`;
     return {
       allowMatureContent: this.stateManager.get<boolean>(`${base}.allowMatureContent`) === true,
       scheduler: this.stateManager.get<string>(`${base}.scheduler`) ?? undefined,
@@ -1171,7 +1173,7 @@ export class ImageService {
     providerParams: Record<string, unknown>;
     snapshot: CivitaiLoraSnapshot | undefined;
   } {
-    const base = '系统.扩展.image.config.civitai';
+    const base = `${SYSTEM_PATHS.image.config}.civitai`;
     const shelf = this.stateManager.get<CivitaiLoraShelfItem[]>(`${base}.loras`) ?? [];
     const rawJson = this.stateManager.get<string>(`${base}.additionalNetworksJson`);
     const scope = resolveLoraScope(subjectType, targetCharacter);
@@ -1218,15 +1220,15 @@ export class ImageService {
     if (!resolvedParams) {
       if (backend === 'novelai') {
         resolvedParams = {
-          sampler: this.stateManager.get<string>('系统.扩展.image.config.novelai.sampler') ?? undefined,
-          noiseSchedule: this.stateManager.get<string>('系统.扩展.image.config.novelai.noiseSchedule') ?? undefined,
-          steps: this.stateManager.get<number>('系统.扩展.image.config.novelai.steps') ?? undefined,
-          cfgScale: this.stateManager.get<number>('系统.扩展.image.config.novelai.cfgScale') ?? undefined,
-          smea: this.stateManager.get<boolean>('系统.扩展.image.config.novelai.smea') ?? undefined,
-          seed: this.stateManager.get<number>('系统.扩展.image.config.novelai.seed') ?? undefined,
+          sampler: this.stateManager.get<string>(`${SYSTEM_PATHS.image.config}.novelai.sampler`) ?? undefined,
+          noiseSchedule: this.stateManager.get<string>(`${SYSTEM_PATHS.image.config}.novelai.noiseSchedule`) ?? undefined,
+          steps: this.stateManager.get<number>(`${SYSTEM_PATHS.image.config}.novelai.steps`) ?? undefined,
+          cfgScale: this.stateManager.get<number>(`${SYSTEM_PATHS.image.config}.novelai.cfgScale`) ?? undefined,
+          smea: this.stateManager.get<boolean>(`${SYSTEM_PATHS.image.config}.novelai.smea`) ?? undefined,
+          seed: this.stateManager.get<number>(`${SYSTEM_PATHS.image.config}.novelai.seed`) ?? undefined,
         };
       } else if (backend === 'comfyui') {
-        const workflowJson = this.stateManager.get<string>('系统.扩展.image.config.comfyui.workflowJson');
+        const workflowJson = this.stateManager.get<string>(`${SYSTEM_PATHS.image.config}.comfyui.workflowJson`);
         const hasTemplate = typeof workflowJson === 'string' && workflowJson.trim() !== '';
         console.log('[ImageService] ComfyUI workflow template:',
           hasTemplate ? `found (${workflowJson!.length} chars)` : 'not configured — will use built-in basic workflow');
@@ -1243,7 +1245,7 @@ export class ImageService {
     }
 
     if (references?.length) {
-      const refBase = '系统.扩展.image.config.reference';
+      const refBase = `${SYSTEM_PATHS.image.config}.reference`;
       if (backend === 'civitai' && this.stateManager.get<boolean>(`${refBase}.civitai.imageToImageEnabled`) === false) {
         throw new Error('[ImageService] Civitai 参考重绘已在设置中禁用');
       }
@@ -1335,7 +1337,7 @@ export class ImageService {
     }
 
     const providerOptions: Record<string, unknown> = {
-      allowMatureContent: this.stateManager.get<boolean>('系统.扩展.image.config.civitai.allowMatureContent') === true,
+      allowMatureContent: this.stateManager.get<boolean>(`${SYSTEM_PATHS.image.config}.civitai.allowMatureContent`) === true,
     };
     return provider.describeImage(effective, providerOptions);
   }
@@ -1394,7 +1396,7 @@ export class ImageService {
     temperature: number;
     maxNewTokens: number;
   } {
-    const base = '系统.扩展.image.config.understanding';
+    const base = `${SYSTEM_PATHS.image.config}.understanding`;
     const engine = this.stateManager.get<string>(`${base}.defaultEngine`);
     return {
       defaultEngine: engine === 'general_llm' ? 'general_llm' : 'civitai_vlm',
@@ -1427,7 +1429,7 @@ export class ImageService {
     return asset;
   }
 
-  private static readonly SCENE_ARCHIVE_PATH = '系统.扩展.image.sceneArchive';
+  private static readonly SCENE_ARCHIVE_PATH = SYSTEM_PATHS.image.sceneArchive;
 
   /**
    * Write a completed scene image to the scene archive in the state tree.
@@ -1435,8 +1437,8 @@ export class ImageService {
    */
   writeToSceneArchive(assetId: string, task: ImageTask): void {
     const archivePath = ImageService.SCENE_ARCHIVE_PATH;
-    const archive = (this.stateManager.get<Record<string, unknown>>(archivePath) ?? { 生图历史: [] }) as Record<string, unknown>;
-    const history = Array.isArray(archive['生图历史']) ? [...(archive['生图历史'] as unknown[])] : [];
+    const archive = (this.stateManager.get<Record<string, unknown>>(archivePath) ?? { [TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory]: [] }) as Record<string, unknown>;
+    const history = Array.isArray(archive[TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory]) ? [...(archive[TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory] as unknown[])] : [];
 
     const record: Record<string, unknown> = {
       id: assetId,
@@ -1456,12 +1458,12 @@ export class ImageService {
     history.unshift(record);
 
     // Enforce history limit (按场景图上限裁剪档案)
-    const limit = this.stateManager.get<number>('系统.扩展.image.config.sceneHistoryLimit') ?? 10;
+    const limit = this.stateManager.get<number>(`${SYSTEM_PATHS.image.config}.sceneHistoryLimit`) ?? 10;
     if (history.length > limit) history.length = limit;
 
     this.stateManager.set(archivePath, {
       ...archive,
-      '生图历史': history,
+      [TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory]: history,
       '最近生图结果': assetId,
     }, 'system');
 
@@ -1469,6 +1471,6 @@ export class ImageService {
   }
 
   getSceneArchive(): Record<string, unknown> {
-    return (this.stateManager.get<Record<string, unknown>>(ImageService.SCENE_ARCHIVE_PATH) ?? { 生图历史: [] }) as Record<string, unknown>;
+    return (this.stateManager.get<Record<string, unknown>>(ImageService.SCENE_ARCHIVE_PATH) ?? { [TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory]: [] }) as Record<string, unknown>;
   }
 }

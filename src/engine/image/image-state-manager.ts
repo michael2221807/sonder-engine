@@ -25,6 +25,8 @@ import type { StateManager } from '../core/state-manager';
 import type { EnginePathConfig } from '../pipeline/types';
 import type { SecretPartType, ReferenceLibraryEntry } from './types';
 import { eventBus } from '../core/event-bus';
+import { SYSTEM_PATHS } from '../pipeline/system-paths';
+import { TIANMING_IMAGE_ARCHIVE_KEYS, TIANMING_SECRET_PART_CN } from '../pack/tianming-coupling';
 
 /** Player pseudo-NPC identifier (主角角色锚点标识) */
 export const PLAYER_PSEUDO_NPC_ID = '__player__';
@@ -86,7 +88,7 @@ export class ImageStateManager {
 
   getNpcImageHistory(npcName: string): Array<Record<string, unknown>> {
     const archive = this.getNpcArchive(npcName);
-    return Array.isArray(archive?.['生图历史']) ? archive!['生图历史'] as Array<Record<string, unknown>> : [];
+    return Array.isArray(archive?.[TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory]) ? archive![TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory] as Array<Record<string, unknown>> : [];
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -113,7 +115,7 @@ export class ImageStateManager {
         .sort((a, b) => (Number((b as Record<string, unknown>)['生成时间'] ?? (b as Record<string, unknown>).createdAt ?? 0)) - (Number((a as Record<string, unknown>)['生成时间'] ?? (a as Record<string, unknown>).createdAt ?? 0)));
 
       // Auto-select avatar fallback if current selection was removed
-      const currentAvatar = String(archive['已选头像图片ID'] ?? '').trim();
+      const currentAvatar = String(archive[TIANMING_IMAGE_ARCHIVE_KEYS.selectedAvatarId] ?? '').trim();
       const avatarStillExists = currentAvatar && nextHistory.some((item) => item.id === currentAvatar);
       const autoAvatar = !avatarStillExists
         ? (nextHistory.find((r) => (r as Record<string, unknown>).composition === 'portrait' && (r as Record<string, unknown>).status === 'complete')?.id as string
@@ -122,7 +124,7 @@ export class ImageStateManager {
         : currentAvatar;
 
       // Enforce per-NPC history limit (按NPC上限裁剪档案)
-      const limit = this.stateManager.get<number>('系统.扩展.image.config.auto.historyLimit') ?? 100;
+      const limit = this.stateManager.get<number>(`${SYSTEM_PATHS.image.config}.auto.historyLimit`) ?? 100;
       if (nextHistory.length > limit) {
         for (let i = limit; i < nextHistory.length; i++) {
           const id = String((nextHistory[i] as Record<string, unknown>).id ?? '');
@@ -133,9 +135,9 @@ export class ImageStateManager {
 
       npc['图片档案'] = {
         ...archive,
-        '生图历史': nextHistory,
+        [TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory]: nextHistory,
         '最近生图结果': newRecord.id,
-        '已选头像图片ID': autoAvatar,
+        [TIANMING_IMAGE_ARCHIVE_KEYS.selectedAvatarId]: autoAvatar,
       };
       return npc;
     });
@@ -145,11 +147,11 @@ export class ImageStateManager {
   // ── Selection management ──
 
   setNpcAvatar(npcName: string, assetId: string): void {
-    this.setArchiveField(npcName, '已选头像图片ID', assetId);
+    this.setArchiveField(npcName, TIANMING_IMAGE_ARCHIVE_KEYS.selectedAvatarId, assetId);
   }
 
   clearNpcAvatar(npcName: string): void {
-    this.setArchiveField(npcName, '已选头像图片ID', '');
+    this.setArchiveField(npcName, TIANMING_IMAGE_ARCHIVE_KEYS.selectedAvatarId, '');
   }
 
   setNpcPortrait(npcName: string, assetId: string): void {
@@ -179,25 +181,25 @@ export class ImageStateManager {
       const clearIfMatch = (field: string) => {
         if (String(archive[field] ?? '') === imageId) archive[field] = '';
       };
-      clearIfMatch('已选头像图片ID');
+      clearIfMatch(TIANMING_IMAGE_ARCHIVE_KEYS.selectedAvatarId);
       clearIfMatch('已选立绘图片ID');
       clearIfMatch('已选背景图片ID');
       if (String(archive['最近生图结果'] ?? '') === imageId) {
         archive['最近生图结果'] = history[0]?.id ?? '';
       }
 
-      const secretArchive = archive['香闺秘档'] as Record<string, unknown> | undefined;
+      const secretArchive = archive[TIANMING_IMAGE_ARCHIVE_KEYS.secretChamber] as Record<string, unknown> | undefined;
       if (secretArchive) {
-        for (const partKey of ['胸部', '小穴', '屁穴']) {
+        for (const partKey of [TIANMING_SECRET_PART_CN.breast, TIANMING_SECRET_PART_CN.vagina, TIANMING_SECRET_PART_CN.anus]) {
           const entry = secretArchive[partKey] as Record<string, unknown> | undefined;
           if (typeof entry?.id === 'string' && entry.id === imageId) {
             delete secretArchive[partKey];
           }
         }
-        archive['香闺秘档'] = secretArchive;
+        archive[TIANMING_IMAGE_ARCHIVE_KEYS.secretChamber] = secretArchive;
       }
 
-      npc['图片档案'] = { ...archive, '生图历史': history };
+      npc['图片档案'] = { ...archive, [TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory]: history };
       return npc;
     });
   }
@@ -205,9 +207,9 @@ export class ImageStateManager {
   clearNpcHistory(npcName: string): void {
     this.mutateNpc(npcName, (npc) => {
       npc['图片档案'] = {
-        '生图历史': [],
+        [TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory]: [],
         '最近生图结果': '',
-        '已选头像图片ID': '',
+        [TIANMING_IMAGE_ARCHIVE_KEYS.selectedAvatarId]: '',
         '已选立绘图片ID': '',
         '已选背景图片ID': '',
       };
@@ -222,10 +224,10 @@ export class ImageStateManager {
   setSecretPartResult(npcName: string, part: SecretPartType, result: Record<string, unknown>): void {
     this.mutateNpc(npcName, (npc) => {
       const archive = this.ensureArchive(npc);
-      const secretArchive = (archive['香闺秘档'] ?? {}) as Record<string, unknown>;
-      const partKey = part === 'breast' ? '胸部' : part === 'vagina' ? '小穴' : '屁穴';
+      const secretArchive = (archive[TIANMING_IMAGE_ARCHIVE_KEYS.secretChamber] ?? {}) as Record<string, unknown>;
+      const partKey = part === 'breast' ? TIANMING_SECRET_PART_CN.breast : part === 'vagina' ? TIANMING_SECRET_PART_CN.vagina : TIANMING_SECRET_PART_CN.anus;
       secretArchive[partKey] = result;
-      npc['图片档案'] = { ...archive, '香闺秘档': secretArchive };
+      npc['图片档案'] = { ...archive, [TIANMING_IMAGE_ARCHIVE_KEYS.secretChamber]: secretArchive };
       return npc;
     });
   }
@@ -233,9 +235,9 @@ export class ImageStateManager {
   getSecretPartResult(npcName: string, part: SecretPartType): Record<string, unknown> | null {
     const archive = this.getNpcArchive(npcName);
     if (!archive) return null;
-    const secretArchive = archive['香闺秘档'] as Record<string, unknown> | undefined;
+    const secretArchive = archive[TIANMING_IMAGE_ARCHIVE_KEYS.secretChamber] as Record<string, unknown> | undefined;
     if (!secretArchive) return null;
-    const partKey = part === 'breast' ? '胸部' : part === 'vagina' ? '小穴' : '屁穴';
+    const partKey = part === 'breast' ? TIANMING_SECRET_PART_CN.breast : part === 'vagina' ? TIANMING_SECRET_PART_CN.vagina : TIANMING_SECRET_PART_CN.anus;
     const result = secretArchive[partKey];
     return result && typeof result === 'object' ? result as Record<string, unknown> : null;
   }
@@ -243,10 +245,10 @@ export class ImageStateManager {
   clearSecretPartResult(npcName: string, part: SecretPartType): void {
     this.mutateNpc(npcName, (npc) => {
       const archive = this.ensureArchive(npc);
-      const secretArchive = (archive['香闺秘档'] ?? {}) as Record<string, unknown>;
-      const partKey = part === 'breast' ? '胸部' : part === 'vagina' ? '小穴' : '屁穴';
+      const secretArchive = (archive[TIANMING_IMAGE_ARCHIVE_KEYS.secretChamber] ?? {}) as Record<string, unknown>;
+      const partKey = part === 'breast' ? TIANMING_SECRET_PART_CN.breast : part === 'vagina' ? TIANMING_SECRET_PART_CN.vagina : TIANMING_SECRET_PART_CN.anus;
       delete secretArchive[partKey];
-      npc['图片档案'] = { ...archive, '香闺秘档': secretArchive };
+      npc['图片档案'] = { ...archive, [TIANMING_IMAGE_ARCHIVE_KEYS.secretChamber]: secretArchive };
       return npc;
     });
   }
@@ -270,24 +272,24 @@ export class ImageStateManager {
   }
 
   setPersistentWallpaper(url: string): void {
-    this.stateManager.set('系统.扩展.image.persistentWallpaper', url, 'system');
+    this.stateManager.set(`${SYSTEM_PATHS.image.root}.persistentWallpaper`, url, 'system');
     eventBus.emit('engine:request-save');
   }
 
   clearPersistentWallpaper(): void {
-    this.stateManager.set('系统.扩展.image.persistentWallpaper', '', 'system');
+    this.stateManager.set(`${SYSTEM_PATHS.image.root}.persistentWallpaper`, '', 'system');
     eventBus.emit('engine:request-save');
   }
 
   getPersistentWallpaper(): string {
-    return this.stateManager.get<string>('系统.扩展.image.persistentWallpaper') ?? '';
+    return this.stateManager.get<string>(`${SYSTEM_PATHS.image.root}.persistentWallpaper`) ?? '';
   }
 
   // ═══════════════════════════════════════════════════════════
   // §6 — Reference Library CRUD
   // ═══════════════════════════════════════════════════════════
 
-  private static readonly REF_LIB_PATH = '系统.扩展.image.referenceLibrary';
+  private static readonly REF_LIB_PATH = SYSTEM_PATHS.image.referenceLibrary;
 
   getReferenceLibrary(): ReferenceLibraryEntry[] {
     const raw = this.stateManager.get<unknown>(ImageStateManager.REF_LIB_PATH);
@@ -306,7 +308,7 @@ export class ImageStateManager {
     eventBus.emit('engine:request-save');
   }
 
-  private static readonly TASKS_PATH = '系统.扩展.image.tasks';
+  private static readonly TASKS_PATH = SYSTEM_PATHS.image.tasks;
 
   /**
    * 该图片资产是否仍被某个生图任务的参考图归档引用。
@@ -400,19 +402,19 @@ export class ImageStateManager {
   private ensureArchive(npc: Record<string, unknown>): Record<string, unknown> {
     const raw = npc['图片档案'];
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) return { ...(raw as Record<string, unknown>) };
-    return { '生图历史': [], '已选头像图片ID': '', '已选立绘图片ID': '', '已选背景图片ID': '', '最近生图结果': '' };
+    return { [TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory]: [], [TIANMING_IMAGE_ARCHIVE_KEYS.selectedAvatarId]: '', '已选立绘图片ID': '', '已选背景图片ID': '', '最近生图结果': '' };
   }
 
   private getHistoryArray(archive: Record<string, unknown>): Array<Record<string, unknown>> {
-    const raw = archive['生图历史'];
+    const raw = archive[TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory];
     return Array.isArray(raw) ? raw.filter((item): item is Record<string, unknown> => item != null && typeof item === 'object') : [];
   }
 
   private mutateSceneArchive(mutator: (archive: Record<string, unknown>) => Record<string, unknown>): void {
-    const raw = this.stateManager.get<Record<string, unknown>>('系统.扩展.image.sceneArchive') ?? { '生图历史': [], '当前壁纸图片ID': '' };
-    const archive = typeof raw === 'object' && !Array.isArray(raw) ? { ...raw } : { '生图历史': [], '当前壁纸图片ID': '' };
+    const raw = this.stateManager.get<Record<string, unknown>>(SYSTEM_PATHS.image.sceneArchive) ?? { [TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory]: [], '当前壁纸图片ID': '' };
+    const archive = typeof raw === 'object' && !Array.isArray(raw) ? { ...raw } : { [TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory]: [], '当前壁纸图片ID': '' };
     const updated = mutator(archive);
-    this.stateManager.set('系统.扩展.image.sceneArchive', updated, 'system');
+    this.stateManager.set(SYSTEM_PATHS.image.sceneArchive, updated, 'system');
     eventBus.emit('engine:request-save');
   }
 

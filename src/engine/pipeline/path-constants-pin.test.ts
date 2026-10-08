@@ -81,9 +81,17 @@ describe('new DEFAULT_ENGINE_PATHS keys', () => {
   });
 });
 
+// Step 7 adds keys to the register; they are pinned in their own block below so the earlier snapshot stays as it was.
+const STEP7_KEYS = ['TIANMING_SECRET_PART_CN'];
+function registerWithoutStep7(): Record<string, unknown> {
+  const all: Record<string, unknown> = { ...TIANMING };
+  for (const k of STEP7_KEYS) delete all[k];
+  return all;
+}
+
 describe('TIANMING_* register', () => {
   it('equals the literals used before R4', () => {
-    const exportsOnly: Record<string, unknown> = { ...TIANMING };
+    const exportsOnly = registerWithoutStep7();
     expect(exportsOnly).toEqual({
       TIANMING_PRIVACY_REQUIRED_FIELDS: [
         '是否为处女/处男', '身体部位', '性格倾向', '性取向', '性癖好', '性渴望程度', '性交总次数', '性伴侣名单',
@@ -136,9 +144,21 @@ describe('TIANMING_* register', () => {
 
 describe('constants snapshot', () => {
   it('writes the whole set for the back-substitution script', async () => {
-    const tianming: Record<string, unknown> = { ...TIANMING };
+    const tianming = registerWithoutStep7();
     await expect(
       serializeContract({ SYSTEM_PATHS, TIANMING: tianming, DEFAULT_ENGINE_PATHS }),
     ).toMatchFileSnapshot('__snapshots__/path-contract/constants.json');
+  });
+});
+
+describe('image subsystem register (R4 step 7)', () => {
+  it('pins the secret-part names to the literals used before', () => {
+    expect(TIANMING.TIANMING_SECRET_PART_CN).toEqual({ breast: '胸部', vagina: '小穴', anus: '屁穴' });
+  });
+
+  it('writes the step 7 constants for the back-substitution script', async () => {
+    await expect(
+      serializeContract({ TIANMING_SECRET_PART_CN: TIANMING.TIANMING_SECRET_PART_CN }),
+    ).toMatchFileSnapshot('__snapshots__/path-contract/image-constants.json');
   });
 });

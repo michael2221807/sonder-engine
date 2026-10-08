@@ -123,3 +123,17 @@ export const TIANMING_LEGACY_NPC_KEYS = {
 
 /** Location key location-dedup reads for the NPC list; `locationFieldNames.npcList` is an array, this is not. */
 export const TIANMING_LOCATION_NPC_KEY = 'NPC';
+
+// ─── Secret-part names (image subsystem, audit E07a-010 / E07b-011) ───
+
+/**
+ * Chinese part name for each engine `SecretPartType`. It is both the `部位名称` of a `私密信息.身体部位` entry and the
+ * key of a part under `图片档案.香闺秘档`. Callers keep their own semantics for an unknown value: the ternary form
+ * (`p === 'breast' ? .breast : p === 'vagina' ? .vagina : .anus`) falls through to `anus`, a table lookup
+ * (`PART_TO_CN[part]`) yields undefined. Do not collapse the two.
+ */
+export const TIANMING_SECRET_PART_CN = {
+  breast: '胸部',
+  vagina: '小穴',
+  anus: '屁穴',
+} as const;

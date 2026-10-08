@@ -10,8 +10,9 @@
  */
 import type { StateManager } from '../core/state-manager';
 import type { CivitaiLoraShelfItem } from './types';
+import { SYSTEM_PATHS } from '../pipeline/system-paths';
 
-const IMAGE_ROOT_PATH = '系统.扩展.image';
+const IMAGE_ROOT_PATH = SYSTEM_PATHS.image.root;
 
 const DEFAULT_IMAGE_STATE = {
   enabled: false,

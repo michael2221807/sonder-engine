@@ -1,3 +1,4 @@
+import { TIANMING_IMAGE_ARCHIVE_KEYS } from '../pack/tianming-coupling';
 // Which cached image assets a state tree still references. Shared by the backup collector,
 // the save-health gate, game-card export and the task-eviction cleanup in image-service.
 // Moved verbatim from persistence/backup-service (R3 step 3); the Set insertion order decides
@@ -18,7 +19,7 @@ export function collectAssetIdsFromTree(tree: Record<string, unknown>, ids: Set<
     if (typeof val === 'string' && val.trim()) ids.add(val.trim());
   };
 
-  const SELECTION_FIELDS = ['已选头像图片ID', '已选立绘图片ID', '已选背景图片ID'];
+  const SELECTION_FIELDS = [TIANMING_IMAGE_ARCHIVE_KEYS.selectedAvatarId, '已选立绘图片ID', '已选背景图片ID'];
 
   const extractFromArchive = (archive: unknown) => {
     if (!archive || typeof archive !== 'object' || Array.isArray(archive)) return;
@@ -26,14 +27,14 @@ export function collectAssetIdsFromTree(tree: Record<string, unknown>, ids: Set<
     for (const f of SELECTION_FIELDS) addIfValid(a[f]);
     addIfValid(a['最近生图结果']);
     // 生图历史 — every entry's id is an asset reference
-    const history = a['生图历史'];
+    const history = a[TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory];
     if (Array.isArray(history)) {
       for (const entry of history) {
         if (entry && typeof entry === 'object') addIfValid((entry as Record<string, unknown>).id);
       }
     }
     // 香闺秘档
-    const secret = a['香闺秘档'];
+    const secret = a[TIANMING_IMAGE_ARCHIVE_KEYS.secretChamber];
     if (secret && typeof secret === 'object') {
       for (const part of Object.values(secret as Record<string, unknown>)) {
         if (part && typeof part === 'object') addIfValid((part as Record<string, unknown>).assetId);
@@ -62,7 +63,7 @@ export function collectAssetIdsFromTree(tree: Record<string, unknown>, ids: Set<
   if (sceneArchive) {
     addIfValid(sceneArchive['当前壁纸图片ID']);
     addIfValid(sceneArchive['最近生图结果']);
-    const sceneHistory = sceneArchive['生图历史'];
+    const sceneHistory = sceneArchive[TIANMING_IMAGE_ARCHIVE_KEYS.generationHistory];
     if (Array.isArray(sceneHistory)) {
       for (const entry of sceneHistory) {
         if (entry && typeof entry === 'object') addIfValid((entry as Record<string, unknown>).id);

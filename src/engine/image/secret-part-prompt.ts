@@ -19,6 +19,7 @@
  */
 import type { SecretPartType } from './types';
 import { cleanPromptOutput } from './output-processor';
+import { TIANMING_SECRET_PART_CN } from '../pack/tianming-coupling';
 
 // ═══════════════════════════════════════════════════════════
 // §1 — Part descriptions
@@ -132,7 +133,7 @@ export function buildSecretPartTaskData(params: {
       params.anchorInjected ? `\n【部位裁剪锚点】\n${params.anchorInjected}` : '',
       '',
       '【输出要求】',
-      `目标部位：${params.part === 'breast' ? '胸部' : params.part === 'vagina' ? '小穴' : '屁穴'}`,
+      `目标部位：${params.part === 'breast' ? TIANMING_SECRET_PART_CN.breast : params.part === 'vagina' ? TIANMING_SECRET_PART_CN.vagina : TIANMING_SECRET_PART_CN.anus}`,
       '输出语言：以英文 tags 为主，必要时可保留专有名词。',
       '格式：请只输出 <提示词>...</提示词>，其中内容使用英文逗号分隔。',
       '重点：只保留目标部位特写和最小必要周边，让局部细节完整、清晰、可画。',
@@ -152,7 +153,7 @@ export function buildSecretPartTaskData(params: {
     params.anchorInjected ? `\n【部位裁剪锚点】\n${params.anchorInjected}` : '',
     '',
     '【额外生成要求】',
-    `目标部位：${params.part === 'breast' ? '胸部' : params.part === 'vagina' ? '小穴' : '屁穴'}`,
+    `目标部位：${params.part === 'breast' ? TIANMING_SECRET_PART_CN.breast : params.part === 'vagina' ? TIANMING_SECRET_PART_CN.vagina : TIANMING_SECRET_PART_CN.anus}`,
     '构图：部位特写 / 仅展示目标部位及其必要周边',
     '画面保持局部聚焦、单主体表达，禁止参考页、拼贴页、多分镜或宫格化排版。',
     '画面要求：描述必须具体、可见、可画，优先写形状、颜色、肌理、湿润感、边缘和布料裁切。',

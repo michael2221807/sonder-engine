@@ -26,6 +26,7 @@ import type { SecretPartType, AnchorStructuredFeatures as AnchorFeatures } from 
 import { buildSecretPartSystemPrompt, buildSecretPartTaskData, reinforceSecretPartPrompt } from './secret-part-prompt';
 import { eventBus } from '../core/event-bus';
 import { extractThinkingBlocks } from '../ai/thinking-tags';
+import { TIANMING_SECRET_PART_CN } from '../pack/tianming-coupling';
 
 /**
  * Extract `<thinking>…</thinking>` (and its siblings <think>, <reasoning>,
@@ -508,7 +509,7 @@ export class ImageTokenizer {
 
     // Build task data as assistant message
     const descObj: Record<string, unknown> = {
-      部位: context.part === 'breast' ? '胸部' : context.part === 'vagina' ? '小穴' : '屁穴',
+      部位: context.part === 'breast' ? TIANMING_SECRET_PART_CN.breast : context.part === 'vagina' ? TIANMING_SECRET_PART_CN.vagina : TIANMING_SECRET_PART_CN.anus,
     };
     if (context.bodyPartEntry) {
       descObj['身体部位'] = context.bodyPartEntry;
