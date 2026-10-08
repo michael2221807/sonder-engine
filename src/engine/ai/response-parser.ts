@@ -18,6 +18,7 @@ import type { AIResponse, RawSettingUpdate } from './types';
 import { MAX_RAW_SETTING_UPDATES } from './types';
 import type { Command } from '../types';
 import { sanitizeJsonEscapes, healUnescapedQuotes } from './json-escape-sanitize';
+import { THINKING_TAGS, extractThinkingBlocks, stripThinkingBlocks } from './thinking-tags';
 
 /**
  * 尝试用原生 JSON.parse；失败就把字符串过一遍 escape sanitizer 再试；
@@ -219,7 +220,7 @@ export const COT_BLOCKS: readonly string[] = ['短期记忆', '变量规划', '�
 /** The CoT protocol's pseudo-tags — never part of a story; the stream's display takes out the same ones. */
 export const COT_PSEUDO_TAGS: readonly string[] = ['正文', ...COT_BLOCKS, 'judge'];
 /** Thinking blocks a reply may carry — never part of a story. */
-export const THINKING_TAGS: readonly string[] = ['think', 'thinking', 'reasoning', 'thought'];
+export { THINKING_TAGS };
 /** The JSON escapes a story escaped twice still carries after one decode, and what each reads as. */
 export const RESIDUAL_ESCAPES: Readonly<Record<string, string>> = { n: '\n', t: '\t', r: '\r', '"': '"', '\\': '\\', '/': '/' };
 const RESIDUAL_ESCAPE = /\\(u[0-9a-fA-F]{4}|[ntr"\\/])/g;
@@ -281,22 +282,13 @@ export function rereadStoredNarrative(stored: string, rawResponse: unknown): str
 
 export class ResponseParser {
   /**
-   * 思维链标签的匹配模式（英文标签名 —— PRINCIPLES §3.17）
-   *
-   * 匹配 `<think>`, `<thinking>`, `<reasoning>`, `<thought>` 及对应关闭标签。
-   * 大小写不敏感 (`/gi`)。非贪婪 `[\s\S]*?`。
-   */
-  private static readonly THINKING_TAG_PATTERN =
-    `<(?:${THINKING_TAGS.join('|')})>([\\s\\S]*?)<\\/(?:${THINKING_TAGS.join('|')})>`;
-
-  /**
    * 清理 AI 原始输出 — 销毁式 strip（pre-migration 行为）
    *
    * 移除所有思维链标签。当 CoT toggle OFF 时由 parse() 调用此方法，
    * 保持与 pre-migration 完全一致（PRINCIPLES §3.9.3 baseline）。
    */
   sanitize(raw: string): string {
-    return raw.replace(new RegExp(ResponseParser.THINKING_TAG_PATTERN, 'gi'), '').trim();
+    return stripThinkingBlocks(raw).trim();
   }
 
   /**
@@ -311,18 +303,9 @@ export class ResponseParser {
    *   若无 thinking 块则为 undefined
    */
   extractAndSanitize(raw: string): { sanitized: string; thinking: string | undefined } {
-    const blocks: string[] = [];
-    let match: RegExpExecArray | null;
-    const re = new RegExp(ResponseParser.THINKING_TAG_PATTERN, 'gi');
-    while ((match = re.exec(raw)) !== null) {
-      const content = match[1]?.trim();
-      if (content) blocks.push(content);
-    }
-    const sanitized = raw.replace(new RegExp(ResponseParser.THINKING_TAG_PATTERN, 'gi'), '').trim();
-    return {
-      sanitized,
-      thinking: blocks.length > 0 ? blocks.join('\n\n') : undefined,
-    };
+    const thinking = extractThinkingBlocks(raw);
+    const sanitized = stripThinkingBlocks(raw).trim();
+    return { sanitized, thinking };
   }
 
   /**

@@ -31,6 +31,7 @@ import {
   extractThinkingFromRaw,
 } from '../../core/prompt-debug';
 import { eventBus } from '../../core/event-bus';
+import { stripThinkingTagOnly } from '../../ai/thinking-tags';
 import { mergeDuplicateNpcArray } from '../../social/npc-merge';
 import {
   formatSettledPlayerProfile,
@@ -138,7 +139,7 @@ interface PhaseContext {
 // ═══════════════════════════════════════════════════════════════
 
 function extractJSON(raw: string, phaseLabel: string): unknown {
-  const cleaned = raw.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim();
+  const cleaned = stripThinkingTagOnly(raw).trim();
   const fenced = cleaned.match(/```(?:json)?\s*\n?([\s\S]*?)```/)
     ?? cleaned.match(/```(?:json)?\s*\n?([\s\S]+)/);
   const jsonStr = fenced ? fenced[1].trim() : cleaned;
@@ -308,9 +309,7 @@ async function executePhaseA(ctx: PhaseContext): Promise<string> {
     rawResponse,
   });
 
-  const worldDescription = rawResponse
-    .replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
-    .trim();
+  const worldDescription = stripThinkingTagOnly(rawResponse).trim();
 
   if (!worldDescription) throw new Error('Phase A: empty world description');
 

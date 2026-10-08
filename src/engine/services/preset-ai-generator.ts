@@ -29,6 +29,7 @@ import type { AIMessage } from '../ai/types';
 import type { GamePack, CustomPresetSchema } from '../types';
 import type { PromptTextSource } from '../prompt/prompt-assembler';
 import { findBalancedJsonBlocks, stripMarkdownFences } from '../ai/json-extract';
+import { stripThinkOrThinkingBlocks } from '../ai/thinking-tags';
 
 // ─── 参数 / 结果 ───
 
@@ -92,7 +93,7 @@ function describeSchema(schema: CustomPresetSchema): string {
  * 旧实现会优先选中它。统一在解析前剥离，避免污染。
  */
 function stripThinkingTags(text: string): string {
-  return text.replace(/<think(?:ing)?>[\s\S]*?<\/think(?:ing)?>/gi, '');
+  return stripThinkOrThinkingBlocks(text);
 }
 
 /**

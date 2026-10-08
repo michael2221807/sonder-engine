@@ -20,6 +20,7 @@
  * thin wrappers that never throw (debug-only plumbing).
  */
 import { eventBus } from './event-bus';
+import { extractThinkingBlocks } from '../ai/thinking-tags';
 import type { AIMessage } from '../ai/types';
 import type { MessageSourceTag } from '../prompt/prompt-assembler';
 import type { CompileTrace } from '../pipeline/types';
@@ -29,19 +30,9 @@ import type { CompileTrace } from '../pipeline/types';
  * `ResponseParser.extractAndSanitize` but local so debug consumers don't have
  * to instantiate the parser just to surface CoT.
  */
-const THINKING_TAG_RE = /<(?:think|thinking|reasoning|thought)>([\s\S]*?)<\/(?:think|thinking|reasoning|thought)>/gi;
-
 export function extractThinkingFromRaw(raw: string): string | undefined {
   if (!raw) return undefined;
-  const blocks: string[] = [];
-  // Reset per call — the regex is global and retains lastIndex across invocations.
-  THINKING_TAG_RE.lastIndex = 0;
-  let m: RegExpExecArray | null;
-  while ((m = THINKING_TAG_RE.exec(raw)) !== null) {
-    const content = m[1]?.trim();
-    if (content) blocks.push(content);
-  }
-  return blocks.length > 0 ? blocks.join('\n\n') : undefined;
+  return extractThinkingBlocks(raw);
 }
 
 export interface EmitAssemblyDebugParams {

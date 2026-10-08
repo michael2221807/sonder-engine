@@ -33,6 +33,7 @@ import type { StateManager } from '../../core/state-manager';
 import type { CommandExecutor } from '../../core/command-executor';
 import type { AIService } from '../../ai/ai-service';
 import type { ResponseParser } from '../../ai/response-parser';
+import { stripThinkingTagOnly } from '../../ai/thinking-tags';
 import type { PromptAssembler } from '../../prompt/prompt-assembler';
 import type { SaveManager } from '../../persistence/save-manager';
 import type { ProfileManager } from '../../persistence/profile-manager';
@@ -495,7 +496,7 @@ export class CharacterInitPipeline {
       // worldGen is COT-style pure text — no JSON parsing, no command execution.
       // The raw text is injected into openingSceneStep1 as WORLD_DESCRIPTION context.
       const text = extractThinkingFromRaw(rawResponse)
-        ? rawResponse.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim()
+        ? stripThinkingTagOnly(rawResponse).trim()
         : rawResponse.trim();
 
       return text || null;

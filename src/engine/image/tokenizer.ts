@@ -25,6 +25,7 @@ import { injectAnchorByComposition } from './anchor-injector';
 import type { SecretPartType, AnchorStructuredFeatures as AnchorFeatures } from './types';
 import { buildSecretPartSystemPrompt, buildSecretPartTaskData, reinforceSecretPartPrompt } from './secret-part-prompt';
 import { eventBus } from '../core/event-bus';
+import { extractThinkingBlocks } from '../ai/thinking-tags';
 
 /**
  * Extract `<thinking>…</thinking>` (and its siblings <think>, <reasoning>,
@@ -44,15 +45,8 @@ export const ART_STYLE_PROMPT_LABELS: Record<string, string> = {
   chinese: '国风',
 };
 
-const THINKING_TAG_RE = /<(?:think|thinking|reasoning|thought)>([\s\S]*?)<\/(?:think|thinking|reasoning|thought)>/gi;
 function extractThinking(raw: string): string | undefined {
-  const blocks: string[] = [];
-  let m: RegExpExecArray | null;
-  while ((m = THINKING_TAG_RE.exec(raw)) !== null) {
-    const content = m[1]?.trim();
-    if (content) blocks.push(content);
-  }
-  return blocks.length > 0 ? blocks.join('\n\n') : undefined;
+  return extractThinkingBlocks(raw);
 }
 
 export interface TokenizerResult {

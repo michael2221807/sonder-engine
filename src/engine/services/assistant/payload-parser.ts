@@ -21,11 +21,12 @@
  * 对应 docs/status/plan-assistant-utility-2026-04-14.md §5.2.2 + Phase 2。
  */
 import { stripMarkdownFences, findBalancedJsonBlocks } from '../../ai/json-extract';
+import { stripThinkOrThinkingBlocks } from '../../ai/thinking-tags';
 import type { AssistantPayload, AssistantPatch, KnowledgeFact } from './types';
 
 /** 剥离 thinking 标签 —— 与 preset-ai-generator 同范式 */
 function stripThinkingTags(text: string): string {
-  return text.replace(/<think(?:ing)?>[\s\S]*?<\/think(?:ing)?>/gi, '');
+  return stripThinkOrThinkingBlocks(text);
 }
 
 /**

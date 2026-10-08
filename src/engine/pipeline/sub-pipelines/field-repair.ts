@@ -41,6 +41,7 @@ import { isEdgeCurrentlyValid, type EngramEdge } from '../../memory/engram/knowl
 import type { EngramEntity } from '../../memory/engram/entity-builder';
 import { loadEngramConfig } from '../../memory/engram/engram-config';
 import { eventBus } from '../../core/event-bus';
+import { stripThinkingBlocks } from '../../ai/thinking-tags';
 import { stringifySnapshotForPrompt } from '../../memory/snapshot-sanitizer';
 import { SUB_PIPELINE_HISTORY_PAIRS } from '../../prompt/context-compiler';
 import {
@@ -704,9 +705,7 @@ export class FieldRepairPipeline {
   // ═══════════════════════════════════════════════════════════════
 
   private parseCombinedResponse(raw: string, extraField?: string): CombinedStepResult {
-    const cleaned = raw
-      .replace(/<(?:think|thinking|reasoning|thought)>[\s\S]*?<\/(?:think|thinking|reasoning|thought)>/gi, '')
-      .trim();
+    const cleaned = stripThinkingBlocks(raw).trim();
     const firstBrace = cleaned.indexOf('{');
     const lastBrace = cleaned.lastIndexOf('}');
 
