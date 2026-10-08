@@ -5,7 +5,7 @@
  * here turn it into the AI requests:
  * - `assembleStoryRequest`    the builder path (context-piece builder), plus its Step 2 request;
  * - `assembleStep2Request`    the split-gen Step 2 messages of the builder path;
- * - `assembleOpeningRequests` the flow-based path (the pack's prompt flows);
+ * - `assembleFlowRequests` the flow-based path (the pack's prompt flows);
  * - `finalizeRequests`        NSFW strip, debug emit, Step 2 follow-up and the returned context.
  *
  * Every function keeps the order, the in-place edits (message arrays, `ctx.meta`) and the event order of the code it
@@ -427,7 +427,7 @@ export function assembleStoryRequest(
 }
 
 /** The flow-based path: the pack's prompt flows (mainRound, or the split-gen Step 1 / Step 2 pair). */
-export function assembleOpeningRequests(
+export function assembleFlowRequests(
   deps: RequestDeps,
   ctx: PipelineContext,
   inputs: RoundPromptInputs,

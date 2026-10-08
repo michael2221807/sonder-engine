@@ -25,7 +25,7 @@ import type { WorldBook } from '../../prompt/world-book';
 import { collectRoundInputs, buildFlowVariables } from './context-assembly-inputs';
 import {
   assembleStoryRequest,
-  assembleOpeningRequests,
+  assembleFlowRequests,
   finalizeRequests,
   type RequestDeps,
 } from './context-assembly-requests';
@@ -86,7 +86,7 @@ export class ContextAssemblyStage implements PipelineStage {
     // Builder path (context pieces) or flow-based path; both edit their message arrays in place.
     const draft = this.useNewBuilder
       ? assembleStoryRequest(deps, ctx, inputs, variables, assembler, transformPrompt)
-      : assembleOpeningRequests(deps, ctx, inputs, variables, assembler);
+      : assembleFlowRequests(deps, ctx, inputs, variables, assembler);
     return finalizeRequests(ctx, inputs, variables, assembler, draft);
   }
 }
