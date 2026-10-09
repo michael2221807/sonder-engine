@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { GameOrchestrator } from './game-orchestrator';
+import { RollbackSnapshot } from './rollback-snapshot';
 import { eventBus } from './event-bus';
+import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 
 vi.mock('../stores/engine-action-queue', () => ({ useActionQueueStore: () => ({ consumeActions: () => [] }) }));
 
@@ -18,6 +20,7 @@ function harness() {
   Object.assign(host, { abortController: null, _subPipelineActive: false, requestedSaveActive: false,
     stateRevision: 0, pendingSave: null, subPipelines: {}, _getActiveSlot: () => slot,
     ports: { actionQueue: { consumeActions: () => [] } }, // R5 step 4: the host reads stores through ports
+    _paths: DEFAULT_ENGINE_PATHS, rollbackSnapshot: new RollbackSnapshot(DEFAULT_ENGINE_PATHS), // 存档瘦身 D1A
     _stateManager: { liveTree: () => ({ round }) }, _saveManager: { saveGame: save } });
   return { host, save, queue: () => { host.pendingSave = { ...slot }; },
     round: (value: number) => { round = value; }, slot: (id: string) => { slot = { ...slot, slotId: id }; } };
@@ -68,12 +71,22 @@ describe('ordinary saves cannot persist half a round', () => {
 
 // PO D6 (2026-09-26): a rollback is written at once, so a reload does not bring the undone round back.
 describe('rollback saves the restored round', () => {
-  function rollbackHarness(tree: Record<string, unknown>) {
+  /**
+   * `held`: the round-start snapshot PreProcess handed to the holder; the tree gets the marker naming it
+   * (存档瘦身 D1A). A tree may instead still hold an old whole snapshot at 元数据.上次对话前快照.
+   */
+  function rollbackHarness(tree: Record<string, unknown>, held?: Record<string, unknown>) {
     const h = harness();
     let live = tree;
+    if (held) {
+      const marker = (h.host as unknown as { rollbackSnapshot: RollbackSnapshot }).rollbackSnapshot.capture(held);
+      live = { ...live, 系统: { 扩展: { rollbackPatch: marker } } };
+    }
+    const deleted: string[] = [];
     // Like StateManager.rollbackTo: restore, then announce a 'rollback' change (the orchestrator bumps its revision).
     const sm = {
-      get: (path: string) => path === '元数据.上次对话前快照' ? (live.元数据 as Record<string, unknown> | undefined)?.上次对话前快照 : undefined,
+      get: (path: string) => path.split('.').reduce<unknown>((o, k) => (o as Record<string, unknown> | undefined)?.[k], live),
+      delete: (path: string) => { deleted.push(path); },
       rollbackTo: (snapshot: Record<string, unknown>) => { live = structuredClone(snapshot); eventBus.emit('engine:state-changed', { type: 'rollback' }); },
     };
     Object.assign(h.host, { _stateManager: { liveTree: () => live }, memoryManager: { clearConfigCache: () => {} },
@@ -81,11 +94,11 @@ describe('rollback saves the restored round', () => {
     // The orchestrator's own listeners: the rollback request and the revision bump on state changes.
     const host = h.host as unknown as { subscribeToEvents: (s: typeof sm) => void; unsubscribers: Array<() => void>; rollbackLastRound: (s: typeof sm) => void };
     host.subscribeToEvents(sm);
-    return { ...h, rollback: () => host.rollbackLastRound(sm), dispose: () => host.unsubscribers.splice(0).forEach(off => off()) };
+    return { ...h, deleted, rollback: () => host.rollbackLastRound(sm), dispose: () => host.unsubscribers.splice(0).forEach(off => off()) };
   }
 
   it('the rollback request saves the tree as it was before the round, once, after the revision moved', async () => {
-    const h = rollbackHarness({ 元数据: { 回合序号: 90, 上次对话前快照: { 元数据: { 回合序号: 89 } } } });
+    const h = rollbackHarness({ 元数据: { 回合序号: 90 } }, { 元数据: { 回合序号: 89 } });
     const seen: string[] = [];
     const offs = [eventBus.on('engine:rollback-complete', () => { seen.push('complete'); }),
       eventBus.on('engine:save-error', () => { seen.push('save-error'); })];
@@ -95,7 +108,33 @@ describe('rollback saves the restored round', () => {
       expect(h.save.mock.calls[0].slice(0, 3)).toEqual(['p', 'a', { 元数据: { 回合序号: 89 } }]);
       expect(h.host.stateRevision).toBe(1);   // bumped by the rollback before the save took its revision
       expect(seen).toEqual(['complete']);     // the save's guard passed
+      // One rollback per round: the holder let go of the snapshot, and the restored tree has no marker.
+      h.rollback();
+      await new Promise((r) => setTimeout(r, 0));
+      expect(h.save).toHaveBeenCalledTimes(1);
     } finally { offs.forEach(off => off()); h.dispose(); }
+  });
+
+  it('a tree that still holds an old whole snapshot (its format upgrade failed) is rolled back to it, as before', async () => {
+    const h = rollbackHarness({ 元数据: { 回合序号: 90, 上次对话前快照: { 元数据: { 回合序号: 89 } } } });
+    try {
+      h.rollback();
+      await vi.waitFor(() => expect(h.save).toHaveBeenCalledTimes(1));
+      expect(h.save.mock.calls[0][2]).toEqual({ 元数据: { 回合序号: 89 } });
+    } finally { h.dispose(); }
+  });
+
+  it('a marker naming no held snapshot offers no rollback: it is taken out, nothing is written', async () => {
+    const h = rollbackHarness({ 元数据: { 回合序号: 90 }, 系统: { 扩展: { rollbackPatch: 'round-start:77' } } });
+    const toasts: unknown[] = [];
+    const off = eventBus.on('ui:toast', (t) => { toasts.push(t); });
+    try {
+      h.rollback();
+      await new Promise((r) => setTimeout(r, 0));
+      expect(h.deleted).toEqual([DEFAULT_ENGINE_PATHS.rollbackPatch]);
+      expect(toasts).toMatchObject([{ i18nKey: 'engine.toast.noRollbackSnapshot' }]);
+      expect(h.save).not.toHaveBeenCalled();
+    } finally { off(); h.dispose(); }
   });
 
   // PO 2026-10-03: a setting changed after the round began survives undoing the round (the real StateManager).
@@ -109,7 +148,7 @@ describe('rollback saves the restored round', () => {
     系统: { 设置: { prompt: { wordCountRequirement: 2500, enableActionOptions: false } }, actionOptions: { mode: 'story', pace: 'slow' },
       扩展: { plotVector: { round: 'after' }, image: { enabled: true, config: { autoSceneOnRound: true }, characterAnchors: ['after'] } } },
     世界: { 状态: { 心跳: { 配置: { enabled: true, period: 3 }, 历史: ['after'] } } },
-    元数据: { 回合序号: 90, 上次对话前快照: before },
+    元数据: { 回合序号: 90 },
   };
   const at = (tree: unknown, path: string): unknown =>
     path.split('.').reduce<unknown>((o, k) => (o as Record<string, unknown> | undefined)?.[k], tree);
@@ -131,6 +170,9 @@ describe('rollback saves the restored round', () => {
     const sm = new StateManager();
     sm.loadTree(structuredClone(now));
     const h = harness();
+    // The round began from `before`: PreProcess handed it to the holder and marked the tree.
+    const holder = (h.host as unknown as { rollbackSnapshot: RollbackSnapshot }).rollbackSnapshot;
+    sm.set(DEFAULT_ENGINE_PATHS.rollbackPatch, holder.capture(structuredClone(before)), 'system');
     Object.assign(h.host, { _stateManager: sm, memoryManager: { clearConfigCache: () => {} },
       engramManager: { isEnabled: () => false }, unsubscribers: [] as Array<() => void> });
     const host = h.host as unknown as { subscribeToEvents: (s: typeof sm) => void; unsubscribers: Array<() => void>; rollbackLastRound: (s: typeof sm) => void };
@@ -154,8 +196,8 @@ describe('rollback saves the restored round', () => {
       _stateManager: sm, _paths: P, subPipelines: {},
       memoryManager: { clearConfigCache: () => {} }, engramManager: { isEnabled: () => false },
       runner: { run: async () => {
-        // As PreProcess does: the snapshot first, then the round moves on and the story changes.
-        sm.set(P.preRoundSnapshot, sm.toSnapshot(), 'system');
+        // As PreProcess does: the snapshot to the holder and the marker into the tree first, then the round moves on.
+        sm.set(P.rollbackPatch, (h.host as unknown as { rollbackSnapshot: RollbackSnapshot }).rollbackSnapshot.capture(sm.toSnapshot()), 'system');
         for (const path of ['元数据.回合序号', '系统.扩展.plotVector', '世界.状态.心跳.历史', '系统.扩展.image.characterAnchors'])
           sm.set(path, structuredClone(at(now, path)), 'system');
         // Meanwhile the player changes settings; then the model call fails.
@@ -169,11 +211,14 @@ describe('rollback saves the restored round', () => {
     } finally { off(); }
     expect(errors).toHaveLength(1);
     expectSettingsKeptStoryBack(sm.liveTree());
+    // Once per round, as for the player's rollback: the holder let go of the snapshot, the tree has no marker.
+    expect((h.host as unknown as { rollbackSnapshot: RollbackSnapshot }).rollbackSnapshot.current()).toBeUndefined();
+    expect(sm.get(P.rollbackPatch)).toBeUndefined();
   });
 
   it('writes nothing when there is no snapshot or a round is still running', async () => {
     const none = rollbackHarness({ 元数据: { 回合序号: 90 } });
-    const busy = rollbackHarness({ 元数据: { 回合序号: 90, 上次对话前快照: { 元数据: { 回合序号: 89 } } } });
+    const busy = rollbackHarness({ 元数据: { 回合序号: 90 } }, { 元数据: { 回合序号: 89 } });
     try {
       none.rollback();
       busy.host.abortController = new AbortController();

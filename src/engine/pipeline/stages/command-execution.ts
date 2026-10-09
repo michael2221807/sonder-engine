@@ -99,8 +99,9 @@ export class CommandExecutionStage implements PipelineStage {
   /**
    * The paths the engine keeps and a round's commands never write (code review M-B): a paid round's `push 记忆 …`
    * once wiped every memory tier, and a `set` or `delete` there would do the same. The round counter, the story
-   * history, the pre-round snapshot, the reasoning ring, the bookmarks and the whole memory tree — and the roots
-   * they live under, written whole. Returns the protected path a command key would write, or undefined.
+   * history, the pre-round snapshot (the old whole one, and the rollback marker and the save format marker of 存档瘦身
+   * D1A), the reasoning ring, the bookmarks and the whole memory tree — and the roots they live under, written whole.
+   * Returns the protected path a command key would write, or undefined.
    */
   /**
    * A gauge written outside the plot state (a shadow copy, gauge-shadow.ts): refused, the gauge changes only through
@@ -116,6 +117,7 @@ export class CommandExecutionStage implements PipelineStage {
   private protectedPathOf(key: string): string | undefined {
     const memoryRoot = this.paths.memoryMidTerm.slice(0, Math.max(0, this.paths.memoryMidTerm.lastIndexOf('.')));
     const kept = [this.paths.roundNumber, this.paths.narrativeHistory, this.paths.preRoundSnapshot,
+      this.paths.rollbackPatch, this.paths.saveFormat,
       this.paths.reasoningHistory, this.paths.bookmarkedRounds, memoryRoot].filter(Boolean);
     const k = key.trim();
     return kept.find((p) => k === p || k.startsWith(`${p}.`) || k.startsWith(`${p}[`) || p.startsWith(`${k}.`));

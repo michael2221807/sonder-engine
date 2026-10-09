@@ -120,6 +120,8 @@ export function buildDefaultCardStripPaths(p: EnginePathConfig = DEFAULT_ENGINE_
       p.reasoningHistory,                         // 元数据.推理历史
       p.storyPlan,                                // 元数据.剧情规划
       p.preRoundSnapshot,                         // 元数据.上次对话前快照
+      p.rollbackPatch,                            // 系统.扩展.rollbackPatch — the rollback record holds earlier values (D1A)
+      p.saveFormat,                               // 系统.扩展.saveFormat — this save's format bookkeeping, not the card's
       DEFAULT_ENGINE_PATHS.currentActionOptions,
       p.storageHealth,                            // 系统.扩展.storageHealth — this device's store baseline, never part of a card
       DEFAULT_ENGINE_PATHS.shortTermMemory, DEFAULT_ENGINE_PATHS.memoryMidTerm,

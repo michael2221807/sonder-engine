@@ -5,6 +5,7 @@ import type { BehaviorRunner } from '../engine/behaviors/behavior-runner';
 import type { CommandExecutor } from '../engine/core/command-executor';
 import type { ConfigStore } from '../engine/core/config-system';
 import { GameOrchestrator } from '../engine/core/game-orchestrator';
+import type { RollbackSnapshot } from '../engine/core/rollback-snapshot';
 import type { StateManager } from '../engine/core/state-manager';
 import { GameCardImportService } from '../engine/export/game-card-import-service';
 import type { ImageAssetCache } from '../engine/image/asset-cache';
@@ -79,8 +80,11 @@ export async function createGameLoop(deps: {
   npcMemSummarizer: NpcMemorySummarizer | undefined;
   plotEvaluationPipeline: PlotEvaluationPipeline | undefined;
   plotVectorHolder: PlotVectorHolder;
+  rollbackSnapshot: RollbackSnapshot;
 }) {
-  const { pack, aiService, responseParser, promptAssembler, promptRegistry, stateManager, commandExecutor, behaviorRunner, engineStateStore, memoryManager, memoryRetriever, engramManager, unifiedRetriever, getActiveSlot, saveManager, profileManager, configStore, promptStorage, customPresetStore, imageAssetCacheForBackup, worldBookStorage, imageService, ttsService, memorySummaryPipeline, midTermRefinePipeline, characterVectorProposePipeline, longTermCompactPipeline, worldHeartbeatPipeline, npcGenerationPipeline, privacyRepairPipeline, fieldRepairPipeline, npcMemSummarizer, plotEvaluationPipeline, plotVectorHolder } = deps;
+  const { pack, aiService, responseParser, promptAssembler, promptRegistry, stateManager, commandExecutor, behaviorRunner, engineStateStore, memoryManager, memoryRetriever, engramManager, unifiedRetriever, getActiveSlot, saveManager, profileManager, configStore, promptStorage, customPresetStore, imageAssetCacheForBackup, worldBookStorage, imageService, ttsService, memorySummaryPipeline, midTermRefinePipeline, characterVectorProposePipeline, longTermCompactPipeline, worldHeartbeatPipeline, npcGenerationPipeline, privacyRepairPipeline, fieldRepairPipeline, npcMemSummarizer, plotEvaluationPipeline, plotVectorHolder, rollbackSnapshot } = deps;
+  // 存档瘦身 D1A: every save stores, in place of the tree's rollback marker, the patch back to the held snapshot.
+  saveManager.setTreeToSave((tree) => rollbackSnapshot.treeToSave(tree));
   // CharacterInitPipeline is created after GameOrchestrator (below) to enable
   // EnhancedOpeningPipeline injection which requires orchestrator.createStagesForOpening().
   let characterInitPipeline: CharacterInitPipeline | null = null;
@@ -161,6 +165,7 @@ export async function createGameLoop(deps: {
           attachResponse: (...args) => usePromptDebugStore().attachResponse(...args),
         },
       },
+      rollbackSnapshot,
     );
   }
 

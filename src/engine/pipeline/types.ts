@@ -272,8 +272,8 @@ export interface PipelineContext {
   promptMetrics?: PromptMetrics;
   /**
    * 本回合开始前的状态树深拷贝（由 PreProcessStage 在递增回合序号前捕获）
-   * PreProcessStage 捕获后立即写入 `paths.preRoundSnapshot`（不等 PostProcess），用于 Rollback 功能；
-   * 这里是同一份的内存副本
+   * PreProcessStage 把它交给 RollbackSnapshot 持有，并在树里写 `paths.rollbackPatch` 标记（不等 PostProcess），
+   * 用于 Rollback 功能（存档瘦身 D1A）；这里是同一份（只读，不要改）
    */
   preRoundSnapshot?: Record<string, unknown>;
   /**
@@ -642,13 +642,15 @@ export interface EnginePathConfig {
    */
   gameTimeFieldNames: EngineGameTimeFieldNames;
   /**
-   * 上次对话前快照路径（如 "元数据.上次对话前快照"）：整份回合开始快照的旧存放位置。存档瘦身 D1A：读存档时它被
-   * 升级成 `rollbackPatch`（save-format-migration.ts）。
+   * 上次对话前快照路径（如 "元数据.上次对话前快照"）：整份回合开始快照的旧存放位置，不再写入。存档瘦身 D1A：读存档时
+   * 它被升级成 `rollbackPatch`（save-format-migration.ts）；升级失败的树仍带着它时，回退照旧读它（读取兼容）。
    */
   preRoundSnapshot: string;
   /**
-   * 回退差异（如 "系统.扩展.rollbackPatch"，存档瘦身 D1A）：从存下的树退回回合开始快照要改的地方，附带它对应的
-   * 那棵树的回合号与叙事历史长度；读档时还原成完整快照。路径存在 = 可以回退。
+   * 回退数据（如 "系统.扩展.rollbackPatch"，存档瘦身 D1A）。游戏进行中是回合开始时写下的标记
+   * （`round-start:<n>`，指向内存里 RollbackSnapshot 持有的快照）；存档里是从存下的树退回那份快照要改的地方，
+   * 附带它对应的那棵树的回合号与叙事历史长度——每次存档时由标记换成，读档时还原成完整快照、再换回标记。
+   * 有值 = 可以回退。
    */
   rollbackPatch: string;
   /**

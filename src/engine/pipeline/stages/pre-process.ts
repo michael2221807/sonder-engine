@@ -19,9 +19,9 @@
  *
  * 对应 STEP-03B M3.4 PreProcessStage。
  */
-import { unset as _unset } from 'lodash-es';
 import type { PipelineStage, PipelineContext, IActionQueueConsumer, EnginePathConfig } from '../types';
 import type { StateManager } from '../../core/state-manager';
+import type { RollbackSnapshot } from '../../core/rollback-snapshot';
 import type { QueuedAction } from '../../types';
 
 export class PreProcessStage implements PipelineStage {
@@ -31,21 +31,22 @@ export class PreProcessStage implements PipelineStage {
     private stateManager: StateManager,
     private actionQueue: IActionQueueConsumer,
     private paths: EnginePathConfig,
+    private rollbackSnapshot: RollbackSnapshot,
   ) {}
 
   async execute(ctx: PipelineContext): Promise<PipelineContext> {
-    // 在任何状态变更（包括递增回合序号）之前，捕获本回合开始前的完整快照。
-    // 快照在下面立即持久化到 paths.preRoundSnapshot，供 Rollback 使用。
+    // Before any change (the round number included), take the whole tree as it is at round start, for Rollback.
     //
-    // 捕获后先删掉快照里已有的 `元数据.上次对话前快照`，保证它永远是单层快照：
-    // 否则每回合嵌套一层，存档体积随回合数膨胀（Changelog: 2026-04-11 递归嵌套快照）。
-    // Rollback 只需要上一回合开始时的状态，不需要回滚链。
-    const preRoundSnapshot = this.stateManager.toSnapshot();
-    _unset(preRoundSnapshot, this.paths.preRoundSnapshot);
-
-    // 立即持久化快照到状态树（不等 PostProcess）：AI 调用失败时 PostProcess 不会执行，
-    // 快照只在 ctx 里的话刷新后就丢了，手动回退读不到。提前写入保证任何时候都能回退。
-    this.stateManager.set(this.paths.preRoundSnapshot, preRoundSnapshot, 'system');
+    // 存档瘦身 D1A: the snapshot goes to the in-memory holder only — no longer into the state tree (41% of a large
+    // save, and three more whole-tree copies every round). The tree keeps a small marker naming it; every save turns
+    // the marker into the patch back to the snapshot (rollback-snapshot.ts). The holder leaves the rollback data out
+    // of the snapshot, so it never nests (Changelog: 2026-04-11 递归嵌套快照). The marker is in the tree before the AI
+    // call: a round that fails before PostProcess can still be rolled back.
+    const marker = this.rollbackSnapshot.capture(this.stateManager.toSnapshot());
+    const preRoundSnapshot = this.rollbackSnapshot.get(marker);
+    // A tree still holding the old whole snapshot (its format upgrade failed on load) lets go of it now.
+    if (this.stateManager.has(this.paths.preRoundSnapshot)) this.stateManager.delete(this.paths.preRoundSnapshot, 'system');
+    this.stateManager.set(this.paths.rollbackPatch, marker, 'system');
 
     const consumed = this.actionQueue.consumeActions();
     const actionQueuePrompt = this.formatActions(consumed);

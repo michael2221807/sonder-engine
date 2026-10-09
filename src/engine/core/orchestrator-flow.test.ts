@@ -21,6 +21,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { GameOrchestrator, type SubPipelineBundle } from './game-orchestrator';
+import { RollbackSnapshot } from './rollback-snapshot';
 import { StateManager } from './state-manager';
 import { eventBus } from './event-bus';
 import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
@@ -201,8 +202,10 @@ interface Host {
   store: ReturnType<typeof useEngineStateStore>;
   /** Runs one round through `runRound` and records how it ended. */
   round: (text?: string) => Promise<void>;
-  /** What PreProcessStage does: snapshot first, then the round number moves on. */
+  /** What PreProcessStage does: snapshot first (to the holder, a marker into the tree), then the round number moves on. */
   preProcess: () => void;
+  /** The round-start snapshot holder the orchestrator was built with (存档瘦身 D1A). */
+  rollback: RollbackSnapshot;
 }
 
 const ls = createMockLocalStorage();
@@ -222,6 +225,7 @@ function buildHost(opts: HostOptions = {}): Host {
   opts.edit?.(tree);
   const sm = new StateManager();
   sm.loadTree(tree);
+  const rollback = new RollbackSnapshot(P);
 
   const results: Results = opts.results ?? {};
   let host: Host | undefined;
@@ -357,6 +361,7 @@ function buildHost(opts: HostOptions = {}): Host {
         attachResponse: (...args) => usePromptDebugStore().attachResponse(...args),
       },
     },
+    rollback,
   );
   const priv = orch as unknown as Priv;
 
@@ -364,7 +369,9 @@ function buildHost(opts: HostOptions = {}): Host {
   let runIndex = 0;
   let host2!: Host;
   const preProcess = (): void => {
-    sm.set(P.preRoundSnapshot, sm.toSnapshot(), 'system');
+    const marker = rollback.capture(sm.toSnapshot());
+    if (sm.has(P.preRoundSnapshot)) sm.delete(P.preRoundSnapshot, 'system');
+    sm.set(P.rollbackPatch, marker, 'system');
     sm.set(P.roundNumber, (sm.get<number>(P.roundNumber) ?? 0) + 1, 'system');
   };
 
@@ -391,7 +398,7 @@ function buildHost(opts: HostOptions = {}): Host {
   };
 
   host2 = {
-    orch, priv, sm, bundle, outcomes, store, preProcess,
+    orch, priv, sm, bundle, outcomes, store, preProcess, rollback,
     round: async (text = '玩家输入') => {
       try {
         await priv.runRound(text, sm);
@@ -909,6 +916,23 @@ describe('orchestrator flow · save and rollback', () => {
     eventBus.emit('engine:rollback-requested');
     await settle();
     await expectSnapshot('S1', h);
+  });
+
+  it('S4 rollback through the held snapshot: once per round; a marker naming nothing held is taken out with a toast', async () => {
+    const h = host({ engramEnabled: true });
+    // A round started: PreProcess handed the snapshot over and marked the tree; the round then changed the story.
+    h.preProcess();
+    h.sm.set('角色.基础信息.当前位置', '洛阳', 'system');
+    eventBus.emit('engine:rollback-requested');
+    await settle();
+    L('probe', 'held after rollback', h.rollback.current() === undefined ? 'nothing' : 'a snapshot');
+    eventBus.emit('engine:rollback-requested');
+    await settle();
+    h.sm.set(P.rollbackPatch, 'round-start:404', 'system');
+    eventBus.emit('engine:rollback-requested');
+    await settle();
+    L('probe', 'marker after', snap(h.sm.get(P.rollbackPatch)));
+    await expectSnapshot('S4', h);
   });
 
   it('S2 request-save during sub-pipelines is merged and written once at the end', async () => {

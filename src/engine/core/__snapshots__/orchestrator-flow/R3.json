@@ -39,26 +39,15 @@
     [
       "state",
       "set",
-      "元数据.上次对话前快照",
-      {
-        "keys": [
-          "元数据",
-          "角色",
-          "世界",
-          "社交",
-          "系统",
-          "记忆"
-        ],
-        "round": 5,
-        "location": "长安"
-      },
+      "系统.扩展.rollbackPatch",
+      "round-start:1",
       "system"
     ],
     [
       "event",
       "engine:state-changed",
       {
-        "path": "元数据.上次对话前快照",
+        "path": "系统.扩展.rollbackPatch",
         "action": "set",
         "source": "system"
       }
@@ -335,26 +324,15 @@
     [
       "state",
       "set",
-      "元数据.上次对话前快照",
-      {
-        "keys": [
-          "元数据",
-          "角色",
-          "世界",
-          "社交",
-          "系统",
-          "记忆"
-        ],
-        "round": 6,
-        "location": "长安"
-      },
+      "系统.扩展.rollbackPatch",
+      "round-start:2",
       "system"
     ],
     [
       "event",
       "engine:state-changed",
       {
-        "path": "元数据.上次对话前快照",
+        "path": "系统.扩展.rollbackPatch",
         "action": "set",
         "source": "system"
       }

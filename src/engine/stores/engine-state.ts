@@ -4,6 +4,7 @@ import { get as _get } from 'lodash-es';
 import type { GameStateTree, StatePath } from '../types';
 import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 import type { StateManager } from '../core/state-manager';
+import type { RollbackSnapshot } from '../core/rollback-snapshot';
 import { eventBus } from '../core/event-bus';
 import { syncNsfwFromLocalStorage, syncAllSettingsFromLocalStorage } from './settings-sync';
 
@@ -42,6 +43,13 @@ export const useEngineStateStore = defineStore('engineState', () => {
    * Changelog: 2026-07-05（此前 onGameLoad 只在创角里触发）。
    */
   let _linkedBehaviorRunner: { runOnGameLoad(sm: StateManager): void } | null = null;
+
+  /**
+   * The round-start snapshot holder from linkRollbackSnapshot (存档瘦身 D1A). loadGame() rebuilds the snapshot from
+   * the save's rollback record right after loadTree, before onGameLoad: no load-time repair reaches it, as no repair
+   * ever reached the old whole snapshot inside the tree.
+   */
+  let _linkedRollbackSnapshot: Pick<RollbackSnapshot, 'restoreLoaded' | 'clear'> | null = null;
 
   /** Convenience getter: retrieve a value by dot-path */
   function get<T = unknown>(path: StatePath): T | undefined {
@@ -130,6 +138,8 @@ export const useEngineStateStore = defineStore('engineState', () => {
     if (_linkedStateManager) {
       // 就地写入：保持 tree.value 与 StateManager.state 是同一个 reactive proxy
       _linkedStateManager.loadTree(data as Record<string, unknown>);
+      // The snapshot to roll back to, rebuilt before any repair below changes the tree (存档瘦身 D1A).
+      _linkedRollbackSnapshot?.restoreLoaded(_linkedStateManager);
       // 读档后行为钩子：npc-dedup 同名融合 / effect-lifecycle 过期清理 /
       // validation-repair 存档修复等（各模块 onGameLoad JSDoc 均声明面向读档场景）
       _linkedBehaviorRunner?.runOnGameLoad(_linkedStateManager);
@@ -235,8 +245,15 @@ export const useEngineStateStore = defineStore('engineState', () => {
     _linkedBehaviorRunner = runner;
   }
 
+  /** Inject the round-start snapshot holder (main.ts at startup, like linkStateManager). */
+  function linkRollbackSnapshot(holder: Pick<RollbackSnapshot, 'restoreLoaded' | 'clear'>): void {
+    _linkedRollbackSnapshot = holder;
+  }
+
   /** Clear all game state */
   function clearGame(): void {
+    // The snapshot belonged to the game that is closed.
+    _linkedRollbackSnapshot?.clear();
     if (_linkedStateManager) {
       // 就地清空 reactive proxy，保持 tree.value 与 stateManager.state 的引用不变。
       // 之前 `tree.value = {}` 会替换引用，导致后续 loadGame() 写入 stateManager
@@ -274,6 +291,7 @@ export const useEngineStateStore = defineStore('engineState', () => {
     setValue,
     linkStateManager,
     linkBehaviorRunner,
+    linkRollbackSnapshot,
     clearGame,
   };
 });

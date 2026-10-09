@@ -57,6 +57,23 @@ describe('CommandExecutionStage · paths the engine keeps', () => {
     expect(changeLog.changes.map((c) => c.path)).toEqual(['社交.关系[0].好感度', '元数据.剧情规划']);
   });
 
+  it('refuses a round\'s writes to the rollback marker and the save format marker, and to their root written whole', async () => {
+    const sm = new StateManager();
+    sm.loadTree({ 元数据: { 回合序号: 3 }, 系统: { 扩展: { rollbackPatch: 'round-start:2', saveFormat: { version: 2 }, 其他: 0 } } });
+    const stage = new CommandExecutionStage(new CommandExecutor(sm, null), { runAfterCommands: vi.fn() } as unknown as IBehaviorRunner,
+      sm, DEFAULT_ENGINE_PATHS);
+    const commands: Command[] = [
+      { action: 'set', key: '系统.扩展.rollbackPatch', value: 'round-start:9' },
+      { action: 'delete', key: '系统.扩展.saveFormat' },
+      { action: 'set', key: '系统.扩展', value: {} },
+      { action: 'set', key: '系统.扩展.其他', value: 1 },
+    ];
+    const { commandResults } = await stage.execute({ parsedResponse: { commands }, meta: {} } as unknown as PipelineContext);
+    expect(commandResults?.results.filter((r) => !r.success).map((r) => r.command.key))
+      .toEqual(['系统.扩展.rollbackPatch', '系统.扩展.saveFormat', '系统.扩展']);
+    expect(sm.get('系统.扩展')).toEqual({ rollbackPatch: 'round-start:2', saveFormat: { version: 2 }, 其他: 1 });
+  });
+
   it('a round with nothing protected runs exactly as before', async () => {
     const { out } = run([{ action: 'add', key: '社交.关系[名称=林晚照].好感度', value: 1 }]);
     const { commandResults } = await out;

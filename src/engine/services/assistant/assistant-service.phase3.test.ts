@@ -14,6 +14,8 @@ import { AssistantService } from './assistant-service';
 import { InMemoryConversationStore } from './conversation-store';
 import type { CommandExecutor } from '../../core/command-executor';
 import type { StateManager } from '../../core/state-manager';
+import { RollbackSnapshot } from '../../core/rollback-snapshot';
+import { DEFAULT_ENGINE_PATHS } from '../../pipeline/types';
 import type { GamePack } from '../../types';
 import type { AIService } from '../../ai/ai-service';
 import type { PayloadDraft, ValidatedPatch, AssistantMessage } from './types';
@@ -210,6 +212,29 @@ describe('rollbackLastInject', () => {
     const session = await test.svc.getSession('default');
     const last = session.messages[session.messages.length - 1];
     expect(last.systemKind).toBe('inject-rolled-back');
+  });
+
+  it('撤销时主回合的回退快照随注入前的树一起回来（存档瘦身 D1A：即使中间又玩了几回合）', async () => {
+    const holder = new RollbackSnapshot(DEFAULT_ENGINE_PATHS);
+    const sm = new MockStateManager({ 元数据: { 回合序号: 10 }, 角色: { 姓名: '李白' } });
+    const marker = holder.capture({ 元数据: { 回合序号: 9 } });
+    sm.state.系统 = { 扩展: { rollbackPatch: marker } };
+    const svc = new AssistantService({
+      aiService: { async generate() { return ''; } } as unknown as AIService,
+      stateManager: sm as unknown as StateManager,
+      commandExecutor: new MockCommandExecutor(sm) as unknown as CommandExecutor,
+      gamePack: { prompts: {} } as unknown as GamePack,
+      conversationStore: new InMemoryConversationStore(),
+      rollbackSnapshot: holder,
+    });
+    await svc.applyPayload('default', 'm1', makeDraft([okPatch({ target: '角色.姓名', op: 'set-field', value: '苏墨' })]));
+    // Rounds go on: each round start replaces what the holder holds.
+    holder.capture({ 元数据: { 回合序号: 13 } });
+    expect(holder.get(marker)).toBeUndefined();
+
+    expect((await svc.rollbackLastInject('default')).ok).toBe(true);
+    expect(sm.get(DEFAULT_ENGINE_PATHS.rollbackPatch)).toBe(marker);
+    expect(holder.get(marker)).toEqual({ 元数据: { 回合序号: 9 } });
   });
 
   it('单步：连续两次 inject 只能 undo 最后一次', async () => {

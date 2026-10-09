@@ -75,7 +75,7 @@ async function bootstrap(): Promise<void> {
 
   const { promptRegistry, responseParser, promptAssembler } = createPromptStack({ pack, worldBookStorage });
 
-  const { stateManager, commandExecutor, behaviorRunner, calendar, engineStateStore } = createStateKernel({ pack });
+  const { stateManager, commandExecutor, behaviorRunner, calendar, engineStateStore, rollbackSnapshot } = createStateKernel({ pack });
 
   const { memoryManager, memoryRetriever } = createMemoryStack({ stateManager, behaviorRunner });
 
@@ -89,9 +89,9 @@ async function bootstrap(): Promise<void> {
 
   const { imageService, ttsService, sttService } = createMediaServices({ pack, aiService, promptAssembler, stateManager });
 
-  const { plotVectorBoard, orchestrator, characterInitPipeline, gameCardImportService } = await createGameLoop({ pack, aiService, responseParser, promptAssembler, promptRegistry, stateManager, commandExecutor, behaviorRunner, engineStateStore, memoryManager, memoryRetriever, engramManager, unifiedRetriever, getActiveSlot, saveManager, profileManager, configStore, promptStorage, customPresetStore, imageAssetCacheForBackup, worldBookStorage, imageService, ttsService, memorySummaryPipeline, midTermRefinePipeline, characterVectorProposePipeline, longTermCompactPipeline, worldHeartbeatPipeline, npcGenerationPipeline, privacyRepairPipeline, fieldRepairPipeline, npcMemSummarizer, plotEvaluationPipeline, plotVectorHolder });
+  const { plotVectorBoard, orchestrator, characterInitPipeline, gameCardImportService } = await createGameLoop({ pack, aiService, responseParser, promptAssembler, promptRegistry, stateManager, commandExecutor, behaviorRunner, engineStateStore, memoryManager, memoryRetriever, engramManager, unifiedRetriever, getActiveSlot, saveManager, profileManager, configStore, promptStorage, customPresetStore, imageAssetCacheForBackup, worldBookStorage, imageService, ttsService, memorySummaryPipeline, midTermRefinePipeline, characterVectorProposePipeline, longTermCompactPipeline, worldHeartbeatPipeline, npcGenerationPipeline, privacyRepairPipeline, fieldRepairPipeline, npcMemSummarizer, plotEvaluationPipeline, plotVectorHolder, rollbackSnapshot });
 
-  provideServices({ app, pack, aiService, responseParser, promptAssembler, promptRegistry, stateManager, commandExecutor, memoryRetriever, engramManager, engramEditor, embedder, vectorStore, saveManager, profileManager, configRegistry, configResolver, promptStorage, customPresetStore, imageAssetCacheForBackup, worldBookStorage, backupService, gameCardExportService, imageService, ttsService, sttService, characterVectorProposePipeline, plotEvaluationPipeline, plotDecomposer, plotReviser, npcChatPipeline, plotVectorBoard, orchestrator, characterInitPipeline, gameCardImportService });
+  provideServices({ app, pack, aiService, responseParser, promptAssembler, promptRegistry, stateManager, commandExecutor, memoryRetriever, engramManager, engramEditor, embedder, vectorStore, saveManager, profileManager, configRegistry, configResolver, promptStorage, customPresetStore, imageAssetCacheForBackup, worldBookStorage, backupService, gameCardExportService, imageService, ttsService, sttService, characterVectorProposePipeline, plotEvaluationPipeline, plotDecomposer, plotReviser, npcChatPipeline, plotVectorBoard, orchestrator, characterInitPipeline, gameCardImportService, rollbackSnapshot });
 
   mountAndFollowUp({ app, pack, worldBookStorage });
 }

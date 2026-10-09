@@ -23,6 +23,7 @@ import { eventBus } from './event-bus';
 import type { usePromptDebugStore } from '../stores/engine-prompt';
 import type { AIMessage } from '../ai/types';
 import type { StateManager } from './state-manager';
+import type { RollbackSnapshot } from './rollback-snapshot';
 import type { CommandExecutor } from './command-executor';
 import type { BehaviorRunner } from '../behaviors/behavior-runner';
 import type { AIService } from '../ai/ai-service';
@@ -39,7 +40,7 @@ import type {
   PipelineContext,
   CompileTrace,
 } from '../pipeline/types';
-import { DEFAULT_ENGINE_PATHS, PREFERENCE_PATHS } from '../pipeline/types';
+import { PREFERENCE_PATHS } from '../pipeline/types';
 import type { GamePack } from '../types';
 import type { MemorySummaryPipeline } from '../pipeline/sub-pipelines/memory-summary';
 import type { MidTermRefinePipeline } from '../pipeline/sub-pipelines/mid-term-refine';
@@ -115,17 +116,21 @@ export interface PreRoundSnapshotOptions {
   /**
    * Live round number captured immediately BEFORE `PipelineRunner.run()`. The stored snapshot
    * survives across rounds, so it is only trusted when the round number advanced this attempt
-   * (PreProcess writes the snapshot, then increments). Omit to skip the guard.
+   * (PreProcess takes the snapshot, then increments). Omit to skip the guard.
    */
   roundBefore?: number;
   /** Fallback source for callers that genuinely hold a populated context. */
   ctx?: Pick<PipelineContext, 'preRoundSnapshot'> | null;
+  /** The round-start snapshot holder (存档瘦身 D1A): the snapshot the tree's marker names. */
+  rollback?: Pick<RollbackSnapshot, 'get'>;
 }
 
 /**
  * Resolve the snapshot used by the pipeline's error auto-rollback (B0-1).
- * The runner copies the context, so `initialCtx.preRoundSnapshot` is always empty: the state tree
- * (`paths.preRoundSnapshot`, written by PreProcess before the round increment) is the primary source.
+ * The runner copies the context, so `initialCtx.preRoundSnapshot` is always empty. The primary source is the
+ * snapshot PreProcess handed to the holder before the round increment, named by the tree's marker at
+ * `paths.rollbackPatch`; a tree that still holds an old whole snapshot at `paths.preRoundSnapshot` (its format
+ * upgrade failed on load) is read as before.
  *
  * @returns the snapshot to roll back to, or `null` when this attempt left nothing dirty.
  */
@@ -138,6 +143,9 @@ export function resolvePreRoundSnapshot(
     const roundNow = stateManager.get<number>(paths.roundNumber) ?? 0;
     if (roundNow === options.roundBefore) return null;
   }
+
+  const held = options?.rollback?.get(stateManager.get<unknown>(paths.rollbackPatch));
+  if (held) return held;
 
   const fromState = stateManager.get<Record<string, unknown>>(paths.preRoundSnapshot);
   if (fromState && typeof fromState === 'object' && !Array.isArray(fromState)) return fromState;
@@ -182,6 +190,8 @@ export class GameOrchestrator {
   private readonly _unifiedRetriever?: IUnifiedRetriever;
   private readonly ports: OrchestratorPorts;
   private readonly _getActiveSlot: () => { profileId: string; slotId: string } | null;
+  /** The round-start snapshot (存档瘦身 D1A): PreProcess hands it over, the rollbacks take it back. */
+  private readonly rollbackSnapshot: RollbackSnapshot;
 
   constructor(
     stateManager: StateManager,
@@ -202,8 +212,11 @@ export class GameOrchestrator {
     subPipelines: SubPipelineBundle = {},
     /** R5 step 4: store access injected by main.ts */
     ports: OrchestratorPorts,
+    /** 存档瘦身 D1A: the holder of the round-start snapshot, shared with SaveManager and the engine-state store */
+    rollbackSnapshot: RollbackSnapshot,
   ) {
     this.subPipelines = subPipelines;
+    this.rollbackSnapshot = rollbackSnapshot;
     this.engramManager = engramManager;
     this.memoryManager = memoryManager;
 
@@ -246,6 +259,7 @@ export class GameOrchestrator {
       subPipelines,
       getActiveSlot,
       actionQueue,
+      rollbackSnapshot,
     });
 
     this.subscribeToEvents(stateManager);
@@ -336,7 +350,7 @@ export class GameOrchestrator {
     );
 
     // ── Rollback：将状态树恢复到上一回合开始前的快照 ──
-    // 快照由 PreProcessStage 捕获并存储在 paths.preRoundSnapshot。
+    // 快照由 PreProcessStage 捕获、交给 RollbackSnapshot 持有（存档瘦身 D1A；树里只有指向它的标记）。
     // 回滚后清空 action queue，并通知 UI 移除最后一条叙事条目。
     this.unsubscribers.push(
       eventBus.on('engine:rollback-requested', () => { this.rollbackLastRound(stateManager); }),
@@ -357,9 +371,13 @@ export class GameOrchestrator {
   private rollbackLastRound(stateManager: StateManager): void {
     if (this.abortController || this._subPipelineActive || this.subPipelines.stateEditInProgress?.()) return; // Do not race an editor's atomic save.
 
-    const snapshotPath = DEFAULT_ENGINE_PATHS.preRoundSnapshot;
-    const snapshot = stateManager.get<Record<string, unknown>>(snapshotPath);
+    // The snapshot the tree's marker names (D1A), or the old whole snapshot a tree may still hold (read compatibility).
+    const marker = stateManager.get<unknown>(this._paths.rollbackPatch);
+    const snapshot = this.rollbackSnapshot.get(marker)
+      ?? stateManager.get<Record<string, unknown>>(this._paths.preRoundSnapshot);
     if (!snapshot) {
+      // A marker that names nothing held offers no rollback: take it out, so the button stops offering one.
+      if (marker !== undefined) stateManager.delete(this._paths.rollbackPatch, 'system');
       // R-05: 无快照时给用户明确反馈（连续第二次回退、或第一回合回退）
       eventBus.emit('ui:toast', {
         type: 'info',
@@ -372,6 +390,8 @@ export class GameOrchestrator {
 
     // The story goes back; the player's settings stay as they are now (PO 2026-10-03).
     stateManager.rollbackTo(snapshot, PREFERENCE_PATHS);
+    // The restored tree carries no marker: one rollback per round, as before.
+    this.rollbackSnapshot.clear();
     this.ports.actionQueue.consumeActions(); // 清空 action queue
     this.memoryManager.clearConfigCache(); // R-04: 清除记忆配置缓存
 
@@ -487,15 +507,18 @@ export class GameOrchestrator {
       // 自动回滚：PreProcess 在 AI 调用前已递增 roundNumber，不回滚会留下脏状态。
       // preRoundSnapshot 在递增前捕获，回滚后 roundNumber 恢复到正确值。
       //
-      // 快照必须从状态树读，不能读 `initialCtx`（见 resolvePreRoundSnapshot）。
+      // 快照从持有者取（树里的标记指向它），不能读 `initialCtx`（见 resolvePreRoundSnapshot）。
       const recoveryAllowed = !ownership.saved && ownership.isCurrent();
       const snapshot = resolvePreRoundSnapshot(stateManager, this._paths, {
         roundBefore,
         ctx: initialCtx,
+        rollback: this.rollbackSnapshot,
       });
       if (snapshot && recoveryAllowed) {
         // Settings changed while the round ran stay (PO 2026-10-03).
         stateManager.rollbackTo(snapshot, PREFERENCE_PATHS);
+        // The restored tree carries no marker, as the old snapshot path was gone after this rollback.
+        this.rollbackSnapshot.clear();
         this.memoryManager.clearConfigCache();
         if (this.engramManager.isEnabled()) {
           this.engramManager.syncVectorsToState(stateManager).catch(() => {});

@@ -94,6 +94,15 @@ describe('stringifySnapshotForPrompt — always-strip paths', () => {
     expect(out).not.toContain('be-stripped');
   });
 
+  it('strips the rollback data and the save format marker (存档瘦身 D1A: engine bookkeeping, holds earlier values)', () => {
+    const out = stringifySnapshotForPrompt(buildSnapshot({
+      系统: { 扩展: { rollbackPatch: { format: 1, ops: [{ op: 'set', path: ['角色'], value: 'earlier-value' }] }, saveFormat: { version: 2, note: 'format-marker' }, 留下: 'kept-value' } },
+    }), true);
+    expect(out).not.toContain('earlier-value');
+    expect(out).not.toContain('format-marker');
+    expect(out).toContain('kept-value');
+  });
+
   it('strips 系统.扩展.narrativeContract (R2: reaches the model only via its own block)', () => {
     const out = stringifySnapshotForPrompt(buildSnapshot({
       系统: { 扩展: { narrativeContract: { enabled: true, clauses: [{ id: 'c', text: 'contract-clause', enabled: true, source: 'player', createdRound: 1 }] } } },

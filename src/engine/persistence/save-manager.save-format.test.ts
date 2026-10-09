@@ -191,6 +191,23 @@ describe('SaveManager · save format 2', () => {
     }
   });
 
+  it('writes the tree the rollback hook gives, made at the call: before the copy of the old record waits', async () => {
+    for (const legacy of [true, false]) {
+      memStore.clear();
+      memStore.set(KEY, legacy ? legacySave(4) : withRound(legacySave(0), 0));
+      const sm = manager();
+      sm.setTreeToSave((tree) => ({ ...tree, hooked: (tree.元数据 as Record<string, unknown>).改动 ?? 'at the call' }));
+      const tree = (await sm.loadGame('p1', 's1')) as GameStateTree;
+      adapterHooks.onGet = (key) => { if (key === KEY) (tree.元数据 as Record<string, unknown>).改动 = '之后才写的'; };
+      await sm.saveGame('p1', 's1', tree);
+      adapterHooks.onGet = undefined;
+      const stored = memStore.get(KEY) as Record<string, unknown>;
+      expect(stored.hooked).toBe('at the call');
+      expect(stored.元数据).not.toHaveProperty('改动');
+      expect(tree).not.toHaveProperty('hooked');
+    }
+  });
+
   it('takes a stored tree marked with another format version for an old one, and copies it aside', async () => {
     const stored = legacySave(4);
     extensionOf(stored).saveFormat = { version: 1, migratedAtRound: 2 };

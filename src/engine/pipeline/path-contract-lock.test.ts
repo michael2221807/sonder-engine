@@ -78,7 +78,8 @@ const ALWAYS_STRIPPED = [
   '系统.扩展.plotVector', '元数据.叙事历史', '元数据.上次对话前快照', '元数据.当前行动选项', '元数据.推理历史',
   '元数据.剧情规划', '元数据.剧情导向', '元数据.收藏楼层', '记忆.短期', '记忆.中期', '记忆.长期', '记忆.隐式中期',
   '系统.扩展.engramMemory', '系统.扩展.image', '系统.扩展.slotWorldBooks', '系统.扩展.settingCaptureLast',
-  '系统.扩展.storageHealth', '系统.扩展.narrativeContract', '系统.扩展.characterVectors', '系统.设置',
+  '系统.扩展.storageHealth', '系统.扩展.narrativeContract', '系统.扩展.characterVectors',
+  '系统.扩展.rollbackPatch', '系统.扩展.saveFormat', '系统.设置',
   '系统.actionOptions', '世界.状态.心跳', '角色.图片档案', '社交.关系.*.图片档案', '社交.关系.*.私聊历史',
   '社交.关系.*.总结记忆', '社交.关系.*.上次主回合更新回合', 'NPC列表',
 ];

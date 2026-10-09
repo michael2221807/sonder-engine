@@ -10,8 +10,10 @@
  *
  * These tests pin all three links of the chain:
  *   1. the Runner really does not write back (the root cause),
- *   2. PreProcessStage really does persist the snapshot to the state tree first,
- *   3. `resolvePreRoundSnapshot()` recovers it from the state tree, and a rollback
+ *   2. PreProcessStage really does hand the snapshot over first: to the in-memory holder,
+ *      with a marker in the state tree naming it (存档瘦身 D1A; it used to be written whole
+ *      into the tree at `paths.preRoundSnapshot`, still read when a tree holds one),
+ *   3. `resolvePreRoundSnapshot()` recovers it through the tree's marker, and a rollback
  *      driven by that value restores the round number.
  */
 import { describe, it, expect } from 'vitest';
@@ -21,6 +23,7 @@ import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 import type { PipelineContext, PipelineStage, IActionQueueConsumer } from '../pipeline/types';
 import type { StateManager } from './state-manager';
 import { resolvePreRoundSnapshot } from './game-orchestrator';
+import { RollbackSnapshot } from './rollback-snapshot';
 import { createMockStateManager, type MockStateManager } from '../__test-utils__';
 
 const paths = DEFAULT_ENGINE_PATHS;
@@ -56,7 +59,7 @@ describe('B0-1 · pre-round snapshot recovery', () => {
   it('PipelineRunner does NOT write stage results back into the caller\'s context object', async () => {
     const { sm } = createMockStateManager({ 元数据: { 回合序号: 4 } });
     const runner = new PipelineRunner();
-    runner.addStage(new PreProcessStage(asStateManager(sm), emptyQueue, paths));
+    runner.addStage(new PreProcessStage(asStateManager(sm), emptyQueue, paths, new RollbackSnapshot(paths)));
 
     const initialCtx = makeCtx();
     const finalCtx = await runner.run(initialCtx);
@@ -69,18 +72,36 @@ describe('B0-1 · pre-round snapshot recovery', () => {
     expect(initialCtx.roundNumber).toBe(0);
   });
 
-  it('PreProcessStage persists the snapshot to the state tree BEFORE incrementing the round', async () => {
+  it('PreProcessStage hands the snapshot to the holder and marks the tree BEFORE incrementing the round', async () => {
     const { sm } = createMockStateManager({ 元数据: { 回合序号: 7 }, 角色: { 基础信息: { 姓名: '林月' } } });
-    const stage = new PreProcessStage(asStateManager(sm), emptyQueue, paths);
+    const holder = new RollbackSnapshot(paths);
+    const stage = new PreProcessStage(asStateManager(sm), emptyQueue, paths, holder);
 
-    await stage.execute(makeCtx());
+    const ctx = await stage.execute(makeCtx());
 
-    const persisted = sm.get<Record<string, unknown>>(paths.preRoundSnapshot);
-    expect(persisted).toBeDefined();
+    const held = holder.get(sm.get(paths.rollbackPatch));
+    expect(held).toBeDefined();
     // Snapshot holds the PRE-increment round number...
-    expect((persisted as { 元数据: { 回合序号: number } }).元数据.回合序号).toBe(7);
+    expect((held as { 元数据: { 回合序号: number } }).元数据.回合序号).toBe(7);
     // ...while the live tree has already advanced.
     expect(sm.get<number>(paths.roundNumber)).toBe(8);
+    // The tree no longer carries the snapshot itself (存档瘦身 D1A), and the context holds the same one.
+    expect(sm.get(paths.preRoundSnapshot)).toBeUndefined();
+    expect(ctx.preRoundSnapshot).toBe(held);
+  });
+
+  it('PreProcessStage lets go of an old whole snapshot a tree still holds, and keeps it out of the new one', async () => {
+    const { sm } = createMockStateManager({
+      元数据: { 回合序号: 7, 上次对话前快照: { 元数据: { 回合序号: 6 } } },
+      系统: { 扩展: { rollbackPatch: 'round-start:41' } },
+    });
+    const holder = new RollbackSnapshot(paths);
+    await new PreProcessStage(asStateManager(sm), emptyQueue, paths, holder).execute(makeCtx());
+
+    expect(sm.has(paths.preRoundSnapshot)).toBe(false);
+    const held = holder.get(sm.get(paths.rollbackPatch)) as { 元数据: Record<string, unknown>; 系统: { 扩展: Record<string, unknown> } };
+    expect(held.元数据).toEqual({ 回合序号: 7 });
+    expect(held.系统.扩展).toEqual({});
   });
 
   it('resolvePreRoundSnapshot recovers from the state tree even when ctx is the untouched initial object', () => {
@@ -115,8 +136,9 @@ describe('B0-1 · pre-round snapshot recovery', () => {
       元数据: { 回合序号: 11 },
       角色: { 基础信息: { 当前位置: '码头' } },
     });
+    const holder = new RollbackSnapshot(paths);
     const runner = new PipelineRunner();
-    runner.addStage(new PreProcessStage(asStateManager(sm), emptyQueue, paths));
+    runner.addStage(new PreProcessStage(asStateManager(sm), emptyQueue, paths, holder));
     runner.addStage(new ExplodingStage());
 
     const initialCtx = makeCtx();
@@ -129,12 +151,30 @@ describe('B0-1 · pre-round snapshot recovery', () => {
     const snapshot = resolvePreRoundSnapshot(asStateManager(sm), paths, {
       roundBefore: 11,
       ctx: initialCtx,
+      rollback: holder,
     });
     expect(snapshot).not.toBeNull();
     sm.rollbackTo(snapshot as Record<string, unknown>);
 
     expect(sm.get<number>(paths.roundNumber)).toBe(11);
     expect(sm.get<string>(paths.playerLocation)).toBe('码头');
+  });
+
+  it('takes the snapshot the marker in the tree names first; a marker naming nothing held falls back as before', () => {
+    const holder = new RollbackSnapshot(paths);
+    const marker = holder.capture({ 元数据: { 回合序号: 8 } });
+    const { sm } = createMockStateManager({
+      元数据: { 回合序号: 9, 上次对话前快照: { 元数据: { 回合序号: 3 } } },
+      系统: { 扩展: { rollbackPatch: marker } },
+    });
+    const pick = (opts: Parameters<typeof resolvePreRoundSnapshot>[2]) =>
+      (resolvePreRoundSnapshot(asStateManager(sm), paths, opts) as { 元数据: { 回合序号: number } } | null)?.元数据.回合序号;
+    expect(pick({ rollback: holder, ctx: makeCtx({ preRoundSnapshot: { 元数据: { 回合序号: 1 } } }) })).toBe(8);
+    sm.set(paths.rollbackPatch, 'round-start:999');
+    expect(pick({ rollback: holder })).toBe(3);
+    sm.delete(paths.preRoundSnapshot);
+    expect(pick({ rollback: holder, ctx: makeCtx({ preRoundSnapshot: { 元数据: { 回合序号: 1 } } }) })).toBe(1);
+    expect(pick({ rollback: holder, roundBefore: 9 })).toBeUndefined();
   });
 
   it('the ctx fallback still works for callers that DO hold a populated context', () => {

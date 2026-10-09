@@ -31,6 +31,7 @@ import type { PromptSettings } from '../prompt/world-book';
 import type { CapturedSettingLabels } from '../prompt/captured-entry-mutations';
 import { SYSTEM_PATHS } from '../pipeline/system-paths';
 import type { StateManager } from './state-manager';
+import type { RollbackSnapshot } from './rollback-snapshot';
 import type { CommandExecutor } from './command-executor';
 import type { BehaviorRunner } from '../behaviors/behavior-runner';
 import type { AIService } from '../ai/ai-service';
@@ -68,9 +69,10 @@ export interface StageAssemblyDeps {
   getActiveSlot: () => { profileId: string; slotId: string } | null;
 }
 
-/** The main round additionally feeds PreProcessStage from the action queue. */
+/** The main round additionally feeds PreProcessStage from the action queue and gives it the rollback holder. */
 export interface RoundStageDeps extends StageAssemblyDeps {
   actionQueue: IActionQueueConsumer;
+  rollbackSnapshot: RollbackSnapshot;
 }
 
 /** Adds the main-round stages to `runner`, in the original order. */
@@ -78,9 +80,9 @@ export function addRoundStages(runner: PipelineRunner, deps: RoundStageDeps): vo
   const {
     stateManager, commandExecutor, behaviorRunner, aiService, responseParser, promptAssembler,
     memoryManager, memoryRetriever, engramManager, saveManager, pack, paths, unifiedRetriever,
-    subPipelines, getActiveSlot, actionQueue,
+    subPipelines, getActiveSlot, actionQueue, rollbackSnapshot,
   } = deps;
-  runner.addStage(new PreProcessStage(stateManager, actionQueue, paths));
+  runner.addStage(new PreProcessStage(stateManager, actionQueue, paths, rollbackSnapshot));
   runner.addStage(
     new ContextAssemblyStage(
       stateManager,

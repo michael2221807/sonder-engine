@@ -203,7 +203,10 @@ export class NpcChatPipeline {
 
     // ── 1b. Capture snapshot BEFORE any state writes (for rollback support) ──
     const snapshot = this.stateManager.toSnapshot();
+    // Without the main round's rollback data (the marker, or an old whole snapshot): after a chat undo the main
+    // round cannot be rolled back, as before.
     _unset(snapshot, this.paths.preRoundSnapshot);
+    _unset(snapshot, this.paths.rollbackPatch);
     this._lastChatSnapshot = snapshot;
     this._lastChatNpcName = npcName;
     this._lastChatRound = this.stateManager.get<number>(this.paths.roundNumber) ?? 0;

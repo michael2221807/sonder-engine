@@ -5,6 +5,7 @@ import type { ConfigRegistry, ConfigResolver } from '../engine/core/config-syste
 import { eventBus } from '../engine/core/event-bus';
 import type { GameOrchestrator } from '../engine/core/game-orchestrator';
 import type { StateManager } from '../engine/core/state-manager';
+import type { RollbackSnapshot } from '../engine/core/rollback-snapshot';
 import type { GameCardExportService } from '../engine/export/game-card-export-service';
 import type { GameCardImportService } from '../engine/export/game-card-import-service';
 import type { ImageAssetCache } from '../engine/image/asset-cache';
@@ -81,8 +82,9 @@ export function provideServices(deps: {
   orchestrator: GameOrchestrator | null;
   characterInitPipeline: CharacterInitPipeline | null;
   gameCardImportService: GameCardImportService;
+  rollbackSnapshot: RollbackSnapshot;
 }) {
-  const { app, pack, aiService, responseParser, promptAssembler, promptRegistry, stateManager, commandExecutor, memoryRetriever, engramManager, engramEditor, embedder, vectorStore, saveManager, profileManager, configRegistry, configResolver, promptStorage, customPresetStore, imageAssetCacheForBackup, worldBookStorage, backupService, gameCardExportService, imageService, ttsService, sttService, characterVectorProposePipeline, plotEvaluationPipeline, plotDecomposer, plotReviser, npcChatPipeline, plotVectorBoard, orchestrator, characterInitPipeline, gameCardImportService } = deps;
+  const { app, pack, aiService, responseParser, promptAssembler, promptRegistry, stateManager, commandExecutor, memoryRetriever, engramManager, engramEditor, embedder, vectorStore, saveManager, profileManager, configRegistry, configResolver, promptStorage, customPresetStore, imageAssetCacheForBackup, worldBookStorage, backupService, gameCardExportService, imageService, ttsService, sttService, characterVectorProposePipeline, plotEvaluationPipeline, plotDecomposer, plotReviser, npcChatPipeline, plotVectorBoard, orchestrator, characterInitPipeline, gameCardImportService, rollbackSnapshot } = deps;
   const actionQueueStore = useActionQueueStore();
   actionQueueStore.loadFromLocalStorage();
 
@@ -155,6 +157,7 @@ export function provideServices(deps: {
     payloadApplier,
     payloadValidator,
     conversationStore: assistantConversationStore,
+    rollbackSnapshot,
   });
   const worldBuilderService = new WorldBuilderService({
     aiService,

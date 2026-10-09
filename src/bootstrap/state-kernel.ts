@@ -5,6 +5,7 @@ import { NpcMainRoundUpdateModule } from '../engine/behaviors/npc-main-round-upd
 import { TimeService, gameCalendar } from '../engine/behaviors/time-service';
 import { CommandExecutor, composePushGuards, schemaArrayItemTypes, schemaDeclaresArray, schemaDeclaresPath, schemaNumberBounds } from '../engine/core/command-executor';
 import { StateManager } from '../engine/core/state-manager';
+import { RollbackSnapshot } from '../engine/core/rollback-snapshot';
 import { DEFAULT_ENGINE_PATHS } from '../engine/pipeline/types';
 import { buildMemoryPushDedupGuard } from '../engine/social/memory-dedup';
 import { buildRelationshipMergeGuard } from '../engine/social/relationship-merge-guard';
@@ -92,5 +93,10 @@ export function createStateKernel(deps: {
   // validation-repair 修复）——2026-07-05 前这些钩子只在创角后触发，真实读档从不执行
   engineStateStore.linkBehaviorRunner(behaviorRunner);
 
-  return { stateManager, commandExecutor, behaviorRunner, calendar, engineStateStore };
+  // 存档瘦身 D1A: the round-start snapshot lives in memory, held here. PreProcess hands it over, every save stores the
+  // patch back to it (SaveManager, wired in game-loop.ts), and loading a save rebuilds it before the hooks above run.
+  const rollbackSnapshot = new RollbackSnapshot(DEFAULT_ENGINE_PATHS);
+  engineStateStore.linkRollbackSnapshot(rollbackSnapshot);
+
+  return { stateManager, commandExecutor, behaviorRunner, calendar, engineStateStore, rollbackSnapshot };
 }

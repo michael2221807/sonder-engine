@@ -115,6 +115,8 @@ function makeTree(): Record<string, unknown> {
       actionOptions: ['x'],
       扩展: {
         engramMemory: { entities: [{ id: 'e1' }], v2Edges: [{ id: 'edge1' }] },
+        rollbackPatch: { format: 1, ops: [{ op: 'set', path: ['角色'], value: 'earlier' }], base: { round: 50, historyLength: 1 } },
+        saveFormat: { version: 2, migratedAtRound: 40 },
         narrativeContract: { enabled: true, clauses: [{ id: 'c1', text: '契约条款', enabled: true, source: 'player', createdRound: 7 }] },
         image: {
           config: { transformer: { apiKey: 'sk-IMAGE-LEAK', endpoint: 'http://leak' } },
@@ -135,6 +137,8 @@ describe('stripStateTreeForCard — always-strip subtrees', () => {
     expect(getByPath(out, '元数据.推理历史')).toBeUndefined();
     expect(getByPath(out, '元数据.剧情规划')).toBeUndefined();
     expect(getByPath(out, '元数据.上次对话前快照')).toBeUndefined();
+    expect(getByPath(out, '系统.扩展.rollbackPatch')).toBeUndefined();
+    expect(getByPath(out, '系统.扩展.saveFormat')).toBeUndefined();
     expect(getByPath(out, '元数据.当前行动选项')).toBeUndefined();
     expect(getByPath(out, '记忆.短期')).toBeUndefined();
     expect(getByPath(out, '记忆.中期')).toBeUndefined();

@@ -1,41 +1,6 @@
 {
-  "outcomes": [
-    {
-      "resolved": true
-    },
-    {
-      "resolved": true
-    }
-  ],
+  "outcomes": [],
   "log": [
-    [
-      "run",
-      "start",
-      {
-        "userInput": "会失败",
-        "originalUserInput": "会失败",
-        "actionQueuePrompt": "",
-        "stateSnapshot": {},
-        "chatHistory": [],
-        "messages": [],
-        "roundNumber": 0,
-        "generationId": "<gen#1>",
-        "meta": {
-          "splitGen": false,
-          "contextCompiler": true,
-          "roundOwnership": "<RoundOwnership>"
-        },
-        "abortSignal": "<AbortSignal aborted=false>",
-        "onStreamChunk": "<fn>"
-      }
-    ],
-    [
-      "event",
-      "engine:round-start",
-      {
-        "roundNumber": 0
-      }
-    ],
     [
       "state",
       "set",
@@ -86,17 +51,8 @@
     ],
     [
       "event",
-      "engine:round-error",
-      {
-        "stage": "AICall",
-        "error": "<Error: model down>"
-      }
-    ],
-    [
-      "console",
-      "error",
-      "[Orchestrator] Pipeline error:",
-      "<Error: model down>"
+      "engine:rollback-requested",
+      "__undefined__"
     ],
     [
       "state",
@@ -134,11 +90,15 @@
       }
     ],
     [
+      "store",
+      "actionQueue.consumeActions"
+    ],
+    [
       "call",
       "memoryManager.clearConfigCache",
       [],
       {
-        "busy": true
+        "busy": false
       }
     ],
     [
@@ -149,65 +109,94 @@
       }
     ],
     [
-      "console",
-      "log",
-      "[Orchestrator] Auto-rolled back to pre-round snapshot after pipeline error"
-    ],
-    [
       "event",
-      "ai:error",
-      {
-        "error": "<Error: model down>"
-      }
+      "engine:rollback-complete",
+      "__undefined__"
     ],
     [
-      "run",
+      "save",
       "start",
       {
-        "userInput": "更早失败",
-        "originalUserInput": "更早失败",
-        "actionQueuePrompt": "",
-        "stateSnapshot": {},
-        "chatHistory": [],
-        "messages": [],
-        "roundNumber": 0,
-        "generationId": "<gen#2>",
-        "meta": {
-          "splitGen": false,
-          "contextCompiler": true,
-          "roundOwnership": "<RoundOwnership>"
-        },
-        "abortSignal": "<AbortSignal aborted=false>",
-        "onStreamChunk": "<fn>"
+        "profileId": "p1",
+        "slotId": "s1",
+        "round": 5,
+        "treeIsLive": true,
+        "meta": "__undefined__"
+      }
+    ],
+    [
+      "save",
+      "committed"
+    ],
+    [
+      "probe",
+      "held after rollback",
+      "nothing"
+    ],
+    [
+      "event",
+      "engine:rollback-requested",
+      "__undefined__"
+    ],
+    [
+      "event",
+      "ui:toast",
+      {
+        "type": "info",
+        "i18nKey": "engine.toast.noRollbackSnapshot",
+        "message": "没有可回退的快照（每回合只能回退一次）",
+        "duration": 2500
+      }
+    ],
+    [
+      "state",
+      "set",
+      "系统.扩展.rollbackPatch",
+      "round-start:404",
+      "system"
+    ],
+    [
+      "event",
+      "engine:state-changed",
+      {
+        "path": "系统.扩展.rollbackPatch",
+        "action": "set",
+        "source": "system"
       }
     ],
     [
       "event",
-      "engine:round-start",
+      "engine:rollback-requested",
+      "__undefined__"
+    ],
+    [
+      "state",
+      "delete",
+      "系统.扩展.rollbackPatch"
+    ],
+    [
+      "event",
+      "engine:state-changed",
       {
-        "roundNumber": 0
+        "path": "系统.扩展.rollbackPatch",
+        "action": "delete",
+        "source": "system"
       }
     ],
     [
       "event",
-      "engine:round-error",
+      "ui:toast",
       {
-        "stage": "AICall",
-        "error": "<Error: model down>"
+        "type": "info",
+        "i18nKey": "engine.toast.noRollbackSnapshot",
+        "message": "没有可回退的快照（每回合只能回退一次）",
+        "duration": 2500
       }
     ],
     [
-      "console",
-      "error",
-      "[Orchestrator] Pipeline error:",
-      "<Error: model down>"
-    ],
-    [
-      "event",
-      "ai:error",
-      {
-        "error": "<Error: model down>"
-      }
+      "probe",
+      "marker after",
+      "__undefined__"
     ]
   ],
   "after": {

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { useEngineStateStore } from './engine-state';
 import { StateManager } from '../core/state-manager';
+import { RollbackSnapshot } from '../core/rollback-snapshot';
 import { BehaviorRunner } from '../behaviors/behavior-runner';
 import { NpcDedupModule } from '../behaviors/npc-dedup';
 import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
@@ -65,5 +66,57 @@ describe('engine-state store — onGameLoad dispatch on real save load', () => {
     const stateManager = new StateManager();
     store.linkStateManager(stateManager);
     expect(() => store.loadGame({}, 'tianming', 'p1', 's1')).not.toThrow();
+  });
+});
+
+// 存档瘦身 D1A: the round-start snapshot is rebuilt from the save's rollback record on load.
+describe('engine-state store — the rollback snapshot on load', () => {
+  const P = DEFAULT_ENGINE_PATHS;
+  beforeEach(() => { setActivePinia(createPinia()); });
+
+  /** A save as a round leaves it: the record back to the round start in place of the marker. */
+  function savedAfterARound(): Record<string, unknown> {
+    const sm = new StateManager();
+    sm.loadTree({ 元数据: { 回合序号: 4, 叙事历史: [] }, 角色: { 基础信息: { 当前位置: '长安' } } });
+    const holder = new RollbackSnapshot(P);
+    sm.set(P.rollbackPatch, holder.capture(sm.toSnapshot()), 'system');
+    sm.set(P.roundNumber, 5, 'system');
+    sm.set(P.playerLocation, '洛阳', 'command');
+    return JSON.parse(JSON.stringify(holder.treeToSave(sm.liveTree()))) as Record<string, unknown>;
+  }
+
+  it('rebuilds the snapshot before the load-time hooks change the tree, and marks the tree', () => {
+    const store = useEngineStateStore();
+    const stateManager = new StateManager();
+    const holder = new RollbackSnapshot(P);
+    const seenByHooks: unknown[] = [];
+    store.linkStateManager(stateManager);
+    store.linkRollbackSnapshot(holder);
+    store.linkBehaviorRunner({
+      runOnGameLoad: (sm: StateManager) => {
+        seenByHooks.push(sm.get(P.rollbackPatch));
+        sm.set(P.playerLocation, '修复后的地点', 'system');
+      },
+    });
+
+    store.loadGame(savedAfterARound(), 'tianming', 'p1', 's1');
+
+    const marker = stateManager.get(P.rollbackPatch);
+    expect(seenByHooks).toEqual([marker]);
+    const snapshot = holder.get(marker) as { 元数据: { 回合序号: number }; 角色: { 基础信息: { 当前位置: string } } };
+    expect(snapshot.元数据.回合序号).toBe(4);
+    expect(snapshot.角色.基础信息.当前位置).toBe('长安');
+  });
+
+  it('closing the game lets go of the held snapshot', () => {
+    const store = useEngineStateStore();
+    const stateManager = new StateManager();
+    const holder = new RollbackSnapshot(P);
+    store.linkStateManager(stateManager);
+    store.linkRollbackSnapshot(holder);
+    store.loadGame(savedAfterARound(), 'tianming', 'p1', 's1');
+    expect(holder.current()).toBeDefined();
+    store.clearGame();
+    expect(holder.current()).toBeUndefined();
   });
 });

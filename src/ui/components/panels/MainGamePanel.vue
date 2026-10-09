@@ -260,13 +260,15 @@ let elapsedTimer: ReturnType<typeof setInterval> | null = null;
 
 // ─── Rollback state ───────────────────────────────────────────
 
-/** Reads the preRoundSnapshot from the state tree — null means no snapshot available */
-const preRoundSnapshot = useValue<Record<string, unknown> | null>(
-  DEFAULT_ENGINE_PATHS.preRoundSnapshot,
-);
+/**
+ * The tree's rollback marker (存档瘦身 D1A: it names the round-start snapshot held in memory), or the old whole
+ * snapshot a save may still hold (read compatibility) — neither means no rollback is available.
+ */
+const rollbackMarker = useValue<unknown>(DEFAULT_ENGINE_PATHS.rollbackPatch);
+const legacyRoundSnapshot = useValue<Record<string, unknown> | null>(DEFAULT_ENGINE_PATHS.preRoundSnapshot);
 
-/** Whether rollback is possible: snapshot must exist and generation must be idle */
-const canRollback = computed(() => !!preRoundSnapshot.value && !isGenerating.value);
+/** Whether rollback is possible: a snapshot must be available and generation must be idle */
+const canRollback = computed(() => (!!rollbackMarker.value || !!legacyRoundSnapshot.value) && !isGenerating.value);
 
 /** Whether the rollback confirmation dialog is visible */
 const showRollbackConfirm = ref(false);

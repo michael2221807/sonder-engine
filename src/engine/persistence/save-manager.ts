@@ -97,7 +97,19 @@ export class SaveManager {
    */
   private readonly slotQueues = new Map<string, Promise<void>>();
 
+  /** Rewrites a tree on its way into the database, at the call (存档瘦身 D1A: the rollback record). */
+  private treeToSave: ((tree: GameStateTree) => GameStateTree) | undefined;
+
   constructor(private profileManager: ProfileManager) {}
+
+  /**
+   * Set at startup (bootstrap/game-loop.ts): every save passes the tree through `transform` before anything else, in
+   * the same moment it is handed over — RollbackSnapshot.treeToSave puts the rollback record in the place of the
+   * tree's marker. The transform copies only what it changes and never throws.
+   */
+  setTreeToSave(transform: (tree: GameStateTree) => GameStateTree): void {
+    this.treeToSave = transform;
+  }
 
   /**
    * §5.2 Gap fix：设置当前 Game Pack 的版本号
@@ -132,7 +144,8 @@ export class SaveManager {
 
     // No copy here: the adapter writes the tree as it is at this call (the browser copies it into the database),
     // so a caller may hand over the live tree (P1 存档写入提速, docs/design/plot-vector-rebuild-plan.md §13.1).
-    let written = stateTree;
+    // The rollback record is made now too, from the same tree (it shares everything else with it).
+    let written = this.treeToSave ? this.treeToSave(stateTree) : stateTree;
     // The first write of a tree upgraded in memory replaces the old-format record, which is copied aside first; a save
     // asked for while that runs goes after it. Either waits on the database, so what it writes is frozen now, as the
     // caller handed it over.

@@ -14,6 +14,7 @@ import type { PromptTextSource } from '../../prompt/prompt-assembler';
 import type { AIResponse } from '../../ai/types';
 import type { CommandExecutor } from '../../core/command-executor';
 import type { StateManager } from '../../core/state-manager';
+import type { HeldRollback, RollbackSnapshot } from '../../core/rollback-snapshot';
 import type { EngramManager } from '../../memory/engram/engram-manager';
 import type { GamePack } from '../../types';
 import type {
@@ -62,6 +63,12 @@ export interface AssistantServiceDeps {
   payloadValidator?: PayloadValidator;
   /** The prompts as the prompt page left them (item 2, PO 2026-10-05); without it, the pack's text. */
   prompts?: PromptTextSource;
+  /**
+   * The main round's round-start snapshot holder (存档瘦身 D1A). An undo brings back the tree from before the inject,
+   * with the rollback marker it carried; the holder gets that marker's snapshot back with it, so the main round can be
+   * rolled back after an undo as before, even when rounds were played in between.
+   */
+  rollbackSnapshot?: Pick<RollbackSnapshot, 'current' | 'hold'>;
 }
 
 /**
@@ -109,9 +116,13 @@ export class AssistantService {
    */
   private lastInjectSnapshot: {
     snapshot: Record<string, unknown>;
+    /** The main round's held round-start snapshot at the time (its marker is in `snapshot`). */
+    rollback: HeldRollback | undefined;
     capturedAt: number;
     draftMessageId: string;
   } | null = null;
+
+  private readonly rollbackSnapshot: Pick<RollbackSnapshot, 'current' | 'hold'> | null;
 
   /**
    * In-memory 注入审计日志 —— 记录每次注入的 patch 数 / 时间戳 / draft id
@@ -135,6 +146,7 @@ export class AssistantService {
     this.conversationStore = deps.conversationStore ?? new InMemoryConversationStore();
     this.settings = deps.settings ?? { ...DEFAULT_ASSISTANT_SETTINGS };
     this.engramManager = deps.engramManager ?? null;
+    this.rollbackSnapshot = deps.rollbackSnapshot ?? null;
     this.validatorExternallySupplied = !!deps.payloadValidator;
     this.payloadApplier = deps.payloadApplier ?? new PayloadApplier({
       stateManager: deps.stateManager,
@@ -389,6 +401,7 @@ export class AssistantService {
     // 3. 成功：覆盖 lastInjectSnapshot（单步 undo 范式）
     this.lastInjectSnapshot = {
       snapshot: snapshotBeforeInject,
+      rollback: this.rollbackSnapshot?.current(),
       capturedAt: Date.now(),
       draftMessageId: messageId,
     };
@@ -459,6 +472,8 @@ export class AssistantService {
     } catch (err) {
       return { ok: false, error: `回滚失败：${String(err)}` };
     }
+    // The tree from before the inject is back with its rollback marker: so is the snapshot that marker names.
+    if (snap.rollback) this.rollbackSnapshot?.hold(snap.rollback);
 
     // 标记审计记录
     const auditEntry = this.injectAuditLog[this.injectAuditLog.length - 1];
