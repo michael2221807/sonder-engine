@@ -27,9 +27,10 @@
             {{ actionIcon(c.action) }}
           </span>
           <span class="delta-path" :title="c.path">{{ c.path }}</span>
-          <!-- A push or pull stored with its one entry (存档瘦身 D3A): the entry added, or the entry removed. -->
-          <span v-if="isEntryRecord(c)" class="delta-values" data-testid="delta-entry">
-            <span :class="c.action === 'pull' ? 'delta-old' : 'delta-new'">{{ fmt(c.element) }}</span>
+          <!-- A push or pull stored with its one entry (存档瘦身 D3A): the entry added, or the entry removed, given the
+               whole free width of the row. -->
+          <span v-if="isCompactListChange(c)" class="delta-values" data-testid="delta-entry">
+            <span :class="['delta-entry', c.action === 'pull' ? 'delta-old' : 'delta-new']">{{ fmt(c.element, ENTRY_CHARS) }}</span>
           </span>
           <span v-else-if="c.action !== 'delete'" class="delta-values">
             <span v-if="c.oldValue !== undefined && c.action !== 'push'" class="delta-old">{{ fmt(c.oldValue) }}</span>
@@ -45,6 +46,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { isCompactListChange } from '@/engine/persistence/save-format/delta-compaction';
 
 const { t } = useI18n();
 
@@ -69,11 +71,6 @@ export interface DeltaChange {
 }
 
 const props = defineProps<{ changes: DeltaChange[] }>();
-
-/** A push or pull stored with only the entry it added or removed (no lists before and after). */
-function isEntryRecord(c: DeltaChange): boolean {
-  return (c.action === 'push' || c.action === 'pull') && Object.prototype.hasOwnProperty.call(c, 'element');
-}
 
 // Group changes by source in a stable display order. Entries without `source`
 // (legacy saves written before the audit tag) fall into the "main" bucket so
@@ -125,19 +122,22 @@ function actionLabel(action: string): string {
   return map[action] ?? action;
 }
 
-/** 将任意值格式化为简短可读字符串（最多 60 字符） */
-function fmt(v: unknown): string {
+/** An entry row has the row's free width: its text is cut only by the row's edge (CSS), within this many characters. */
+const ENTRY_CHARS = 400;
+
+/** 将任意值格式化为简短可读字符串（最多 limit 字符，默认 60） */
+function fmt(v: unknown, limit = 60): string {
   if (v === null || v === undefined) return '—';
   if (typeof v === 'object') {
     try {
       const s = JSON.stringify(v);
-      return s.length > 60 ? s.slice(0, 57) + '…' : s;
+      return s.length > limit ? s.slice(0, limit - 3) + '…' : s;
     } catch {
       return `[${t('common.delta.format.object')}]`;
     }
   }
   const s = String(v);
-  return s.length > 60 ? s.slice(0, 57) + '…' : s;
+  return s.length > limit ? s.slice(0, limit - 3) + '…' : s;
 }
 </script>
 
@@ -313,5 +313,12 @@ function fmt(v: unknown): string {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 160px;
+}
+
+/* The one entry of a compact push / pull fills the row; the row's edge cuts it. */
+.delta-values > .delta-entry {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
 }
 </style>

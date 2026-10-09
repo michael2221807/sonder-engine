@@ -116,31 +116,18 @@
     [
       "state",
       "set",
-      "元数据.叙事历史",
-      [
-        {
-          "类型": "ai",
-          "内容": "旧叙事",
-          "_engramWrite": {
-            "nodes": 1,
-            "reviewResult": {
-              "invalidated": 2,
-              "reviewed": 5
-            }
-          }
-        },
-        {
-          "类型": "ai",
-          "内容": "新叙事"
-        }
-      ],
+      "元数据.叙事历史.0._engramWrite.reviewResult",
+      {
+        "invalidated": 2,
+        "reviewed": 5
+      },
       "system"
     ],
     [
       "event",
       "engine:state-changed",
       {
-        "path": "元数据.叙事历史",
+        "path": "元数据.叙事历史.0._engramWrite.reviewResult",
         "action": "set",
         "source": "system"
       }

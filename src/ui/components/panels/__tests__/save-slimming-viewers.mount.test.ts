@@ -28,6 +28,23 @@ describe('DeltaViewer with records stored compactly (存档瘦身 D3A)', () => {
     expect(wrapper.find('.delta-arrow').exists()).toBe(false);
   });
 
+  it('gives an entry the whole row: a long one is no longer cut at 60 characters', () => {
+    const element = { 事件名称: '到了集市', 事件描述: '主角在集市口遇到了卖花的老人，老人说起二十年前那场大火，还提到了城东的旧宅和一个名字。' };
+    const wrapper = mountWith([{ path: '社交.事件.事件记录', action: 'push', element, timestamp: 1, source: 'main' }]);
+    const entry = wrapper.find('[data-testid="delta-entry"] .delta-new');
+    expect(entry.classes()).toContain('delta-entry');
+    expect(entry.text()).toBe(JSON.stringify(element));
+    expect(JSON.stringify(element).length).toBeGreaterThan(60);
+  });
+
+  it('takes a record that kept its lists for one of the old kind, even with an element field', () => {
+    const wrapper = mountWith([
+      { path: '社交.事件.事件记录', action: 'push', oldValue: [], newValue: [{ n: 1 }], element: { n: 1 }, timestamp: 1 },
+    ]);
+    expect(wrapper.find('[data-testid="delta-entry"]').exists()).toBe(false);
+    expect(wrapper.find('.delta-values .delta-new').text()).toBe('[{"n":1}]');
+  });
+
   it('shows a record that still holds both lists as before', () => {
     const wrapper = mountWith([
       { path: '社交.事件.事件记录', action: 'push', oldValue: [{ n: 1 }], newValue: [{ n: 1 }, { n: 2 }], timestamp: 1 },

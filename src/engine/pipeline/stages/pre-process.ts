@@ -68,13 +68,20 @@ export class PreProcessStage implements PipelineStage {
     return { ...ctx, userInput, actionQueuePrompt, roundNumber, preRoundSnapshot };
   }
 
-  /** Trim the traces of the entries that left the window of full traces (engram-read-trim.ts). */
+  /**
+   * Trim the traces of the entries that left the window of full traces (engram-read-trim.ts). Never stops the round:
+   * a failure leaves the traces as they are (the load-time upgrade trims them later).
+   */
   private trimOldTraces(): void {
-    // The plain history (not through the reactive state): the trim builds new objects and changes nothing in place.
-    const history = readPath(this.stateManager.liveTree(), this.paths.narrativeHistory);
-    if (!Array.isArray(history)) return;
-    for (const { index, trace } of traceTrims(history, traceTrimCut(history))) {
-      this.stateManager.set(`${this.paths.narrativeHistory}.${index}.${TRACE_FIELD}`, trace, 'system');
+    try {
+      // The plain history (not through the reactive state): the trim builds new objects and changes nothing in place.
+      const history = readPath(this.stateManager.liveTree(), this.paths.narrativeHistory);
+      if (!Array.isArray(history)) return;
+      for (const { index, trace } of traceTrims(history, traceTrimCut(history))) {
+        this.stateManager.set(`${this.paths.narrativeHistory}.${index}.${TRACE_FIELD}`, trace, 'system');
+      }
+    } catch (err) {
+      console.warn('[PreProcess] Trimming old retrieval traces failed; the round goes on with them as they are:', err);
     }
   }
 

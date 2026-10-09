@@ -4,6 +4,7 @@ import { eventBus } from '../core/event-bus';
 import { CommandExecutor, schemaArrayItemTypes, schemaDeclaresArray } from '../core/command-executor';
 import type { Command, StateChange } from '../types';
 import { ListOverwriteRecoveryModule, type ListRecoveryMark } from './list-overwrite-recovery';
+import { compactHistoryDeltas } from '../persistence/save-format/delta-compaction';
 
 const NOW = 1_791_000_000_000;
 const PATHS = { narrativeHistory: '元数据.叙事历史', shortTermMemory: '记忆.短期', implicitMidTermMemory: '记忆.隐式中期' };
@@ -112,6 +113,30 @@ describe('ListOverwriteRecoveryModule (E1)', () => {
     expect(emitted.map((e) => e.name).filter((name) => name !== 'engine:state-changed')).toEqual(['ui:toast']);
     expect(toasts()[0]).toMatchObject({
       type: 'success', i18nKey: 'engine.toast.listsRecovered', i18nParams: { count: 4, fields: '社交.事件.事件记录 ×4' } });
+  });
+
+  it('finds the same in a history whose push and pull records are stored with their one entry (存档瘦身 D3A)', () => {
+    const tree = playBeforeFix({ 社交: { 事件: { 事件记录: [event(1), event(2)] } } }, [
+      [{ action: 'push', key: '社交.事件.事件记录', value: event(3) }],
+      [{ action: 'set', key: '社交.事件.事件记录', value: event(4) }],
+      [{ action: 'push', key: '社交.事件.事件记录', value: event(5) }, { action: 'push', key: '社交.事件.事件记录', value: event(6) }],
+      [{ action: 'pull', key: '社交.事件.事件记录', value: event(6) }],
+    ]);
+    const history = (tree.元数据 as { 叙事历史: unknown[] }).叙事历史;
+    const compacted = compactHistoryDeltas(history);
+    const compactRecords = (compacted as Array<{ _delta?: Array<Record<string, unknown>> }>)
+      .flatMap((entry) => entry._delta ?? []).filter((r) => 'element' in r);
+    expect(compactRecords.map((r) => r.action)).toEqual(['push', 'push', 'push', 'pull']);
+
+    const full = load(tree);
+    recover(full);
+    const compact = load({ ...tree, 元数据: { ...(tree.元数据 as object), 叙事历史: compacted } });
+    recover(compact);
+
+    expect(compact.get('社交.事件.事件记录')).toEqual(full.get('社交.事件.事件记录'));
+    expect(full.get('社交.事件.事件记录')).toEqual([1, 2, 3, 4, 5].map(event));
+    for (const round of [0, 1, 2, 3]) expect(markOf(compact, round)).toEqual(markOf(full, round));
+    expect(markOf(compact, 1)).toEqual({ at: NOW, restored: 4 });
   });
 
   it('uses each record once: a second load changes nothing and says nothing', () => {

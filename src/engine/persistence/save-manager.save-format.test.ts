@@ -163,6 +163,29 @@ describe('SaveManager · save format 2', () => {
     expect(writes).toEqual([]);
   });
 
+  it('says so in the log when a tree already in format 2 needs upgrading again (old data written into it)', async () => {
+    const later = await upgradedInEarlierSession();
+    // An older tab, still open across the update, pushes a whole-list record into the new-format tree.
+    const stored = memStore.get(KEY) as GameStateTree;
+    const history = (stored.元数据 as { 叙事历史: Array<Record<string, unknown>> }).叙事历史;
+    history.push({ role: 'user', content: '旧标签页' }, {
+      role: 'assistant', content: '旧标签页的回复',
+      _delta: [{ path: '社交.事件.事件记录', action: 'push', oldValue: [], newValue: [{ 事件名称: '旧' }], timestamp: 9, source: 'main' }],
+    });
+    const warn = vi.mocked(console.warn);
+    warn.mockClear();
+
+    const tree = await later.loadGame('p1', 's1');
+
+    expect(tree).not.toBe(stored);
+    expect(warn).toHaveBeenCalledWith('[SaveManager] save_p1_s1 is in save format 2 yet needed upgrading again');
+    // The tree it gave back needs nothing more: read again, it logs nothing.
+    warn.mockClear();
+    memStore.set(KEY, tree);
+    expect(await manager().loadGame('p1', 's1')).toBe(tree);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it('copies the old record aside before the first write of the upgraded tree, and only then', async () => {
     const stored = legacySave(4);
     memStore.set(KEY, stored);

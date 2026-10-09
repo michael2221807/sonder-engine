@@ -293,6 +293,10 @@ export class SaveManager {
       const upgrade = upgradeSaveFormat(stored, SAVE_FORMAT_PATHS);
       const ms = Date.now() - started;
       if (upgrade.changed) {
+        // A tree already in this format changes again only when older code wrote old-shaped data into it (a tab left
+        // open across the update) or the round-time trim disagrees with the upgrade; either way its old-format copy is
+        // kept until a later session reads the tree back unchanged.
+        if (isCurrentFormat(stored)) console.warn(`[SaveManager] ${key} is in save format ${SAVE_FORMAT_VERSION} yet needed upgrading again`);
         this.formatUpgradedUnsaved.add(key);
         this.formatSeen.set(key, 'upgraded');
         console.info(

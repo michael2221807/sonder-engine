@@ -20,7 +20,7 @@ import { isPlainRecord } from './plain-data';
 export const FULL_TRACE_ROUNDS = 5;
 
 /** What a trimmed trace records about the candidates it no longer lists: candidates per outcome before the trim. */
-export type TrimmedTraceInfo = NonNullable<EngramReadSnapshot['trimmed']>;
+type TrimmedTraceInfo = NonNullable<EngramReadSnapshot['trimmed']>;
 
 /** The narrative-entry field holding a round's retrieval trace. */
 export const TRACE_FIELD = '_engramRead';

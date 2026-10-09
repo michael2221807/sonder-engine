@@ -87,6 +87,54 @@ describe('PreProcessStage · retrieval traces outside the latest five rounds (�
     expect(set.mock.calls.some((call) => call[0].endsWith('._engramRead'))).toBe(false);
   });
 
+  it('agrees with the upgrade in every shape a history takes: an opening, failed rounds, saves mid-round, notices', async () => {
+    // An opening reply with no player entry before it and no trace; system notices between rounds; a reply without a
+    // trace; a round whose reply never came (failed, rolled back to its start); a save while the round runs.
+    const sm = new StateManager();
+    sm.loadTree({ 元数据: { 回合序号: 0, 叙事历史: [{ role: 'assistant', content: '开场' }] }, 系统: { 扩展: {} } });
+    const holder = new RollbackSnapshot(P);
+    const stage = new PreProcessStage(sm, { consumeActions: () => [] }, P, holder);
+    const unchanged = (label: string) => {
+      const saved = JSON.parse(JSON.stringify(holder.treeToSave(sm.liveTree()))) as Json;
+      const upgrade = upgradeSaveFormat(saved, SAVE_FORMAT_PATHS);
+      expect({ label, changed: upgrade.changed, same: upgrade.tree === saved }).toEqual({ label, changed: false, same: true });
+    };
+    for (let round = 1; round <= 14; round++) {
+      await stage.execute(ctx());
+      unchanged(`round ${round}, right after the round start`);
+      sm.push(P.narrativeHistory, { role: 'user', content: `输入${round}` }, 'system');
+      unchanged(`round ${round}, mid-round`);
+      if (round % 5 === 0) {
+        // The reply failed: the round rolls back to its start.
+        sm.rollbackTo(holder.get(sm.get(P.rollbackPatch)) as Json);
+        holder.clear();
+        unchanged(`round ${round}, rolled back`);
+        continue;
+      }
+      const reply: Json = { role: 'assistant', content: `正文${round}` };
+      if (round % 4 !== 0) reply._engramRead = trace(round);
+      sm.push(P.narrativeHistory, reply, 'system');
+      if (round % 3 === 0) sm.push(P.narrativeHistory, { role: 'system', content: `提示${round}` }, 'system');
+      unchanged(`round ${round}, done`);
+    }
+    // The window did move: the early traces are trimmed.
+    const history = sm.get<Json[]>(P.narrativeHistory)!;
+    const trimmed = history.filter((e) => (e._engramRead as Json | undefined)?.trimmed !== undefined).length;
+    expect(trimmed).toBeGreaterThan(2);
+  });
+
+  it('a trim that throws never stops the round: it is logged and the round starts as before', async () => {
+    const sm = game(7);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const realGet = sm.get.bind(sm);
+    vi.spyOn(sm, 'liveTree').mockImplementation(() => { throw new Error('trace store broken'); });
+    const holder = new RollbackSnapshot(P);
+    await new PreProcessStage(sm, { consumeActions: () => [] }, P, holder).execute(ctx());
+    expect(warn).toHaveBeenCalledWith('[PreProcess] Trimming old retrieval traces failed; the round goes on with them as they are:', expect.any(Error));
+    expect(holder.get(realGet(P.rollbackPatch))).toBeDefined();
+    expect(traceOf(sm, 1)).toEqual(trace(1));
+  });
+
   it('uses the window the load-time upgrade uses: a tree the rounds wrote comes back from it as the same object', async () => {
     const sm = game(3);
     const holder = new RollbackSnapshot(P);

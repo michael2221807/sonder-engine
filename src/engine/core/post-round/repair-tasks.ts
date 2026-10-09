@@ -100,10 +100,9 @@ export async function runFieldRepair(env: PostRoundEnv): Promise<void> {
         if (p) {
           const history = stateManager.get<Array<Record<string, unknown>>>(p.narrativeHistory) ?? [];
           for (let i = history.length - 1; i >= 0; i--) {
-            const entry = history[i];
-            if (entry._engramWrite) {
-              (entry._engramWrite as Record<string, unknown>).reviewResult = result.edgeReviewResult;
-              stateManager.set(p.narrativeHistory, history, 'system');
+            if (history[i]._engramWrite) {
+              // That one field only (存档瘦身 P1): a set of the whole history deep-copies it three times.
+              stateManager.set(`${p.narrativeHistory}.${i}._engramWrite.reviewResult`, result.edgeReviewResult, 'system');
               break;
             }
           }

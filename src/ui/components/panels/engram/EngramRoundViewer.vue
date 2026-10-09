@@ -104,7 +104,7 @@ function sourceLabel(s: ScoredCandidateTrace['source']): string {
   return map[s] ?? s;
 }
 
-function outcomeLabel(o: ScoredCandidateTrace['outcome'] | string): string {
+function outcomeLabel(o: string): string {
   const map: Record<string, string> = {
     'injected': t('mainGame.engram.outcome.injected'),
     'filtered-by-topK': t('mainGame.engram.outcome.filteredByTopK'),
@@ -787,9 +787,9 @@ function fmtScore(n: number): string {
   color: var(--color-text-umber);
 }
 
+/* The Tooltip wrapper gives the help cursor; the dashed line, in the text's own colour, says there is a hint. */
 .erv__trimmed-label {
-  border-bottom: 1px dashed var(--color-border);
-  cursor: help;
+  border-bottom: 1px dashed color-mix(in oklch, currentColor 45%, transparent);
 }
 
 .erv__trimmed-count {
