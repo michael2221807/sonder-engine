@@ -15,6 +15,7 @@
  * comes back as the same object or list, so a caller can tell "nothing changed" by identity.
  */
 import { isEqual } from 'lodash-es';
+import { isPlainRecord } from './plain-data';
 
 /** A push or pull as stored on a narrative entry once compacted. */
 export interface CompactListChange {
@@ -35,7 +36,7 @@ export const DELTA_FIELD = '_delta';
 export function compactChangeRecord<T extends object>(record: T): T | CompactListChange;
 export function compactChangeRecord(record: unknown): unknown;
 export function compactChangeRecord(record: unknown): unknown {
-  if (!isRecord(record) || typeof record.path !== 'string') return record;
+  if (!isPlainRecord(record) || typeof record.path !== 'string') return record;
   const { oldValue, newValue, ...rest } = record;
   if (record.action === 'push') {
     const element = pushedElement(oldValue, newValue);
@@ -63,7 +64,7 @@ export function compactChangeRecords(records: readonly unknown[]): readonly unkn
 export function compactHistoryDeltas(history: readonly unknown[]): readonly unknown[] {
   let next: unknown[] | undefined;
   history.forEach((entry, i) => {
-    if (!isRecord(entry) || !Array.isArray(entry[DELTA_FIELD])) return;
+    if (!isPlainRecord(entry) || !Array.isArray(entry[DELTA_FIELD])) return;
     const delta = entry[DELTA_FIELD] as unknown[];
     const stored = compactChangeRecords(delta);
     if (stored === delta) return;
@@ -75,7 +76,7 @@ export function compactHistoryDeltas(history: readonly unknown[]): readonly unkn
 
 /** Whether a stored record is a compacted push or pull (it names its entry and no longer holds the lists). */
 export function isCompactListChange(record: unknown): record is CompactListChange {
-  return isRecord(record)
+  return isPlainRecord(record)
     && (record.action === 'push' || record.action === 'pull')
     && Object.prototype.hasOwnProperty.call(record, 'element')
     && record.oldValue === undefined && record.newValue === undefined;
@@ -99,8 +100,4 @@ function pulledElement(before: unknown, after: unknown): { value: unknown; index
     if (!isEqual(before[i + 1], after[i])) return undefined;
   }
   return { value: before[k], index: k };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

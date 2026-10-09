@@ -178,6 +178,8 @@
       "minute": "分钟"
     },
     "preRoundSnapshot": "元数据.上次对话前快照",
+    "rollbackPatch": "系统.扩展.rollbackPatch",
+    "saveFormat": "系统.扩展.saveFormat",
     "slotWorldBooks": "系统.扩展.slotWorldBooks",
     "settingCaptureLast": "系统.扩展.settingCaptureLast",
     "storageHealth": "系统.扩展.storageHealth",

@@ -9,7 +9,7 @@
  * 对应 STEP-03 M1.6。
  * 参照 demo: indexedDBManager.ts 中的 save/load 逻辑。
  */
-import { get as _get } from 'lodash-es';
+import { cloneDeep, get as _get } from 'lodash-es';
 import { idbAdapter } from './idb-adapter';
 import type { GameStateTree, SaveSlotMeta } from '../types';
 import type { ProfileManager } from './profile-manager';
@@ -17,6 +17,21 @@ import { eventBus } from '../core/event-bus';
 import type { SaveReplacedEvent } from '../types/event-bus';
 import { migrationRegistry, compareVersions } from './migration-registry';
 import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
+import { SAVE_FORMAT_VERSION, upgradeSaveFormat, type SaveFormatPaths } from './save-format/save-format-migration';
+import { readPath } from './save-format/path-copy';
+import { isPlainRecord } from './save-format/plain-data';
+
+/** The engine paths the save format upgrade reads and writes. */
+const SAVE_FORMAT_PATHS: SaveFormatPaths = {
+  narrativeHistory: DEFAULT_ENGINE_PATHS.narrativeHistory,
+  preRoundSnapshot: DEFAULT_ENGINE_PATHS.preRoundSnapshot,
+  rollbackPatch: DEFAULT_ENGINE_PATHS.rollbackPatch,
+  roundNumber: DEFAULT_ENGINE_PATHS.roundNumber,
+  saveFormat: DEFAULT_ENGINE_PATHS.saveFormat,
+};
+
+/** An upgrade that held the page longer than this is explained to the player once it is done. */
+const SLOW_UPGRADE_MS = 1000;
 
 /**
  * 从状态树读取回合序号快照（`DEFAULT_ENGINE_PATHS.roundNumber`）。
@@ -32,6 +47,21 @@ export function saveKey(profileId: string, slotId: string): string {
   return `save_${profileId}_${slotId}`;
 }
 
+/**
+ * The copy of a save's old-format record, kept from the first write of the upgraded tree until the new format has
+ * proved itself: a later session read it back in the new format and a round was played past the upgrade (存档瘦身
+ * P1 §2.1).
+ */
+export function formatBackupKey(profileId: string, slotId: string): string {
+  return `${saveKey(profileId, slotId)}:pre-format-${SAVE_FORMAT_VERSION}`;
+}
+
+/** Whether a stored tree is in the current save format (it carries the marker an upgrade leaves). */
+function isCurrentFormat(tree: unknown): boolean {
+  const marker = readPath(tree, SAVE_FORMAT_PATHS.saveFormat);
+  return isPlainRecord(marker) && marker.version === SAVE_FORMAT_VERSION;
+}
+
 export class SaveManager {
   /**
    * 当前 Game Pack 版本 —— §5.2 schema 迁移的目标版本号。
@@ -39,6 +69,19 @@ export class SaveManager {
    * 未设置时 loadGame 跳过迁移（保持旧行为）。
    */
   private currentPackVersion: string | null = null;
+
+  /**
+   * Save format upgrade bookkeeping, per save key, for this session:
+   * - upgraded in memory on load, old record still in IndexedDB (copy it aside before the first write);
+   * - how this session met the save in the current format: upgraded here (its later reads of what this session wrote
+   *   prove nothing), or read back already in the current format, as an earlier session wrote it (the format works);
+   * - the old-format copy dropped — no need to try again;
+   * - an upgrade failure already reported to the player.
+   */
+  private readonly formatUpgradedUnsaved = new Set<string>();
+  private readonly formatSeen = new Map<string, 'upgraded' | 'read-back'>();
+  private readonly formatBackupSettled = new Set<string>();
+  private readonly formatFailureReported = new Set<string>();
 
   constructor(private profileManager: ProfileManager) {}
 
@@ -75,13 +118,22 @@ export class SaveManager {
 
     // No copy here: the adapter writes the tree as it is at this call (the browser copies it into the database),
     // so a caller may hand over the live tree (P1 存档写入提速, docs/design/plot-vector-rebuild-plan.md §13.1).
+    let written = stateTree;
+    if (this.formatUpgradedUnsaved.has(key)) {
+      // The first write of a tree upgraded in memory replaces the old-format record, which is copied aside first.
+      // That copy waits on the database, so what is written is frozen now, as the caller handed it over.
+      written = cloneDeep(stateTree);
+      await this.keepOldFormatRecord(profileId, slotId);
+    }
+
     // A round save rechecks inside the write that it still belongs to the active slot (switching saves mid-round).
     if (commit) {
-      await idbAdapter.setGuarded(key, stateTree, commit.guard);
+      await idbAdapter.setGuarded(key, written, commit.guard);
       commit.committed();
     } else {
-      await idbAdapter.set(key, stateTree);
+      await idbAdapter.set(key, written);
     }
+    await this.dropOldFormatRecordOnceProved(profileId, slotId, written, roundNumber);
 
     // 联动更新 ProfileManager 中的存档元数据
     // §5.2：每次存档都把 slotMeta.packVersion 戳为当前 pack 版本，保证下次 loadGame
@@ -102,6 +154,9 @@ export class SaveManager {
   /**
    * 加载存档 — 返回完整状态树（或 undefined 表示无存档）
    *
+   * 存档瘦身 P1：先把引擎存档格式升级到当前版本（save-format-migration.ts）——只在内存里，读取时不写库；
+   * 打开的游戏第一次存档时写成新格式（写前把库里的旧记录复制到备份键）。升级失败按原样返回（只提示一次）。
+   *
    * §5.2 Gap fix：在读取后自动应用 schema 迁移。
    * - 读 `slotMeta.packVersion` 得到存档创建/上次迁移时的 pack 版本
    * - 若 `currentPackVersion` 已设置且严格大于存档版本，调 `migrationRegistry.apply()`
@@ -113,8 +168,10 @@ export class SaveManager {
    *   会重新迁移一次（幂等）
    */
   async loadGame(profileId: string, slotId: string): Promise<GameStateTree | undefined> {
-    const raw = await idbAdapter.get<GameStateTree>(saveKey(profileId, slotId));
-    if (!raw) return undefined;
+    const stored = await idbAdapter.get<GameStateTree>(saveKey(profileId, slotId));
+    if (!stored) return undefined;
+    // Engine save format first (in memory, no write), then the pack's migrations on the upgraded tree.
+    const raw = this.upgradeFormat(profileId, slotId, stored);
 
     // Fast-path: 未设置 currentPackVersion（例如 pack 加载失败）→ 跳过迁移
     if (!this.currentPackVersion) return raw;
@@ -175,8 +232,10 @@ export class SaveManager {
     if (!result.error && result.finalVersion !== fromVersion) {
       try {
         const backupKey = saveKey(profileId, slotId) + ':pre-migration';
-        await idbAdapter.set(backupKey, raw);
+        // The record as it was stored: the pack migration's backup also stands for the old engine format.
+        await idbAdapter.set(backupKey, stored);
         await idbAdapter.set(saveKey(profileId, slotId), result.data);
+        this.formatUpgradedUnsaved.delete(saveKey(profileId, slotId));
         await this.profileManager.updateSlotMeta(profileId, slotId, {
           packVersion: result.finalVersion,
         });
@@ -188,11 +247,106 @@ export class SaveManager {
     return result.data as unknown as GameStateTree;
   }
 
+  /**
+   * The stored tree in the current engine save format, upgraded in memory (save-format-migration.ts): nothing is
+   * written here — the first save of the opened game writes the new format. An upgrade that fails is reported once and
+   * the tree is used as it was (every reader still understands the old format). An upgrade that held the page for more
+   * than a second (a large old save, the first time) is explained once it is done: it runs in one go, so a notice put up
+   * before it could not be relied on to show while it runs.
+   */
+  private upgradeFormat(profileId: string, slotId: string, stored: GameStateTree): GameStateTree {
+    const key = saveKey(profileId, slotId);
+    const started = Date.now();
+    try {
+      const upgrade = upgradeSaveFormat(stored, SAVE_FORMAT_PATHS);
+      const ms = Date.now() - started;
+      if (upgrade.changed) {
+        this.formatUpgradedUnsaved.add(key);
+        this.formatSeen.set(key, 'upgraded');
+        console.info(
+          `[SaveManager] Upgraded ${key} to save format ${SAVE_FORMAT_VERSION} in memory (${ms} ms): ` +
+          `${upgrade.tracesTrimmed} trace(s) trimmed, change records ${upgrade.recordsCompacted ? 'compacted' : 'already compact'}, ` +
+          (upgrade.snapshotToPatch ? 'snapshot turned into a rollback patch' : 'no old snapshot'),
+        );
+        if (ms > SLOW_UPGRADE_MS) {
+          eventBus.emit('ui:toast', {
+            type: 'info',
+            i18nKey: 'engine.toast.saveFormatUpgradedSlow',
+            message: '存档格式已升级（较大的旧存档第一次打开会慢一些）',
+            duration: 5000,
+          });
+        }
+      } else if (isCurrentFormat(stored) && this.formatSeen.get(key) !== 'upgraded') {
+        this.formatSeen.set(key, 'read-back');
+      }
+      return upgrade.tree;
+    } catch (err) {
+      console.warn(`[SaveManager] Save format upgrade of ${key} failed; loading the save as it was:`, err);
+      if (!this.formatFailureReported.has(key)) {
+        this.formatFailureReported.add(key);
+        eventBus.emit('ui:toast', {
+          type: 'warning',
+          i18nKey: 'engine.toast.saveFormatUpgradeFailed',
+          message: '存档格式升级失败，已按原格式载入（不影响游玩）',
+          duration: 6000,
+        });
+      }
+      return stored;
+    }
+  }
+
+  /**
+   * Before the first write of an upgraded tree: copy the old-format record still in IndexedDB aside. A copy that fails
+   * (storage full, a read error) never stops the save itself — the new tree is smaller than the old record — and is not
+   * tried again.
+   */
+  private async keepOldFormatRecord(profileId: string, slotId: string): Promise<void> {
+    const key = saveKey(profileId, slotId);
+    this.formatUpgradedUnsaved.delete(key);
+    try {
+      const old = await idbAdapter.get<GameStateTree>(key);
+      if (old && !isCurrentFormat(old)) await idbAdapter.set(formatBackupKey(profileId, slotId), old);
+    } catch (err) {
+      console.warn(`[SaveManager] Could not keep a copy of the old-format record of ${key}; saving on without it:`, err);
+    }
+  }
+
+  /**
+   * After a write: drop the copy of the old-format record once the new format has proved itself — a later session read
+   * the slot back already in the new format, and a round has been played past the upgrade (or the save has no round).
+   */
+  private async dropOldFormatRecordOnceProved(
+    profileId: string,
+    slotId: string,
+    tree: GameStateTree,
+    round: number | null,
+  ): Promise<void> {
+    const key = saveKey(profileId, slotId);
+    if (this.formatBackupSettled.has(key) || this.formatSeen.get(key) !== 'read-back') return;
+    const marker = readPath(tree, SAVE_FORMAT_PATHS.saveFormat);
+    if (!isPlainRecord(marker) || marker.version !== SAVE_FORMAT_VERSION) return;
+    const upgradedAt = typeof marker.migratedAtRound === 'number' ? marker.migratedAtRound : null;
+    if (upgradedAt !== null && round !== null && round <= upgradedAt) return;
+    try {
+      await idbAdapter.delete(formatBackupKey(profileId, slotId));
+      this.formatBackupSettled.add(key);
+    } catch (err) {
+      console.warn('[SaveManager] Could not drop the old-format copy (it will be tried again):', err);
+    }
+  }
+
   /** 删除存档 */
   async deleteGame(profileId: string, slotId: string): Promise<void> {
     // A board arrangement still waiting for this profile must not bring the save back (§13.1).
     eventBus.emit('engine:save-replaced', { profileId } satisfies SaveReplacedEvent);
     await idbAdapter.delete(saveKey(profileId, slotId));
+    // The old-format copy goes with its save (it is never read back by the game).
+    await idbAdapter.delete(formatBackupKey(profileId, slotId));
+    const key = saveKey(profileId, slotId);
+    this.formatUpgradedUnsaved.delete(key);
+    this.formatSeen.delete(key);
+    this.formatBackupSettled.delete(key);
+    this.formatFailureReported.delete(key);
   }
 
   /** 检查存档是否存在 */

@@ -24,6 +24,7 @@
  * so a tree that went through an export or a cloud copy can lack keys the live tree had when the patch was made.
  */
 import { cloneDeep, isEqualWith } from 'lodash-es';
+import { defineOwn, hasOwn, isPlainRecord } from './plain-data';
 
 export type PatchPath = ReadonlyArray<string | number>;
 
@@ -198,11 +199,6 @@ function setOwn(container: object, key: string | number, value: unknown, fullPat
   defineOwn(container, String(key), value);
 }
 
-/** An own data property, also for a key named like `__proto__` (it stays data, as JSON reads it). */
-function defineOwn(target: object, key: string, value: unknown): void {
-  Object.defineProperty(target, key, { value, writable: true, enumerable: true, configurable: true });
-}
-
 /** Whether a value is a well-formed patch (data read back from a save is not trusted). */
 export function isTreePatch(value: unknown): value is TreePatch {
   return isDenseList(value) && value.every(isTreePatchOp);
@@ -228,15 +224,4 @@ function isPathStep(step: unknown): boolean {
 
 function isIndex(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
-}
-
-function hasOwn(target: object, key: string | number): boolean {
-  return Object.prototype.hasOwnProperty.call(target, key);
-}
-
-/** A plain object (prototype Object.prototype or null); anything else — lists, dates, maps — is compared whole. */
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
-  const proto: unknown = Object.getPrototypeOf(value);
-  return proto === Object.prototype || proto === null;
 }

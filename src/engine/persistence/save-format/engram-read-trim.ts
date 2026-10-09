@@ -14,6 +14,7 @@
  * it see the same entries trimmed, and a migration applies the window of the old snapshot's history to the tree too.
  */
 import type { ScoredCandidateTrace } from '../../memory/engram/engram-types';
+import { isPlainRecord } from './plain-data';
 
 /** How many of the latest completed rounds keep their full trace. */
 export const FULL_TRACE_ROUNDS = 5;
@@ -38,7 +39,7 @@ export function traceTrimCut(history: readonly unknown[], keepRounds: number = F
   if (!Number.isSafeInteger(keepRounds) || keepRounds < 1) throw new RangeError(`keepRounds must be a whole number ≥ 1, got ${keepRounds}`);
   const assistantIndices: number[] = [];
   history.forEach((entry, i) => {
-    if (isRecord(entry) && entry.role === 'assistant') assistantIndices.push(i);
+    if (isPlainRecord(entry) && entry.role === 'assistant') assistantIndices.push(i);
   });
   return assistantIndices.length > keepRounds ? assistantIndices[assistantIndices.length - keepRounds] : 0;
 }
@@ -48,13 +49,13 @@ export function traceTrimCut(history: readonly unknown[], keepRounds: number = F
  * trim (not a trace, already trimmed, or no filtered candidate).
  */
 export function trimmedTrace(trace: unknown): Record<string, unknown> | undefined {
-  if (!isRecord(trace) || !Array.isArray(trace.candidates) || trace.trimmed !== undefined) return undefined;
+  if (!isPlainRecord(trace) || !Array.isArray(trace.candidates) || trace.trimmed !== undefined) return undefined;
   const candidates: unknown[] = trace.candidates;
-  const kept = candidates.filter((candidate) => isRecord(candidate) && candidate.outcome === INJECTED);
+  const kept = candidates.filter((candidate) => isPlainRecord(candidate) && candidate.outcome === INJECTED);
   if (kept.length === candidates.length) return undefined;
   const counts = new Map<string, number>();
   for (const candidate of candidates) {
-    const outcome = isRecord(candidate) && typeof candidate.outcome === 'string' ? candidate.outcome : 'unknown';
+    const outcome = isPlainRecord(candidate) && typeof candidate.outcome === 'string' ? candidate.outcome : 'unknown';
     counts.set(outcome, (counts.get(outcome) ?? 0) + 1);
   }
   const trimmed: TrimmedTraceInfo = { counts: Object.fromEntries(counts) };
@@ -66,7 +67,7 @@ export function traceTrims(history: readonly unknown[], cut: number): Array<{ in
   const trims: Array<{ index: number; trace: Record<string, unknown> }> = [];
   for (let i = 0; i < Math.min(cut, history.length); i++) {
     const entry = history[i];
-    if (!isRecord(entry)) continue;
+    if (!isPlainRecord(entry)) continue;
     const trace = trimmedTrace(entry[TRACE_FIELD]);
     if (trace) trims.push({ index: i, trace });
   }
@@ -85,8 +86,4 @@ export function trimHistoryTraces(history: readonly unknown[], cut: number): rea
     next[index] = { ...(history[index] as Record<string, unknown>), [TRACE_FIELD]: trace };
   }
   return next;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

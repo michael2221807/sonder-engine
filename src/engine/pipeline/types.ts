@@ -641,8 +641,21 @@ export interface EnginePathConfig {
    * 此映射注入（静态契约，不由 pack 覆写）。
    */
   gameTimeFieldNames: EngineGameTimeFieldNames;
-  /** 上次对话前快照路径（用于 Rollback，如 "元数据.上次对话前快照"） */
+  /**
+   * 上次对话前快照路径（如 "元数据.上次对话前快照"）：整份回合开始快照的旧存放位置。存档瘦身 D1A：读存档时它被
+   * 升级成 `rollbackPatch`（save-format-migration.ts）。
+   */
   preRoundSnapshot: string;
+  /**
+   * 回退差异（如 "系统.扩展.rollbackPatch"，存档瘦身 D1A）：从存下的树退回回合开始快照要改的地方，附带它对应的
+   * 那棵树的回合号与叙事历史长度；读档时还原成完整快照。路径存在 = 可以回退。
+   */
+  rollbackPatch: string;
+  /**
+   * 引擎存档格式标记（如 "系统.扩展.saveFormat"）：`{ version, migratedAtRound }`，后续步骤可加自己的字段。格式转换
+   * 自己按数据形状判断，不靠标记跳过；标记记录第一次升级发生在第几回合（升级前备份何时删除）。
+   */
+  saveFormat: string;
   /**
    * Slot-owned world books (Canon Capture) — `WorldBook[]` living INSIDE the state tree
    * (e.g. "系统.扩展.slotWorldBooks").
@@ -1112,6 +1125,8 @@ export const DEFAULT_ENGINE_PATHS: EnginePathConfig = {
     minute: '分钟',
   },
   preRoundSnapshot: '元数据.上次对话前快照',
+  rollbackPatch: '系统.扩展.rollbackPatch',
+  saveFormat: '系统.扩展.saveFormat',
   slotWorldBooks: '系统.扩展.slotWorldBooks',
   settingCaptureLast: '系统.扩展.settingCaptureLast',
   storageHealth: '系统.扩展.storageHealth',
