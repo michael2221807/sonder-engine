@@ -10,6 +10,9 @@ export class SavePage {
   /** A save slot card by slotId (the seed uses 'auto'). */
   slot(slotId: string): Locator { return this.page.getByTestId(`save-slot-${slotId}`); }
 
+  /** The size a slot card shows (the save in play is measured when the panel opens). */
+  slotSize(slotId: string): Locator { return this.slot(slotId).locator('.slot-detail--size'); }
+
   /** Expand the collapsible settings section that hosts the full-backup controls. */
   async openSettings(): Promise<void> { await this.page.getByTestId('save-settings-toggle').click(); }
 

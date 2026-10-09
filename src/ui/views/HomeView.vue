@@ -39,6 +39,7 @@ import CloudSlotsSection from '@/ui/components/cloud/CloudSlotsSection.vue';
 import { eventBus } from '@/engine/core/event-bus';
 import { useLocale } from '@/ui/composables/useLocale';
 import { useCloudAutoSyncToggle } from '@/ui/composables/useCloudAutoSyncToggle';
+import { formatSizeKB } from '@/ui/composables/save/format-size';
 
 const router = useRouter();
 const { t } = useI18n();
@@ -623,7 +624,7 @@ onMounted(async () => {
               <div class="sync-cloud-label">{{ $t('home.cloudStatus.hasArchive') }}</div>
               <div class="sync-cloud-detail">
                 {{ ghCloudInfo.updatedAt ? $t('home.cloudStatus.updatedAt', { date: formatDateTime(ghCloudInfo.updatedAt) }) : $t('home.cloudStatus.unknownTime') }}
-                <span class="sync-cloud-size">{{ ghCloudInfo.sizeKB ?? 0 }} KB</span>
+                <span class="sync-cloud-size">{{ formatSizeKB(ghCloudInfo.sizeKB ?? 0) }}</span>
               </div>
             </template>
             <template v-else-if="ghCloudInfo">

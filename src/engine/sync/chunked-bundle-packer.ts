@@ -2,7 +2,7 @@
 // App doc: docs/user-guide/cloud-sync.md, docs/user-guide/pages/game-save.md §2.3
 
 import { ENGINE_VERSION } from '../core/engine-version';
-import { gzipCompress, gzipDecompress, sha256, sha256String, sha256Blob, serializeBundleJson } from '../core/codec';
+import { gzipCompress, gzipDecompress, sha256, sha256String, sha256Blob, serializeBundleJson, type BundleSerialization } from '../core/codec';
 
 // The codec functions moved to core/codec.ts; keep the original export names here.
 export { gzipCompress, gzipDecompress, sha256, sha256String, sha256Blob };
@@ -15,6 +15,16 @@ export interface ChunkManifest {
   engineVersion: string;
   totalSizeBytes: number;
   bundleChecksum: string;
+  /**
+   * The layout of the bundle JSON the checksum was taken over (存档瘦身 D9A): unpack serialises the reassembled bundle
+   * this way to check it. Absent on uploads from before D9A, whose bundles were 'pretty'.
+   */
+  bundleSerialization?: BundleSerialization;
+  /**
+   * What the upload stores: the compressed bytes of all its chunks (存档瘦身 D9A). For display — the size a slot
+   * really takes; totalSizeBytes keeps its old meaning. Absent on uploads from before D9A.
+   */
+  storedBytes?: number;
   chunks: ChunkEntry[];
   /**
    * Audit stamp: which device produced this upload. Set by GitHubSyncService at
@@ -80,6 +90,10 @@ const STATE_SLICE_CHARS = 8_000_000;
  *   'global' so each slot's chunks live in their own directory
  *   (docs/design/github-save-slots-design.md §4). Pure path prefix — the pack
  *   algorithm, checksums, and roundtrip identity are unaffected.
+ *
+ * The layout of the bundle text (存档瘦身 D9A) is read off the text, never taken from the caller: a manifest that named
+ * another layout than the one its checksum was taken over would make the upload undownloadable. 'compact' is recorded
+ * in the manifest (`bundleSerialization`) for unpack's check; 'pretty' records nothing, as manifests before D9A did.
  */
 export async function* packChunks(
   source: string | Blob,
@@ -105,6 +119,7 @@ export async function* packChunks(
   // (chunks + checksums) is byte-identical.
   const totalSizeBytes = json.length;
   const bundleChecksum = await sha256String(json);
+  const serialization = bundleSerializationOf(json);
   let parsed = JSON.parse(json) as Record<string, unknown>;
   // Release the (potentially 100MB+) source string before the compress phase.
   json = '';
@@ -206,6 +221,7 @@ export async function* packChunks(
     engineVersion: ENGINE_VERSION,
     totalSizeBytes,
     bundleChecksum,
+    ...storageFields(serialization, entries),
     chunks: entries,
   };
 }
@@ -231,6 +247,13 @@ export async function unpack(
   manifest: ChunkManifest,
   chunks: Map<string, Blob>,
 ): Promise<string> {
+  // The layout the bundle checksum was taken over (a manifest from before 存档瘦身 D9A names none: 'pretty'). The
+  // manifest is data read back from the cloud: checked, not trusted.
+  const serialization: unknown = manifest.bundleSerialization ?? 'pretty';
+  if (serialization !== 'pretty' && serialization !== 'compact') {
+    throw new ChecksumError(`存档格式无法识别（bundleSerialization: ${String(serialization)}）`);
+  }
+
   // Layer 1: per-chunk checksum verification
   for (const entry of manifest.chunks) {
     const blob = chunks.get(entry.path);
@@ -280,7 +303,7 @@ export async function unpack(
   }
 
   // Layer 2: bundle checksum verification
-  const reassembledJson = serializeBundleJson(stateObj);
+  const reassembledJson = serializeBundleJson(stateObj, serialization);
   const actualChecksum = await sha256String(reassembledJson);
   if (actualChecksum !== manifest.bundleChecksum) {
     throw new ChecksumError('存档重组校验失败（SHA-256 不匹配）');
@@ -290,6 +313,22 @@ export async function unpack(
 }
 
 // ─── Internal ───
+
+/**
+ * The layout of a bundle's text as serializeBundleJson writes it: an object serialised with an indent starts with a
+ * line break after its brace, one serialised without never does (an empty object is the same text either way).
+ */
+function bundleSerializationOf(json: string): BundleSerialization {
+  return json.charCodeAt(1) === 0x0a ? 'pretty' : 'compact';
+}
+
+/** The manifest fields of 存档瘦身 D9A: the layout when it is not the old one, and what the chunks store. */
+function storageFields(serialization: BundleSerialization, entries: readonly ChunkEntry[]): Pick<ChunkManifest, 'bundleSerialization' | 'storedBytes'> {
+  return {
+    ...(serialization === 'compact' ? { bundleSerialization: serialization } : {}),
+    storedBytes: entries.reduce((sum, entry) => sum + entry.compressedSize, 0),
+  };
+}
 
 /** Order key for state chunks: legacy single `state` sorts before any `state-N`. */
 function stateOrder(name: string): number {

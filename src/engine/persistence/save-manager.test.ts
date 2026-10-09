@@ -97,8 +97,14 @@ describe('SaveManager', () => {
       await sm.saveGame('p1', 's1', { 角色: {} });
       expect(pm.updateSlotMeta).toHaveBeenCalledWith('p1', 's1', expect.objectContaining({
         lastSavedAt: expect.any(String),
-        saveSize: expect.any(Number),
       }));
+    });
+
+    it('does not measure the save (存档瘦身 D9A: the save panel measures the save in play when it opens)', async () => {
+      await sm.saveGame('p1', 's1', { 角色: { 姓名: '甲' } });
+      const update = vi.mocked(pm.updateSlotMeta).mock.calls.at(-1)?.[2];
+      expect(update).toBeDefined();
+      expect(update).not.toHaveProperty('saveSize');
     });
 
     it('includes packVersion in meta when set', async () => {

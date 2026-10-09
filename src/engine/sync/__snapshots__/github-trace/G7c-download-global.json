@@ -45,8 +45,8 @@
         "args": [
           {
             "blob": true,
-            "size": 2105,
-            "sha256": "34b3f470d411f81a7afef2b2b79a2bf3d957020e14021c0aeaf7b1094856f4fe"
+            "size": 1321,
+            "sha256": "ea5d37fb219d076989152dc9b1b69b1190f96c4225bc21e9e7a9e3012351dd1f"
           },
           {
             "fromOwnSync": true

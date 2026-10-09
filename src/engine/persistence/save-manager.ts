@@ -142,8 +142,9 @@ export class SaveManager {
     commit?: { guard: () => void; committed: () => void },
   ): Promise<void> {
     const key = saveKey(profileId, slotId);
-    // 5.3: 自动从状态树提取展示字段 — read before the write starts, from the same tree it writes.
-    const saveSize = JSON.stringify(stateTree).length;
+    // 5.3: 自动从状态树提取展示字段 — read before the write starts, from the same tree it writes. The save's size is
+    // not measured here (a whole-tree serialisation each round, 存档瘦身 D9A): the save panel measures the save in play
+    // when it opens.
     // 安全读取 角色.可变属性.地位.名称（多层可选链）
     const root = stateTree as Record<string, unknown>;
     const charAttrs = (root['角色'] as Record<string, unknown> | undefined)?.['可变属性'] as Record<string, unknown> | undefined;
@@ -173,7 +174,6 @@ export class SaveManager {
     // 保持原有行为（不写 packVersion 字段）。
     await this.profileManager.updateSlotMeta(profileId, slotId, {
       lastSavedAt: new Date().toISOString(),
-      saveSize,
       characterStatus,
       // 云端插槽新鲜度比较的回合依据（docs/design/cloud-slot-freshness.md §3）
       roundNumber,

@@ -83,8 +83,8 @@
         "body": {
           "message": "sync 2026-10-08T00:00:00",
           "chunk": {
-            "plainLength": 2310,
-            "plainSha256": "9ed93d1c7dcebe5588a3b0feefaedfac5f0b87b7e911c4c567680b4cfd0d0e72"
+            "plainLength": 2280,
+            "plainSha256": "461583c29d1448c681911e61067631fd631a461ed93689b8d7c13e96f64454ea"
           }
         }
       },
@@ -112,14 +112,16 @@
             "manifestVersion": 2,
             "createdAt": "2026-10-08T00:00:00.000Z",
             "engineVersion": "0.1.0",
-            "totalSizeBytes": 8480,
-            "bundleChecksum": "4961e12d250cda85d486f49ea088ccc99b6c8e878f5e7cba21d99be3f6d70e35",
+            "totalSizeBytes": 4832,
+            "bundleChecksum": "5301800161fe76cb654658790281193295442b69652354e2f77953e2a7e9a81b",
+            "bundleSerialization": "compact",
+            "storedBytes": "<gz>",
             "chunks": [
               {
                 "name": "state",
                 "path": "slots/prof_a/state.muyrsao01f9a.gz",
                 "compressedSize": "<gz>",
-                "originalSize": 2310,
+                "originalSize": 2280,
                 "checksum": "<gz>"
               },
               {
@@ -314,8 +316,8 @@
         "body": {
           "message": "sync 2026-10-08T00:00:00",
           "chunk": {
-            "plainLength": 2310,
-            "plainSha256": "9ed93d1c7dcebe5588a3b0feefaedfac5f0b87b7e911c4c567680b4cfd0d0e72"
+            "plainLength": 2280,
+            "plainSha256": "461583c29d1448c681911e61067631fd631a461ed93689b8d7c13e96f64454ea"
           }
         }
       }
@@ -379,8 +381,8 @@
         "body": {
           "message": "sync 2026-10-08T00:00:00",
           "chunk": {
-            "plainLength": 2310,
-            "plainSha256": "9ed93d1c7dcebe5588a3b0feefaedfac5f0b87b7e911c4c567680b4cfd0d0e72"
+            "plainLength": 2280,
+            "plainSha256": "461583c29d1448c681911e61067631fd631a461ed93689b8d7c13e96f64454ea"
           }
         }
       },
@@ -408,14 +410,16 @@
             "manifestVersion": 2,
             "createdAt": "2026-10-08T00:00:00.000Z",
             "engineVersion": "0.1.0",
-            "totalSizeBytes": 8914,
-            "bundleChecksum": "a7f4d907c3f2fc432ee8b713bc82e944ec5a78e3c9c4bfb77afa29fbc3d49f44",
+            "totalSizeBytes": 5117,
+            "bundleChecksum": "06d37455e248ab443b0aa0d67af57be904bf70bfabdcefe565ecea4fc6de75a1",
+            "bundleSerialization": "compact",
+            "storedBytes": "<gz>",
             "chunks": [
               {
                 "name": "state",
                 "path": "slots/prof_a/state.muyrsao01f9a.gz",
                 "compressedSize": "<gz>",
-                "originalSize": 2310,
+                "originalSize": 2280,
                 "checksum": "<gz>"
               },
               {

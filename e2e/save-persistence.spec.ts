@@ -28,6 +28,9 @@ test.describe('Save persistence — full-backup roundtrip (offline)', () => {
 
       // The seeded slot renders with the seeded character (proves load + render).
       await expect(savePage.slot(ids.slotId)).toContainText(ids.protagonist);
+      // The seed records no size; the save in play is measured as the panel opens (存档瘦身 D9A: saving no longer
+      // measures it every round), and shows in the one size format.
+      await expect(savePage.slotSize(ids.slotId)).toHaveText(/^(\d+ KB|\d+\.\d MB)$/);
 
       // Reveal the full-backup controls (collapsed behind the settings gear).
       await savePage.openSettings();

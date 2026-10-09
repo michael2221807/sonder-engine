@@ -7,13 +7,22 @@
  */
 
 /**
- * Canonical text form of a backup bundle / reassembled state.
- * `unpack` (chunked-bundle-packer) rebuilds the JSON with this exact call and
- * compares its SHA-256 with the manifest's bundleChecksum (E09-004), so every
- * bundle exporter MUST serialise with it — changing the indent changes the bytes.
+ * How a bundle's JSON text is laid out: 'pretty' (two-space indent, every bundle before 存档瘦身 D9A) or 'compact'
+ * (no whitespace, every bundle from D9A on — about half the size).
  */
-export function serializeBundleJson(value: unknown): string {
-  return JSON.stringify(value, null, 2);
+export type BundleSerialization = 'pretty' | 'compact';
+
+/** The layout every bundle exporter writes (存档瘦身 D9A, 2026-10-09). */
+export const BUNDLE_SERIALIZATION: BundleSerialization = 'compact';
+
+/**
+ * Canonical text form of a backup bundle / reassembled state.
+ * `unpack` (chunked-bundle-packer) rebuilds the JSON with this exact call — in the layout the manifest names
+ * (`bundleSerialization`; none means 'pretty', an upload from before D9A) — and compares its SHA-256 with the
+ * manifest's bundleChecksum (E09-004), so every bundle exporter MUST serialise with it: the layout changes the bytes.
+ */
+export function serializeBundleJson(value: unknown, serialization: BundleSerialization = BUNDLE_SERIALIZATION): string {
+  return serialization === 'pretty' ? JSON.stringify(value, null, 2) : JSON.stringify(value);
 }
 
 // ─── Compression ───

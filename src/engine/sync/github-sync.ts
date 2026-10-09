@@ -481,7 +481,7 @@ export class GitHubSyncService {
         infos.push({
           slotKey: entry.name,
           updatedAt: m.createdAt,
-          sizeKB: Math.round(m.totalSizeBytes / 1024),
+          sizeKB: displaySizeKB(m),
           profileName: m.slotMeta?.profileName,
           packId: m.slotMeta?.packId,
           slotCount: m.slotMeta?.slotCount,
@@ -502,7 +502,7 @@ export class GitHubSyncService {
     try {
       const g = await this.fetchManifestAt(owner, repo, `${GLOBAL_DIR}/manifest.json`);
       infos.push({
-        slotKey: GLOBAL_SLOT_KEY, updatedAt: g.createdAt, sizeKB: Math.round(g.totalSizeBytes / 1024),
+        slotKey: GLOBAL_SLOT_KEY, updatedAt: g.createdAt, sizeKB: displaySizeKB(g),
         uploadedByLabel: g.uploadedBy?.deviceLabel, uploadedByDeviceId: g.uploadedBy?.deviceId,
       });
     } catch (err) {
@@ -1115,12 +1115,20 @@ export class GitHubSyncService {
 
 // ─── 工具 ───
 
+/**
+ * The size a cloud save shows, in KB: what the upload stores (its compressed chunks, 存档瘦身 D9A), or for an upload
+ * from before D9A the length of its bundle JSON, as shown until then.
+ */
+function displaySizeKB(m: ChunkManifest): number {
+  return Math.round((m.storedBytes ?? m.totalSizeBytes) / 1024);
+}
+
 /** Existing-cloud summary of a manifest (shared by the v2 and slot queries; each keeps its own corrupt-manifest handling). */
 function toCloudInfo(m: ChunkManifest): CloudInfo {
   return {
     exists: true,
     updatedAt: m.createdAt,
-    sizeKB: Math.round(m.totalSizeBytes / 1024),
+    sizeKB: displaySizeKB(m),
     uploadedByLabel: m.uploadedBy?.deviceLabel,
     uploadedByDeviceId: m.uploadedBy?.deviceId,
   };

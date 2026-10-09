@@ -618,7 +618,11 @@ function utf8ToBase64(str: string): string {
 
 const REPO_BASE = 'https://api.github.com/repos/testuser/aga-cloud-save';
 
-async function setupDownloadableBundle(bundleJson?: string): Promise<{ manifest: ChunkManifest; json: string }> {
+async function setupDownloadableBundle(
+  bundleJson?: string,
+  /** Shapes the manifest as served, e.g. into one from before 存档瘦身 D9A. */
+  editManifest?: (m: ChunkManifest) => void,
+): Promise<{ manifest: ChunkManifest; json: string }> {
   const json = bundleJson ?? JSON.stringify({
     version: 1,
     exportedAt: '2026-05-09T12:00:00Z',
@@ -638,6 +642,7 @@ async function setupDownloadableBundle(bundleJson?: string): Promise<{ manifest:
   }, null, 2);
 
   const { manifest, chunks } = await pack(json);
+  editManifest?.(manifest);
 
   // Setup manifest responses: GET contents → sha, GET blobs/{sha} → base64 content
   const manifestSha = 'sha_manifest_' + Date.now();
@@ -839,6 +844,18 @@ describe('getCloudInfo — v2 manifest', () => {
 
     expect(info.exists).toBe(true);
     expect(info.updatedAt).toBe(manifest.createdAt);
+    // What the upload stores: its compressed chunks (存档瘦身 D9A).
+    expect(manifest.storedBytes).toBe(manifest.chunks.reduce((n, c) => n + c.compressedSize, 0));
+    expect(info.sizeKB).toBe(Math.round(manifest.storedBytes! / 1024));
+  });
+
+  it('shows an upload from before D9A (no stored bytes in its manifest) at the length of its bundle JSON, as before', async () => {
+    const backup = createMockBackup();
+    const sync = new GitHubSyncService(backup as never);
+    const { manifest } = await setupDownloadableBundle(undefined, (m) => { delete m.storedBytes; });
+
+    const info = await sync.getCloudInfo();
+
     expect(info.sizeKB).toBe(Math.round(manifest.totalSizeBytes / 1024));
   });
 

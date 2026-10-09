@@ -30,6 +30,7 @@ import {
   type CloudFormat, type CloudSlotInfo, type SyncStatus, type DegradedUploadDetail,
 } from '@/engine/sync/github-sync';
 import { deriveProfileSaveStamp, compareSaveStamps, type SaveStamp, type SaveFreshness } from '@/engine/sync/save-freshness';
+import { formatSizeKB } from '@/ui/composables/save/format-size';
 
 const { t } = useI18n();
 const githubSync = injectService('githubSync');
@@ -432,7 +433,7 @@ function formatTime(iso?: string): string {
           <div class="cs-row-main">
             <span class="cs-name">{{ row.name }}</span>
             <span v-if="row.cloud" class="cs-meta">
-              {{ t('save.cloudSlots.cloudMeta', { time: formatTime(row.cloud.updatedAt), size: row.cloud.sizeKB }) }}
+              {{ t('save.cloudSlots.cloudMeta', { time: formatTime(row.cloud.updatedAt), size: formatSizeKB(row.cloud.sizeKB) }) }}
             </span>
             <span v-else class="cs-meta cs-meta--none">{{ t('save.cloudSlots.notInCloud') }}</span>
             <span v-if="typeof row.cloud?.lastRound === 'number'" class="cs-meta cs-meta--round">
@@ -478,7 +479,7 @@ function formatTime(iso?: string): string {
           <div class="cs-row-main">
             <span class="cs-name">{{ t('save.cloudSlots.globalRow') }}</span>
             <span v-if="globalSlot" class="cs-meta">
-              {{ t('save.cloudSlots.cloudMeta', { time: formatTime(globalSlot.updatedAt), size: globalSlot.sizeKB }) }}
+              {{ t('save.cloudSlots.cloudMeta', { time: formatTime(globalSlot.updatedAt), size: formatSizeKB(globalSlot.sizeKB) }) }}
             </span>
             <span v-else class="cs-meta cs-meta--none">{{ t('save.cloudSlots.notInCloud') }}</span>
             <Tooltip v-if="globalSlot?.uploadedByLabel" :text="t('save.cloudSlots.uploadedByTip', { id: globalSlot.uploadedByDeviceId ?? '?' })">

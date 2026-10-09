@@ -13,7 +13,9 @@ import 'fake-indexeddb/auto';
  * Why the traces are stable:
  *  - gzip bytes never enter a snapshot: a chunk upload is recorded by the sha-256 and length of its UNCOMPRESSED text,
  *    and the manifest's `checksum` and `compressedSize` are masked as `<gz>`. `bundleChecksum` and every plain-text
- *    hash stay. (gzip output changes with the zlib version.)
+ *    hash stay. (gzip output changes with the zlib version.) Since 存档瘦身 D9A the manifest's `storedBytes` (the sum
+ *    of the compressed sizes, masked as `<gz>` once checked to be that sum) and every `sizeKB` (shown from it) depend on
+ *    the gzip bytes too; a manifest without `storedBytes` shows `totalSizeBytes`, which github-sync.test.ts covers.
  *  - the fake's file shas are a counter (`sha1`, `sha2`, ...), not a hash of the bytes.
  *  - Date is faked (and advanced explicitly where two uploads must get different generation tags), `Math.random` is
  *    fixed, the device id and the user agent are preset, the harness rebuilds the idbAdapter per case.
@@ -65,11 +67,25 @@ function maskGzipFields(value: unknown): unknown {
           ? { ...(maskGzipFields(c) as Doc), checksum: '<gz>', compressedSize: '<gz>' }
           : maskGzipFields(c),
       );
+    } else if (k === 'storedBytes') {
+      out[k] = maskStoredBytes(value as Doc);
+    } else if (k === 'sizeKB' && typeof v === 'number') {
+      out[k] = '<gz>';
     } else {
       out[k] = maskGzipFields(v);
     }
   }
   return out;
+}
+
+/** A manifest's `storedBytes` as `<gz>` when it is the sum of its chunks' compressed sizes; a mark that fails the lock when not. */
+function maskStoredBytes(manifest: Doc): unknown {
+  if (manifest.storedBytes === '<gz>') return '<gz>'; // masked already (a request body, then the whole document)
+  const chunks = manifest.chunks;
+  const sum = Array.isArray(chunks)
+    ? chunks.reduce((n: number, c) => n + Number((c as Doc | null)?.compressedSize), 0)
+    : NaN;
+  return manifest.storedBytes === sum ? '<gz>' : `<not the sum of the chunks: ${String(manifest.storedBytes)}>`;
 }
 
 // ─── the fake GitHub ───
@@ -80,7 +96,7 @@ interface TraceEntry { method: string; path: string; body?: unknown }
 
 /** Masks everything that depends on the gzip bytes; leaves every plain-text field. */
 function maskManifest(manifest: ChunkManifest): unknown {
-  return { ...manifest, chunks: manifest.chunks.map((c) => ({ ...c, checksum: '<gz>', compressedSize: '<gz>' })) };
+  return maskGzipFields(manifest);
 }
 
 async function describeBody(path: string, body: unknown): Promise<unknown> {

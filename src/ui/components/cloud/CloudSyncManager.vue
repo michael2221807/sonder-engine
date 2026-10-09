@@ -32,6 +32,7 @@ import {
   type CloudFormat,
 } from '@/engine/sync/github-sync';
 import { shouldAttemptAutoUpload } from './cloud-autosync';
+import { formatSizeKB } from '@/ui/composables/save/format-size';
 import { useSaveHealthStore } from '@/engine/stores/save-health';
 
 const { t } = useI18n();
@@ -461,7 +462,7 @@ onBeforeUnmount(() => {
         <span class="cloud-conflict__k">{{ $t('save.autoSyncCloud.conflict.cloudLabel') }}</span>
         <span class="cloud-conflict__v">
           {{ cloudTimeDisplay() }}
-          <span v-if="conflictDetail.cloudSizeKB != null" class="cloud-conflict__size">· {{ conflictDetail.cloudSizeKB }} KB</span>
+          <span v-if="conflictDetail.cloudSizeKB != null" class="cloud-conflict__size">· {{ formatSizeKB(conflictDetail.cloudSizeKB) }}</span>
           <span v-if="conflictDetail.cloudDeviceLabel" class="cloud-conflict__size">· {{ $t('save.cloudSlots.uploadedBy', { device: conflictDetail.cloudDeviceLabel }) }}</span>
         </span>
       </div>

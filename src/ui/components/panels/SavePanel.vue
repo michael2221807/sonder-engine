@@ -11,7 +11,7 @@
  * - 自动存档设置：时间点存档间隔
  * - 完整备份导出 / 恢复（BackupService）
  */
-import { ref, computed, watch, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { injectService } from '@/ui/injection-keys';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -92,6 +92,28 @@ function refreshSlots(): void {
 }
 
 watch([isLoaded, activeProfileId], () => { refreshSlots(); }, { immediate: true });
+
+// ─── Save size (存档瘦身 D9A) ─────────────────────────────────
+// Saving no longer measures the save (a whole-tree serialisation every round). The save in play is measured here, as
+// a save would write it, once each time the panel opens and after it has painted; the other slots keep the size they
+// were measured at last.
+const stateManager = injectService('stateManager', undefined);
+
+async function measureSaveInPlay(): Promise<void> {
+  const pid = activeProfileId.value;
+  const sid = activeSlotId.value;
+  if (!isLoaded.value || !pid || !sid || !profileManager || !saveManager || !stateManager) return;
+  if (!profileManager.getProfile(pid)?.slots[sid]) return;
+  const saveSize = JSON.stringify(saveManager.prepareTree(stateManager.liveTree())).length;
+  await profileManager.updateSlotMeta(pid, sid, { saveSize });
+  refreshSlots();
+}
+
+onMounted(() => {
+  window.setTimeout(() => {
+    measureSaveInPlay().catch((err: unknown) => console.warn('[SavePanel] Measuring the save in play failed:', err));
+  }, 0);
+});
 
 // ─── Save / Load / Delete ─────────────────────────────────────
 
@@ -692,6 +714,7 @@ async function executeImport(): Promise<void> {
 import type { SyncStatus, DegradedUploadDetail, CloudFormat, CloudInfo } from '@/engine/sync/github-sync';
 import { DegradedUploadError } from '@/engine/sync/github-sync';
 import CloudSlotsSection from '@/ui/components/cloud/CloudSlotsSection.vue';
+import { formatSizeBytes, formatSizeKB } from '@/ui/composables/save/format-size';
 
 const githubSync = injectService('githubSync');
 
@@ -929,7 +952,7 @@ const showSettings = ref(false);
           <div v-if="ghClassicVisible" class="gh-cloud-row">
             <div class="gh-cloud-meta">
               <span v-if="ghCloudInfo?.exists" class="gh-cloud-info">
-                {{ $t('save.github.cloudInfo', { time: ghCloudInfo.updatedAt ? formatDateTime(ghCloudInfo.updatedAt) : $t('common.fallback.unknown'), size: ghCloudInfo.sizeKB ?? 0 }) }}
+                {{ $t('save.github.cloudInfo', { time: ghCloudInfo.updatedAt ? formatDateTime(ghCloudInfo.updatedAt) : $t('common.fallback.unknown'), size: formatSizeKB(ghCloudInfo.sizeKB ?? 0) }) }}
                 <template v-if="ghCloudInfo.uploadedByLabel"> · {{ $t('save.cloudSlots.uploadedBy', { device: ghCloudInfo.uploadedByLabel }) }}</template>
               </span>
               <span v-else-if="ghCloudInfo" class="gh-cloud-info gh-cloud-empty">{{ $t('save.github.cloudEmpty') }}</span>
@@ -1105,7 +1128,7 @@ const showSettings = ref(false);
             <span v-if="slot.characterStatus" class="slot-detail slot-detail--status">{{ slot.characterStatus }}</span>
             <span v-if="slot.currentLocation" class="slot-detail">{{ slot.currentLocation }}</span>
             <span v-if="slot.gameTime" class="slot-detail">{{ slot.gameTime }}</span>
-            <span v-if="slot.saveSize" class="slot-detail slot-detail--size">{{ Math.round(slot.saveSize / 1024) }}KB</span>
+            <span v-if="slot.saveSize" class="slot-detail slot-detail--size">{{ formatSizeBytes(slot.saveSize) }}</span>
           </div>
 
           <div class="slot-actions">

@@ -72,7 +72,7 @@
       "ok": {
         "exists": true,
         "updatedAt": "2026-10-08T00:00:00.000Z",
-        "sizeKB": 15,
+        "sizeKB": "<gz>",
         "uploadedByLabel": "Windows · Chrome",
         "uploadedByDeviceId": "dev_0a0b0c0d"
       }
@@ -81,7 +81,7 @@
       "ok": {
         "exists": true,
         "updatedAt": "2026-10-08T00:00:01.000Z",
-        "sizeKB": 9,
+        "sizeKB": "<gz>",
         "uploadedByLabel": "Windows · Chrome",
         "uploadedByDeviceId": "dev_0a0b0c0d"
       }
@@ -90,7 +90,7 @@
       "ok": {
         "exists": true,
         "updatedAt": "2026-10-08T00:00:02.000Z",
-        "sizeKB": 2,
+        "sizeKB": "<gz>",
         "uploadedByLabel": "Windows · Chrome",
         "uploadedByDeviceId": "dev_0a0b0c0d"
       }

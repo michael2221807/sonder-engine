@@ -590,6 +590,70 @@ describe('pack — chunking behavior', () => {
 
 // ─── unpack: roundtrip identity ───
 
+describe('compact bundles (存档瘦身 D9A)', () => {
+  const compactOf = (pretty: string) => JSON.stringify(JSON.parse(pretty));
+
+  it('records the layout and the stored bytes in the manifest, and checks a compact bundle back', async () => {
+    const pretty = makeRealisticBundle({ imageCount: 4 });
+    const compact = compactOf(pretty);
+    const { manifest, chunks } = await pack(compact, 'slots/p1');
+
+    expect(manifest.bundleSerialization).toBe('compact');
+    expect(manifest.bundleChecksum).toBe(await sha256String(compact));
+    expect(manifest.totalSizeBytes).toBe(compact.length);
+    expect(manifest.storedBytes).toBe(manifest.chunks.reduce((n, c) => n + c.compressedSize, 0));
+    expect(manifest.storedBytes).toBeGreaterThan(0);
+    expect(await unpack(manifest, chunks)).toBe(compact);
+  });
+
+  it('a compact bundle is about half the text of the same bundle pretty, and stores the same chunks', async () => {
+    const pretty = makeRealisticBundle({ imageCount: 4 });
+    const compact = compactOf(pretty);
+    const a = await pack(pretty, 'v2');
+    const b = await pack(compact, 'v2');
+    expect(compact.length).toBeLessThan(pretty.length * 0.75);
+    expect(b.manifest.chunks.map((c) => c.checksum)).toEqual(a.manifest.chunks.map((c) => c.checksum));
+    expect(b.manifest.storedBytes).toBe(a.manifest.storedBytes);
+  });
+
+  it('a manifest from before D9A (no layout named) is checked pretty, as before', async () => {
+    const pretty = makeRealisticBundle({ imageCount: 2 });
+    const { manifest, chunks } = await pack(pretty);
+    expect(manifest).not.toHaveProperty('bundleSerialization');
+    const old: ChunkManifest = { ...manifest };
+    delete old.storedBytes;
+    expect(await unpack(old, chunks)).toBe(pretty);
+  });
+
+  it('the layout is part of the check: a compact upload named pretty, or the other way, fails it', async () => {
+    const pretty = makeRealisticBundle({ imageCount: 1 });
+    const compact = compactOf(pretty);
+    const fromCompact = await pack(compact, 'v2');
+    await expect(unpack({ ...fromCompact.manifest, bundleSerialization: 'pretty' }, fromCompact.chunks)).rejects.toThrow(ChecksumError);
+    const fromPretty = await pack(pretty);
+    await expect(unpack({ ...fromPretty.manifest, bundleSerialization: 'compact' }, fromPretty.chunks)).rejects.toThrow(ChecksumError);
+  });
+
+  it('refuses a layout it does not know (a manifest from a newer version, or a damaged one)', async () => {
+    const { manifest, chunks } = await pack(compactOf(makeRealisticBundle()), 'v2');
+    const unknown = { ...manifest, bundleSerialization: 'yaml' } as unknown as ChunkManifest;
+    await expect(unpack(unknown, chunks)).rejects.toThrow('存档格式无法识别（bundleSerialization: yaml）');
+  });
+
+  it('reads the layout off the text, from a Blob too: a manifest never names a layout the bytes do not have', async () => {
+    const compact = compactOf(makeRealisticBundle({ imageCount: 2 }));
+    const { manifest, chunks } = await collectChunks(packChunks(new Blob([compact]), 'global'));
+    expect(manifest.bundleSerialization).toBe('compact');
+    expect(await unpack(manifest, chunks)).toBe(compact);
+    const pretty = await collectChunks(packChunks(new Blob([makeRealisticBundle()]), 'global'));
+    expect(pretty.manifest).not.toHaveProperty('bundleSerialization');
+    // An empty object is the same text in both layouts.
+    expect(JSON.stringify({}, null, 2)).toBe(JSON.stringify({}));
+    const empty = await pack('{}');
+    expect(await unpack(empty.manifest, empty.chunks)).toBe('{}');
+  });
+});
+
 describe('unpack — roundtrip identity', () => {
   it('full realistic bundle with all fields', async () => {
     const json = makeRealisticBundle({ imageCount: 5, multipleProfiles: true });
