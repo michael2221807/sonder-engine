@@ -44,6 +44,7 @@
 </template>
 
 <script setup lang="ts">
+// App doc: docs/user-guide/pages/game-main.md §3.8.2 (变更详情 · 生效变更)
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { isCompactListChange } from '@/engine/persistence/save-format/delta-compaction';

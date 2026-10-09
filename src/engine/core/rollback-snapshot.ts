@@ -1,3 +1,4 @@
+// App doc: docs/user-guide/pages/game-main.md §3.9 (回滚确认弹窗); docs/user-guide/pages/game-save.md §存档格式 2
 /**
  * 回退快照持有者 — 回合开始时的整棵树只放在内存里（存档瘦身 D1A，2026-10-09）
  *
