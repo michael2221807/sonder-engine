@@ -658,6 +658,8 @@ export interface EnginePathConfig {
   /**
    * 引擎存档格式标记（如 "系统.扩展.saveFormat"）：`{ version, migratedAtRound }`，后续步骤可加自己的字段。格式转换
    * 自己按数据形状判断，不靠标记跳过；标记记录第一次升级发生在第几回合（升级前备份何时删除）。
+   * A tree whose format was not upgraded may hold a marker without a version (the pseudo-vector repair's
+   * `{ vectorDimRepaired: true }`, 存档瘦身 D4A): it claims no format.
    */
   saveFormat: string;
   /**

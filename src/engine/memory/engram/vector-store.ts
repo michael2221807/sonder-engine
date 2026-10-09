@@ -102,8 +102,8 @@ const slotWrites = new Map<string, Promise<void>>();
 /**
  * Run a read-modify-write of a slot's record after the ones already running on it (存档瘦身 D4A): two that overlap
  * would each write back what it read, and the later write would drop the earlier one's change (a merged vector lost,
- * a removed one back). Module-wide: the engram manager, the retriever, the save panel and the backup service each
- * hold a VectorStore of their own.
+ * a removed one back). Module-wide: the engram manager holds a VectorStore of its own, the retriever, the save panel
+ * and the backup service share another (bootstrap/persistence-stack.ts).
  */
 function inSlotOrder<T>(key: string, readModifyWrite: () => Promise<T>): Promise<T> {
   const done = (slotWrites.get(key) ?? Promise.resolve()).then(readModifyWrite);
@@ -321,25 +321,29 @@ export class VectorStore {
   /**
    * Remove the given vectors of a slot in one write (存档瘦身 D4A: a save's pseudo vectors,
    * EngramManager.repairVectorDims). Keys a table does not hold are skipped; nothing is written when none is held.
+   * `stillRemovable` is asked about each vector as the queued removal finds it: a vector written at the key since the
+   * caller decided (a rebuild, a late vectorisation) is kept when it says no.
    */
   async removeVectors(
     keys: Partial<Record<VectorTable, readonly string[]>>,
     profileId: string,
     slotId: string,
+    stillRemovable: (vector: StoredVector) => boolean = () => true,
   ): Promise<number> {
-    return inSlotOrder(this.buildKey({ profileId, slotId }), () => this.removeVectorsNow(keys, profileId, slotId));
+    return inSlotOrder(this.buildKey({ profileId, slotId }), () => this.removeVectorsNow(keys, profileId, slotId, stillRemovable));
   }
 
   private async removeVectorsNow(
     keys: Partial<Record<VectorTable, readonly string[]>>,
     profileId: string,
     slotId: string,
+    stillRemovable: (vector: StoredVector) => boolean,
   ): Promise<number> {
     const data = await this.load(profileId, slotId);
     let removed = 0;
     for (const table of VECTOR_TABLES) {
       for (const key of keys[table] ?? []) {
-        if (Object.prototype.hasOwnProperty.call(data[table], key)) {
+        if (Object.prototype.hasOwnProperty.call(data[table], key) && stillRemovable(data[table][key])) {
           delete data[table][key];
           removed++;
         }

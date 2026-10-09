@@ -225,6 +225,22 @@ describe('pseudo-vector repair after a save is opened (存档瘦身 D4A)', () =>
     expect((await save.vectorKeys()).events).toEqual(['e1', 'e2', 'e3', 'pe1', 'pe2', 'pe3']);
   });
 
+  it('keeps a real vector written at a removable key after the repair looked (a rebuild, a late vectorisation)', async () => {
+    const save = await openSave(engramTree());
+    const key = `engram_vectors_${save.slot.profileId}_${save.slot.slotId}`;
+    const load = VectorStore.prototype.load;
+    vi.spyOn(VectorStore.prototype, 'load').mockImplementationOnce(async function (this: VectorStore, profileId: string, slotId: string) {
+      const data = await load.call(this, profileId, slotId);
+      // Between the look and the queued removal, pe3 gets a real vector.
+      await idbAdapter.set(key, { ...engramVectors(), eventVectors: { ...(engramVectors().eventVectors as Json), pe3: real(9) } });
+      return data;
+    });
+
+    expect(await save.repair()).toEqual({ mainDim: 8, unmarked: 4, removed: 1 }); // only the edge no longer held
+    const data = await save.store.load(save.slot.profileId, save.slot.slotId);
+    expect(Array.from(data.eventVectors.pe3)).toEqual(Array.from(real(9)));
+  });
+
   it('keeps every field of a marker that is there', async () => {
     const save = await openSave(engramTree({ version: 2, migratedAtRound: 132, other: 'kept' }));
 

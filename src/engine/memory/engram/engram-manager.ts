@@ -29,7 +29,7 @@ import { inferEntityType, isSentenceLikeName, makeFactStubEntity } from './entit
 import { VectorStore, type VectorTable } from './vector-store';
 import type { StoredVector } from '../../persistence/save-format/vector-codec';
 import {
-  countKeys, embeddedKeys, engramOf, keysByTable, mainVectorDim, markerSaysRepaired, pseudoVectorKeys, unionKeys,
+  countKeys, embeddedKeys, engramOf, hasNoNegativeValue, keysByTable, mainVectorDim, markerSaysRepaired, pseudoVectorKeys, unionKeys,
   type KeySetsByTable, type VectorKeysByTable,
 } from './vector-dim-repair';
 import { isPlainRecord } from '../../persistence/save-format/plain-data';
@@ -400,7 +400,10 @@ export class EngramManager {
     }
 
     const removed = countKeys(removable) > 0
-      ? await this.vectorStore.removeVectors(removable, opened.profileId, opened.slotId)
+      // Re-checked when the queued removal runs: a vector written at the key since (a rebuild, a late
+      // vectorisation) is a real one and stays.
+      ? await this.vectorStore.removeVectors(removable, opened.profileId, opened.slotId,
+        (vector) => vector.length !== mainDim && hasNoNegativeValue(vector))
       : 0;
     if (removed > 0 || countKeys(unmarked) > 0) {
       console.info(`[Engram] Pseudo vectors (the save's own dimension is ${mainDim}): ${countKeys(unmarked)} entr${countKeys(unmarked) === 1 ? 'y' : 'ies'} marked not embedded, ${removed} vector(s) removed`);

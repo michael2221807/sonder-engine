@@ -8,6 +8,7 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { createEngramStack } from './engram-stack';
+import { eventBus } from '../engine/core/event-bus';
 import { StateManager } from '../engine/core/state-manager';
 import { RollbackSnapshot } from '../engine/core/rollback-snapshot';
 import { useEngineStateStore } from '../engine/stores/engine-state';
@@ -34,13 +35,19 @@ const engramTree = (round: number, pseudoEmbedded: boolean, marker?: Record<stri
   },
 });
 
+/** The listeners each stack puts on the global event bus, taken off after each test. */
+const offs: Array<() => void> = [];
+
 function stack() {
   const stateManager = new StateManager();
   const store = useEngineStateStore();
   const rollbackSnapshot = new RollbackSnapshot(P);
   store.linkStateManager(stateManager);
   store.linkRollbackSnapshot(rollbackSnapshot);
+  const on = vi.spyOn(eventBus, 'on');
   const { engramManager } = createEngramStack({ aiService, stateManager, engineStateStore: store, vectorStore: new VectorStore(), rollbackSnapshot });
+  for (const result of on.mock.results) offs.push(result.value as () => void);
+  on.mockRestore();
   return { stateManager, store, rollbackSnapshot, repair: vi.spyOn(engramManager, 'repairVectorDims') };
 }
 
@@ -55,7 +62,10 @@ describe('engram stack — the pseudo-vector repair on opening a save', () => {
     vi.spyOn(EngramManager.prototype, 'isEnabled').mockReturnValue(true);
     vi.spyOn(console, 'info').mockImplementation(() => undefined);
   });
-  afterEach(() => { vi.restoreAllMocks(); });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    offs.splice(0).forEach((off) => off());
+  });
 
   it('opening a save marks the entries of its pseudo vectors not embedded and records the repair', async () => {
     const { stateManager, store, repair } = stack();
@@ -69,6 +79,20 @@ describe('engram stack — the pseudo-vector repair on opening a save', () => {
     const events = stateManager.get<Array<{ id: string; is_embedded: boolean }>>(`${P.engramMemory}.events`)!;
     expect(events.map((e) => [e.id, e.is_embedded])).toEqual([['e1', true], ['e2', true], ['p1', false]]);
     expect(stateManager.get(P.saveFormat)).toEqual({ vectorDimRepaired: true });
+  });
+
+  it('also hands over the old whole snapshot a tree still holds (its format upgrade failed): its entries count', async () => {
+    // Repaired already, p1 not embedded now; the old whole snapshot in the tree, which a rollback would put back,
+    // still marks it embedded.
+    const tree = engramTree(6, false, { vectorDimRepaired: true }) as Record<string, Record<string, unknown>>;
+    tree['元数据'] = { ...tree['元数据'], 上次对话前快照: engramTree(5, true) };
+
+    const { store, repair } = stack();
+    await storeVectors('slot_3');
+    store.loadGame(tree, 'tianming', 'prof_es', 'slot_3');
+
+    expect(await repair.mock.results[0].value).toEqual({ mainDim: 8, unmarked: 0, removed: 0 });
+    expect(await eventKeys('slot_3')).toEqual(['e1', 'e2', 'p1']);
   });
 
   it('hands over the round-start tree a rollback would put back: a vector its entry still has there stays', async () => {

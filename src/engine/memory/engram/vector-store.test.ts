@@ -150,6 +150,18 @@ describe('VectorStore (存档瘦身 D4A)', () => {
     expect(await removed).toBe(1);
   });
 
+  it('runs the edge trims and deletes of a slot in that order too', async () => {
+    const s = freshSlot();
+    await idbAdapter.set(keyOf(s), { eventVectors: {}, entityVectors: {}, edgeVectors: { g1: A, g2: B, g3: C }, model: 'm', dim: 3 });
+    const merged = new VectorStore().mergeEdgeVectors([{ id: 'g4' }], [A], 'm', s);
+    const trimmed = new VectorStore().trimEdgeVectors(new Set(['g1', 'g2', 'g4']), s.profileId, s.slotId);
+    const deleted = new VectorStore().deleteEdgeVectorsByIds(['g1'], s.profileId, s.slotId);
+    await Promise.all([merged, trimmed, deleted]);
+
+    const data = await new VectorStore().load(s.profileId, s.slotId);
+    expect(Object.keys(data.edgeVectors).sort()).toEqual(['g2', 'g4']);
+  });
+
   it('a failed read-modify-write does not hold up the next one on the slot', async () => {
     const s = freshSlot();
     await idbAdapter.set(keyOf(s), { eventVectors: { a: A }, entityVectors: {}, edgeVectors: {}, model: 'm', dim: 3 });

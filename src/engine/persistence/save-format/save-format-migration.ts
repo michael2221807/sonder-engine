@@ -35,6 +35,11 @@ export interface SaveFormatPaths extends RollbackPaths {
 }
 
 /** The format marker an upgraded tree carries at `paths.saveFormat` (later steps may add fields of their own). */
+/**
+ * The marker the upgrade writes. A tree whose format was not upgraded may carry a marker without a version: the
+ * pseudo-vector repair records only its flag there (存档瘦身 D4A); such a marker claims no format, and the upgrade keeps
+ * its fields (otherMarkerFields).
+ */
 export interface SaveFormatMarker {
   version: number;
   /** The tree's round when it was upgraded (null when it has no round number). */
