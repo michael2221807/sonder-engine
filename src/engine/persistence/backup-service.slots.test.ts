@@ -821,6 +821,8 @@ describe('backup-service save-slot primitives', () => {
 
     it('rolls back the profile on failure and leaves other profiles untouched', async () => {
       await seedTwoProfiles();
+      // The copy of s1's old-format record kept since a save format upgrade (存档瘦身 P1 §2.1).
+      memStore.set('save_p1_s1:pre-format-2', { 元数据: { 回合序号: 3, 上次对话前快照: { 元数据: { 回合序号: 2 } } } });
       worldBooks.books.set('p1', [{ id: 'keep-book' }]);
       worldBooks.failSaveWorldBook = true; // 第 4 步爆炸
       const bundle = p1ReplaceBundle({
@@ -836,6 +838,8 @@ describe('backup-service save-slot primitives', () => {
       expect((s1['角色'] as Record<string, Record<string, unknown>>)['图片档案']['已选头像图片ID']).toBe('imgA');
       expect(memStore.get('save_p1_s2')).toBeDefined();
       expect(Object.keys(pm.getProfile('p1')!.slots).sort()).toEqual(['s1', 's2']);
+      // The old-format copy is rolled back with its save (deleting the slot took it).
+      expect(memStore.get('save_p1_s1:pre-format-2')).toEqual({ 元数据: { 回合序号: 3, 上次对话前快照: { 元数据: { 回合序号: 2 } } } });
       // fake 只对 id='boom' 抛错，回滚写回 'keep-book' 不受影响
       expect((await worldBooks.loadWorldBooks('p1')).map((b) => b.id)).toEqual(['keep-book']);
       // p2 未受波及

@@ -252,6 +252,24 @@ describe('SaveManager · save format 2', () => {
     expect(writes).toEqual([`set ${KEY}`]);
   });
 
+  it('keeps the copy when the tree written has no round number although the upgrade recorded one', async () => {
+    const later = await upgradedInEarlierSession();
+    const reread = (await later.loadGame('p1', 's1')) as GameStateTree;
+    const roundless = { ...reread, 元数据: { ...(reread.元数据 as Record<string, unknown>) } } as GameStateTree;
+    delete (roundless.元数据 as Record<string, unknown>).回合序号;
+    await later.saveGame('p1', 's1', roundless);
+    expect(memStore.has(BACKUP)).toBe(true);
+  });
+
+  it('decides on the tree as it was handed over: a marker taken out of it while the write runs changes nothing', async () => {
+    const later = await upgradedInEarlierSession();
+    const reread = (await later.loadGame('p1', 's1')) as GameStateTree;
+    const saving = later.saveGame('p1', 's1', withRound(reread, 5));
+    delete extensionOf(reread).saveFormat;
+    await saving;
+    expect(memStore.has(BACKUP)).toBe(false);
+  });
+
   it('drops nothing on the strength of a written tree that is not in the new format', async () => {
     const later = await upgradedInEarlierSession();
     await later.loadGame('p1', 's1');

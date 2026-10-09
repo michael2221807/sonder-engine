@@ -56,10 +56,17 @@ export function formatBackupKey(profileId: string, slotId: string): string {
   return `${saveKey(profileId, slotId)}:pre-format-${SAVE_FORMAT_VERSION}`;
 }
 
+/** The round of the first upgrade a tree's format marker records (null: none); undefined when it is not in the format. */
+function migratedAtRoundOf(tree: unknown): number | null | undefined {
+  const marker = readPath(tree, SAVE_FORMAT_PATHS.saveFormat);
+  if (!isPlainRecord(marker) || marker.version !== SAVE_FORMAT_VERSION) return undefined;
+  const round = marker.migratedAtRound;
+  return typeof round === 'number' && Number.isFinite(round) ? round : null;
+}
+
 /** Whether a stored tree is in the current save format (it carries the marker an upgrade leaves). */
 function isCurrentFormat(tree: unknown): boolean {
-  const marker = readPath(tree, SAVE_FORMAT_PATHS.saveFormat);
-  return isPlainRecord(marker) && marker.version === SAVE_FORMAT_VERSION;
+  return migratedAtRoundOf(tree) !== undefined;
 }
 
 export class SaveManager {
@@ -82,6 +89,13 @@ export class SaveManager {
   private readonly formatSeen = new Map<string, 'upgraded' | 'read-back'>();
   private readonly formatBackupSettled = new Set<string>();
   private readonly formatFailureReported = new Set<string>();
+
+  /**
+   * The writes of a slot that wait, in the order they were asked for. The first write of an upgraded slot waits while
+   * the old record is copied aside; a save or delete of the slot asked for meanwhile goes after it, so a later write
+   * never lands under an earlier one (the order idb-adapter keeps for writes waiting on the connection).
+   */
+  private readonly slotQueues = new Map<string, Promise<void>>();
 
   constructor(private profileManager: ProfileManager) {}
 
@@ -119,21 +133,17 @@ export class SaveManager {
     // No copy here: the adapter writes the tree as it is at this call (the browser copies it into the database),
     // so a caller may hand over the live tree (P1 存档写入提速, docs/design/plot-vector-rebuild-plan.md §13.1).
     let written = stateTree;
-    if (this.formatUpgradedUnsaved.has(key)) {
-      // The first write of a tree upgraded in memory replaces the old-format record, which is copied aside first.
-      // That copy waits on the database, so what is written is frozen now, as the caller handed it over.
-      written = cloneDeep(stateTree);
-      await this.keepOldFormatRecord(profileId, slotId);
-    }
-
-    // A round save rechecks inside the write that it still belongs to the active slot (switching saves mid-round).
-    if (commit) {
-      await idbAdapter.setGuarded(key, written, commit.guard);
-      commit.committed();
-    } else {
-      await idbAdapter.set(key, written);
-    }
-    await this.dropOldFormatRecordOnceProved(profileId, slotId, written, roundNumber);
+    // The first write of a tree upgraded in memory replaces the old-format record, which is copied aside first; a save
+    // asked for while that runs goes after it. Either waits on the database, so what it writes is frozen now, as the
+    // caller handed it over.
+    const first = this.formatUpgradedUnsaved.delete(key);
+    if (first || this.slotQueues.has(key)) written = cloneDeep(written);
+    const upgradedAt = migratedAtRoundOf(written);
+    await this.inSlotOrder(key, first, async () => {
+      if (first) await this.keepOldFormatRecord(profileId, slotId);
+      await this.writeRecord(key, written, commit);
+    });
+    await this.dropOldFormatRecordOnceProved(profileId, slotId, upgradedAt, roundNumber);
 
     // 联动更新 ProfileManager 中的存档元数据
     // §5.2：每次存档都把 slotMeta.packVersion 戳为当前 pack 版本，保证下次 loadGame
@@ -296,13 +306,36 @@ export class SaveManager {
   }
 
   /**
+   * Run a write of the slot now, or after the slot's waiting writes when there are any. `opensQueue`: this write itself
+   * waits (it copies first), so the writes asked for meanwhile go after it.
+   */
+  private inSlotOrder(key: string, opensQueue: boolean, write: () => Promise<void>): Promise<void> {
+    const ahead = this.slotQueues.get(key);
+    if (ahead === undefined && !opensQueue) return write();
+    const done = ahead === undefined ? write() : ahead.then(write);
+    const settled = done.then(() => undefined, () => undefined);
+    this.slotQueues.set(key, settled);
+    void settled.then(() => { if (this.slotQueues.get(key) === settled) this.slotQueues.delete(key); });
+    return done;
+  }
+
+  /** One write of the save record; a round save rechecks inside the write that it still belongs to the active slot. */
+  private async writeRecord(key: string, tree: GameStateTree, commit?: { guard: () => void; committed: () => void }): Promise<void> {
+    if (commit) {
+      await idbAdapter.setGuarded(key, tree, commit.guard);
+      commit.committed();
+    } else {
+      await idbAdapter.set(key, tree);
+    }
+  }
+
+  /**
    * Before the first write of an upgraded tree: copy the old-format record still in IndexedDB aside. A copy that fails
    * (storage full, a read error) never stops the save itself — the new tree is smaller than the old record — and is not
    * tried again.
    */
   private async keepOldFormatRecord(profileId: string, slotId: string): Promise<void> {
     const key = saveKey(profileId, slotId);
-    this.formatUpgradedUnsaved.delete(key);
     try {
       const old = await idbAdapter.get<GameStateTree>(key);
       if (old && !isCurrentFormat(old)) await idbAdapter.set(formatBackupKey(profileId, slotId), old);
@@ -313,20 +346,18 @@ export class SaveManager {
 
   /**
    * After a write: drop the copy of the old-format record once the new format has proved itself — a later session read
-   * the slot back already in the new format, and a round has been played past the upgrade (or the save has no round).
+   * the slot back already in the new format, and the tree written (`upgradedAt`, `round`: read from it at the call) is
+   * in the new format with a round played past the upgrade. A save upgraded without a round number needs no round.
    */
   private async dropOldFormatRecordOnceProved(
     profileId: string,
     slotId: string,
-    tree: GameStateTree,
+    upgradedAt: number | null | undefined,
     round: number | null,
   ): Promise<void> {
     const key = saveKey(profileId, slotId);
     if (this.formatBackupSettled.has(key) || this.formatSeen.get(key) !== 'read-back') return;
-    const marker = readPath(tree, SAVE_FORMAT_PATHS.saveFormat);
-    if (!isPlainRecord(marker) || marker.version !== SAVE_FORMAT_VERSION) return;
-    const upgradedAt = typeof marker.migratedAtRound === 'number' ? marker.migratedAtRound : null;
-    if (upgradedAt !== null && round !== null && round <= upgradedAt) return;
+    if (upgradedAt === undefined || (upgradedAt !== null && (round === null || round <= upgradedAt))) return;
     try {
       await idbAdapter.delete(formatBackupKey(profileId, slotId));
       this.formatBackupSettled.add(key);
@@ -339,10 +370,13 @@ export class SaveManager {
   async deleteGame(profileId: string, slotId: string): Promise<void> {
     // A board arrangement still waiting for this profile must not bring the save back (§13.1).
     eventBus.emit('engine:save-replaced', { profileId } satisfies SaveReplacedEvent);
-    await idbAdapter.delete(saveKey(profileId, slotId));
-    // The old-format copy goes with its save (it is never read back by the game).
-    await idbAdapter.delete(formatBackupKey(profileId, slotId));
     const key = saveKey(profileId, slotId);
+    // After a write of the slot still waiting (the first write of an upgraded save): it must not bring the save back.
+    await this.inSlotOrder(key, false, async () => {
+      await idbAdapter.delete(key);
+      // The old-format copy goes with its save (it is never read back by the game).
+      await idbAdapter.delete(formatBackupKey(profileId, slotId));
+    });
     this.formatUpgradedUnsaved.delete(key);
     this.formatSeen.delete(key);
     this.formatBackupSettled.delete(key);

@@ -34,7 +34,7 @@ import { deriveProfileSaveStamp } from '../sync/save-freshness';
 import { ENGINE_VERSION } from '../core/engine-version';
 import { serializeBundleJson } from '../core/codec';
 import { collectAssetIdsFromTree } from '../image/asset-refs';
-import { saveKey } from './save-manager';
+import { formatBackupKey, saveKey } from './save-manager';
 import type { BuiltinPromptExportData } from '../prompt/world-book';
 import type { WorldBookStorage } from '../prompt/world-book-storage';
 import {
@@ -159,6 +159,8 @@ interface ProfileSnapshot {
   /** null = 导入前该档案不存在（回滚 = 删除新建的一切） */
   profileMeta: ProfileMeta | null;
   saves: Record<string, unknown>;
+  /** The old-format copies kept since a save format upgrade (存档瘦身 P1 §2.1), by slot: rolled back with the saves. */
+  formatBackups: Record<string, unknown>;
   vectors: Record<string, unknown>;
   worldBooks: import('../prompt/world-book').WorldBook[];
   activeProfile: { profileId: string; slotId: string } | null;
@@ -761,6 +763,7 @@ export class BackupService {
     const root = this.profileManager.getRoot();
     const meta = root.profiles[profileId];
     const saves: Record<string, unknown> = {};
+    const formatBackups: Record<string, unknown> = {};
     const vectors: Record<string, unknown> = {};
     if (meta) {
       for (const slotId of Object.keys(meta.slots)) {
@@ -768,6 +771,10 @@ export class BackupService {
         // 惰性迁移回写（快照本身不能改变被快照的数据）。
         const saveData = await idbAdapter.get(saveKey(profileId, slotId));
         if (saveData !== undefined) saves[slotId] = structuredClone(saveData);
+        // The rollback deletes the slot with SaveManager.deleteGame, which takes this copy too. A read gives a fresh
+        // copy that nothing else holds: no clone needed (it can be as large as the old save).
+        const formatBackup = await idbAdapter.get(formatBackupKey(profileId, slotId));
+        if (formatBackup !== undefined) formatBackups[slotId] = formatBackup;
         const vectorData = await this.vectorStore.load(profileId, slotId);
         if (hasVectorContent(vectorData)) vectors[slotId] = structuredClone(vectorData);
       }
@@ -781,6 +788,7 @@ export class BackupService {
     return {
       profileMeta: meta ? structuredClone(meta) : null,
       saves,
+      formatBackups,
       vectors,
       worldBooks,
       activeProfile: root.activeProfile ? { ...root.activeProfile } : null,
@@ -815,6 +823,9 @@ export class BackupService {
     await this.profileManager.createProfile(snapshot.profileMeta);
     for (const [slotId, data] of Object.entries(snapshot.saves)) {
       await idbAdapter.set(saveKey(profileId, slotId), structuredClone(data));
+    }
+    for (const [slotId, data] of Object.entries(snapshot.formatBackups)) {
+      await idbAdapter.set(formatBackupKey(profileId, slotId), data);
     }
     for (const [slotId, data] of Object.entries(snapshot.vectors)) {
       await this.vectorStore.save(profileId, slotId, structuredClone(data) as VectorSaveData);

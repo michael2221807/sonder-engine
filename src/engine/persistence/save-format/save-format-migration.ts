@@ -51,11 +51,6 @@ export interface SaveFormatUpgrade {
   snapshotToPatch: boolean;
 }
 
-/** Whether a tree still holds an old whole snapshot (the upgrade's slow step: it is diffed against the tree). */
-export function hasLegacySnapshot(tree: GameStateTree, paths: SaveFormatPaths): boolean {
-  return isPlainRecord(readPath(tree, paths.preRoundSnapshot));
-}
-
 /** The tree in save format 2, in memory (see the module comment). */
 export function upgradeSaveFormat(raw: GameStateTree, paths: SaveFormatPaths): SaveFormatUpgrade {
   const legacy = readPath(raw, paths.preRoundSnapshot);

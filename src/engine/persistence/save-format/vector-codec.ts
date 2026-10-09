@@ -16,6 +16,7 @@
  * A Float32Array that is a view into a larger buffer comes back as a copy of its own: structured clone would store the
  * whole buffer with it.
  */
+import { hasOwn } from './plain-data';
 
 /** A vector as the local vector store holds it: Float32Array from this version on, a number list from older saves. */
 export type StoredVector = Float32Array | number[];
@@ -99,7 +100,7 @@ function decodeIndexObject(value: Record<string, unknown>): Float32Array | undef
   const out = new Float32Array(keys.length);
   for (let i = 0; i < keys.length; i++) {
     const x = value[String(i)];
-    if (typeof x !== 'number' || !Object.prototype.hasOwnProperty.call(value, String(i))) return undefined;
+    if (typeof x !== 'number' || !hasOwn(value, String(i))) return undefined;
     out[i] = x;
   }
   return out;

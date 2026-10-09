@@ -15,7 +15,7 @@
  * comes back as the same object or list, so a caller can tell "nothing changed" by identity.
  */
 import { isEqual } from 'lodash-es';
-import { isPlainRecord } from './plain-data';
+import { hasOwn, isPlainRecord } from './plain-data';
 
 /** A push or pull as stored on a narrative entry once compacted. */
 export interface CompactListChange {
@@ -78,7 +78,7 @@ export function compactHistoryDeltas(history: readonly unknown[]): readonly unkn
 export function isCompactListChange(record: unknown): record is CompactListChange {
   return isPlainRecord(record)
     && (record.action === 'push' || record.action === 'pull')
-    && Object.prototype.hasOwnProperty.call(record, 'element')
+    && hasOwn(record, 'element')
     && record.oldValue === undefined && record.newValue === undefined;
 }
 

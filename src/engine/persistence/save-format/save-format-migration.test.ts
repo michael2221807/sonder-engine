@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { cloneDeep } from 'lodash-es';
 import { StateManager } from '../../core/state-manager';
-import { hasLegacySnapshot, SAVE_FORMAT_VERSION, upgradeSaveFormat } from './save-format-migration';
+import { SAVE_FORMAT_VERSION, upgradeSaveFormat } from './save-format-migration';
 import { restoreRollbackSnapshot } from './rollback-patch';
 import { traceTrimCut, trimHistoryTraces } from './engram-read-trim';
 import { compactHistoryDeltas, isCompactListChange } from './delta-compaction';
@@ -58,14 +58,13 @@ function expectedSnapshot(save: GameStateTree, marker: unknown): GameStateTree {
 describe('save format upgrade (version 2)', () => {
   it('turns the old snapshot into a rollback record that rebuilds it, and trims and compacts both histories', () => {
     const save = legacySave(8);
-    expect(hasLegacySnapshot(save, PATHS)).toBe(true);
+    expect(readPath(save, PATHS.preRoundSnapshot)).toBeDefined();
     const upgrade = upgradeSaveFormat(save, PATHS);
     expect(upgrade).toMatchObject({ changed: true, snapshotToPatch: true, recordsCompacted: true, tracesTrimmed: 2 });
     const tree = upgrade.tree;
     const marker = { version: SAVE_FORMAT_VERSION, migratedAtRound: 8 };
     expect(readPath(tree, PATHS.saveFormat)).toEqual(marker);
     expect(readPath(tree, PATHS.preRoundSnapshot)).toBeUndefined();
-    expect(hasLegacySnapshot(tree, PATHS)).toBe(false);
 
     const history = readPath(tree, PATHS.narrativeHistory) as Array<Record<string, unknown>>;
     expect(history).toHaveLength(16);
@@ -128,7 +127,6 @@ describe('save format upgrade (version 2)', () => {
 
   it('leaves alone an old snapshot path that does not hold a snapshot', () => {
     const tree = { 元数据: { 上次对话前快照: '坏掉', 回合序号: 2 } };
-    expect(hasLegacySnapshot(tree, PATHS)).toBe(false);
     expect(upgradeSaveFormat(tree, PATHS).tree).toBe(tree);
   });
 
