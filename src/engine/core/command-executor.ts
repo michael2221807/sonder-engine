@@ -15,6 +15,8 @@
  *    未声明时 set 的值夹至 [0, MAX_NUMERIC_VALUE]，add 的增量可为负（受伤、花钱），结果不超过上限，
  *    非负值减少时最低到 0，已经为负的值不会被拉回 0
  * 4. 数组容量限制 — push 时若已达 MAX_ARRAY_CAPACITY，先 pull 最旧元素
+ * 5. 列表守卫 — set 把 state-schema 声明为列表的字段写成单个值时：一条记录（非空对象）追加进记录列表；
+ *    文字、数字、缺值、往文字列表写记录都拒绝，原列表不动；null / 空对象照旧（等于清空）（E1，2026-10-08）
  *
  * §11.4 路径根白名单（归位 / 拒绝模式，2026-09-04 起）：
  * 构造时可传入 pathRootWhitelist —— Game Pack state-schema 的顶层 properties 列表。
@@ -29,6 +31,7 @@
 import type { Command, CommandResult, BatchCommandResult, ChangeLog, StateChange } from '../types';
 import type { StateManager } from './state-manager';
 import { eventBus } from './event-bus';
+import { listFromMalformed, isNonEmptyRecord, listHoldsRecords } from './list-repair';
 
 /**
  * Optional guard for push operations. Injected at construction time so the
@@ -79,6 +82,8 @@ interface SchemaNodeLike {
   maximum?: number;
   properties?: Record<string, SchemaNodeLike>;
   items?: SchemaNodeLike;
+  oneOf?: SchemaNodeLike[];
+  anyOf?: SchemaNodeLike[];
 }
 
 /**
@@ -117,13 +122,18 @@ export function schemaDeclaresArray(schema: unknown, path: string): boolean {
 }
 
 /**
- * The list malformed data in a declared list field should have been: text becomes its first entry (blank text, no
- * entry), an empty object an empty list. Anything else is not repaired (undefined): it may be real data.
+ * The types the pack's state-schema allows for the items of the list a state path points at: `items.type`, or the
+ * types of its `oneOf` / `anyOf` alternatives (an NPC's memory holds text or `{内容, 时间}`). Undefined when none is
+ * declared.
  */
-function listFromMalformed(value: unknown): unknown[] | undefined {
-  if (typeof value === 'string') return value.trim() ? [value] : [];
-  if (value !== null && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) return [];
-  return undefined;
+export function schemaArrayItemTypes(schema: unknown, path: string): string[] | undefined {
+  const node = schemaNodeAt(schema, path);
+  if (node?.type !== 'array' || !node.items) return undefined;
+  const { items } = node;
+  const types = [items, ...(items.oneOf ?? []), ...(items.anyOf ?? [])]
+    .map((alternative) => alternative.type)
+    .filter((type): type is string => typeof type === 'string');
+  return types.length > 0 ? types : undefined;
 }
 
 /** push 操作下，单个数组字段的最大容量（超出时自动淘汰最旧元素） */
@@ -160,10 +170,18 @@ export class CommandExecutor {
     private pushDedupGuard?: PushDedupGuard,
     /** Declared numeric ranges from the pack schema (see schemaNumberBounds); undefined keeps the defaults. */
     private numericBounds?: (path: string) => NumericBounds | undefined,
-    /** Whether the pack schema declares a path a list (see schemaDeclaresArray); lets a push repair malformed data. */
+    /**
+     * Whether the pack schema declares a path a list (see schemaDeclaresArray): lets a push repair malformed data, and
+     * keeps a set from replacing the list with one value (the list guard).
+     */
     private declaresArray?: (path: string) => boolean,
     /** Whether the pack schema declares a path at all (see schemaDeclaresPath); undefined when there is no schema. */
     private declares?: (path: string) => boolean,
+    /**
+     * The item types the pack schema allows for a list (see schemaArrayItemTypes): the list guard appends a record
+     * only to a list of records.
+     */
+    private arrayItemTypes?: (path: string) => string[] | undefined,
   ) {}
 
   /** Whether the executor was given the pack schema's path lookup. */
@@ -197,6 +215,12 @@ export class CommandExecutor {
       switch (cmd.action) {
         case 'set': {
           const sanitized = sanitizeValue(cmd.value);
+          // ── 步骤 5：列表守卫 — a set must not replace a declared list with one value (E1, 2026-10-08) ──
+          if (!Array.isArray(sanitized) && this.declaresArray?.(cmd.key) === true) {
+            const guarded = this.guardListSet(cmd, command, sanitized);
+            if (guarded && 'refused' in guarded) return guarded.refused;
+            if (guarded) { change = guarded.change; break; }
+          }
           const bounds = typeof sanitized === 'number' ? this.numericBounds?.(cmd.key) : undefined;
           const finalVal = typeof sanitized === 'number'
             ? clampNumber(sanitized, bounds?.min ?? 0, bounds?.max)
@@ -227,42 +251,9 @@ export class CommandExecutor {
           break;
 
         case 'push': {
-          // ── 步骤 4：数组容量限制 ──
-          let arr = this.stateManager.get<unknown>(cmd.key);
-
-          // A push onto a value that is there but is not a list would replace it with a one-item list (see
-          // StateManager.push). A model's `push 记忆 …` replaced the whole memory object that way, wiping every tier
-          // (paid check, 2026-10-04): refuse it and leave the value as it is. Unless the pack declares the field a
-          // list and what is there is text or an empty object — malformed data, e.g. an NPC's memory written as one
-          // string: it becomes the list it should have been (the text kept) and the push goes on (code review M-A).
-          if (arr !== undefined && arr !== null && !Array.isArray(arr)) {
-            const repaired = this.declaresArray?.(cmd.key) ? listFromMalformed(arr) : undefined;
-            if (!repaired) return { success: false, command, error: `push target is not a list: ${cmd.key}` };
-            this.stateManager.set(cmd.key, repaired, 'command');
-            arr = repaired;
-          }
-
-          // ── 步骤 4b：push 去重/融合守卫 ──
-          if (this.pushDedupGuard && Array.isArray(arr)) {
-            const verdict = this.pushDedupGuard(cmd.key, cmd.value, arr);
-            if (verdict === false) {
-              // 抑制：视为 no-op 成功
-              change = undefined;
-              break;
-            }
-            if (verdict !== true) {
-              // 守卫已执行替代写入（如同名 NPC 融合）——push 本身被抑制，
-              // 但替代写入的 StateChange 记入命令结果，保证回合 changeLog /
-              // Δ 审计能看到真实发生的变更
-              change = verdict;
-              break;
-            }
-          }
-
-          if (Array.isArray(arr) && arr.length >= MAX_ARRAY_CAPACITY) {
-            this.stateManager.pull(cmd.key, arr[0], 'command');
-          }
-          change = this.stateManager.push(cmd.key, cmd.value, 'command');
+          const pushed = this.pushValue(cmd, command, cmd.value);
+          if ('refused' in pushed) return pushed.refused;
+          change = pushed.change;
           break;
         }
 
@@ -282,6 +273,90 @@ export class CommandExecutor {
     } catch (err) {
       return { success: false, command: cmd, error: String(err) };
     }
+  }
+
+  /**
+   * The list guard (E1, 2026-10-08): a set onto a field the pack declares a list, with a value that is not a list. A
+   * model's `set 社交.事件.事件记录 {…}` put one event where the 73-event log was; the round-end type repair then
+   * emptied the field.
+   * - One record (a non-empty object) onto a list of records is appended through the push path and its guards (the
+   *   change is that append, or the guard's own write).
+   * - null and an empty object clear the list as before: undefined is returned and the set goes on.
+   * - Anything else — text, a number, a missing value, a record onto a list of text — is refused and the list stays
+   *   as it was.
+   */
+  private guardListSet(
+    cmd: Command,
+    original: Command,
+    value: unknown,
+  ): { change: StateChange | undefined } | { refused: CommandResult } | undefined {
+    if (value === null || (typeof value === 'object' && !isNonEmptyRecord(value))) return undefined;
+    if (isNonEmptyRecord(value) && this.holdsRecords(cmd.key)) {
+      const pushed = this.pushValue(cmd, original, value, 'set');
+      if ('change' in pushed && pushed.change?.action === 'push') {
+        console.warn(`[CommandExecutor] set of one record onto the list "${cmd.key}" appended instead of replacing the list`);
+      }
+      return pushed;
+    }
+    return { refused: { success: false, command: original, error: `set would replace a list with a single value: ${cmd.key}` } };
+  }
+
+  /**
+   * Whether the list at `path` holds records (listHoldsRecords): by the item types the schema allows, else by what it
+   * holds — malformed text read as the list it would become, anything else that is not a list as empty.
+   */
+  private holdsRecords(path: string): boolean {
+    const current = this.stateManager.get<unknown>(path);
+    const entries = Array.isArray(current) ? current : (listFromMalformed(current) ?? []);
+    return listHoldsRecords(this.arrayItemTypes?.(path), entries);
+  }
+
+  /**
+   * Append `value` to the list at `cmd.key` — the push action, and a set the list guard turned into an append (`via`
+   * names which, for the refusal message). Returns the change (undefined when the dedup guard suppressed the append)
+   * or the refusal; a refusal carries the command as the model wrote it.
+   */
+  private pushValue(
+    cmd: Command,
+    original: Command,
+    value: unknown,
+    via: 'push' | 'set' = 'push',
+  ): { change: StateChange | undefined } | { refused: CommandResult } {
+    // ── 步骤 4：数组容量限制 ──
+    let arr = this.stateManager.get<unknown>(cmd.key);
+
+    // A push onto a value that is there but is not a list would replace it with a one-item list (see
+    // StateManager.push). A model's `push 记忆 …` replaced the whole memory object that way, wiping every tier
+    // (paid check, 2026-10-04): refuse it and leave the value as it is. Unless the pack declares the field a
+    // list and what is there is text or an empty object — malformed data, e.g. an NPC's memory written as one
+    // string: it becomes the list it should have been (the text kept) and the push goes on (code review M-A).
+    if (arr !== undefined && arr !== null && !Array.isArray(arr)) {
+      const repaired = this.declaresArray?.(cmd.key) ? listFromMalformed(arr) : undefined;
+      if (!repaired) {
+        const error = via === 'set'
+          ? `set would append a record to a value that is not a list: ${cmd.key}`
+          : `push target is not a list: ${cmd.key}`;
+        return { refused: { success: false, command: original, error } };
+      }
+      this.stateManager.set(cmd.key, repaired, 'command');
+      arr = repaired;
+    }
+
+    // ── 步骤 4b：push 去重/融合守卫 ──
+    if (this.pushDedupGuard && Array.isArray(arr)) {
+      const verdict = this.pushDedupGuard(cmd.key, value, arr);
+      // 抑制：视为 no-op 成功
+      if (verdict === false) return { change: undefined };
+      // 守卫已执行替代写入（如同名 NPC 融合）——push 本身被抑制，
+      // 但替代写入的 StateChange 记入命令结果，保证回合 changeLog /
+      // Δ 审计能看到真实发生的变更
+      if (verdict !== true) return { change: verdict };
+    }
+
+    if (Array.isArray(arr) && arr.length >= MAX_ARRAY_CAPACITY) {
+      this.stateManager.pull(cmd.key, arr[0], 'command');
+    }
+    return { change: this.stateManager.push(cmd.key, value, 'command') };
   }
 
   /**

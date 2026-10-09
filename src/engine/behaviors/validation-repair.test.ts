@@ -104,7 +104,9 @@ describe('ValidationRepairModule', () => {
       expect(sm.get('已死亡')).toBe(true);
     });
 
-    it('replaces non-array with default when array expected', () => {
+    // E1 (2026-10-08): this used to reset the field to the default `[]`, which wiped a 73-event log the round a model
+    // set it to one event. A list field is never emptied to repair it: the value it holds is kept as its one entry.
+    it('keeps a non-array value as the list\'s one entry instead of emptying the list', () => {
       const schema = {
         type: 'object',
         properties: { 效果: { type: 'array', default: [] } },
@@ -112,7 +114,27 @@ describe('ValidationRepairModule', () => {
       const mod = createModule(schema);
       const { sm } = createMockStateManager({ 效果: 'not an array' });
       mod.onRoundEnd(sm as never);
-      expect(sm.get('效果')).toEqual([]);
+      expect(sm.get('效果')).toEqual(['not an array']);
+    });
+
+    it('reads a list field holding one value the way the push guard reads malformed data', () => {
+      const schema = {
+        type: 'object',
+        properties: {
+          记录: { type: 'array', default: [] },
+          空对象: { type: 'array', default: [] },
+          空文字: { type: 'array', default: [] },
+          数字: { type: 'array', default: [] },
+        },
+      };
+      const mod = createModule(schema);
+      const event = { 事件名称: '雨夜', 事件描述: '一封信' };
+      const { sm } = createMockStateManager({ 记录: event, 空对象: {}, 空文字: '  ', 数字: 7 });
+      mod.onRoundEnd(sm as never);
+      expect(sm.get('记录')).toEqual([event]);
+      expect(sm.get('空对象')).toEqual([]);
+      expect(sm.get('空文字')).toEqual([]);
+      expect(sm.get('数字')).toEqual([7]);
     });
 
     it('keeps valid array unchanged', () => {

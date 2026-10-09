@@ -1,6 +1,8 @@
 {
   "engine": {
     "toast": {
+      "listsRecovered": "已从变更记录找回 {count} 条被覆盖的列表数据：{fields}",
+      "listRecoverySkipped": "未找回 {fields}：找回后的条数与短期记忆对不上，已保持原样",
       "noRollbackSnapshot": "没有可回退的快照（每回合只能回退一次）",
       "privacyFieldsRepaired": "扩展字段已自动补齐",
       "privacyFieldsIncomplete": "仍有 {count} 项扩展字段未补齐（已达重试上限）",

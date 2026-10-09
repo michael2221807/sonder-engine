@@ -3,7 +3,7 @@ import { NpcDedupModule } from '../engine/behaviors/npc-dedup';
 import { NpcDemotionModule } from '../engine/behaviors/npc-demotion';
 import { NpcMainRoundUpdateModule } from '../engine/behaviors/npc-main-round-update';
 import { TimeService, gameCalendar } from '../engine/behaviors/time-service';
-import { CommandExecutor, composePushGuards, schemaDeclaresArray, schemaDeclaresPath, schemaNumberBounds } from '../engine/core/command-executor';
+import { CommandExecutor, composePushGuards, schemaArrayItemTypes, schemaDeclaresArray, schemaDeclaresPath, schemaNumberBounds } from '../engine/core/command-executor';
 import { StateManager } from '../engine/core/state-manager';
 import { DEFAULT_ENGINE_PATHS } from '../engine/pipeline/types';
 import { buildMemoryPushDedupGuard } from '../engine/social/memory-dedup';
@@ -37,11 +37,13 @@ export function createStateKernel(deps: {
       DEFAULT_ENGINE_PATHS.npcFieldNames,
     ),
   );
-  // Numeric ranges the pack schema declares (e.g. an affinity of -100~100) bound set/add writes.
+  // Numeric ranges the pack schema declares (e.g. an affinity of -100~100) bound set/add writes; declared lists and
+  // their item types keep a set from replacing a list with one value (E1).
   const commandExecutor = new CommandExecutor(stateManager, schemaRoots, pushDedupGuard,
     pack ? (path => schemaNumberBounds(pack.stateSchema, path)) : undefined,
     pack ? (path => schemaDeclaresArray(pack.stateSchema, path)) : undefined,
-    pack ? (path => schemaDeclaresPath(pack.stateSchema, path)) : undefined);
+    pack ? (path => schemaDeclaresPath(pack.stateSchema, path)) : undefined,
+    pack ? (path => schemaArrayItemTypes(pack.stateSchema, path)) : undefined);
 
   const behaviorRunner = new BehaviorRunner();
 

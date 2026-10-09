@@ -1,6 +1,8 @@
 {
   "engine": {
     "toast": {
+      "listsRecovered": "Recovered {count} overwritten list item(s) from the change records: {fields}",
+      "listRecoverySkipped": "Did not recover {fields}: the result would not pair one to one with the short-term memory, so it was left as it is",
       "noRollbackSnapshot": "No rollback snapshot available (only one rollback per round)",
       "privacyFieldsRepaired": "Extended fields auto-populated",
       "privacyFieldsIncomplete": "{count} extended field(s) still incomplete (retry limit reached)",

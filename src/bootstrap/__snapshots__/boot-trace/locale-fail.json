@@ -169,6 +169,11 @@
     [
       "call",
       "BehaviorRunner.register",
+      "#ListOverwriteRecoveryModule#1 id=list-overwrite-recovery"
+    ],
+    [
+      "call",
+      "BehaviorRunner.register",
       "#ValidationRepairModule#1 id=validation-repair"
     ],
     [
@@ -563,6 +568,7 @@
       "npc-behavior",
       "content-filter",
       "cross-ref-sync",
+      "list-overwrite-recovery",
       "validation-repair"
     ]
   ]

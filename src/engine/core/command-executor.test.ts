@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createMockStateManager } from '@/engine/__test-utils__';
 
 // Mock eventBus before importing CommandExecutor
@@ -492,5 +492,191 @@ describe('CommandExecutor · numeric ranges declared by the pack schema', () => 
     new CommandExecutor(sm, ['社交']).execute({ action: 'push', key: '社交.关系', value: { 名称: '仇人', 好感度: -150 } });
     new ValidationRepairModule(schema as Record<string, unknown>).onRoundEnd(sm);
     expect(sm.get('社交.关系[名称=仇人].好感度')).toBe(-100);
+  });
+});
+
+// E1 (2026-10-08): a model's `set 社交.事件.事件记录 {…}` put one event where the 73-event log was, and the round-end
+// type repair then emptied the field. A set must not replace a declared list with a single value.
+describe('CommandExecutor · a set never replaces a declared list with one value (E1)', () => {
+  const event = (n: number) => ({ 事件名称: `事件${n}`, 事件描述: `描述${n}` });
+  const schema = { type: 'object', properties: {
+    社交: { type: 'object', properties: {
+      事件: { type: 'object', properties: { 事件记录: { type: 'array', items: { type: 'object' } } } },
+      关系: { type: 'array', items: { type: 'object', properties: {
+        名称: { type: 'string' },
+        记忆: { type: 'array', items: { oneOf: [{ type: 'string' }, { type: 'object' }] } },
+        标签: { type: 'array' },
+      } } },
+      标签: { type: 'array', items: { type: 'string' } },
+      空标签: { type: 'array', items: { type: 'string' } },
+    } },
+    角色: { type: 'object', properties: { 名字: { type: 'string' } } },
+  } };
+  const npcs = () => [
+    { 名称: '林晚照', 记忆: ['第一句'], 标签: ['温柔'] },
+    { 名称: '程彦', 记忆: [], 标签: [] },
+    { 名称: '白诗雅', 标签: [{ 名称: '旧标签' }] },
+    { 名称: '沈墨琛', 标签: '旧的一句' },
+    { 名称: '苏棠', 记忆: { 内容: '一条' } },
+  ];
+  let warn: ReturnType<typeof vi.spyOn>;
+  const appendedWarnings = () => warn.mock.calls.filter((c: unknown[]) => String(c[0]).includes('appended')).length;
+
+  beforeEach(() => { warn = vi.spyOn(console, 'warn').mockImplementation(() => {}); });
+  afterEach(() => { warn.mockRestore(); });
+
+  async function setup(options: { guard?: import('@/engine/core/command-executor').PushDedupGuard; schemaless?: boolean } = {}) {
+    const { StateManager } = await import('@/engine/core/state-manager');
+    const { schemaDeclaresArray, schemaArrayItemTypes } = await import('@/engine/core/command-executor');
+    const sm = new StateManager();
+    sm.loadTree({
+      社交: { 事件: { 事件记录: [event(1), event(2)] }, 关系: npcs(), 标签: ['甲'], 空标签: [], 未声明列表: [event(1)] },
+      角色: { 名字: '韩素琴' },
+    });
+    const ex = options.schemaless
+      ? new CommandExecutor(sm, ['社交', '角色'], options.guard)
+      : new CommandExecutor(sm, ['社交', '角色'], options.guard, undefined,
+        (path) => schemaDeclaresArray(schema, path), undefined, (path) => schemaArrayItemTypes(schema, path));
+    return { sm, ex };
+  }
+
+  it('reads the item types a list allows, oneOf / anyOf included, through filtered segments', async () => {
+    const { schemaArrayItemTypes } = await import('@/engine/core/command-executor');
+    const tianming = (await import('../../../public/packs/tianming/schemas/state-schema.json')).default;
+    expect(schemaArrayItemTypes(schema, '社交.事件.事件记录')).toEqual(['object']);
+    expect(schemaArrayItemTypes(schema, '社交.标签')).toEqual(['string']);
+    expect(schemaArrayItemTypes(schema, '社交.关系[名称=林晚照].记忆')).toEqual(['string', 'object']);
+    expect(schemaArrayItemTypes({ type: 'array', items: { anyOf: [{ type: 'number' }, {}] } }, '')).toEqual(['number']);
+    expect(schemaArrayItemTypes({ type: 'array', items: {} }, '')).toBeUndefined();
+    expect(schemaArrayItemTypes({ type: 'array', items: { oneOf: [{}] } }, '')).toBeUndefined();
+    expect(schemaArrayItemTypes(schema, '社交.关系[名称=林晚照].标签')).toBeUndefined();
+    expect(schemaArrayItemTypes(schema, '角色.名字')).toBeUndefined();
+    expect(schemaArrayItemTypes(tianming, '世界.环境')).toEqual(['object']);
+    expect(schemaArrayItemTypes(tianming, '角色.身体.敏感点')).toEqual(['string']);
+    expect(schemaArrayItemTypes(tianming, '社交.关系[名称=林晚照].记忆')).toEqual(['string', 'object']);
+  });
+
+  it('appends one record set onto a declared list of records instead of replacing the list, as a push', async () => {
+    const { sm, ex } = await setup();
+    const result = ex.execute({ action: 'set', key: '社交.事件.事件记录', value: event(3) });
+    expect(result.success).toBe(true);
+    expect(result.change).toMatchObject({ action: 'push', path: '社交.事件.事件记录' });
+    expect(sm.get('社交.事件.事件记录')).toEqual([event(1), event(2), event(3)]);
+    expect(appendedWarnings()).toBe(1);
+  });
+
+  it('refuses text, blank text, a number, a boolean or a missing value set onto a declared list; the list stays', async () => {
+    const { sm, ex } = await setup();
+    const commands = [
+      { action: 'set' as const, key: '社交.事件.事件记录', value: '一段文字' },
+      { action: 'set' as const, key: '社交.事件.事件记录', value: '  ' },
+      { action: 'set' as const, key: '社交.事件.事件记录', value: 5 },
+      { action: 'set' as const, key: '社交.事件.事件记录', value: true },
+      { action: 'set' as const, key: '社交.事件.事件记录', value: undefined },
+      { action: 'set' as const, key: '社交.事件.事件记录' },
+      { action: 'set' as const, key: '社交.关系[名称=林晚照].记忆', value: '新的一句' },
+      { action: 'set' as const, key: '角色.名字', value: '素琴' },
+    ];
+    const { results } = ex.executeBatch(commands);
+    expect(results.map((r) => r.success)).toEqual([false, false, false, false, false, false, false, true]);
+    for (const [i, r] of results.slice(0, 7).entries()) {
+      expect(r.error).toContain('single value');
+      expect(r.command).toBe(commands[i]);
+    }
+    expect(sm.get('社交.事件.事件记录')).toEqual([event(1), event(2)]);
+    expect(sm.get('社交.关系[名称=林晚照].记忆')).toEqual(['第一句']);
+    expect(sm.get('角色.名字')).toBe('素琴');
+    expect(appendedWarnings()).toBe(0);
+  });
+
+  it('appends a record only where the list holds records: by the item types the schema allows, else by what it holds', async () => {
+    const { sm, ex } = await setup();
+    const record = { 内容: '喂粥' };
+    const cases: Array<[string, boolean, unknown]> = [
+      ['社交.标签', false, ['甲']],
+      ['社交.空标签', false, []],
+      ['社交.关系[名称=林晚照].记忆', true, ['第一句', record]],
+      ['社交.关系[名称=程彦].记忆', true, [record]],
+      ['社交.关系[名称=林晚照].标签', false, ['温柔']],
+      ['社交.关系[名称=沈墨琛].标签', false, '旧的一句'],
+      ['社交.关系[名称=程彦].标签', true, [record]],
+      ['社交.关系[名称=白诗雅].标签', true, [{ 名称: '旧标签' }, record]],
+    ];
+    const { results } = ex.executeBatch(cases.map(([key]) => ({ action: 'set', key, value: record })));
+    expect(results.map((r) => r.success)).toEqual(cases.map(([, appended]) => appended));
+    for (const [key, , after] of cases) expect(sm.get(key)).toEqual(after);
+  });
+
+  it('refuses a record onto a declared list holding a value that is not a list and cannot be repaired', async () => {
+    const { sm, ex } = await setup();
+    const result = ex.execute({ action: 'set', key: '社交.关系[名称=苏棠].记忆', value: { 内容: '第二条' } });
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('not a list');
+    expect(sm.get('社交.关系[名称=苏棠].记忆')).toEqual({ 内容: '一条' });
+  });
+
+  it('starts the list with the record when the declared list is not there yet', async () => {
+    const { sm, ex } = await setup();
+    sm.delete('社交.事件.事件记录');
+    expect(ex.execute({ action: 'set', key: '社交.事件.事件记录', value: event(3) }).success).toBe(true);
+    expect(sm.get('社交.事件.事件记录')).toEqual([event(3)]);
+  });
+
+  it('guards a path the executor moved under a known root the same way; a refusal carries the command as written', async () => {
+    const { sm, ex } = await setup();
+    const text = { action: 'set' as const, key: '事件.事件记录', value: '一段文字' };
+    const refused = ex.execute(text);
+    expect(refused.success).toBe(false);
+    expect(refused.command).toBe(text);
+    const appended = ex.execute({ action: 'set', key: '事件.事件记录', value: event(3) });
+    expect(appended).toMatchObject({ success: true, relocatedFrom: '事件.事件记录', command: { key: '社交.事件.事件记录' } });
+    expect(sm.get('社交.事件.事件记录')).toEqual([event(1), event(2), event(3)]);
+  });
+
+  it('sets a list, null or an empty object as before (the last two read as clearing the list)', async () => {
+    const { sm, ex } = await setup();
+    expect(ex.execute({ action: 'set', key: '社交.事件.事件记录', value: [event(9)] }).change?.action).toBe('set');
+    expect(sm.get('社交.事件.事件记录')).toEqual([event(9)]);
+    ex.execute({ action: 'set', key: '社交.事件.事件记录', value: null });
+    expect(sm.get('社交.事件.事件记录')).toBeNull();
+    ex.execute({ action: 'set', key: '社交.事件.事件记录', value: {} });
+    expect(sm.get('社交.事件.事件记录')).toEqual({});
+  });
+
+  it('leaves a set alone when the pack schema is not there or does not declare the field a list', async () => {
+    const schemaless = await setup({ schemaless: true });
+    schemaless.ex.execute({ action: 'set', key: '社交.事件.事件记录', value: event(3) });
+    expect(schemaless.sm.get('社交.事件.事件记录')).toEqual(event(3));
+    schemaless.ex.execute({ action: 'set', key: '社交.标签', value: '乙' });
+    expect(schemaless.sm.get('社交.标签')).toBe('乙');
+    const { sm, ex } = await setup();
+    ex.execute({ action: 'set', key: '社交.未声明列表', value: event(3) });
+    expect(sm.get('社交.未声明列表')).toEqual(event(3));
+    expect(appendedWarnings()).toBe(0);
+  });
+
+  it('runs the appended record through the push guard: suppressed, or replaced by the guard\'s own write', async () => {
+    const suppressed = await setup({ guard: () => false });
+    const r1 = suppressed.ex.execute({ action: 'set', key: '社交.事件.事件记录', value: event(3) });
+    expect(r1.success).toBe(true);
+    expect(r1.change).toBeUndefined();
+    expect(suppressed.sm.get('社交.事件.事件记录')).toEqual([event(1), event(2)]);
+
+    const substitute = { path: '社交.事件.事件记录[0]', action: 'set' as const, oldValue: event(1), newValue: event(3), timestamp: 1 };
+    const replaced = await setup({ guard: () => substitute });
+    expect(replaced.ex.execute({ action: 'set', key: '社交.事件.事件记录', value: event(3) }).change).toBe(substitute);
+    expect(appendedWarnings()).toBe(0);
+  });
+
+  it('drops the oldest entry of a full list before appending, as a push does', async () => {
+    const { MAX_ARRAY_CAPACITY } = await import('@/engine/core/command-executor');
+    const { sm, ex } = await setup();
+    const full = Array.from({ length: MAX_ARRAY_CAPACITY }, (_, i) => event(i));
+    sm.set('社交.事件.事件记录', full);
+    ex.execute({ action: 'set', key: '社交.事件.事件记录', value: event(999) });
+    const list = sm.get<unknown[]>('社交.事件.事件记录') ?? [];
+    expect(list).toHaveLength(MAX_ARRAY_CAPACITY);
+    expect(list[0]).toEqual(event(1));
+    expect(list.at(-1)).toEqual(event(999));
   });
 });

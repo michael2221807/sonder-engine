@@ -3,11 +3,12 @@ import { ComputedFieldsModule } from '../engine/behaviors/computed-fields';
 import { ContentFilterModule } from '../engine/behaviors/content-filter';
 import { CrossRefSyncModule } from '../engine/behaviors/cross-ref-sync';
 import { EffectLifecycleModule } from '../engine/behaviors/effect-lifecycle';
+import { ListOverwriteRecoveryModule } from '../engine/behaviors/list-overwrite-recovery';
 import { NpcBehaviorModule } from '../engine/behaviors/npc-behavior';
 import { ThresholdTriggersModule } from '../engine/behaviors/threshold-triggers';
 import type { gameCalendar } from '../engine/behaviors/time-service';
 import { ValidationRepairModule } from '../engine/behaviors/validation-repair';
-import type { CommandExecutor } from '../engine/core/command-executor';
+import { schemaArrayItemTypes, schemaDeclaresArray, type CommandExecutor } from '../engine/core/command-executor';
 import type { StateManager } from '../engine/core/state-manager';
 import { DEFAULT_ENGINE_PATHS } from '../engine/pipeline/types';
 import type { ComputedFieldConfig, ContentFilterConfig, EffectLifecycleConfig, GamePack, IntegrityRule, NpcBehaviorConfig, ThresholdTriggerConfig } from '../engine/types';
@@ -77,6 +78,19 @@ export function registerPackBehaviors(deps: {
     if (syncConfig?.rules?.length) {
       behaviorRunner.register(new CrossRefSyncModule(syncConfig.rules));
     }
+
+    // ListOverwriteRecovery — onGameLoad 从变更记录找回被 AI 整体 set 成单个值、又被类型修复清空的列表（E1，2026-10-08）
+    // 注册在 ValidationRepair 之前：找回的条目也经过收尾的 schema 校验
+    const stateSchema = pack.stateSchema;
+    behaviorRunner.register(new ListOverwriteRecoveryModule(
+      {
+        narrativeHistory: DEFAULT_ENGINE_PATHS.narrativeHistory,
+        shortTermMemory: DEFAULT_ENGINE_PATHS.shortTermMemory,
+        implicitMidTermMemory: DEFAULT_ENGINE_PATHS.implicitMidTermMemory,
+      },
+      (path) => schemaDeclaresArray(stateSchema, path),
+      (path) => schemaArrayItemTypes(stateSchema, path),
+    ));
 
     // ValidationRepair — 最后注册，在其他模块执行完后做收尾的 schema 校验与字段修复
     // 不依赖 rules/*.json，直接读 pack.stateSchema

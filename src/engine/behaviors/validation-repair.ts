@@ -9,7 +9,7 @@
  * 1. 缺失字段 → 填入 schema 中的默认值
  * 2. 数值越界 → 钳制（clamp）到 min/max 范围；声明了 `x-maximum-field` 的字段不超过同级那个字段的当前值
  *    （如「当前」不超过「上限」——只在这里收尾，回合内命令先后顺序不影响结果）
- * 3. 类型错误 → 尝试类型转换，失败则替换为默认值
+ * 3. 类型错误 → 尝试类型转换，失败则替换为默认值；列表字段永不清空——单个值包成只有一项的列表（E1，2026-10-08）
  *
  * 设计选择：
  * 本模块只做"安全修复"（不改变语义的修正）。
@@ -21,6 +21,7 @@
 import { get as _get, set as _set } from 'lodash-es';
 import type { BehaviorModule } from './types';
 import type { StateManager } from '../core/state-manager';
+import { listFromMalformed } from '../core/list-repair';
 
 /**
  * JSON Schema 子集 — 仅覆盖本模块需要的校验属性
@@ -132,6 +133,7 @@ export class ValidationRepairModule implements BehaviorModule {
    * 转换规则：
    * - string → number: Number() 转换，NaN 时回退默认值
    * - number → string: String() 转换
+   * - 列表：文字 / 空对象按 listFromMalformed 整理，其他单个值包成只有一项的列表，永不清空（E1）
    * - 其他不兼容类型 → 使用默认值
    */
   private coerceType(
@@ -152,7 +154,11 @@ export class ValidationRepairModule implements BehaviorModule {
       case 'boolean':
         return typeof value === 'boolean' ? value : Boolean(value);
       case 'array':
-        return Array.isArray(value) ? value : (defaultValue ?? []);
+        // Never empty a list to repair it (E1, 2026-10-08): this used to reset a list field holding one value to the
+        // default `[]`, which wiped a 73-event log the round a model set it to a single event. Malformed text or an
+        // empty object reads as the push guard reads it (listFromMalformed); any other value is kept as the one entry.
+        if (Array.isArray(value)) return value;
+        return listFromMalformed(value) ?? [value];
       case 'object':
         if (value !== null && typeof value === 'object' && !Array.isArray(value)) return value;
         if (typeof value === 'string' && value && schemaProperties) {
