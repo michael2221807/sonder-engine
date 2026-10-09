@@ -13,17 +13,14 @@
  * The window is counted on the history the round starts from: the round-start trim and the snapshot taken right after
  * it see the same entries trimmed, and a migration applies the window of the old snapshot's history to the tree too.
  */
-import type { ScoredCandidateTrace } from '../../memory/engram/engram-types';
+import type { EngramReadSnapshot, ScoredCandidateTrace } from '../../memory/engram/engram-types';
 import { isPlainRecord } from './plain-data';
 
 /** How many of the latest completed rounds keep their full trace. */
 export const FULL_TRACE_ROUNDS = 5;
 
-/** What a trimmed trace records about the candidates it no longer lists. */
-export interface TrimmedTraceInfo {
-  /** Candidates per outcome before the trim (the injected ones are still listed). */
-  counts: Record<string, number>;
-}
+/** What a trimmed trace records about the candidates it no longer lists: candidates per outcome before the trim. */
+export type TrimmedTraceInfo = NonNullable<EngramReadSnapshot['trimmed']>;
 
 /** The narrative-entry field holding a round's retrieval trace. */
 export const TRACE_FIELD = '_engramRead';

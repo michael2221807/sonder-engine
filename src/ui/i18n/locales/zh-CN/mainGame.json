@@ -173,6 +173,8 @@
   "mainGame.engram.filteredToggle.expand": "展开",
   "mainGame.engram.filteredToggle.collapse": "收起",
   "mainGame.engram.filteredToggle.label": "被淘汰 ({n})",
+  "mainGame.engram.trimmed.label": "被淘汰 {n} 条",
+  "mainGame.engram.trimmed.note": "较早的回合只保留用上的记忆，被淘汰的只记数量",
   "mainGame.engram.legend.vectorSimilarity": "向量相似度",
   "mainGame.engram.legend.keywordHit": "关键词命中",
   "mainGame.engram.legend.timeDecay": "时间衰减",

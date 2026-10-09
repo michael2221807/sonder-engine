@@ -12,8 +12,9 @@
  * - An overwrite is a set the command executor's list guard now refuses or turns into an append: any value but a
  *   list, null or an empty object (those two clear a list on purpose and are left alone), onto a list the schema
  *   declares, whatever it held — also an empty or missing list, or the single value an earlier slip left there, as a
- *   model that repeats the mistake does. A record that changed nothing (no value before or after, e.g. a set on an
- *   entry that does not exist) is ignored.
+ *   model that repeats the mistake does. A record with no value before or after is ignored: a set that changed
+ *   nothing (on an entry that does not exist), or a push or pull stored with only its entry (存档瘦身 D3A) — neither
+ *   overwrites nor replaces a list.
  * - A list value is read as the type repair leaves it — what the list held before the set, and what it holds now:
  *   text or an empty object made a list (listFromMalformed), another single value as its one entry; a missing list
  *   now reads as empty while the field holding it is there. A list that is still not a list after the recovery is
@@ -104,7 +105,8 @@ export class ListOverwriteRecoveryModule implements BehaviorModule {
     const replacements: Replacement[] = [];
     for (let k = records.length - 1; k >= 0; k--) {
       const { entry, index, record } = records[k];
-      if (record.oldValue === undefined && record.newValue === undefined) continue; // changed nothing
+      // No value before or after: a set that changed nothing, or a push / pull stored with only its entry (D3A).
+      if (record.oldValue === undefined && record.newValue === undefined) continue;
       if (!this.isOverwrite(record)) {
         const replacement = replacementBy(record);
         if (replacement) replacements.push(replacement);

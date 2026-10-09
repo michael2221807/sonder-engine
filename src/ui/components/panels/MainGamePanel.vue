@@ -91,6 +91,9 @@ interface DeltaChange {
   action: string;
   oldValue?: unknown;
   newValue?: unknown;
+  /** A push or pull stored with the one entry it added or removed (存档瘦身 D3A). */
+  element?: unknown;
+  index?: number;
 }
 
 /**

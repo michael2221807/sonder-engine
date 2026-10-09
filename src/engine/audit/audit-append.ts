@@ -16,10 +16,15 @@
  *
  * If no assistant entry exists yet (e.g., opening scene first run), we fall
  * back silently — the audit is non-critical and must not break the pipeline.
+ *
+ * 存档瘦身 D3A (2026-10-09): a push or pull is stored with the one entry it added or removed (delta-compaction.ts);
+ * the entry's `_delta` may already hold records of either form. Only that entry's `_delta` is written — the whole
+ * history used to be copied and set back, two more deep copies of it per append.
  */
 import type { StateManager } from '../core/state-manager';
 import type { EnginePathConfig } from '../pipeline/types';
 import type { StateChange } from '../types/state';
+import { compactChangeRecords, DELTA_FIELD } from '../persistence/save-format/delta-compaction';
 
 /**
  * Source tag attached to each audit change. Matches the DeltaViewer UI labels.
@@ -64,15 +69,10 @@ export function appendChangesToLastNarrative(
   }
   if (targetIdx < 0) return;
 
-  const entry = { ...history[targetIdx] };
-  const existing: TaggedChange[] = Array.isArray(entry._delta)
-    ? [...(entry._delta as TaggedChange[])]
+  const existing: unknown[] = Array.isArray(history[targetIdx][DELTA_FIELD])
+    ? (history[targetIdx][DELTA_FIELD] as unknown[])
     : [];
 
   const tagged: TaggedChange[] = changes.map((c) => ({ ...c, source }));
-  entry._delta = [...existing, ...tagged];
-
-  const nextHistory = [...history];
-  nextHistory[targetIdx] = entry;
-  stateManager.set(paths.narrativeHistory, nextHistory, 'system');
+  stateManager.set(`${paths.narrativeHistory}.${targetIdx}.${DELTA_FIELD}`, [...existing, ...compactChangeRecords(tagged)], 'system');
 }

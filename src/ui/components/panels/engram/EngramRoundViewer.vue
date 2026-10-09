@@ -68,6 +68,20 @@ const filteredCandidates = computed(() =>
   (props.read?.candidates ?? []).filter((c) => c.outcome !== 'injected'),
 );
 
+/**
+ * A trace of an earlier round keeps only its injected memories (存档瘦身 D2B): the filtered ones are counts by
+ * outcome. Null for a trace that still lists every candidate.
+ */
+const trimmedFiltered = computed<Array<[string, number]> | null>(() => {
+  const counts = props.read?.trimmed?.counts;
+  if (!counts) return null;
+  return Object.entries(counts).filter(([outcome, n]) => outcome !== 'injected' && n > 0);
+});
+
+const trimmedFilteredTotal = computed(() =>
+  (trimmedFiltered.value ?? []).reduce((total, [, n]) => total + n, 0),
+);
+
 const componentColorMap: Record<ScoredComponent['color'], string> = {
   blue: 'var(--color-viz-blue)',
   green: 'var(--color-viz-green)',
@@ -90,7 +104,7 @@ function sourceLabel(s: ScoredCandidateTrace['source']): string {
   return map[s] ?? s;
 }
 
-function outcomeLabel(o: ScoredCandidateTrace['outcome']): string {
+function outcomeLabel(o: ScoredCandidateTrace['outcome'] | string): string {
   const map: Record<string, string> = {
     'injected': t('mainGame.engram.outcome.injected'),
     'filtered-by-topK': t('mainGame.engram.outcome.filteredByTopK'),
@@ -298,6 +312,16 @@ function fmtScore(n: number): string {
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Filtered, of a trace trimmed to its injected memories: how many, by outcome -->
+        <div v-if="trimmedFiltered && trimmedFiltered.length > 0" class="erv__trimmed" data-testid="engram-trimmed">
+          <Tooltip fixed :text="$t('mainGame.engram.trimmed.note')">
+            <span class="erv__trimmed-label">{{ $t('mainGame.engram.trimmed.label', { n: trimmedFilteredTotal }) }}</span>
+          </Tooltip>
+          <span v-for="[outcome, n] in trimmedFiltered" :key="outcome" class="erv__trimmed-count">
+            {{ outcomeLabel(outcome) }} <span class="erv__trimmed-n">{{ n }}</span>
+          </span>
         </div>
 
         <!-- Filtered (collapsed by default) -->
@@ -749,6 +773,32 @@ function fmtScore(n: number): string {
 
 .erv__filtered-btn:hover {
   border-color: var(--color-text-umber);
+}
+
+/* A trimmed trace: the filtered candidates as counts only (存档瘦身 D2B) */
+.erv__trimmed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: var(--space-xs) var(--space-md);
+  padding: var(--space-xs) 0;
+  font-size: 11px;
+  color: var(--color-text-umber);
+}
+
+.erv__trimmed-label {
+  border-bottom: 1px dashed var(--color-border);
+  cursor: help;
+}
+
+.erv__trimmed-count {
+  opacity: 0.8;
+}
+
+.erv__trimmed-n {
+  font-variant-numeric: tabular-nums;
+  opacity: 1;
 }
 
 /* ── Legend ── */

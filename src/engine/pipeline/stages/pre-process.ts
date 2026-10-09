@@ -23,6 +23,8 @@ import type { PipelineStage, PipelineContext, IActionQueueConsumer, EnginePathCo
 import type { StateManager } from '../../core/state-manager';
 import type { RollbackSnapshot } from '../../core/rollback-snapshot';
 import type { QueuedAction } from '../../types';
+import { TRACE_FIELD, traceTrimCut, traceTrims } from '../../persistence/save-format/engram-read-trim';
+import { readPath } from '../../persistence/save-format/path-copy';
 
 export class PreProcessStage implements PipelineStage {
   name = 'PreProcess';
@@ -35,6 +37,11 @@ export class PreProcessStage implements PipelineStage {
   ) {}
 
   async execute(ctx: PipelineContext): Promise<PipelineContext> {
+    // 存档瘦身 D2B, before the snapshot (so it holds the same entries trimmed): outside the latest five completed
+    // rounds a retrieval trace keeps only the memories it injected, with how many candidates each outcome had.
+    // Usually one entry per round leaves the window; only that entry's trace is written.
+    this.trimOldTraces();
+
     // Before any change (the round number included), take the whole tree as it is at round start, for Rollback.
     //
     // 存档瘦身 D1A: the snapshot goes to the in-memory holder only — no longer into the state tree (41% of a large
@@ -59,6 +66,16 @@ export class PreProcessStage implements PipelineStage {
     this.stateManager.set(this.paths.roundNumber, roundNumber, 'system');
 
     return { ...ctx, userInput, actionQueuePrompt, roundNumber, preRoundSnapshot };
+  }
+
+  /** Trim the traces of the entries that left the window of full traces (engram-read-trim.ts). */
+  private trimOldTraces(): void {
+    // The plain history (not through the reactive state): the trim builds new objects and changes nothing in place.
+    const history = readPath(this.stateManager.liveTree(), this.paths.narrativeHistory);
+    if (!Array.isArray(history)) return;
+    for (const { index, trace } of traceTrims(history, traceTrimCut(history))) {
+      this.stateManager.set(`${this.paths.narrativeHistory}.${index}.${TRACE_FIELD}`, trace, 'system');
+    }
   }
 
   /**

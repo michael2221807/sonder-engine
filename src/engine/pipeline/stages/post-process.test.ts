@@ -438,6 +438,24 @@ describe('PostProcessStage — Phase 1 per-turn metadata', () => {
     expect(entry?._metrics).toBeDefined();
   });
 
+  it('stores a push or pull with the one entry it added or removed; the change log keeps both lists (存档瘦身 D3A)', async () => {
+    const changes = [
+      { path: '社交.事件.事件记录', action: 'push' as const, oldValue: [{ n: 1 }], newValue: [{ n: 1 }, { n: 2 }], timestamp: 1 },
+      { path: '角色.效果', action: 'pull' as const, oldValue: ['甲', '乙'], newValue: ['乙'], timestamp: 2 },
+      { path: '角色.姓名', action: 'set' as const, oldValue: 'A', newValue: 'B', timestamp: 3 },
+    ];
+    const ctx = makeCtx({
+      commandResults: { results: [], changeLog: { source: 'command', timestamp: 1, changes }, hasErrors: false },
+    });
+    await stage.execute(ctx);
+    expect(getAssistantEntry()?._delta).toEqual([
+      { path: '社交.事件.事件记录', action: 'push', element: { n: 2 }, timestamp: 1, source: 'main' },
+      { path: '角色.效果', action: 'pull', element: '甲', index: 0, timestamp: 2, source: 'main' },
+      { path: '角色.姓名', action: 'set', oldValue: 'A', newValue: 'B', timestamp: 3, source: 'main' },
+    ]);
+    expect(ctx.commandResults?.changeLog.changes[0]).toHaveProperty('newValue', [{ n: 1 }, { n: 2 }]);
+  });
+
   it('role and content fields are unchanged', async () => {
     const ctx = makeCtx({
       parsedResponse: { text: 'narrative body' } as AIResponse,

@@ -3,10 +3,10 @@
  * sub-pipeline change logs into the most recent assistant narrative entry's
  * `_delta` array so DeltaViewer shows a unified audit trail.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { appendChangesToLastNarrative } from './audit-append';
-import type { StateManager } from '../core/state-manager';
+import { StateManager } from '../core/state-manager';
 import type { EnginePathConfig } from '../pipeline/types';
 import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 import type { StateChange } from '../types/state';
@@ -14,19 +14,9 @@ import type { StateChange } from '../types/state';
 type NarrativeEntry = Record<string, unknown>;
 
 function makeStateManager(history: NarrativeEntry[]): { sm: StateManager; read: () => NarrativeEntry[] } {
-  let current = [...history];
-  const sm = {
-    get<T>(path: string): T | undefined {
-      if (path === DEFAULT_ENGINE_PATHS.narrativeHistory) return current as unknown as T;
-      return undefined;
-    },
-    set(path: string, value: unknown): void {
-      if (path === DEFAULT_ENGINE_PATHS.narrativeHistory) {
-        current = value as NarrativeEntry[];
-      }
-    },
-  } as unknown as StateManager;
-  return { sm, read: () => current };
+  const sm = new StateManager();
+  sm.loadTree({ 元数据: { 叙事历史: history } });
+  return { sm, read: () => JSON.parse(JSON.stringify(sm.get(DEFAULT_ENGINE_PATHS.narrativeHistory))) as NarrativeEntry[] };
 }
 
 function change(path: string, action: StateChange['action'] = 'set'): StateChange {
@@ -96,6 +86,37 @@ describe('appendChangesToLastNarrative', () => {
     ]);
     const delta = read()[0]._delta as Array<{ source?: string }>;
     expect(delta.every((d) => d.source === 'privacyRepair')).toBe(true);
+  });
+
+  // 存档瘦身 D3A: a push or pull is stored with its one entry; only that entry's _delta is written.
+  it('stores a push or pull with the one entry it added or removed, next to records already stored either way', () => {
+    const before = [{ 事件名称: '甲' }];
+    const push: StateChange = { path: '社交.事件.事件记录', action: 'push', oldValue: before, newValue: [...before, { 事件名称: '乙' }], timestamp: 2 };
+    const pull: StateChange = { path: '角色.效果', action: 'pull', oldValue: ['中毒', '疲惫'], newValue: ['中毒'], timestamp: 3 };
+    const oldForm = { path: '社交.事件.事件记录', action: 'push', oldValue: [], newValue: before, timestamp: 1, source: 'main' };
+    const compactForm = { path: '角色.背包', action: 'push', element: '药', timestamp: 1, source: 'main' };
+    const { sm, read } = makeStateManager([
+      { role: 'user', content: 'u' },
+      { role: 'assistant', content: 'a', _delta: [oldForm, compactForm] },
+    ]);
+    appendChangesToLastNarrative(sm, PATHS, 'worldHeartbeat', [push, pull, change('角色.姓名')]);
+    expect(read()[1]._delta).toEqual([
+      oldForm,
+      compactForm,
+      { path: '社交.事件.事件记录', action: 'push', element: { 事件名称: '乙' }, timestamp: 2, source: 'worldHeartbeat' },
+      { path: '角色.效果', action: 'pull', element: '疲惫', index: 1, timestamp: 3, source: 'worldHeartbeat' },
+      { ...change('角色.姓名'), source: 'worldHeartbeat' },
+    ]);
+  });
+
+  it('writes only that entry\'s _delta, not the whole history', () => {
+    const { sm } = makeStateManager([
+      { role: 'user', content: 'u' },
+      { role: 'assistant', content: 'a' },
+    ]);
+    const set = vi.spyOn(sm, 'set');
+    appendChangesToLastNarrative(sm, PATHS, 'fieldRepair', [change('x')]);
+    expect(set.mock.calls.map((call) => call[0])).toEqual([`${DEFAULT_ENGINE_PATHS.narrativeHistory}.1._delta`]);
   });
 
   it('finds the MOST RECENT assistant entry when multiple exist', () => {

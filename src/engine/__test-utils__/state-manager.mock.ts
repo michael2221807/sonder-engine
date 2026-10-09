@@ -25,6 +25,8 @@ export interface MockStateManager {
   add(path: string, value: number, source?: string): void;
   loadTree(data: Record<string, unknown>): void;
   toSnapshot(): Record<string, unknown>;
+  /** The data itself, not a copy (as StateManager.liveTree: never keep or change it). */
+  liveTree(): Record<string, unknown>;
   rollbackTo(snapshot: Record<string, unknown>, keep?: readonly string[]): void;
   clear(): void;
   isLoaded(): boolean;
@@ -144,6 +146,10 @@ export function createMockStateManager(
 
     toSnapshot(): Record<string, unknown> {
       return cloneDeep(data);
+    },
+
+    liveTree(): Record<string, unknown> {
+      return data;
     },
 
     rollbackTo(snapshot: Record<string, unknown>, keep: readonly string[] = []): void {

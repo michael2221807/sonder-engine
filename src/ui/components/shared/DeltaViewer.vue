@@ -27,7 +27,11 @@
             {{ actionIcon(c.action) }}
           </span>
           <span class="delta-path" :title="c.path">{{ c.path }}</span>
-          <span v-if="c.action !== 'delete'" class="delta-values">
+          <!-- A push or pull stored with its one entry (存档瘦身 D3A): the entry added, or the entry removed. -->
+          <span v-if="isEntryRecord(c)" class="delta-values" data-testid="delta-entry">
+            <span :class="c.action === 'pull' ? 'delta-old' : 'delta-new'">{{ fmt(c.element) }}</span>
+          </span>
+          <span v-else-if="c.action !== 'delete'" class="delta-values">
             <span v-if="c.oldValue !== undefined && c.action !== 'push'" class="delta-old">{{ fmt(c.oldValue) }}</span>
             <span v-if="c.action !== 'push'" class="delta-arrow" aria-hidden="true">→</span>
             <span class="delta-new">{{ fmt(c.newValue) }}</span>
@@ -57,10 +61,19 @@ export interface DeltaChange {
   action: string;
   oldValue?: unknown;
   newValue?: unknown;
+  /** A push or pull stored compactly (存档瘦身 D3A): the entry it added or removed, instead of both whole lists. */
+  element?: unknown;
+  /** Where a compact pull removed its entry. */
+  index?: number;
   source?: AuditSource;
 }
 
 const props = defineProps<{ changes: DeltaChange[] }>();
+
+/** A push or pull stored with only the entry it added or removed (no lists before and after). */
+function isEntryRecord(c: DeltaChange): boolean {
+  return (c.action === 'push' || c.action === 'pull') && Object.prototype.hasOwnProperty.call(c, 'element');
+}
 
 // Group changes by source in a stable display order. Entries without `source`
 // (legacy saves written before the audit tag) fall into the "main" bucket so

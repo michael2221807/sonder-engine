@@ -38,6 +38,7 @@ import { estimateMessagesTokens, estimateTextTokens } from '../../core/metrics-h
 import { extractPlotEvaluations } from '../../plot/types';
 import { SYSTEM_PATHS } from '../system-paths';
 import { DEFAULT_ENGINE_PATHS } from '../types';
+import { compactChangeRecords } from '../../persistence/save-format/delta-compaction';
 
 /**
  * Pull this round's accepted captures out of `ctx.meta` in the shape the graph needs.
@@ -298,7 +299,9 @@ export class PostProcessStage implements PipelineStage {
       // Tag main-round commands so post-turn sub-pipelines (field repair,
       // world heartbeat, etc.) can append their own changes under different
       // source tags while sharing the same `_delta` array.
-      assistantEntry._delta = deltaChanges.map((c) => ({ ...c, source: 'main' }));
+      // 存档瘦身 D3A: a push or pull is stored with the one entry it added or removed, not both whole lists; the
+      // change log in memory keeps the lists (the round's own logic reads them).
+      assistantEntry._delta = compactChangeRecords(deltaChanges.map((c) => ({ ...c, source: 'main' })));
     }
 
     // ── Phase 1 (2026-04-19): per-turn metadata capture ──

@@ -259,8 +259,13 @@ export interface EngramReadSnapshot {
   query: string;
   capturedAt: number;
   totalDurationMs: number;
-  /** 所有参与过评分的候选（含被淘汰的） */
+  /** 所有参与过评分的候选（含被淘汰的）；裁剪过的（见 trimmed）只剩已注入的 */
   candidates: ScoredCandidateTrace[];
+  /**
+   * Set on a trace outside the latest five completed rounds (存档瘦身 D2B): `candidates` then lists only the injected
+   * ones, and `counts` says how many candidates each outcome had before the trim.
+   */
+  trimmed?: { counts: Record<string, number> };
   /** 管线统计 */
   pipeline: {
     vectorEventCount: number;

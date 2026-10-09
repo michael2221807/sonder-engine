@@ -173,6 +173,8 @@
   "mainGame.engram.filteredToggle.expand": "Expand",
   "mainGame.engram.filteredToggle.collapse": "Collapse",
   "mainGame.engram.filteredToggle.label": "Filtered ({n})",
+  "mainGame.engram.trimmed.label": "{n} filtered",
+  "mainGame.engram.trimmed.note": "Earlier rounds keep only the memories that were used; filtered ones are counted",
   "mainGame.engram.legend.vectorSimilarity": "Vector Similarity",
   "mainGame.engram.legend.keywordHit": "Keyword Hit",
   "mainGame.engram.legend.timeDecay": "Time Decay",
