@@ -69,7 +69,7 @@ function maskGzipFields(value: unknown): unknown {
       );
     } else if (k === 'storedBytes') {
       out[k] = maskStoredBytes(value as Doc);
-    } else if (k === 'sizeKB' && typeof v === 'number') {
+    } else if (k === 'sizeKB' && typeof v === 'number' && Number.isInteger(v) && v >= 0) {
       out[k] = '<gz>';
     } else {
       out[k] = maskGzipFields(v);

@@ -624,7 +624,7 @@ onMounted(async () => {
               <div class="sync-cloud-label">{{ $t('home.cloudStatus.hasArchive') }}</div>
               <div class="sync-cloud-detail">
                 {{ ghCloudInfo.updatedAt ? $t('home.cloudStatus.updatedAt', { date: formatDateTime(ghCloudInfo.updatedAt) }) : $t('home.cloudStatus.unknownTime') }}
-                <span class="sync-cloud-size">{{ formatSizeKB(ghCloudInfo.sizeKB ?? 0) }}</span>
+                <span class="sync-cloud-size">{{ formatSizeKB(ghCloudInfo.sizeKB) }}</span>
               </div>
             </template>
             <template v-else-if="ghCloudInfo">

@@ -95,24 +95,36 @@ watch([isLoaded, activeProfileId], () => { refreshSlots(); }, { immediate: true 
 
 // ─── Save size (存档瘦身 D9A) ─────────────────────────────────
 // Saving no longer measures the save (a whole-tree serialisation every round). The save in play is measured here, as
-// a save would write it, once each time the panel opens and after it has painted; the other slots keep the size they
-// were measured at last.
+// a save would write it, once each time the panel opens and after it has painted, and a save made from this panel is
+// measured when it is made; the other slots keep the size they were measured at last.
 const stateManager = injectService('stateManager', undefined);
+let panelOpen = true;
+let measureTimer: number | undefined;
+
+/** Record a slot's size, measured on the tree as a save writes it. */
+async function measureSlot(pid: string, sid: string, tree: GameStateTree): Promise<void> {
+  if (!profileManager || !saveManager || !profileManager.getProfile(pid)?.slots[sid]) return;
+  const saveSize = JSON.stringify(saveManager.prepareTree(tree)).length;
+  await profileManager.updateSlotMeta(pid, sid, { saveSize });
+  if (panelOpen) refreshSlots();
+}
 
 async function measureSaveInPlay(): Promise<void> {
   const pid = activeProfileId.value;
   const sid = activeSlotId.value;
-  if (!isLoaded.value || !pid || !sid || !profileManager || !saveManager || !stateManager) return;
-  if (!profileManager.getProfile(pid)?.slots[sid]) return;
-  const saveSize = JSON.stringify(saveManager.prepareTree(stateManager.liveTree())).length;
-  await profileManager.updateSlotMeta(pid, sid, { saveSize });
-  refreshSlots();
+  if (!panelOpen || !isLoaded.value || !pid || !sid || !stateManager) return;
+  await measureSlot(pid, sid, stateManager.liveTree() as GameStateTree);
 }
 
 onMounted(() => {
-  window.setTimeout(() => {
+  measureTimer = window.setTimeout(() => {
     measureSaveInPlay().catch((err: unknown) => console.warn('[SavePanel] Measuring the save in play failed:', err));
   }, 0);
+});
+
+onUnmounted(() => {
+  panelOpen = false;
+  window.clearTimeout(measureTimer);
 });
 
 // ─── Save / Load / Delete ─────────────────────────────────────
@@ -153,6 +165,7 @@ async function performSave(slotId: string): Promise<void> {
   refreshSlots();
   confirmOverwrite.value = false;
   pendingSaveSlotId.value = '';
+  measureSlot(pid, slotId, snapshot).catch((err: unknown) => console.warn('[SavePanel] Measuring the save failed:', err));
 
   eventBus.emit('engine:save-complete', { profileId: pid, slotId });
   eventBus.emit('ui:toast', { type: 'success', message: t('save.toast.saveSuccess'), duration: 1500 });
@@ -952,7 +965,7 @@ const showSettings = ref(false);
           <div v-if="ghClassicVisible" class="gh-cloud-row">
             <div class="gh-cloud-meta">
               <span v-if="ghCloudInfo?.exists" class="gh-cloud-info">
-                {{ $t('save.github.cloudInfo', { time: ghCloudInfo.updatedAt ? formatDateTime(ghCloudInfo.updatedAt) : $t('common.fallback.unknown'), size: formatSizeKB(ghCloudInfo.sizeKB ?? 0) }) }}
+                {{ $t('save.github.cloudInfo', { time: ghCloudInfo.updatedAt ? formatDateTime(ghCloudInfo.updatedAt) : $t('common.fallback.unknown'), size: formatSizeKB(ghCloudInfo.sizeKB) }) }}
                 <template v-if="ghCloudInfo.uploadedByLabel"> · {{ $t('save.cloudSlots.uploadedBy', { device: ghCloudInfo.uploadedByLabel }) }}</template>
               </span>
               <span v-else-if="ghCloudInfo" class="gh-cloud-info gh-cloud-empty">{{ $t('save.github.cloudEmpty') }}</span>

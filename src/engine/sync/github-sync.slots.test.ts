@@ -620,6 +620,29 @@ describe('listCloudSlots', () => {
     expect(infos[1]).toMatchObject({ slotKey: GLOBAL_SLOT_KEY, sizeKB: 1 });
   });
 
+  it('shows what a slot stores (存档瘦身 D9A storedBytes), for the slots, the global slot and one slot asked about', async () => {
+    setDirListing('slots', [{ name: 'p1', path: 'slots/p1', sha: 'x', type: 'dir' }]);
+    const slotManifest = {
+      manifestVersion: 2, createdAt: '2026-10-09T03:00:00Z', engineVersion: '0.1.0', totalSizeBytes: 31_000_000,
+      storedBytes: 9_437_184, bundleSerialization: 'compact', bundleChecksum: 'x', chunks: [], slotMeta: DISPLAY_META,
+    };
+    const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(slotManifest))));
+    fetchResponses.set(`GET ${API}/contents/slots/p1/manifest.json`, { status: 200, body: { sha: 'sm' } });
+    fetchResponses.set(`GET ${API}/git/blobs/sm`, { status: 200, body: { content: b64, encoding: 'base64' } });
+    const globalManifest = {
+      manifestVersion: 2, createdAt: '2026-10-09T04:00:00Z', engineVersion: '0.1.0', totalSizeBytes: 9_000,
+      storedBytes: 3_072, bundleSerialization: 'compact', bundleChecksum: 'g', chunks: [],
+    };
+    const gb64 = btoa(unescape(encodeURIComponent(JSON.stringify(globalManifest))));
+    fetchResponses.set(`GET ${API}/contents/global/manifest.json`, { status: 200, body: { sha: 'gm2' } });
+    fetchResponses.set(`GET ${API}/git/blobs/gm2`, { status: 200, body: { content: gb64, encoding: 'base64' } });
+
+    const sync = new GitHubSyncService(createMockBackup() as never);
+    const infos = await sync.listCloudSlots();
+    expect(infos.map((i) => [i.slotKey, i.sizeKB])).toEqual([['p1', 9216], [GLOBAL_SLOT_KEY, 3]]);
+    expect((await sync.getCloudSlotInfo('p1')).sizeKB).toBe(9216);
+  });
+
   it('a CORRUPTED slot manifest is skipped without blanking the rest of the list', async () => {
     setDirListing('slots', [
       { name: 'good', path: 'slots/good', sha: 'x', type: 'dir' },
