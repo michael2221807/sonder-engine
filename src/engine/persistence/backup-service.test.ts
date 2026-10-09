@@ -90,8 +90,9 @@ describe('isValidBundleShape', () => {
     expect(isValidBundleShape({ ...makeValid(), version: 'v1' })).toBe(false);
   });
 
-  it('BACKUP_FORMAT_VERSION is still 1 (v1 bundles remain valid after 2026-04-13 changes)', () => {
-    expect(BACKUP_FORMAT_VERSION).toBe(1);
+  it('BACKUP_FORMAT_VERSION is 2 since 存档瘦身 D4A (vectors as base64); v1 bundles remain valid', () => {
+    expect(BACKUP_FORMAT_VERSION).toBe(2);
+    expect(isValidBundleShape({ ...makeValid(), version: 1 })).toBe(true);
   });
 
   // 2026-04-14 Phase 4：customPresets 字段是 optional，新旧 bundle 都能通过

@@ -64,7 +64,10 @@ function norm(value: unknown): unknown {
   return value;
 }
 
-/** Vectors are long float lists: record the dimension and a hash of each one. */
+/**
+ * Vectors are long float lists: record how they are kept (a Float32Array since 存档瘦身 D4A), the dimension and a hash of
+ * the values.
+ */
 function compactVectorData(data: unknown): unknown {
   if (!data || typeof data !== 'object') return data;
   const out: Json = {};
@@ -72,7 +75,9 @@ function compactVectorData(data: unknown): unknown {
     if (k.endsWith('Vectors') && v && typeof v === 'object') {
       const compact: Json = {};
       for (const [id, vec] of Object.entries(v as Json)) {
-        compact[id] = Array.isArray(vec) ? { dim: vec.length, sha256: sha256Hex(JSON.stringify(vec)) } : vec;
+        compact[id] = vec instanceof Float32Array || Array.isArray(vec)
+          ? { kept: vec instanceof Float32Array ? 'Float32Array' : 'number[]', dim: vec.length, sha256: sha256Hex(JSON.stringify(Array.from(vec as ArrayLike<number>))) }
+          : vec;
       }
       out[k] = compact;
     } else {

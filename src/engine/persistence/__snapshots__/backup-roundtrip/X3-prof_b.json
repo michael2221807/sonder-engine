@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "exportedAt": "2026-10-08T00:00:00.000Z",
   "engineVersion": "0.1.0",
   "bundleType": "profile",
@@ -81,11 +81,7 @@
   "vectors": {
     "prof_b/slot_2": {
       "eventVectors": {
-        "evt_b1": [
-          0.7,
-          0.1,
-          0.2
-        ]
+        "evt_b1": "MzMzP83MzD3NzEw+"
       },
       "entityVectors": {},
       "edgeVectors": {},

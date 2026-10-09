@@ -163,3 +163,44 @@ describe('engine-state store — the rollback snapshot on load', () => {
     expect(holder.current()).toBeUndefined();
   });
 });
+
+describe('engine-state store — the opened save is announced', () => {
+  beforeEach(() => { setActivePinia(createPinia()); });
+
+  it('announces the save once its tree is in and its slot is the active one (存档瘦身 D4A: the pseudo-vector repair)', () => {
+    const store = useEngineStateStore();
+    const stateManager = new StateManager();
+    const runner = { runOnGameLoad: vi.fn() };
+    store.linkStateManager(stateManager);
+    store.linkBehaviorRunner(runner);
+    const seen: unknown[] = [];
+    const off = eventBus.on<{ profileId: string; slotId: string }>('engine:game-opened', (opened) => {
+      seen.push({
+        opened,
+        active: { profileId: store.activeProfileId, slotId: store.activeSlotId, loaded: store.isGameLoaded },
+        round: stateManager.get(DEFAULT_ENGINE_PATHS.roundNumber),
+        hooksRan: runner.runOnGameLoad.mock.calls.length,
+      });
+    });
+    try {
+      store.loadGame({ 元数据: { 回合序号: 7 } }, 'tianming', 'prof_open', 'slot_2');
+    } finally { off(); }
+
+    expect(seen).toEqual([{
+      opened: { profileId: 'prof_open', slotId: 'slot_2' },
+      active: { profileId: 'prof_open', slotId: 'slot_2', loaded: true },
+      round: 7,
+      hooksRan: 1,
+    }]);
+  });
+
+  it('a game marked loaded after character creation is not announced (no save was opened)', () => {
+    const store = useEngineStateStore();
+    const opened = vi.fn();
+    const off = eventBus.on('engine:game-opened', opened);
+    try {
+      store.markLoaded('tianming', 'prof_new', 'slot_1');
+    } finally { off(); }
+    expect(opened).not.toHaveBeenCalled();
+  });
+});

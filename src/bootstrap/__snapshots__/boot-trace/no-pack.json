@@ -112,6 +112,10 @@
       "#MemoryCompilerModule#1 id=memory-compiler"
     ],
     [
+      "eventBus.on",
+      "engine:game-opened"
+    ],
+    [
       "call",
       "ImageProviderRegistry.register",
       "novelai",

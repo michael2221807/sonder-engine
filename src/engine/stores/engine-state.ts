@@ -6,6 +6,7 @@ import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
 import type { StateManager } from '../core/state-manager';
 import type { RollbackSnapshot } from '../core/rollback-snapshot';
 import { eventBus } from '../core/event-bus';
+import type { GameOpenedEvent } from '../types/event-bus';
 import { syncNsfwFromLocalStorage, syncAllSettingsFromLocalStorage } from './settings-sync';
 
 /**
@@ -154,6 +155,8 @@ export const useEngineStateStore = defineStore('engineState', () => {
     activeSlotId.value = slotId;
     syncNsfwFromLocalStorage(setValue);
     syncAllSettingsFromLocalStorage(get, setValue);
+    // The save is open and its slot active: work that needs both runs now (存档瘦身 D4A: the pseudo-vector repair).
+    eventBus.emit('engine:game-opened', { profileId, slotId } satisfies GameOpenedEvent);
   }
 
   /**

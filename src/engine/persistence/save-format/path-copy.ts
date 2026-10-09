@@ -48,6 +48,17 @@ function writeAt(tree: Tree, key: string, rest: string[], path: string, value: u
   return next;
 }
 
+/** Whether writePath could write the dot path: every field on the way is missing or a plain object. */
+export function canWritePath(tree: unknown, path: string): boolean {
+  let node: unknown = tree;
+  for (const key of path.split('.').slice(0, -1)) {
+    if (!isPlainRecord(node)) return false;
+    if (!hasOwn(node, key)) return true;
+    node = node[key];
+  }
+  return isPlainRecord(node);
+}
+
 /** A copy of the tree without the field at the dot path, or the tree itself when the field is not there. */
 export function removePath(tree: Tree, path: string): Tree {
   const [key, ...rest] = path.split('.');

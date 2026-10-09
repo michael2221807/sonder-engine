@@ -30,11 +30,11 @@ type RrfContribution = { method: string; rank: number; contribution: number };
 function rankByCosine<T>(
   items: T[],
   idOf: (item: T) => string,
-  vectors: Record<string, number[]>,
-  queryVec: number[],
+  vectors: Readonly<Record<string, ArrayLike<number>>>,
+  queryVec: ArrayLike<number>,
   minScore: number,
   topK: number,
-  cosine: (a: number[], b: number[]) => number,
+  cosine: (a: ArrayLike<number>, b: ArrayLike<number>) => number,
 ): string[] {
   return items
     .map((item) => {
@@ -251,7 +251,7 @@ export class UnifiedRetriever {
     // Score tracing: RRF rank contributions per retrieval method
     const bfsHitIds = new Set<string>();
     const rrfContributions = new Map<string, RrfContribution[]>();
-    const cosine = (a: number[], b: number[]) => this.vectorStore.cosineSimilarity(a, b);
+    const cosine = (a: ArrayLike<number>, b: ArrayLike<number>) => this.vectorStore.cosineSimilarity(a, b);
 
     // ── Scope 1: Edge search (Cosine + BM25 + BFS) ──
     const edgeCosineIds: string[] = [];

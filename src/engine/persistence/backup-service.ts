@@ -23,7 +23,7 @@ import type { ProfileManager } from './profile-manager';
 import type { SaveManager } from './save-manager';
 import type { ConfigStore } from '../core/config-system';
 import type { PromptStorage } from '../prompt/prompt-storage';
-import type { VectorStore } from '../memory/engram/vector-store';
+import { vectorDataForBundle, vectorDataFromBundle, type VectorStore } from '../memory/engram/vector-store';
 import type { CustomPresetStore, CustomPresetEntry } from './custom-preset-store';
 import type { ImageAssetCache } from '../image/asset-cache';
 import type { ImageAsset } from '../image/types';
@@ -188,10 +188,6 @@ type ConfigImportData = Parameters<ConfigStore['importAll']>[0];
  */
 type PromptImportData = Parameters<PromptStorage['importAll']>[0];
 
-/**
- * 派生类型 — 从 VectorStore.save 的第三个参数中提取向量数据类型
- */
-type VectorSaveData = Parameters<VectorStore['save']>[2];
 
 // ─── 服务实现 ───
 
@@ -276,7 +272,8 @@ export class BackupService {
           slotId,
         );
         if (hasVectorContent(vectorData)) {
-          vectors[compositeKey] = structuredClone(vectorData);
+          // 存档瘦身 D4A: each vector as the base64 of its float32 bytes (JSON cannot hold a Float32Array).
+          vectors[compositeKey] = vectorDataForBundle(vectorData);
         }
       }
     }
@@ -775,8 +772,10 @@ export class BackupService {
         // copy that nothing else holds: no clone needed (it can be as large as the old save).
         const formatBackup = await idbAdapter.get(formatBackupKey(profileId, slotId));
         if (formatBackup !== undefined) formatBackups[slotId] = formatBackup;
-        const vectorData = await this.vectorStore.load(profileId, slotId);
-        if (hasVectorContent(vectorData)) vectors[slotId] = structuredClone(vectorData);
+        // As stored, unconverted: the rollback puts back exactly what was there (load would give Float32Arrays for
+        // an older record's number lists, 存档瘦身 D4A).
+        const vectorData = await this.vectorStore.loadStored(profileId, slotId);
+        if (vectorData !== undefined && hasVectorContent(vectorDataFromBundle(vectorData))) vectors[slotId] = structuredClone(vectorData);
       }
     }
     let worldBooks: import('../prompt/world-book').WorldBook[] = [];
@@ -828,7 +827,7 @@ export class BackupService {
       await idbAdapter.set(formatBackupKey(profileId, slotId), data);
     }
     for (const [slotId, data] of Object.entries(snapshot.vectors)) {
-      await this.vectorStore.save(profileId, slotId, structuredClone(data) as VectorSaveData);
+      await this.vectorStore.restoreStored(profileId, slotId, structuredClone(data));
     }
     if (this.worldBookStorage) {
       try {
@@ -1427,7 +1426,8 @@ export class BackupService {
 
       const vectorData = await this.vectorStore.load(profileId, slotId);
       if (hasVectorContent(vectorData)) {
-        vectors[compositeKey] = structuredClone(vectorData);
+        // 存档瘦身 D4A: each vector as the base64 of its float32 bytes (JSON cannot hold a Float32Array).
+        vectors[compositeKey] = vectorDataForBundle(vectorData);
       }
     }
 
@@ -1600,18 +1600,15 @@ export class BackupService {
    * 恢复向量数据 — 通过 VectorStore.save 写入
    *
    * compositeKey 格式同存档: "profileId/slotId"
-   * 数据结构需与 VectorStoreData 兼容（eventVectors, entityVectors, model, dim）
+   * 存档瘦身 D4A: a vector may come in any form it was ever exported in (the number lists of an older backup, the
+   * base64 of this version, the objects of indices an older tab exports); each is written as a Float32Array.
    */
   private async restoreVectors(
     vectorsData: Record<string, unknown>,
   ): Promise<void> {
     for (const [compositeKey, data] of Object.entries(vectorsData)) {
       const { profileId, slotId } = parseCompositeKey(compositeKey);
-      await this.vectorStore.save(
-        profileId,
-        slotId,
-        structuredClone(data) as VectorSaveData,
-      );
+      await this.vectorStore.save(profileId, slotId, vectorDataFromBundle(data));
     }
   }
 

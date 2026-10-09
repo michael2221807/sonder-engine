@@ -84,11 +84,11 @@
             "engram_vectors_prof_b_slot_2",
             {
               "eventVectors": {
-                "evt_b1": [
-                  0.7,
-                  0.1,
-                  0.2
-                ]
+                "evt_b1": {
+                  "typedArray": "Float32Array",
+                  "byteLength": 12,
+                  "sha256": "6151a2c4a262f96b57c73edfebe80df7dda9b5b0cee43f515b9b3396f2085f0f"
+                }
               },
               "entityVectors": {},
               "edgeVectors": {},

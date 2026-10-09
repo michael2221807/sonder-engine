@@ -8,8 +8,8 @@
     "exportedBooks": 3,
     "degradedProfiles": []
   },
-  "bundleSha256": "0286802b9e6894376572efa48317b5f301eeb6e409dccc1f31748af5c5156540",
-  "bundleLength": 15322,
+  "bundleSha256": "80183a6f1c408066e79f27c85710b3c1aed1ce2ce45bb922cdb59cea684115d7",
+  "bundleLength": 15139,
   "topLevelKeys": [
     "version",
     "exportedAt",
@@ -64,7 +64,7 @@
       "referencedAssets": 14,
       "exportedAssets": 14
     },
-    "bundleSha256": "8aa5a6a5dddc52d2ebc9f832d268bda01b125116861c8b32472eedcb98d1e636",
+    "bundleSha256": "1f6b90263cba5ff1a6b3ce00b6f47a3b4d0d2acdbc32a22a0e4801478d45af1c",
     "imageAssetIds": [
       "img_avatar_a",
       "img_avatar_b",

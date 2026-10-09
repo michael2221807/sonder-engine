@@ -141,30 +141,30 @@
             "engram_vectors_prof_a_slot_1",
             {
               "eventVectors": {
-                "evt_a1": [
-                  0.1,
-                  0.2,
-                  0.3
-                ],
-                "evt_a2": [
-                  0.3,
-                  0.2,
-                  0.1
-                ]
+                "evt_a1": {
+                  "typedArray": "Float32Array",
+                  "byteLength": 12,
+                  "sha256": "85dd1779ed6efc5644f3ef8b25784a4ea351d8f9c57f0fa383673b34974dfdc2"
+                },
+                "evt_a2": {
+                  "typedArray": "Float32Array",
+                  "byteLength": 12,
+                  "sha256": "772d68c81673bf0c082b5f0a198c2f1937c912b7a4b8384f8e2e52c1f97a2386"
+                }
               },
               "entityVectors": {
-                "Alice": [
-                  0.5,
-                  0.5,
-                  0.5
-                ]
+                "Alice": {
+                  "typedArray": "Float32Array",
+                  "byteLength": 12,
+                  "sha256": "fbfe4ca61ec299680879894a16ca776f81f23454312659ac8736249aa1e9722b"
+                }
               },
               "edgeVectors": {
-                "edge_a1": [
-                  0.9,
-                  0.1,
-                  0
-                ]
+                "edge_a1": {
+                  "typedArray": "Float32Array",
+                  "byteLength": 12,
+                  "sha256": "7bd754690fb35a7408efdd6ee4b83f9fff0a3652cd343fd3b90dec1b2f4421dd"
+                }
               },
               "model": "embed-test",
               "dim": 3
@@ -174,11 +174,11 @@
             "engram_vectors_prof_b_slot_2",
             {
               "eventVectors": {
-                "evt_b1": [
-                  0.7,
-                  0.1,
-                  0.2
-                ]
+                "evt_b1": {
+                  "typedArray": "Float32Array",
+                  "byteLength": 12,
+                  "sha256": "6151a2c4a262f96b57c73edfebe80df7dda9b5b0cee43f515b9b3396f2085f0f"
+                }
               },
               "entityVectors": {},
               "edgeVectors": {},

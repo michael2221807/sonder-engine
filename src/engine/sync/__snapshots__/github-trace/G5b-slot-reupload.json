@@ -54,8 +54,8 @@
       "body": {
         "message": "sync 2026-10-08T00:01:00",
         "chunk": {
-          "plainLength": 2288,
-          "plainSha256": "99b83a7368ee49b5bb519b34a7e13cb5361715c9a9bfebbb98512d8a29c16581"
+          "plainLength": 2310,
+          "plainSha256": "29a8a748771d8b68e46f5dba52210c22a35ebd19eaf0c5395d9886e8519d75e3"
         }
       }
     },
@@ -84,14 +84,14 @@
           "manifestVersion": 2,
           "createdAt": "2026-10-08T00:01:00.000Z",
           "engineVersion": "0.1.0",
-          "totalSizeBytes": 9060,
-          "bundleChecksum": "2cefeaa8a3855d9b95dc8a2984a28a76fbc4c27eb35935447c578bded6b1c557",
+          "totalSizeBytes": 8914,
+          "bundleChecksum": "f6f5b5103f60f7cab578910231a11abcb7f11f54c53ca30b94976ab3154f6998",
           "chunks": [
             {
               "name": "state",
               "path": "slots/prof_a/state.muyrtkyo1f9a.gz",
               "compressedSize": "<gz>",
-              "originalSize": 2288,
+              "originalSize": 2310,
               "checksum": "<gz>"
             },
             {

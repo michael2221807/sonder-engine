@@ -7,6 +7,7 @@ import { Reranker } from '../engine/memory/engram/reranker';
 import { UnifiedRetriever } from '../engine/memory/engram/unified-retriever';
 import type { VectorStore } from '../engine/memory/engram/vector-store';
 import { DEFAULT_ENGINE_PATHS } from '../engine/pipeline/types';
+import { eventBus } from '../engine/core/event-bus';
 import type { useEngineStateStore } from '../engine/stores/engine-state';
 import { useEngramDebugStore } from '../engine/stores/engram-debug';
 
@@ -73,6 +74,11 @@ export function createEngramStack(deps: {
     engramDebugStore,
     getActiveSlot,
   );
+
+  // 存档瘦身 D4A: a save's pseudo vectors are cleaned once it is opened (EngramManager.repairVectorDims).
+  eventBus.on('engine:game-opened', () => {
+    void engramManager.repairVectorDims(stateManager, DEFAULT_ENGINE_PATHS.saveFormat);
+  });
 
   return { getActiveSlot, engramManager, engramEditor, embedder, unifiedRetriever };
 }

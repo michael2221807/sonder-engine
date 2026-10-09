@@ -728,74 +728,91 @@
             {
               "eventVectors": {
                 "evt_r1": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "e37ad3460944fd3a37adb2c2bc48e7890c4b52f23285f6cee5850e56968c4f83"
                 },
                 "evt_r2": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "bd99b0376b37152048480847b86c7db752be1a18dc6228c8f6b64eb136a20be1"
                 },
                 "evt_r3": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "f5ae5a16f71149e5cb45a29d90d22b4f931f386f4af5347dbfef689b7a01565e"
                 },
                 "evt_r4": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "5cf9747c7e93b84cccc3fced12a6787b8c14774d81076a99717f43de36be28e5"
                 },
                 "evt_r5": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "444f3f067541d709bda821e2d242282f2b66f6723a10b824bb7b6be1a8291050"
                 },
                 "evt_r6": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "a8793e7598de50b26a582ca40ec3c591515e2b2e535604f64b31d0bc46947325"
                 }
               },
               "entityVectors": {
                 "陆沉": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
                 },
                 "Alpha": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "c3cea348a0530d2310c7e118a92d3b475a7c4aa153630920e53c8280451f16e7"
                 },
                 "Beta": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "c57e75ec4aa131bb1dc5a86e59da67cfede8daa2696e9bc87b14642faf3aef0a"
                 },
                 "Gamma": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "17eaebfd01add92c8eb54e983657cf4a77353cdf58a1d0bf221386fa98cd98eb"
                 },
                 "Delta": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "32c8146f1d4148d02a8c211707280e508ff1fda94712ab6161a18ecad5d9d1aa"
                 },
                 "Epsilon": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "0a78ae5d7f63ca470937cc35fc592c8dd636bcaff4cdd99bf3c2ccbef5054d90"
                 }
               },
               "edgeVectors": {
                 "c1": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "5ce608064dc2497416ae0808cd0421a591051e5c0e890b73770794b4513daeda"
                 },
                 "c2": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "b046c493016eb471300ba3286e0d0945e2b76b51323d9902f74c6c01357c1b05"
                 },
                 "c3": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "7b4684c6e19544316dedba75d8f29d4b231abed34117ee1244e3d9dcb4e153cf"
                 },
                 "c4": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "b01061baed355a24c52e70295392e32ada5278bf0b9fee7facba3b4f023368f7"
                 },
                 "c5": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "c42185399013101410d048ad8ec9118b5a0d791939c0421cef68a0af81ac5720"
                 }

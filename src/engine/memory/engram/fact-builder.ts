@@ -13,6 +13,7 @@ import type { EngramEntity } from './entity-builder';
 import { isSentenceLikeName } from './entity-builder';
 import { EDGE_CAPACITY_DEFAULT, MIN_FACT_LENGTH } from './engram-types';
 import type { VectorStore } from './vector-store';
+import type { StoredVector } from '../../persistence/save-format/vector-codec';
 
 /**
  * Where a single fact came from.
@@ -96,7 +97,8 @@ function upgradeProvenance(edge: EngramEdge, provenance?: FactProvenance): void 
 /** Mutable working state shared by the per-fact steps of {@link buildFacts}. */
 interface BuildContext {
   existingEdges: EngramEdge[];
-  edgeVectors: Record<string, number[]>;
+  /** The stored edge vectors (Float32Array once loaded, 存档瘦身 D4A). */
+  edgeVectors: Record<string, StoredVector>;
   newFactVectors: Map<string, number[]>;
   options?: FactBuilderOptions;
   entityNames: Set<string>;
@@ -116,7 +118,7 @@ export function buildFacts(
   params: FactBuilderParams,
   existingEdges: EngramEdge[],
   vectorStore: VectorStore | null,
-  edgeVectors: Record<string, number[]>,
+  edgeVectors: Record<string, StoredVector>,
   newFactVectors: Map<string, number[]>,
   options?: FactBuilderOptions,
 ): FactBuildResult {

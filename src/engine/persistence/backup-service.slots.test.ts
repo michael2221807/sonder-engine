@@ -62,13 +62,22 @@ import type { ImageAsset } from '../image/types';
 
 // ─── 轻量 fake 协作者 ───
 
+type FakeVectorRecord = { eventVectors: Record<string, ArrayLike<number>>; entityVectors: Record<string, ArrayLike<number>> };
+
 class FakeVectorStore {
-  data = new Map<string, { eventVectors: Record<string, number[]>; entityVectors: Record<string, number[]> }>();
+  data = new Map<string, FakeVectorRecord>();
   async load(pid: string, sid: string) {
     return structuredClone(this.data.get(`${pid}/${sid}`) ?? { eventVectors: {}, entityVectors: {} });
   }
-  async save(pid: string, sid: string, d: { eventVectors: Record<string, number[]>; entityVectors: Record<string, number[]> }) {
+  async save(pid: string, sid: string, d: FakeVectorRecord) {
     this.data.set(`${pid}/${sid}`, structuredClone(d));
+  }
+  async loadStored(pid: string, sid: string) {
+    return structuredClone(this.data.get(`${pid}/${sid}`));
+  }
+  async restoreStored(pid: string, sid: string, stored: unknown) {
+    // Puts back what loadStored gave, as it was (a FakeVectorRecord).
+    this.data.set(`${pid}/${sid}`, structuredClone(stored) as FakeVectorRecord);
   }
   async deleteForSlot(pid: string, sid: string) {
     this.data.delete(`${pid}/${sid}`);

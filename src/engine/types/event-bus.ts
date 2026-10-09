@@ -18,6 +18,10 @@ export type EngineEventName =
   // started finishes first and one that starts later sees it. Deliberately not 'engine:save-complete': cloud sync
   // marks those for upload.
   | 'engine:save-replaced'
+  // A save was opened in the game: its tree is loaded and its slot is the active one (engine-state.loadGame, at the
+  // end). Payload: GameOpenedEvent. Unlike 'engine:state-changed' { type: 'load' }, which a tree load also emits for a
+  // new game or a restored opening, before the active slot is switched.
+  | 'engine:game-opened'
   | 'engine:save-error'
   | 'engine:config-changed'
   | 'engram:config-changed'
@@ -120,3 +124,6 @@ export type EventHandler<T = unknown> = (payload: T) => void | Promise<void>;
 
 /** Payload of 'engine:save-replaced'. */
 export interface SaveReplacedEvent { profileId?: string; phase?: 'begin' | 'end' }
+
+/** Payload of 'engine:game-opened'. */
+export interface GameOpenedEvent { profileId: string; slotId: string }

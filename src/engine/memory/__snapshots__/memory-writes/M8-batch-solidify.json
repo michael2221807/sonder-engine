@@ -202,38 +202,46 @@
           "eventVectors": {},
           "entityVectors": {
             "Lin Nuan": {
-              "dim": 384,
-              "sha256": "48ec0d832af3536afcd51513cf6a2fbbc61dd97ed07408841faa0def74bc0808"
+              "typedArray": "Float32Array",
+              "byteLength": 1536,
+              "sha256": "ecbd0fb1f94f753966311e935e15673c66741c22799c85310581bbe357405690"
             },
             "Gone NPC": {
-              "dim": 384,
-              "sha256": "7dd081e8100715491ed5e26511950700afb1a82964a5c7329ab7367e5d9413a1"
+              "typedArray": "Float32Array",
+              "byteLength": 1536,
+              "sha256": "877c217c72ca0dd035757ab5ed3521f0770a1447e149c5dec157b7e91805196c"
             },
             "Guan Yu": {
-              "dim": 384,
-              "sha256": "96b4e32f7bf3ea00abe308033e433bdccca4cd279e505ef82d300ee5fc2e8821"
+              "typedArray": "Float32Array",
+              "byteLength": 1536,
+              "sha256": "fa3ad4260ae3e30cb904cc4438438d3ed2e03b4a7b25f8b9086c51cf16517682"
             },
             "Silent Monk": {
-              "dim": 384,
-              "sha256": "7730853b4534638e971a6b7bb1f3aeacca369c2fd118a59a485be0ecec157e34"
+              "typedArray": "Float32Array",
+              "byteLength": 1536,
+              "sha256": "9ea5fa1198d1fad47cc32ad5fa22efb6c9533273a14f5debaeec963e17452417"
             },
             "青石镇": {
-              "dim": 384,
-              "sha256": "89980358675c91c7b753cee78f758267787408588b153f73d5bca4c43c8042f9"
+              "typedArray": "Float32Array",
+              "byteLength": 1536,
+              "sha256": "de7b11f275121bcdbd609a3bf2db2991ee9c4d52c21792c38479656e0f3a12e1"
             },
             "后山": {
-              "dim": 384,
-              "sha256": "a6007947a965c23982092317447370cd091d0014164e7727e1e26de85903a248"
+              "typedArray": "Float32Array",
+              "byteLength": 1536,
+              "sha256": "8ec3291caacc1d6443d278b220b806e2d75aff4e7fb9201ac41e34c7113d2575"
             }
           },
           "edgeVectors": {
             "silent monk|青石镇|silentmonkmeditatesintheqingshitowntempl": {
-              "dim": 384,
-              "sha256": "f9edbedd951b7e674653effbef3eeaf8c7b74a1a9e02d7e589fc02c08a711b67"
+              "typedArray": "Float32Array",
+              "byteLength": 1536,
+              "sha256": "4119f2addbbc9d858c40ad6cf9db43e795e3290f7d33a9d01b9151c1ee7ea459"
             },
             "guan yu|lin nuan|guanyudrinksatthetavernthatlinnuanruns": {
-              "dim": 384,
-              "sha256": "2a51720c3be9ed047d8e68bbbe916dce8995cf48aae026efa5a3e72b8f4e4bf3"
+              "typedArray": "Float32Array",
+              "byteLength": 1536,
+              "sha256": "c257a1230693169bfd6011dbd14f7c43a5d6668ebc26cce2d86683cf46dfb179"
             }
           },
           "model": "unknown",
@@ -253,26 +261,32 @@
           "eventVectors": {},
           "entityVectors": {
             "Lin Nuan": {
+              "kept": "Float32Array",
               "dim": 384,
               "sha256": "48ec0d832af3536afcd51513cf6a2fbbc61dd97ed07408841faa0def74bc0808"
             },
             "Gone NPC": {
+              "kept": "Float32Array",
               "dim": 384,
               "sha256": "7dd081e8100715491ed5e26511950700afb1a82964a5c7329ab7367e5d9413a1"
             },
             "Guan Yu": {
+              "kept": "Float32Array",
               "dim": 384,
               "sha256": "96b4e32f7bf3ea00abe308033e433bdccca4cd279e505ef82d300ee5fc2e8821"
             },
             "Silent Monk": {
+              "kept": "Float32Array",
               "dim": 384,
               "sha256": "7730853b4534638e971a6b7bb1f3aeacca369c2fd118a59a485be0ecec157e34"
             },
             "青石镇": {
+              "kept": "Float32Array",
               "dim": 384,
               "sha256": "89980358675c91c7b753cee78f758267787408588b153f73d5bca4c43c8042f9"
             },
             "后山": {
+              "kept": "Float32Array",
               "dim": 384,
               "sha256": "a6007947a965c23982092317447370cd091d0014164e7727e1e26de85903a248"
             }
@@ -293,36 +307,44 @@
           "eventVectors": {},
           "entityVectors": {
             "Lin Nuan": {
+              "kept": "Float32Array",
               "dim": 384,
               "sha256": "48ec0d832af3536afcd51513cf6a2fbbc61dd97ed07408841faa0def74bc0808"
             },
             "Gone NPC": {
+              "kept": "Float32Array",
               "dim": 384,
               "sha256": "7dd081e8100715491ed5e26511950700afb1a82964a5c7329ab7367e5d9413a1"
             },
             "Guan Yu": {
+              "kept": "Float32Array",
               "dim": 384,
               "sha256": "96b4e32f7bf3ea00abe308033e433bdccca4cd279e505ef82d300ee5fc2e8821"
             },
             "Silent Monk": {
+              "kept": "Float32Array",
               "dim": 384,
               "sha256": "7730853b4534638e971a6b7bb1f3aeacca369c2fd118a59a485be0ecec157e34"
             },
             "青石镇": {
+              "kept": "Float32Array",
               "dim": 384,
               "sha256": "89980358675c91c7b753cee78f758267787408588b153f73d5bca4c43c8042f9"
             },
             "后山": {
+              "kept": "Float32Array",
               "dim": 384,
               "sha256": "a6007947a965c23982092317447370cd091d0014164e7727e1e26de85903a248"
             }
           },
           "edgeVectors": {
             "silent monk|青石镇|silentmonkmeditatesintheqingshitowntempl": {
+              "kept": "Float32Array",
               "dim": 384,
               "sha256": "f9edbedd951b7e674653effbef3eeaf8c7b74a1a9e02d7e589fc02c08a711b67"
             },
             "guan yu|lin nuan|guanyudrinksatthetavernthatlinnuanruns": {
+              "kept": "Float32Array",
               "dim": 384,
               "sha256": "2a51720c3be9ed047d8e68bbbe916dce8995cf48aae026efa5a3e72b8f4e4bf3"
             }
@@ -720,24 +742,29 @@
           "eventVectors": {},
           "entityVectors": {
             "陆沉": {
+              "kept": "number[]",
               "dim": 2,
               "sha256": "5aaf1e183f1faf12c327dc2fb8c223022f04684c61fc34533bff62e7e572c776"
             },
             "Lin Nuan": {
+              "kept": "number[]",
               "dim": 2,
               "sha256": "463f2998327eb3a694145e6014444480b2235be84aa6cfd57871cc64f1cd816c"
             },
             "Gone NPC": {
+              "kept": "number[]",
               "dim": 2,
               "sha256": "e61b9f584dbe27741cef6e9ee440831d7d94470c0871b0871541f0308916efea"
             }
           },
           "edgeVectors": {
             "edge_gone": {
+              "kept": "number[]",
               "dim": 2,
               "sha256": "5aaf1e183f1faf12c327dc2fb8c223022f04684c61fc34533bff62e7e572c776"
             },
             "edge_ok": {
+              "kept": "number[]",
               "dim": 2,
               "sha256": "463f2998327eb3a694145e6014444480b2235be84aa6cfd57871cc64f1cd816c"
             }
@@ -991,24 +1018,29 @@
           "eventVectors": {},
           "entityVectors": {
             "陆沉": {
+              "kept": "number[]",
               "dim": 2,
               "sha256": "5aaf1e183f1faf12c327dc2fb8c223022f04684c61fc34533bff62e7e572c776"
             },
             "Lin Nuan": {
+              "kept": "number[]",
               "dim": 2,
               "sha256": "463f2998327eb3a694145e6014444480b2235be84aa6cfd57871cc64f1cd816c"
             },
             "Gone NPC": {
+              "kept": "number[]",
               "dim": 2,
               "sha256": "e61b9f584dbe27741cef6e9ee440831d7d94470c0871b0871541f0308916efea"
             }
           },
           "edgeVectors": {
             "edge_gone": {
+              "kept": "number[]",
               "dim": 2,
               "sha256": "5aaf1e183f1faf12c327dc2fb8c223022f04684c61fc34533bff62e7e572c776"
             },
             "edge_ok": {
+              "kept": "number[]",
               "dim": 2,
               "sha256": "463f2998327eb3a694145e6014444480b2235be84aa6cfd57871cc64f1cd816c"
             }
@@ -1363,24 +1395,29 @@
           "eventVectors": {},
           "entityVectors": {
             "陆沉": {
+              "kept": "number[]",
               "dim": 2,
               "sha256": "5aaf1e183f1faf12c327dc2fb8c223022f04684c61fc34533bff62e7e572c776"
             },
             "Lin Nuan": {
+              "kept": "number[]",
               "dim": 2,
               "sha256": "463f2998327eb3a694145e6014444480b2235be84aa6cfd57871cc64f1cd816c"
             },
             "Gone NPC": {
+              "kept": "number[]",
               "dim": 2,
               "sha256": "e61b9f584dbe27741cef6e9ee440831d7d94470c0871b0871541f0308916efea"
             }
           },
           "edgeVectors": {
             "edge_gone": {
+              "kept": "number[]",
               "dim": 2,
               "sha256": "5aaf1e183f1faf12c327dc2fb8c223022f04684c61fc34533bff62e7e572c776"
             },
             "edge_ok": {
+              "kept": "number[]",
               "dim": 2,
               "sha256": "463f2998327eb3a694145e6014444480b2235be84aa6cfd57871cc64f1cd816c"
             }

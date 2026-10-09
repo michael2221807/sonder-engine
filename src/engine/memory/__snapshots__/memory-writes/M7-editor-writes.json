@@ -268,40 +268,48 @@
           {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
-                "dim": 384,
-                "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "82afaac610af185094bce62773a54b41a00484359515ff7fcd531994e50e6e5d"
               }
             },
             "entityVectors": {
               "陆沉": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Lin Nuan": {
-                "dim": 384,
-                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "2b939291bb5dddd1cb67e0358fce75f5b1ad7fb4e5ef5a733512107b417669da"
               },
               "Guan Yu": {
-                "dim": 384,
-                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "a491a292e9e67de7a88b02f2a890795a87bca1b5f57098de3f93cca98731ae42"
               },
               "青石镇": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               }
             },
             "edgeVectors": {
               "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
-                "dim": 384,
-                "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "702410cc6a880642e64c113858af5332e6f4799e85e5071c0fd496d13367b0d6"
               },
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
-                "dim": 384,
-                "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "803c3439e4163b693311dd648e32226e00b5fd03b68c9b31efe5123546308618"
               },
               "guan yu|陆沉|guanyutravelstogetherwithluchenalongthem": {
-                "dim": 384,
-                "sha256": "b8686723c453a0a2ab01f8058f0f3a227705f796a813397441deb4a2ce5a5027"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "01446007bc05801bf311495464e9ab1e53df8f56fb46e919a77342bfb0f6414e"
               }
             },
             "model": "unknown",
@@ -328,6 +336,7 @@
           "value": {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
               }
@@ -356,6 +365,7 @@
           "value": {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "c76ba08f2a19e25558de85acfbe457a8c82a9b80571ddc4f5274be3c306df173"
               }
@@ -372,24 +382,29 @@
           "value": {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "Guan Yu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               }
@@ -413,24 +428,29 @@
           "value": {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "Guan Yu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               }
@@ -446,34 +466,41 @@
           "value": {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "Guan Yu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               }
             },
             "edgeVectors": {
               "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
               },
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
               }
@@ -492,38 +519,46 @@
           "value": {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "Guan Yu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               }
             },
             "edgeVectors": {
               "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
               },
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
               },
               "guan yu|陆沉|guanyutravelstogetherwithluchenalongthem": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "b8686723c453a0a2ab01f8058f0f3a227705f796a813397441deb4a2ce5a5027"
               }
@@ -814,44 +849,53 @@
           {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
-                "dim": 384,
-                "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "82afaac610af185094bce62773a54b41a00484359515ff7fcd531994e50e6e5d"
               }
             },
             "entityVectors": {
               "陆沉": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Lin Nuan": {
-                "dim": 384,
-                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "2b939291bb5dddd1cb67e0358fce75f5b1ad7fb4e5ef5a733512107b417669da"
               },
               "Guan Yu": {
-                "dim": 384,
-                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "a491a292e9e67de7a88b02f2a890795a87bca1b5f57098de3f93cca98731ae42"
               },
               "青石镇": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Blacksmith Li": {
-                "dim": 384,
-                "sha256": "d8f226fb967dfd67a5399b113f734a7103638c4c2f0eb8a78e68ffa616a8138b"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "2058ceee14333d17aa6663f92c9927471d59d43db0be080e0373246461863c40"
               }
             },
             "edgeVectors": {
               "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
-                "dim": 384,
-                "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "702410cc6a880642e64c113858af5332e6f4799e85e5071c0fd496d13367b0d6"
               },
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
-                "dim": 384,
-                "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "803c3439e4163b693311dd648e32226e00b5fd03b68c9b31efe5123546308618"
               },
               "guan yu|陆沉|guanyutravelstogetherwithluchenalongthem": {
-                "dim": 384,
-                "sha256": "b8686723c453a0a2ab01f8058f0f3a227705f796a813397441deb4a2ce5a5027"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "01446007bc05801bf311495464e9ab1e53df8f56fb46e919a77342bfb0f6414e"
               }
             },
             "model": "unknown",
@@ -870,42 +914,51 @@
           "value": {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "Guan Yu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Blacksmith Li": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "d8f226fb967dfd67a5399b113f734a7103638c4c2f0eb8a78e68ffa616a8138b"
               }
             },
             "edgeVectors": {
               "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
               },
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
               },
               "guan yu|陆沉|guanyutravelstogetherwithluchenalongthem": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "b8686723c453a0a2ab01f8058f0f3a227705f796a813397441deb4a2ce5a5027"
               }
@@ -1487,36 +1540,43 @@
           {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
-                "dim": 384,
-                "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "82afaac610af185094bce62773a54b41a00484359515ff7fcd531994e50e6e5d"
               }
             },
             "entityVectors": {
               "陆沉": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Lin Nuan": {
-                "dim": 384,
-                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "2b939291bb5dddd1cb67e0358fce75f5b1ad7fb4e5ef5a733512107b417669da"
               },
               "青石镇": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Blacksmith Li": {
-                "dim": 384,
-                "sha256": "d8f226fb967dfd67a5399b113f734a7103638c4c2f0eb8a78e68ffa616a8138b"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "2058ceee14333d17aa6663f92c9927471d59d43db0be080e0373246461863c40"
               }
             },
             "edgeVectors": {
               "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
-                "dim": 384,
-                "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "702410cc6a880642e64c113858af5332e6f4799e85e5071c0fd496d13367b0d6"
               },
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
-                "dim": 384,
-                "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "803c3439e4163b693311dd648e32226e00b5fd03b68c9b31efe5123546308618"
               }
             },
             "model": "unknown",
@@ -1535,38 +1595,46 @@
           "value": {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "Guan Yu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Blacksmith Li": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "d8f226fb967dfd67a5399b113f734a7103638c4c2f0eb8a78e68ffa616a8138b"
               }
             },
             "edgeVectors": {
               "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
               },
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
               }
@@ -1585,34 +1653,41 @@
           "value": {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Blacksmith Li": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "d8f226fb967dfd67a5399b113f734a7103638c4c2f0eb8a78e68ffa616a8138b"
               }
             },
             "edgeVectors": {
               "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
               },
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
               }
@@ -2257,56 +2332,68 @@
           {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
-                "dim": 384,
-                "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "82afaac610af185094bce62773a54b41a00484359515ff7fcd531994e50e6e5d"
               }
             },
             "entityVectors": {
               "陆沉": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Lin Nuan": {
-                "dim": 384,
-                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "2b939291bb5dddd1cb67e0358fce75f5b1ad7fb4e5ef5a733512107b417669da"
               },
               "青石镇": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Blacksmith Li": {
-                "dim": 384,
-                "sha256": "699f583b712e996f24abf560e87a78af94de3fbdf719f3ba9e8dd3008f5b004c"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "ff59bdf1df071628abc9041cbb046405d70ed6f08faf3f2a5abed0118d62c75a"
               },
               "Guan Yunchang": {
-                "dim": 384,
-                "sha256": "9f61dc3610bdf36a85829e5d2cdf0be4502f77ef17430dc05f7bf54584c2efbb"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "11e4e8c7388bcd304e98839099950552161a11288c4ce6c6db31d099ef1678d2"
               },
               "Iron Gate": {
-                "dim": 384,
-                "sha256": "664eff04b2c97d4c20e15af36392408e5d2d08d561e5ae7eae2493ce0453f07d"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "ecca0bcc3fa5d490fffb57fc2e6e35357e726bdc0a22892ad14120393184a712"
               }
             },
             "edgeVectors": {
               "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
-                "dim": 384,
-                "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "702410cc6a880642e64c113858af5332e6f4799e85e5071c0fd496d13367b0d6"
               },
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
-                "dim": 384,
-                "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "803c3439e4163b693311dd648e32226e00b5fd03b68c9b31efe5123546308618"
               },
               "guan yunchang|陆沉|guanyutravelstogetherwithluchenalongthem": {
-                "dim": 384,
-                "sha256": "b8686723c453a0a2ab01f8058f0f3a227705f796a813397441deb4a2ce5a5027"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "01446007bc05801bf311495464e9ab1e53df8f56fb46e919a77342bfb0f6414e"
               },
               "blacksmith li|iron gate|blacksmithliworksbytheirongateeveryday": {
-                "dim": 384,
-                "sha256": "3f5bb8cb370847a1f0eaf4ca7511528a8e2291f958d9cdbfdecc10453adc0695"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "0d26901807c42c77023f84d8b1a2b7e4668055deb3a20828b507e91a62f314c5"
               },
               "blacksmith li|lin nuan|blacksmithlibuyscharcoalfromlinnuan": {
-                "dim": 384,
-                "sha256": "681c1a2e72132e778ac5118d48d90d955e2292c9d6a3f857d101506f35fecbb5"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "15386d5130d0f05f8ea7ab097c4eb400e5288fcf15ab394453e3124af1f7a739"
               }
             },
             "model": "unknown",
@@ -2325,42 +2412,51 @@
           "value": {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Blacksmith Li": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "699f583b712e996f24abf560e87a78af94de3fbdf719f3ba9e8dd3008f5b004c"
               },
               "Guan Yunchang": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "9f61dc3610bdf36a85829e5d2cdf0be4502f77ef17430dc05f7bf54584c2efbb"
               },
               "Iron Gate": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "664eff04b2c97d4c20e15af36392408e5d2d08d561e5ae7eae2493ce0453f07d"
               }
             },
             "edgeVectors": {
               "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
               },
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
               }
@@ -2379,54 +2475,66 @@
           "value": {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Blacksmith Li": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "699f583b712e996f24abf560e87a78af94de3fbdf719f3ba9e8dd3008f5b004c"
               },
               "Guan Yunchang": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "9f61dc3610bdf36a85829e5d2cdf0be4502f77ef17430dc05f7bf54584c2efbb"
               },
               "Iron Gate": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "664eff04b2c97d4c20e15af36392408e5d2d08d561e5ae7eae2493ce0453f07d"
               }
             },
             "edgeVectors": {
               "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
               },
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
               },
               "guan yunchang|陆沉|guanyutravelstogetherwithluchenalongthem": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "b8686723c453a0a2ab01f8058f0f3a227705f796a813397441deb4a2ce5a5027"
               },
               "blacksmith li|iron gate|blacksmithliworksbytheirongateeveryday": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "3f5bb8cb370847a1f0eaf4ca7511528a8e2291f958d9cdbfdecc10453adc0695"
               },
               "blacksmith li|lin nuan|blacksmithlibuyscharcoalfromlinnuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "681c1a2e72132e778ac5118d48d90d955e2292c9d6a3f857d101506f35fecbb5"
               }
@@ -2743,52 +2851,63 @@
           {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
-                "dim": 384,
-                "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "82afaac610af185094bce62773a54b41a00484359515ff7fcd531994e50e6e5d"
               }
             },
             "entityVectors": {
               "陆沉": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Lin Nuan": {
-                "dim": 384,
-                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "2b939291bb5dddd1cb67e0358fce75f5b1ad7fb4e5ef5a733512107b417669da"
               },
               "青石镇": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Blacksmith Li": {
-                "dim": 384,
-                "sha256": "699f583b712e996f24abf560e87a78af94de3fbdf719f3ba9e8dd3008f5b004c"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "ff59bdf1df071628abc9041cbb046405d70ed6f08faf3f2a5abed0118d62c75a"
               },
               "Guan Yunchang": {
-                "dim": 384,
-                "sha256": "9f61dc3610bdf36a85829e5d2cdf0be4502f77ef17430dc05f7bf54584c2efbb"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "11e4e8c7388bcd304e98839099950552161a11288c4ce6c6db31d099ef1678d2"
               },
               "Iron Gate": {
-                "dim": 384,
-                "sha256": "664eff04b2c97d4c20e15af36392408e5d2d08d561e5ae7eae2493ce0453f07d"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "ecca0bcc3fa5d490fffb57fc2e6e35357e726bdc0a22892ad14120393184a712"
               }
             },
             "edgeVectors": {
               "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
-                "dim": 384,
-                "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "702410cc6a880642e64c113858af5332e6f4799e85e5071c0fd496d13367b0d6"
               },
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
-                "dim": 384,
-                "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "803c3439e4163b693311dd648e32226e00b5fd03b68c9b31efe5123546308618"
               },
               "guan yunchang|陆沉|guanyutravelstogetherwithluchenalongthem": {
-                "dim": 384,
-                "sha256": "b8686723c453a0a2ab01f8058f0f3a227705f796a813397441deb4a2ce5a5027"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "01446007bc05801bf311495464e9ab1e53df8f56fb46e919a77342bfb0f6414e"
               },
               "blacksmith li|lin nuan|blacksmithlibuyscharcoalfromlinnuan": {
-                "dim": 384,
-                "sha256": "681c1a2e72132e778ac5118d48d90d955e2292c9d6a3f857d101506f35fecbb5"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "15386d5130d0f05f8ea7ab097c4eb400e5288fcf15ab394453e3124af1f7a739"
               }
             },
             "model": "unknown",
@@ -2807,50 +2926,61 @@
           "value": {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Blacksmith Li": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "699f583b712e996f24abf560e87a78af94de3fbdf719f3ba9e8dd3008f5b004c"
               },
               "Guan Yunchang": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "9f61dc3610bdf36a85829e5d2cdf0be4502f77ef17430dc05f7bf54584c2efbb"
               },
               "Iron Gate": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "664eff04b2c97d4c20e15af36392408e5d2d08d561e5ae7eae2493ce0453f07d"
               }
             },
             "edgeVectors": {
               "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
               },
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
               },
               "guan yunchang|陆沉|guanyutravelstogetherwithluchenalongthem": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "b8686723c453a0a2ab01f8058f0f3a227705f796a813397441deb4a2ce5a5027"
               },
               "blacksmith li|lin nuan|blacksmithlibuyscharcoalfromlinnuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "681c1a2e72132e778ac5118d48d90d955e2292c9d6a3f857d101506f35fecbb5"
               }
@@ -4811,44 +4941,53 @@
           {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
-                "dim": 384,
-                "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "82afaac610af185094bce62773a54b41a00484359515ff7fcd531994e50e6e5d"
               }
             },
             "entityVectors": {
               "陆沉": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Lin Nuan": {
-                "dim": 384,
-                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "2b939291bb5dddd1cb67e0358fce75f5b1ad7fb4e5ef5a733512107b417669da"
               },
               "青石镇": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Guan Yunchang": {
-                "dim": 384,
-                "sha256": "9f61dc3610bdf36a85829e5d2cdf0be4502f77ef17430dc05f7bf54584c2efbb"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "11e4e8c7388bcd304e98839099950552161a11288c4ce6c6db31d099ef1678d2"
               },
               "Iron Gate": {
-                "dim": 384,
-                "sha256": "664eff04b2c97d4c20e15af36392408e5d2d08d561e5ae7eae2493ce0453f07d"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "ecca0bcc3fa5d490fffb57fc2e6e35357e726bdc0a22892ad14120393184a712"
               }
             },
             "edgeVectors": {
               "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
-                "dim": 384,
-                "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "702410cc6a880642e64c113858af5332e6f4799e85e5071c0fd496d13367b0d6"
               },
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
-                "dim": 384,
-                "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "803c3439e4163b693311dd648e32226e00b5fd03b68c9b31efe5123546308618"
               },
               "guan yunchang|陆沉|guanyutravelstogetherwithluchenalongthem": {
-                "dim": 384,
-                "sha256": "b8686723c453a0a2ab01f8058f0f3a227705f796a813397441deb4a2ce5a5027"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "01446007bc05801bf311495464e9ab1e53df8f56fb46e919a77342bfb0f6414e"
               }
             },
             "model": "unknown",
@@ -4867,46 +5006,56 @@
           "value": {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Blacksmith Li": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "699f583b712e996f24abf560e87a78af94de3fbdf719f3ba9e8dd3008f5b004c"
               },
               "Guan Yunchang": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "9f61dc3610bdf36a85829e5d2cdf0be4502f77ef17430dc05f7bf54584c2efbb"
               },
               "Iron Gate": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "664eff04b2c97d4c20e15af36392408e5d2d08d561e5ae7eae2493ce0453f07d"
               }
             },
             "edgeVectors": {
               "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
               },
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
               },
               "guan yunchang|陆沉|guanyutravelstogetherwithluchenalongthem": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "b8686723c453a0a2ab01f8058f0f3a227705f796a813397441deb4a2ce5a5027"
               }
@@ -4925,42 +5074,51 @@
           "value": {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Guan Yunchang": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "9f61dc3610bdf36a85829e5d2cdf0be4502f77ef17430dc05f7bf54584c2efbb"
               },
               "Iron Gate": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "664eff04b2c97d4c20e15af36392408e5d2d08d561e5ae7eae2493ce0453f07d"
               }
             },
             "edgeVectors": {
               "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
               },
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
               },
               "guan yunchang|陆沉|guanyutravelstogetherwithluchenalongthem": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "b8686723c453a0a2ab01f8058f0f3a227705f796a813397441deb4a2ce5a5027"
               }
@@ -5532,40 +5690,48 @@
           {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
-                "dim": 384,
-                "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "82afaac610af185094bce62773a54b41a00484359515ff7fcd531994e50e6e5d"
               }
             },
             "entityVectors": {
               "陆沉": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Lin Nuan": {
-                "dim": 384,
-                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "2b939291bb5dddd1cb67e0358fce75f5b1ad7fb4e5ef5a733512107b417669da"
               },
               "青石镇": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Guan Yunchang": {
-                "dim": 384,
-                "sha256": "9f61dc3610bdf36a85829e5d2cdf0be4502f77ef17430dc05f7bf54584c2efbb"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "11e4e8c7388bcd304e98839099950552161a11288c4ce6c6db31d099ef1678d2"
               },
               "Iron Gate": {
-                "dim": 384,
-                "sha256": "664eff04b2c97d4c20e15af36392408e5d2d08d561e5ae7eae2493ce0453f07d"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "ecca0bcc3fa5d490fffb57fc2e6e35357e726bdc0a22892ad14120393184a712"
               }
             },
             "edgeVectors": {
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
-                "dim": 384,
-                "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "803c3439e4163b693311dd648e32226e00b5fd03b68c9b31efe5123546308618"
               },
               "guan yunchang|陆沉|guanyutravelstogetherwithluchenalongthem": {
-                "dim": 384,
-                "sha256": "b8686723c453a0a2ab01f8058f0f3a227705f796a813397441deb4a2ce5a5027"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "01446007bc05801bf311495464e9ab1e53df8f56fb46e919a77342bfb0f6414e"
               }
             },
             "model": "unknown",
@@ -5584,38 +5750,46 @@
           "value": {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Guan Yunchang": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "9f61dc3610bdf36a85829e5d2cdf0be4502f77ef17430dc05f7bf54584c2efbb"
               },
               "Iron Gate": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "664eff04b2c97d4c20e15af36392408e5d2d08d561e5ae7eae2493ce0453f07d"
               }
             },
             "edgeVectors": {
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
               },
               "guan yunchang|陆沉|guanyutravelstogetherwithluchenalongthem": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "b8686723c453a0a2ab01f8058f0f3a227705f796a813397441deb4a2ce5a5027"
               }
@@ -5911,56 +6085,68 @@
           {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
-                "dim": 384,
-                "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "82afaac610af185094bce62773a54b41a00484359515ff7fcd531994e50e6e5d"
               }
             },
             "entityVectors": {
               "陆沉": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Lin Nuan": {
-                "dim": 384,
-                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "2b939291bb5dddd1cb67e0358fce75f5b1ad7fb4e5ef5a733512107b417669da"
               },
               "青石镇": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Guan Yunchang": {
-                "dim": 384,
-                "sha256": "9f61dc3610bdf36a85829e5d2cdf0be4502f77ef17430dc05f7bf54584c2efbb"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "11e4e8c7388bcd304e98839099950552161a11288c4ce6c6db31d099ef1678d2"
               },
               "Iron Gate": {
-                "dim": 384,
-                "sha256": "664eff04b2c97d4c20e15af36392408e5d2d08d561e5ae7eae2493ce0453f07d"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "ecca0bcc3fa5d490fffb57fc2e6e35357e726bdc0a22892ad14120393184a712"
               },
               "后山": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Stranger": {
-                "dim": 384,
-                "sha256": "bfafb8e60f358ce73c7d00752ae43a906ac02373cdd82d5fb55a2f78907b0014"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "6c3dd633efec6918e71530a7ca34373cae03d73299fac10473ff43e8db77abae"
               }
             },
             "edgeVectors": {
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
-                "dim": 384,
-                "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "803c3439e4163b693311dd648e32226e00b5fd03b68c9b31efe5123546308618"
               },
               "guan yunchang|陆沉|guanyutravelstogetherwithluchenalongthem": {
-                "dim": 384,
-                "sha256": "b8686723c453a0a2ab01f8058f0f3a227705f796a813397441deb4a2ce5a5027"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "01446007bc05801bf311495464e9ab1e53df8f56fb46e919a77342bfb0f6414e"
               },
               "herbalist qin|后山|herbalistqinpicksherbsonthebackmountain": {
-                "dim": 384,
-                "sha256": "4ff9bfff1e8f046559bbf18df768928b4dd7f222186361923197da1498fd82fc"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "3e9474fdbe9a07700358c3ecb6c06f6f57e7e799b9ff8553dfd16234e7f54ea0"
               },
               "herbalist qin|stranger|herbalistqinsellsherbstoeverystranger": {
-                "dim": 384,
-                "sha256": "cb221877609e7ffe46a11e384982f91f603cf206987a02eb72e65e25b9288f5b"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "5db2f27ab0ad25aeebd7319497ec27c8439174ef764767e4849bf4d807e8bbcb"
               }
             },
             "model": "unknown",
@@ -5979,46 +6165,56 @@
           "value": {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Guan Yunchang": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "9f61dc3610bdf36a85829e5d2cdf0be4502f77ef17430dc05f7bf54584c2efbb"
               },
               "Iron Gate": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "664eff04b2c97d4c20e15af36392408e5d2d08d561e5ae7eae2493ce0453f07d"
               },
               "后山": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Stranger": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "bfafb8e60f358ce73c7d00752ae43a906ac02373cdd82d5fb55a2f78907b0014"
               }
             },
             "edgeVectors": {
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
               },
               "guan yunchang|陆沉|guanyutravelstogetherwithluchenalongthem": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "b8686723c453a0a2ab01f8058f0f3a227705f796a813397441deb4a2ce5a5027"
               }
@@ -6037,54 +6233,66 @@
           "value": {
             "eventVectors": {
               "evt_muysi0lc_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "4f29626299f4ce89265d6858726a20aec14e3100c4b229aa29a9cf2114f037f0"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Guan Yunchang": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "9f61dc3610bdf36a85829e5d2cdf0be4502f77ef17430dc05f7bf54584c2efbb"
               },
               "Iron Gate": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "664eff04b2c97d4c20e15af36392408e5d2d08d561e5ae7eae2493ce0453f07d"
               },
               "后山": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Stranger": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "bfafb8e60f358ce73c7d00752ae43a906ac02373cdd82d5fb55a2f78907b0014"
               }
             },
             "edgeVectors": {
               "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "dfa0385c8de4af9446472927f4c8cd58cdc48e162038df019501037c24e8cf50"
               },
               "guan yunchang|陆沉|guanyutravelstogetherwithluchenalongthem": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "b8686723c453a0a2ab01f8058f0f3a227705f796a813397441deb4a2ce5a5027"
               },
               "herbalist qin|后山|herbalistqinpicksherbsonthebackmountain": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "4ff9bfff1e8f046559bbf18df768928b4dd7f222186361923197da1498fd82fc"
               },
               "herbalist qin|stranger|herbalistqinsellsherbstoeverystranger": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "cb221877609e7ffe46a11e384982f91f603cf206987a02eb72e65e25b9288f5b"
               }

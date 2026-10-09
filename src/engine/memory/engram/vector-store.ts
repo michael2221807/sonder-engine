@@ -10,25 +10,86 @@
  * - 向量数据与状态树分离存储（因为向量数据量大且不需要响应式），
  *   状态树中只存事件/实体/关系的元数据
  * - cosine similarity 是纯数学计算，不依赖外部库
+ * - 存档瘦身 D4A (2026-10-09): vectors are kept as Float32Arrays (4 bytes a value; an embedding API gives float32
+ *   values anyway). Reading turns the number lists of older records and the objects of indices an older tab writes
+ *   into Float32Arrays, in memory only (the record takes the new form with its next write); the embedder's number
+ *   lists are converted before they are written. A backup bundle holds the base64 of the little-endian float32 bytes
+ *   (vectorDataForBundle / vectorDataFromBundle).
  *
  * 对应 STEP-03B M3.6 Engram 数据流（VectorStore 持久化）。
  */
 import { idbAdapter } from '../../persistence/idb-adapter';
+import {
+  decodeVectorMap,
+  encodeVectorMap,
+  toFloat32,
+  type StoredVector,
+} from '../../persistence/save-format/vector-codec';
 
 // ─── 类型定义 ───
 
+/** The three vector tables of a slot. */
+export type VectorTable = 'eventVectors' | 'entityVectors' | 'edgeVectors';
+export const VECTOR_TABLES: readonly VectorTable[] = ['eventVectors', 'entityVectors', 'edgeVectors'];
+
 /** 向量存储的持久化数据结构 */
 export interface VectorStoreData {
-  /** 事件向量（eventId → 向量数组） */
-  eventVectors: Record<string, number[]>;
-  /** 实体向量（entityName → 向量数组） */
-  entityVectors: Record<string, number[]>;
+  /** 事件向量 (eventId → vector: a Float32Array once loaded, a number list in an older record) */
+  eventVectors: Record<string, StoredVector>;
+  /** 实体向量 (entityName → vector) */
+  entityVectors: Record<string, StoredVector>;
   /** V2: 边向量（edgeId → fact embedding） */
-  edgeVectors: Record<string, number[]>;
+  edgeVectors: Record<string, StoredVector>;
   /** 使用的 embedding 模型名（如果模型变更，需要重新向量化） */
   model: string;
   /** 向量维度（用于校验新向量与已有数据的兼容性） */
   dim: number;
+}
+
+/** A slot's vectors as a backup bundle carries them: each vector as the base64 of its little-endian float32 bytes. */
+export interface BundleVectorData {
+  eventVectors: Record<string, string>;
+  entityVectors: Record<string, string>;
+  edgeVectors: Record<string, string>;
+  model: string;
+  dim: number;
+}
+
+/**
+ * A slot's vectors for a backup bundle (JSON cannot hold a Float32Array: it would become an object of indices). A record
+ * from before edge vectors existed has none.
+ */
+export function vectorDataForBundle(data: Omit<VectorStoreData, 'edgeVectors'> & Partial<Pick<VectorStoreData, 'edgeVectors'>>): BundleVectorData {
+  return {
+    eventVectors: encodeVectorMap(data.eventVectors),
+    entityVectors: encodeVectorMap(data.entityVectors),
+    edgeVectors: encodeVectorMap(data.edgeVectors ?? {}),
+    model: data.model,
+    dim: data.dim,
+  };
+}
+
+/**
+ * A slot's vectors from a backup bundle or a stored record, in any form a vector has been kept in (a number list, the
+ * base64 of a bundle, a Float32Array, an object of indices), as Float32Arrays. An entry that is no vector is left out
+ * (and logged): it never served a search.
+ */
+export function vectorDataFromBundle(raw: unknown): VectorStoreData {
+  const record = raw !== null && typeof raw === 'object' && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
+  const data: VectorStoreData = {
+    eventVectors: {},
+    entityVectors: {},
+    edgeVectors: {},
+    model: typeof record.model === 'string' ? record.model : '',
+    dim: typeof record.dim === 'number' && Number.isFinite(record.dim) ? record.dim : 0,
+  };
+  for (const table of VECTOR_TABLES) {
+    const { vectors, invalid } = decodeVectorMap(record[table]);
+    data[table] = vectors;
+    const dropped = Object.keys(invalid).length;
+    if (dropped > 0) console.warn(`[VectorStore] ${table}: ${dropped === 1 ? '1 entry is not a vector' : `${dropped} entries are not vectors`}; left out`);
+  }
+  return data;
 }
 
 /** 用于 idbAdapter key 生成的存档标识 */
@@ -46,9 +107,23 @@ export class VectorStore {
    */
   async load(profileId: string, slotId: string): Promise<VectorStoreData> {
     const key = this.buildKey({ profileId, slotId });
-    return (
-      (await idbAdapter.get<VectorStoreData>(key)) ?? this.createEmpty()
-    );
+    const stored = await idbAdapter.get<unknown>(key);
+    // 存档瘦身 D4A: every form a vector was stored in becomes a Float32Array here, in memory only (the export reads
+    // through this too, and must not write); the record takes the new form with its next write.
+    return stored === undefined ? this.createEmpty() : vectorDataFromBundle(stored);
+  }
+
+  /**
+   * The slot's record exactly as it is stored, unconverted (load converts every vector to a Float32Array); undefined
+   * when there is none. For a rollback snapshot that must put back what was there, byte for byte.
+   */
+  async loadStored(profileId: string, slotId: string): Promise<unknown> {
+    return idbAdapter.get<unknown>(this.buildKey({ profileId, slotId }));
+  }
+
+  /** Put back a record loadStored gave, as it was. */
+  async restoreStored(profileId: string, slotId: string, stored: unknown): Promise<void> {
+    await idbAdapter.set(this.buildKey({ profileId, slotId }), stored);
   }
 
   /** 将向量数据写入 IndexedDB */
@@ -79,7 +154,7 @@ export class VectorStore {
    */
   async mergeEventVectors(
     events: Array<{ id: string }>,
-    vectors: number[][],
+    vectors: ReadonlyArray<ArrayLike<number>>,
     model: string,
     storage: StorageIdentifier,
   ): Promise<void> {
@@ -93,7 +168,7 @@ export class VectorStore {
    */
   async mergeEntityVectors(
     entities: Array<{ name: string }>,
-    vectors: number[][],
+    vectors: ReadonlyArray<ArrayLike<number>>,
     model: string,
     storage: StorageIdentifier,
   ): Promise<void> {
@@ -111,7 +186,7 @@ export class VectorStore {
    * 除零保护：当任一向量的范数为 0 时返回 0（而非 NaN），
    * 因为零向量表示"无语义信息"，与任何向量的相似度应为 0。
    */
-  cosineSimilarity(a: number[], b: number[]): number {
+  cosineSimilarity(a: ArrayLike<number>, b: ArrayLike<number>): number {
     if (a.length !== b.length || a.length === 0) return 0;
 
     let dot = 0;
@@ -204,7 +279,7 @@ export class VectorStore {
 
   async mergeEdgeVectors(
     edges: Array<{ id: string }>,
-    vectors: number[][],
+    vectors: ReadonlyArray<ArrayLike<number>>,
     model: string,
     storage: StorageIdentifier,
   ): Promise<void> {
@@ -212,15 +287,38 @@ export class VectorStore {
   }
 
   /**
+   * Remove the given vectors of a slot in one write (存档瘦身 D4A: a save's pseudo vectors,
+   * EngramManager.repairVectorDims). Keys a table does not hold are skipped; nothing is written when none is held.
+   */
+  async removeVectors(
+    keys: Partial<Record<VectorTable, readonly string[]>>,
+    profileId: string,
+    slotId: string,
+  ): Promise<number> {
+    const data = await this.load(profileId, slotId);
+    let removed = 0;
+    for (const table of VECTOR_TABLES) {
+      for (const key of keys[table] ?? []) {
+        if (Object.prototype.hasOwnProperty.call(data[table], key)) {
+          delete data[table][key];
+          removed++;
+        }
+      }
+    }
+    if (removed > 0) await this.save(profileId, slotId, data);
+    return removed;
+  }
+
+  /**
    * Shared body of the three merge*Vectors methods. `items[i]` pairs with `vectors[i]`;
-   * a falsy item or missing vector is skipped.
+   * a falsy item or missing vector is skipped. Each vector is stored as a Float32Array (存档瘦身 D4A).
    * A different embedding model wipes all three tables first (vector spaces differ).
    */
   private async mergeVectors<T extends object>(
-    kind: 'eventVectors' | 'entityVectors' | 'edgeVectors',
+    kind: VectorTable,
     items: T[],
     keyOf: (item: T) => string,
-    vectors: number[][],
+    vectors: ReadonlyArray<ArrayLike<number>>,
     model: string,
     storage: StorageIdentifier,
   ): Promise<void> {
@@ -239,7 +337,7 @@ export class VectorStore {
       const item = items[i];
       const vector = vectors[i];
       if (item && vector) {
-        data[kind][keyOf(item)] = vector;
+        data[kind][keyOf(item)] = toFloat32(vector);
       }
     }
 

@@ -172,6 +172,10 @@
       "#ValidationRepairModule#1 id=validation-repair"
     ],
     [
+      "eventBus.on",
+      "engine:game-opened"
+    ],
+    [
       "call",
       "ImageProviderRegistry.register",
       "novelai",

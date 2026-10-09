@@ -12,8 +12,12 @@ import { collectAssetIdsFromTree } from '../image/asset-refs';
 
 // ─── 常量 ───
 
-/** 备份文件的格式版本 — 导入时用于兼容性校验和未来的格式迁移 */
-export const BACKUP_FORMAT_VERSION = 1;
+/**
+ * 备份文件的格式版本 — 导入时用于兼容性校验和未来的格式迁移。
+ * 2 (存档瘦身 D4A, 2026-10-09): vectors are the base64 of their little-endian float32 bytes; version 1 bundles (number
+ * lists) import as before, and code from before refuses version 2.
+ */
+export const BACKUP_FORMAT_VERSION = 2;
 
 // ─── 类型 ───
 
@@ -211,8 +215,8 @@ export function parseCompositeKey(key: string): {
  * 跳过它们可减小备份文件体积。
  */
 export function hasVectorContent(data: {
-  eventVectors: Record<string, number[]>;
-  entityVectors: Record<string, number[]>;
+  eventVectors: Readonly<Record<string, unknown>>;
+  entityVectors: Readonly<Record<string, unknown>>;
 }): boolean {
   return (
     Object.keys(data.eventVectors).length > 0 ||

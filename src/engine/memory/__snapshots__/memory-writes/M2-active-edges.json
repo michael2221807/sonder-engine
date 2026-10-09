@@ -319,56 +319,68 @@
           {
             "eventVectors": {
               "evt_muyrtkyo_4fzyo8": {
-                "dim": 384,
-                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "15bf00eb90af73e8fac97c7f43dd2135a5e4962f5b868ea00176caef98aa60f6"
               }
             },
             "entityVectors": {
               "陆沉": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Lin Nuan": {
-                "dim": 384,
-                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "2b939291bb5dddd1cb67e0358fce75f5b1ad7fb4e5ef5a733512107b417669da"
               },
               "Guan Yu": {
-                "dim": 384,
-                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "a491a292e9e67de7a88b02f2a890795a87bca1b5f57098de3f93cca98731ae42"
               },
               "青石镇": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Old Hermit": {
-                "dim": 384,
-                "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "8c45835e193c2dca557e74e937076360f9e8673d958dc7f6d7eae1d5257b1997"
               },
               "Old Well": {
-                "dim": 384,
-                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "1984ed4ad89c4ad35053437f0506bdcf5cc3fd7a0defc4bf479490cd93371fb5"
               },
               "Stranger One": {
-                "dim": 384,
-                "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "68d68f0eb0ccbb06a1c00c24519e3359dbaca678e4c86daef4ae7dd76686b554"
               },
               "Stranger Two": {
-                "dim": 384,
-                "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "85c06a39c859d2f7c123eee8f27a42d18e230c409b91180ce315cdb6a93a568c"
               }
             },
             "edgeVectors": {
               "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
-                "dim": 384,
-                "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "fe4d030c17c524aa460ba71c9b55c6ed37d1d46fc5a2292950d1f231b517c3a3"
               },
               "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
-                "dim": 384,
-                "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "12872b9958af60424b79a10c53e8c1bd40f6c92a37e745d5f635ed55c584177e"
               },
               "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
-                "dim": 384,
-                "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "443ba395f608f1eb391bafa691cc381a7bb439c4f63617251cbd8b0f44ebff08"
               }
             },
             "model": "unknown",
@@ -391,6 +403,7 @@
           "value": {
             "eventVectors": {
               "evt_muyrtkyo_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
               }
@@ -411,40 +424,49 @@
           "value": {
             "eventVectors": {
               "evt_muyrtkyo_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "Guan Yu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Old Hermit": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
               },
               "Old Well": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
               },
               "Stranger One": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
               },
               "Stranger Two": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
               }
@@ -464,54 +486,66 @@
           "value": {
             "eventVectors": {
               "evt_muyrtkyo_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "Guan Yu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Old Hermit": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
               },
               "Old Well": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
               },
               "Stranger One": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
               },
               "Stranger Two": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
               }
             },
             "edgeVectors": {
               "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
               },
               "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
               },
               "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
               }
@@ -896,64 +930,78 @@
           {
             "eventVectors": {
               "evt_muyrtkyo_4fzyo8": {
-                "dim": 384,
-                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "15bf00eb90af73e8fac97c7f43dd2135a5e4962f5b868ea00176caef98aa60f6"
               },
               "evt_muyruv9c_4fzyo8": {
-                "dim": 384,
-                "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "1062cf9de251896f02a758f4ce56c1f1e99dcc4e049c3dc329791e3df685fddb"
               }
             },
             "entityVectors": {
               "陆沉": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Lin Nuan": {
-                "dim": 384,
-                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "2b939291bb5dddd1cb67e0358fce75f5b1ad7fb4e5ef5a733512107b417669da"
               },
               "Guan Yu": {
-                "dim": 384,
-                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "a491a292e9e67de7a88b02f2a890795a87bca1b5f57098de3f93cca98731ae42"
               },
               "青石镇": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Old Hermit": {
-                "dim": 384,
-                "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "8c45835e193c2dca557e74e937076360f9e8673d958dc7f6d7eae1d5257b1997"
               },
               "Old Well": {
-                "dim": 384,
-                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "1984ed4ad89c4ad35053437f0506bdcf5cc3fd7a0defc4bf479490cd93371fb5"
               },
               "Stranger One": {
-                "dim": 384,
-                "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "68d68f0eb0ccbb06a1c00c24519e3359dbaca678e4c86daef4ae7dd76686b554"
               },
               "Stranger Two": {
-                "dim": 384,
-                "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "85c06a39c859d2f7c123eee8f27a42d18e230c409b91180ce315cdb6a93a568c"
               }
             },
             "edgeVectors": {
               "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
-                "dim": 384,
-                "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "fe4d030c17c524aa460ba71c9b55c6ed37d1d46fc5a2292950d1f231b517c3a3"
               },
               "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
-                "dim": 384,
-                "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "12872b9958af60424b79a10c53e8c1bd40f6c92a37e745d5f635ed55c584177e"
               },
               "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
-                "dim": 384,
-                "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "443ba395f608f1eb391bafa691cc381a7bb439c4f63617251cbd8b0f44ebff08"
               },
               "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
-                "dim": 384,
-                "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "da4f1a581456f6f93e159e183b72aa199139ac5a479d99798c1750b4d638779a"
               }
             },
             "model": "unknown",
@@ -980,58 +1028,71 @@
           "value": {
             "eventVectors": {
               "evt_muyrtkyo_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
               },
               "evt_muyruv9c_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "Guan Yu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Old Hermit": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
               },
               "Old Well": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
               },
               "Stranger One": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
               },
               "Stranger Two": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
               }
             },
             "edgeVectors": {
               "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
               },
               "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
               },
               "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
               }
@@ -1050,62 +1111,76 @@
           "value": {
             "eventVectors": {
               "evt_muyrtkyo_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
               },
               "evt_muyruv9c_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "Guan Yu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Old Hermit": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
               },
               "Old Well": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
               },
               "Stranger One": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
               },
               "Stranger Two": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
               }
             },
             "edgeVectors": {
               "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
               },
               "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
               },
               "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
               },
               "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
               }
@@ -1542,80 +1617,98 @@
           {
             "eventVectors": {
               "evt_muyrtkyo_4fzyo8": {
-                "dim": 384,
-                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "15bf00eb90af73e8fac97c7f43dd2135a5e4962f5b868ea00176caef98aa60f6"
               },
               "evt_muyruv9c_4fzyo8": {
-                "dim": 384,
-                "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "1062cf9de251896f02a758f4ce56c1f1e99dcc4e049c3dc329791e3df685fddb"
               },
               "evt_muyrw5k0_4fzyo8": {
-                "dim": 384,
-                "sha256": "1c9396c6e96a407266b3efe776c0bd39112a09da2393dc164e1b8c43171dcf38"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "dec9386e807cab51b4066db0c1b8a7b77eae768dc64bb37544596873853cb8e4"
               }
             },
             "entityVectors": {
               "陆沉": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Lin Nuan": {
-                "dim": 384,
-                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "2b939291bb5dddd1cb67e0358fce75f5b1ad7fb4e5ef5a733512107b417669da"
               },
               "Guan Yu": {
-                "dim": 384,
-                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "a491a292e9e67de7a88b02f2a890795a87bca1b5f57098de3f93cca98731ae42"
               },
               "青石镇": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Old Hermit": {
-                "dim": 384,
-                "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "8c45835e193c2dca557e74e937076360f9e8673d958dc7f6d7eae1d5257b1997"
               },
               "Old Well": {
-                "dim": 384,
-                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "1984ed4ad89c4ad35053437f0506bdcf5cc3fd7a0defc4bf479490cd93371fb5"
               },
               "Stranger One": {
-                "dim": 384,
-                "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "68d68f0eb0ccbb06a1c00c24519e3359dbaca678e4c86daef4ae7dd76686b554"
               },
               "Stranger Two": {
-                "dim": 384,
-                "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "85c06a39c859d2f7c123eee8f27a42d18e230c409b91180ce315cdb6a93a568c"
               },
               "林月": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               }
             },
             "edgeVectors": {
               "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
-                "dim": 384,
-                "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "fe4d030c17c524aa460ba71c9b55c6ed37d1d46fc5a2292950d1f231b517c3a3"
               },
               "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
-                "dim": 384,
-                "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "12872b9958af60424b79a10c53e8c1bd40f6c92a37e745d5f635ed55c584177e"
               },
               "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
-                "dim": 384,
-                "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "443ba395f608f1eb391bafa691cc381a7bb439c4f63617251cbd8b0f44ebff08"
               },
               "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
-                "dim": 384,
-                "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "da4f1a581456f6f93e159e183b72aa199139ac5a479d99798c1750b4d638779a"
               },
               "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
-                "dim": 384,
-                "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "1c8de3265c0a62da0e2e48f601a431bf04bd07b9a5c4a649a2886e57a8e77814"
               },
               "林月|陆沉|林月是玩家的妹妹": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               }
             },
             "model": "unknown",
@@ -1642,66 +1735,81 @@
           "value": {
             "eventVectors": {
               "evt_muyrtkyo_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
               },
               "evt_muyruv9c_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
               },
               "evt_muyrw5k0_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "1c9396c6e96a407266b3efe776c0bd39112a09da2393dc164e1b8c43171dcf38"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "Guan Yu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Old Hermit": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
               },
               "Old Well": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
               },
               "Stranger One": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
               },
               "Stranger Two": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
               }
             },
             "edgeVectors": {
               "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
               },
               "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
               },
               "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
               },
               "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
               }
@@ -1720,70 +1828,86 @@
           "value": {
             "eventVectors": {
               "evt_muyrtkyo_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
               },
               "evt_muyruv9c_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
               },
               "evt_muyrw5k0_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "1c9396c6e96a407266b3efe776c0bd39112a09da2393dc164e1b8c43171dcf38"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "Guan Yu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Old Hermit": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
               },
               "Old Well": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
               },
               "Stranger One": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
               },
               "Stranger Two": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
               },
               "林月": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               }
             },
             "edgeVectors": {
               "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
               },
               "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
               },
               "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
               },
               "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
               }
@@ -1802,78 +1926,96 @@
           "value": {
             "eventVectors": {
               "evt_muyrtkyo_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
               },
               "evt_muyruv9c_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
               },
               "evt_muyrw5k0_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "1c9396c6e96a407266b3efe776c0bd39112a09da2393dc164e1b8c43171dcf38"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "Guan Yu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Old Hermit": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
               },
               "Old Well": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
               },
               "Stranger One": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
               },
               "Stranger Two": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
               },
               "林月": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               }
             },
             "edgeVectors": {
               "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
               },
               "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
               },
               "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
               },
               "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
               },
               "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
               },
               "林月|陆沉|林月是玩家的妹妹": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               }
@@ -2376,92 +2518,113 @@
           {
             "eventVectors": {
               "evt_muyrtkyo_4fzyo8": {
-                "dim": 384,
-                "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "15bf00eb90af73e8fac97c7f43dd2135a5e4962f5b868ea00176caef98aa60f6"
               },
               "evt_muyruv9c_4fzyo8": {
-                "dim": 384,
-                "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "1062cf9de251896f02a758f4ce56c1f1e99dcc4e049c3dc329791e3df685fddb"
               },
               "evt_muyrw5k0_4fzyo8": {
-                "dim": 384,
-                "sha256": "1c9396c6e96a407266b3efe776c0bd39112a09da2393dc164e1b8c43171dcf38"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "dec9386e807cab51b4066db0c1b8a7b77eae768dc64bb37544596873853cb8e4"
               },
               "evt_muyrxfuo_4fzyo8": {
-                "dim": 384,
-                "sha256": "c76ba08f2a19e25558de85acfbe457a8c82a9b80571ddc4f5274be3c306df173"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "cdfe24245c2f2304100f5017fffd9d194f271a65aa61d29d2e5cf36ce5da7a83"
               }
             },
             "entityVectors": {
               "陆沉": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Lin Nuan": {
-                "dim": 384,
-                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "2b939291bb5dddd1cb67e0358fce75f5b1ad7fb4e5ef5a733512107b417669da"
               },
               "Guan Yu": {
-                "dim": 384,
-                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "a491a292e9e67de7a88b02f2a890795a87bca1b5f57098de3f93cca98731ae42"
               },
               "青石镇": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Old Hermit": {
-                "dim": 384,
-                "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "8c45835e193c2dca557e74e937076360f9e8673d958dc7f6d7eae1d5257b1997"
               },
               "Old Well": {
-                "dim": 384,
-                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "1984ed4ad89c4ad35053437f0506bdcf5cc3fd7a0defc4bf479490cd93371fb5"
               },
               "Stranger One": {
-                "dim": 384,
-                "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "68d68f0eb0ccbb06a1c00c24519e3359dbaca678e4c86daef4ae7dd76686b554"
               },
               "Stranger Two": {
-                "dim": 384,
-                "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "85c06a39c859d2f7c123eee8f27a42d18e230c409b91180ce315cdb6a93a568c"
               },
               "林月": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Extra Wang": {
-                "dim": 384,
-                "sha256": "aa00682e52c63382e51b103df87cfb21fe2384a8dfbb23235a01a32d57aeaf82"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "eca1ba707817bb4d340b80290255972cdc988ff527c0d1047132951e567a802f"
               }
             },
             "edgeVectors": {
               "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
-                "dim": 384,
-                "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "fe4d030c17c524aa460ba71c9b55c6ed37d1d46fc5a2292950d1f231b517c3a3"
               },
               "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
-                "dim": 384,
-                "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "12872b9958af60424b79a10c53e8c1bd40f6c92a37e745d5f635ed55c584177e"
               },
               "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
-                "dim": 384,
-                "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "443ba395f608f1eb391bafa691cc381a7bb439c4f63617251cbd8b0f44ebff08"
               },
               "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
-                "dim": 384,
-                "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "da4f1a581456f6f93e159e183b72aa199139ac5a479d99798c1750b4d638779a"
               },
               "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
-                "dim": 384,
-                "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "1c8de3265c0a62da0e2e48f601a431bf04bd07b9a5c4a649a2886e57a8e77814"
               },
               "林月|陆沉|林月是玩家的妹妹": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "guan yu|陆沉|guanyusparswithluchenonthemountainpathev": {
-                "dim": 384,
-                "sha256": "160b1a2528c19270fce2c01a3decfdb369f49a3be12710e36c68281a3ce0eee8"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "7e72394e89df7f56b52b163b5b060c163ced89d6c4c9d3a0ba048703e09cd36b"
               }
             },
             "model": "unknown",
@@ -2488,82 +2651,101 @@
           "value": {
             "eventVectors": {
               "evt_muyrtkyo_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
               },
               "evt_muyruv9c_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
               },
               "evt_muyrw5k0_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "1c9396c6e96a407266b3efe776c0bd39112a09da2393dc164e1b8c43171dcf38"
               },
               "evt_muyrxfuo_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "c76ba08f2a19e25558de85acfbe457a8c82a9b80571ddc4f5274be3c306df173"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "Guan Yu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Old Hermit": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
               },
               "Old Well": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
               },
               "Stranger One": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
               },
               "Stranger Two": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
               },
               "林月": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               }
             },
             "edgeVectors": {
               "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
               },
               "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
               },
               "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
               },
               "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
               },
               "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
               },
               "林月|陆沉|林月是玩家的妹妹": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               }
@@ -2582,86 +2764,106 @@
           "value": {
             "eventVectors": {
               "evt_muyrtkyo_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
               },
               "evt_muyruv9c_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
               },
               "evt_muyrw5k0_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "1c9396c6e96a407266b3efe776c0bd39112a09da2393dc164e1b8c43171dcf38"
               },
               "evt_muyrxfuo_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "c76ba08f2a19e25558de85acfbe457a8c82a9b80571ddc4f5274be3c306df173"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "Guan Yu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Old Hermit": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
               },
               "Old Well": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
               },
               "Stranger One": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
               },
               "Stranger Two": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
               },
               "林月": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Extra Wang": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "aa00682e52c63382e51b103df87cfb21fe2384a8dfbb23235a01a32d57aeaf82"
               }
             },
             "edgeVectors": {
               "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
               },
               "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
               },
               "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
               },
               "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
               },
               "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
               },
               "林月|陆沉|林月是玩家的妹妹": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               }
@@ -2680,90 +2882,111 @@
           "value": {
             "eventVectors": {
               "evt_muyrtkyo_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "06c84c6bbdc04611458fda4bdfbbc6a5536299ae817160afc83fe04f14716403"
               },
               "evt_muyruv9c_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "b1646fd3c780fb9d67463ed40b9150162391d8a994b0b9ee7f6fa3e42f9d71b4"
               },
               "evt_muyrw5k0_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "1c9396c6e96a407266b3efe776c0bd39112a09da2393dc164e1b8c43171dcf38"
               },
               "evt_muyrxfuo_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "c76ba08f2a19e25558de85acfbe457a8c82a9b80571ddc4f5274be3c306df173"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "Guan Yu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Old Hermit": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "79673eadf084f44ba9e27e1e3eb7b01532968004698ac0dab54795ec541f60b4"
               },
               "Old Well": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
               },
               "Stranger One": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0e642acb5f28dd67c19bb485ffe2b592acf4aee8b6b167edce0b4c00e5c22413"
               },
               "Stranger Two": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "f09dec178c1018b0a4ad8f40ad77be7273702a0b27c6aae97fbff5ca5db90b08"
               },
               "林月": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Extra Wang": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "aa00682e52c63382e51b103df87cfb21fe2384a8dfbb23235a01a32d57aeaf82"
               }
             },
             "edgeVectors": {
               "old well|陆沉|theoldwellliesonthemountainpathwhereluch": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "13487577f1ee7b3b4d6f2fea05ae9d9e6fd50dcc638f0b4258c7f578723dfb85"
               },
               "stranger one|stranger two|astrangermeetsanotherstrangerontheroad": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "bfa28a2f0c9bee488698ffbe2fd796e6ce9efb00fba35ac2d75fcb06c03b52ff"
               },
               "old hermit|old well|oldhermitguardsthesecretoftheoldwellfory": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0b4cefc1bb0d80d3efde0a46325408375b074517fc22193fe62297b6cb399d6e"
               },
               "lin nuan|old well|linnuanasksluchenabouttherumouroftheoldw": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "426fe3c37c31beb520b8d97ac529aaae9301d93fcc5cbf54e453794277c0aae9"
               },
               "guan yu|陆沉|guanyuistheswornbrotherofluchen": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "6cee5b0dfb4d3f76b6f32f61b1ff3f2ef293fcb21b4f43cef11d91d6ede86a73"
               },
               "林月|陆沉|林月是玩家的妹妹": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "guan yu|陆沉|guanyusparswithluchenonthemountainpathev": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "160b1a2528c19270fce2c01a3decfdb369f49a3be12710e36c68281a3ce0eee8"
               }
@@ -3020,30 +3243,36 @@
           {
             "eventVectors": {
               "evt_muyrtkyo_4fzyo8": {
-                "dim": 384,
-                "sha256": "1e84e5788bf5e989b3f4389c936254e6a2dddfc835b37bd03be1d627bc0e1d90"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "576b8728c71201a15e42f3b485160ce1ae361747d52b120b5f609b4496711c10"
               }
             },
             "entityVectors": {
               "陆沉": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Lin Nuan": {
-                "dim": 384,
-                "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "2b939291bb5dddd1cb67e0358fce75f5b1ad7fb4e5ef5a733512107b417669da"
               },
               "Guan Yu": {
-                "dim": 384,
-                "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "a491a292e9e67de7a88b02f2a890795a87bca1b5f57098de3f93cca98731ae42"
               },
               "青石镇": {
-                "dim": 384,
-                "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
               },
               "Old Well": {
-                "dim": 384,
-                "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
+                "typedArray": "Float32Array",
+                "byteLength": 1536,
+                "sha256": "1984ed4ad89c4ad35053437f0506bdcf5cc3fd7a0defc4bf479490cd93371fb5"
               }
             },
             "edgeVectors": {},
@@ -3067,6 +3296,7 @@
           "value": {
             "eventVectors": {
               "evt_muyrtkyo_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "1e84e5788bf5e989b3f4389c936254e6a2dddfc835b37bd03be1d627bc0e1d90"
               }
@@ -3087,28 +3317,34 @@
           "value": {
             "eventVectors": {
               "evt_muyrtkyo_4fzyo8": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "1e84e5788bf5e989b3f4389c936254e6a2dddfc835b37bd03be1d627bc0e1d90"
               }
             },
             "entityVectors": {
               "陆沉": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Lin Nuan": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "732c4191f7115d153c2fb249abff59526e757ef8b59c96463d03871ca3302a1e"
               },
               "Guan Yu": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "826061b84a6e710fde0e74cd46de4cf65198895df0f94b09acf0cbe1c3eb271d"
               },
               "青石镇": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
               },
               "Old Well": {
+                "kept": "Float32Array",
                 "dim": 384,
                 "sha256": "0be557382f7805c113c54782a1bf88c0547bf5e288ac91d18fb33f82013af70d"
               }

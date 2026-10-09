@@ -882,86 +882,106 @@
             {
               "eventVectors": {
                 "evt_r1": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "e37ad3460944fd3a37adb2c2bc48e7890c4b52f23285f6cee5850e56968c4f83"
                 },
                 "evt_r2": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "bd99b0376b37152048480847b86c7db752be1a18dc6228c8f6b64eb136a20be1"
                 },
                 "evt_r3": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "f5ae5a16f71149e5cb45a29d90d22b4f931f386f4af5347dbfef689b7a01565e"
                 },
                 "evt_r4": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "5cf9747c7e93b84cccc3fced12a6787b8c14774d81076a99717f43de36be28e5"
                 },
                 "evt_r5": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "444f3f067541d709bda821e2d242282f2b66f6723a10b824bb7b6be1a8291050"
                 },
                 "evt_r6": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "a8793e7598de50b26a582ca40ec3c591515e2b2e535604f64b31d0bc46947325"
                 }
               },
               "entityVectors": {
                 "陆沉": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "82814c3c414a3b42e14882797436f37f2dc440325b28b630feeb8ba773c30916"
                 },
                 "Lin Nuan": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "222bbbaaf9272f25798fa014857f9bb96b73cbfd76427d1f27bd8145baebc2e7"
                 },
                 "Guan Yu": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "f46ebb4fe9111fb41c7e788542ff1d88719b211710bfc03c56faad7c01c9fd86"
                 },
                 "Village Elder": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "c382777ee7e2011e0ee77738fd498037e3c71c365a2da2dbd6eac5fd0de1e6bc"
                 },
                 "青石镇": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "bfb71508f2acf58e701b1bebdf9d7f189d03a11524425fb2c2ede75acd91042d"
                 },
                 "后山": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "e7b8aad5dae592deecb79dbaf49397367fac65af866e92f0471dad8fdbc1ee97"
                 }
               },
               "edgeVectors": {
                 "edge_1": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "12e4abf2b2d5138669e52cb537d93b8a875d8dbe0867128c32f2f26857b8a156"
                 },
                 "edge_2": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "09537185467dd7c43e18254ad7c2e150a5d3eb01471550d75186203e45e4c02a"
                 },
                 "edge_3": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "23df6e4c1b9eb92ba9e3d6e915a59d235e9bd96a7d40fb0d412edc52ecd95a0b"
                 },
                 "edge_4": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "922d55c76255c211149d80df4d7e396ea970a63f72199d0e73a64359feab6140"
                 },
                 "edge_5": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "276f08bc1b29538908e8f140d39bfd00fa591d6b9d50b2cca0e5b3b2a3da2cb8"
                 },
                 "edge_6": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "97daa8eda1f9ee2e0bd2abef79952a353a5f1396fba8796e0dd8c9da2c5c04da"
                 },
                 "edge_old": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "379fe1e7046a36b29eb0e627589ffe880aedf5f2b790810aafacf3d8b57c86ee"
                 },
                 "edge_gone": {
+                  "kept": "number[]",
                   "dim": 384,
                   "sha256": "d48e595bea5c4f63520cf8b2f0cb4725e36c2b8a2dd4aaf242f195e7af0782b9"
                 }

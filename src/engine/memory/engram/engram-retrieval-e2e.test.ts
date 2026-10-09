@@ -133,8 +133,8 @@ function makeStack(round = 5) {
   return { sm: sm as unknown as StateManager, manager, editor, retriever };
 }
 
-function l2norm(vec: number[]): number {
-  return Math.sqrt(vec.reduce((s, x) => s + x * x, 0));
+function l2norm(vec: ArrayLike<number>): number {
+  return Math.sqrt(Array.from(vec).reduce((s, x) => s + x * x, 0));
 }
 
 beforeEach(() => {

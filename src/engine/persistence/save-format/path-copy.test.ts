@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { cloneDeep } from 'lodash-es';
-import { PathShapeError, readPath, removePath, writePath } from './path-copy';
+import { PathShapeError, canWritePath, readPath, removePath, writePath } from './path-copy';
 
 describe('path copy', () => {
   const tree = () => ({ 元数据: { 叙事历史: [1, 2], 回合序号: 3 }, 系统: { 扩展: { a: 1 } }, 社交: {} });
@@ -39,6 +39,19 @@ describe('path copy', () => {
     expect(() => writePath(t, 'a.b', 1)).toThrow(PathShapeError);
     expect(() => writePath(t, 'd.b', 1)).toThrow(PathShapeError);
     expect(t).toStrictEqual(before);
+  });
+
+  it('tells whether writePath could write a path, exactly when it would not throw', () => {
+    const t = { x: 'not an object', 系统: { 扩展: { a: 1 }, 列表: [1] }, a: null, 空: {} };
+    const cases = ['系统.扩展.saveFormat', '系统.扩展.a', '系统.新.x', '新.x.y', 'x.y', '系统.列表.x', 'a.b', '空.x', 'top'];
+    for (const path of cases) {
+      let wrote = true;
+      try { writePath(t, path, 1); } catch { wrote = false; }
+      expect(canWritePath(t, path)).toBe(wrote);
+    }
+    expect(canWritePath(t, 'x.y')).toBe(false);
+    expect(canWritePath(t, '系统.扩展.saveFormat')).toBe(true);
+    expect(canWritePath('not a tree', 'a')).toBe(false);
   });
 
   it('removes a field into a copy, or returns the tree itself when the field is not there', () => {

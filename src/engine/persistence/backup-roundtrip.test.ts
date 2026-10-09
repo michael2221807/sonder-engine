@@ -398,7 +398,7 @@ describe('R6 step 0 · A · backup import', () => {
     const cases: Array<[string, () => Promise<unknown>]> = [
       ['importAll not json', () => t.backup.importAll(asBlob('not json at all'))],
       ['importAll wrong shape', () => t.backup.importAll(asBlob('{"version":1}'))],
-      ['importAll future version', () => t.backup.importAll(asBlob(edited(src.fullNoRef, (b) => { b['version'] = 2; })))],
+      ['importAll future version', () => t.backup.importAll(asBlob(edited(src.fullNoRef, (b) => { b['version'] = 3; })))],
       ['importProfileReplace wrong shape', () => t.backup.importProfileReplace(asBlob('[]'))],
       ['importProfileReplace future version', () => t.backup.importProfileReplace(asBlob(edited(src.profileA, (b) => { b['version'] = 9; })))],
       ['importProfileReplace full bundle', () => t.backup.importProfileReplace(asBlob(src.fullNoRef))],
