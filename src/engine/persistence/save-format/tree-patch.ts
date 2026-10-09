@@ -58,7 +58,11 @@ function diffInto(current: unknown, target: unknown, path: Array<string | number
     return;
   }
   if (Array.isArray(current) && Array.isArray(target)) {
-    if (current.length > target.length && isPrefix(target, current)) {
+    if (current.length > target.length && (isPrefix(target, current) || isDenseList(target))) {
+      // Entries added after the snapshot's are cut off; an entry of the snapshot's that changed since is one op of its
+      // own, not the whole list again (an old history entry edited mid-round once made the record the whole history).
+      // A snapshot list with holes is replaced whole (an entry set to undefined is not a hole).
+      if (!isPrefix(target, current)) for (let i = 0; i < target.length; i++) diffInto(current[i], target[i], [...path, i], ops);
       ops.push({ op: 'trunc', path, length: target.length });
       return;
     }

@@ -48,9 +48,10 @@ const NSFW_STRIP_PATHS: readonly string[] = [
  * 2. `记忆.短期 / 中期 / 长期 / 隐式中期` — 已编译进结构化的 `MEMORY_BLOCK`。
  * 3. `系统.扩展.engramMemory` — Engram 的事件/实体/关系/向量元数据；AI 只读 UnifiedRetriever
  *    检索出的少量片段（已并入 `MEMORY_BLOCK`）。
- * 4. `元数据.上次对话前快照` — Rollback 用的整棵状态树克隆；不剥等于 prompt 里有两份状态树。存档瘦身 D1A 之后
- *    树里放的是 `系统.扩展.rollbackPatch`（回退标记 / 读档时的回退差异，可有数十万字符，含旧值）和
- *    `系统.扩展.saveFormat`（引擎存档格式标记）——都是引擎内部数据，同样无条件剥离。
+ * 4. `元数据.上次对话前快照` — Rollback 用的整棵状态树克隆；不剥等于 prompt 里有两份状态树。Since 存档瘦身 D1A
+ *    the tree holds `系统.扩展.rollbackPatch` instead (the rollback marker, or a loaded save's patch: up to hundreds
+ *    of thousands of characters, earlier values included) and `系统.扩展.saveFormat` (the save format marker) —
+ *    engine data, stripped as unconditionally.
  * 5. `系统.扩展.image` / `角色.图片档案` / `社交.关系.*.图片档案` — 生图子系统的配置、任务队列和
  *    资产 ID。`image.config.transformer` 含 apiKey / endpoint，整棵子树被剥离所以不会泄漏。
  * 6. `系统.设置` / `系统.actionOptions` / `元数据.当前行动选项` / `世界.状态.心跳` — 运行时设置、

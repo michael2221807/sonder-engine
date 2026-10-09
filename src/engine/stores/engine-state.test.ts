@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import { useEngineStateStore } from './engine-state';
 import { StateManager } from '../core/state-manager';
 import { RollbackSnapshot } from '../core/rollback-snapshot';
+import { eventBus } from '../core/event-bus';
 import { BehaviorRunner } from '../behaviors/behavior-runner';
 import { NpcDedupModule } from '../behaviors/npc-dedup';
 import { DEFAULT_ENGINE_PATHS } from '../pipeline/types';
@@ -106,6 +107,48 @@ describe('engine-state store — the rollback snapshot on load', () => {
     const snapshot = holder.get(marker) as { 元数据: { 回合序号: number }; 角色: { 基础信息: { 当前位置: string } } };
     expect(snapshot.元数据.回合序号).toBe(4);
     expect(snapshot.角色.基础信息.当前位置).toBe('长安');
+  });
+
+  it('rebuilds the snapshot from the save as loaded, though a load listener changes the tree at once (B3 review)', () => {
+    // The round grew the history from two entries to four; the record cuts it back to two.
+    const sm = new StateManager();
+    sm.loadTree({ 元数据: { 回合序号: 4, 叙事历史: [{ role: 'user', content: '一' }, { role: 'assistant', content: '甲' }] } });
+    const before = new RollbackSnapshot(P);
+    sm.set(P.rollbackPatch, before.capture(sm.toSnapshot()), 'system');
+    sm.set(P.roundNumber, 5, 'system');
+    sm.push(P.narrativeHistory, { role: 'user', content: '二' }, 'system');
+    sm.push(P.narrativeHistory, { role: 'assistant', content: '乙' }, 'system');
+    const saved = JSON.parse(JSON.stringify(before.treeToSave(sm.liveTree()))) as Record<string, unknown>;
+
+    const store = useEngineStateStore();
+    const stateManager = new StateManager();
+    const holder = new RollbackSnapshot(P);
+    store.linkStateManager(stateManager);
+    store.linkRollbackSnapshot(holder);
+    // As the private-chat trim does on 'load': a list the record touches is cut as soon as the tree is in.
+    const off = eventBus.on<{ type?: string }>('engine:state-changed', (e) => {
+      if (e?.type === 'load') stateManager.set(P.narrativeHistory, [{ role: 'assistant', content: '乙' }], 'system');
+    });
+    try {
+      store.loadGame(saved, 'tianming', 'p1', 's1');
+    } finally { off(); }
+
+    const snapshot = holder.get(stateManager.get(P.rollbackPatch)) as { 元数据: { 回合序号: number; 叙事历史: unknown[] } };
+    expect(snapshot.元数据.回合序号).toBe(4);
+    expect(snapshot.元数据.叙事历史).toEqual([{ role: 'user', content: '一' }, { role: 'assistant', content: '甲' }]);
+  });
+
+  it('says so in the log when a stored record does not fit, and takes it out', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const store = useEngineStateStore();
+    const stateManager = new StateManager();
+    const holder = new RollbackSnapshot(P);
+    store.linkStateManager(stateManager);
+    store.linkRollbackSnapshot(holder);
+    store.loadGame({ 元数据: { 回合序号: 2 }, 系统: { 扩展: { rollbackPatch: { format: 1, ops: [], base: { round: 9, historyLength: 0 } } } } }, 'tianming', 'p1', 's1');
+    expect(stateManager.get(P.rollbackPatch)).toBeUndefined();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('rollback record does not fit'));
+    warn.mockRestore();
   });
 
   it('closing the game lets go of the held snapshot', () => {

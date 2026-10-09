@@ -227,7 +227,7 @@ export class PostProcessStage implements PipelineStage {
       }
     }
 
-    // preRoundSnapshot 已在 PreProcessStage 立即持久化（不再延迟到此处）
+    // The round-start snapshot was handed to the rollback holder by PreProcessStage (存档瘦身 D1A); nothing to do here.
 
     // ── 9. 探索记录自动追踪 ──
     // 每回合结束后检查玩家当前位置是否已在探索记录中。

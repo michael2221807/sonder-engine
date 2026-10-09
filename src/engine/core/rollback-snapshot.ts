@@ -100,19 +100,24 @@ export class RollbackSnapshot {
   }
 
   /**
-   * Right after a save is loaded into the state, before anything repairs it: rebuild the snapshot its rollback record
-   * leads back to, hold it and mark the tree. A record that cannot be used (made for another tree, damaged, or a
-   * marker a save should never hold) is taken out: there is nothing to roll back to, and the button says so.
+   * Right after a save is loaded into the state: rebuild the snapshot its rollback record leads back to, hold it and
+   * mark the tree. The snapshot is rebuilt from `loaded`, the save as it was handed to the state: the state emits
+   * 'load' as the tree goes in, and a listener may change the tree at once (the private-chat trim, the image task
+   * restore) — the record no longer fits that tree, and no repair ever reached the old whole snapshot either. A record
+   * that cannot be used (made for another tree, damaged, or a marker a save should never hold) is taken out: there is
+   * nothing to roll back to, and the button says so.
    */
-  restoreLoaded(state: Pick<StateManager, 'liveTree' | 'set' | 'delete'>): void {
-    const tree = state.liveTree();
-    const stored = readPath(tree, this.paths.rollbackPatch);
-    const snapshot = restoreRollbackSnapshot(tree, this.paths);
+  restoreLoaded(state: Pick<StateManager, 'liveTree' | 'set' | 'delete'>, loaded: GameStateTree = state.liveTree()): void {
+    const stored = readPath(loaded, this.paths.rollbackPatch);
+    const snapshot = restoreRollbackSnapshot(loaded, this.paths);
     if (snapshot !== undefined) {
       state.set(this.paths.rollbackPatch, this.capture(snapshot), 'system');
       return;
     }
     this.clear();
-    if (stored !== undefined) state.delete(this.paths.rollbackPatch, 'system');
+    if (stored !== undefined) {
+      console.warn('[RollbackSnapshot] The save\'s rollback record does not fit it (made for another tree, or damaged): no rollback until the next round');
+    }
+    if (readPath(state.liveTree(), this.paths.rollbackPatch) !== undefined) state.delete(this.paths.rollbackPatch, 'system');
   }
 }

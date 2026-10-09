@@ -78,7 +78,7 @@ export class VectorBoardAccess {
   /** Arrangements are in the live state but not yet in the save file. */
   get hasUnsaved(): boolean { return this.pending !== null; }
   private unsubs: Array<() => void>;
-  constructor(private state: StateManager, private saves: Pick<SaveManager, 'saveGame' | 'hasSave'>,
+  constructor(private state: StateManager, private saves: Pick<SaveManager, 'saveGame' | 'hasSave'> & Partial<Pick<SaveManager, 'prepareTree'>>,
     private slot: () => { profileId: string; slotId: string } | null, private busy: () => boolean,
     private nativeRules?: NativeRules,
     private onSaveSettled: () => void = () => {},
@@ -91,8 +91,13 @@ export class VectorBoardAccess {
         this.generation++;
         // The tree an arrangement was kept in has just been replaced: settle it now. The loader names the newly
         // active save right after replacing the tree, so look once that has run.
-        const target = this.pending;
-        if (target && target.generation === this.generation - 1) queueMicrotask(() => { void this.settleReplaced(target); });
+        const pending = this.pending;
+        if (pending && pending.generation === this.generation - 1) {
+          // The kept tree takes its rollback record now, while the round start it names is still held (存档瘦身 D1A).
+          const target = { ...pending, tree: this.saves.prepareTree?.(pending.tree) ?? pending.tree };
+          this.pending = target;
+          queueMicrotask(() => { void this.settleReplaced(target); });
+        }
       }),
       eventBus.on<SaveReplacedEvent | undefined>('engine:save-replaced', change => {
         const profileId = change?.profileId ?? '';

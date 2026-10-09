@@ -45,10 +45,20 @@ describe('tree patch (D1A)', () => {
     expect(patch).toEqual([{ op: 'trunc', path: ['元数据', '叙事历史'], length: 2 }]);
   });
 
-  it('compares lists of the same length entry by entry, and replaces a list that is neither', () => {
+  it('compares lists entry by entry where the snapshot\'s entries are still there, and replaces a shorter list', () => {
     expect(roundTrip([1, { a: 1 }, 3], [1, { a: 2 }, 3])).toEqual([{ op: 'set', path: [1, 'a'], value: 2 }]);
     expect(roundTrip([1, 2], [1, 2, 3])).toEqual([{ op: 'set', path: [], value: [1, 2, 3] }]);
-    expect(roundTrip({ list: [9, 2, 3] }, { list: [1, 2] })).toEqual([{ op: 'set', path: ['list'], value: [1, 2] }]);
+    // An entry of the snapshot's changed since, entries added after it: one op for the entry, then the cut (B3 review).
+    expect(roundTrip({ list: [9, 2, 3] }, { list: [1, 2] })).toEqual([
+      { op: 'set', path: ['list', 0], value: 1 },
+      { op: 'trunc', path: ['list'], length: 2 },
+    ]);
+    const history = Array.from({ length: 50 }, (_, i) => ({ role: 'assistant', content: `正文${i}`, _metrics: { n: i } }));
+    const edited = [...history.map((e, i) => (i === 3 ? { ...e, _recovered: true } : e)), { role: 'user', content: '新' }];
+    expect(roundTrip({ h: edited }, { h: history })).toEqual([
+      { op: 'del', path: ['h', 3, '_recovered'] },
+      { op: 'trunc', path: ['h'], length: 50 },
+    ]);
   });
 
   it('puts keys added back where the target had them, and restores an order that alone changed', () => {

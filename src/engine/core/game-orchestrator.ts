@@ -350,7 +350,7 @@ export class GameOrchestrator {
     );
 
     // ── Rollback：将状态树恢复到上一回合开始前的快照 ──
-    // 快照由 PreProcessStage 捕获、交给 RollbackSnapshot 持有（存档瘦身 D1A；树里只有指向它的标记）。
+    // PreProcessStage takes the snapshot and hands it to RollbackSnapshot (存档瘦身 D1A: the tree only holds a marker).
     // 回滚后清空 action queue，并通知 UI 移除最后一条叙事条目。
     this.unsubscribers.push(
       eventBus.on('engine:rollback-requested', () => { this.rollbackLastRound(stateManager); }),
@@ -507,7 +507,7 @@ export class GameOrchestrator {
       // 自动回滚：PreProcess 在 AI 调用前已递增 roundNumber，不回滚会留下脏状态。
       // preRoundSnapshot 在递增前捕获，回滚后 roundNumber 恢复到正确值。
       //
-      // 快照从持有者取（树里的标记指向它），不能读 `initialCtx`（见 resolvePreRoundSnapshot）。
+      // The snapshot comes from the holder (the tree's marker names it), never from `initialCtx` (see resolvePreRoundSnapshot).
       const recoveryAllowed = !ownership.saved && ownership.isCurrent();
       const snapshot = resolvePreRoundSnapshot(stateManager, this._paths, {
         roundBefore,

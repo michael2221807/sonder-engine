@@ -112,6 +112,15 @@ export class SaveManager {
   }
 
   /**
+   * The tree as a save would write it at this moment (the rollback record in the place of its marker), for a caller
+   * that keeps a tree to write later: once another tree is loaded, the marker names nothing any more and the save
+   * would go without its rollback (VectorBoardAccess, an arrangement kept for the previous save).
+   */
+  prepareTree(tree: GameStateTree): GameStateTree {
+    return this.treeToSave ? this.treeToSave(tree) : tree;
+  }
+
+  /**
    * §5.2 Gap fix：设置当前 Game Pack 的版本号
    *
    * 必须在 `main.ts` 的 pack 加载之后、任何 loadGame 调用之前调用。

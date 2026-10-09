@@ -271,9 +271,9 @@ export interface PipelineContext {
   /** Per-call prompt cost for this round — see [[PromptMetrics]]. Set by AICallStage. */
   promptMetrics?: PromptMetrics;
   /**
-   * 本回合开始前的状态树深拷贝（由 PreProcessStage 在递增回合序号前捕获）
-   * PreProcessStage 把它交给 RollbackSnapshot 持有，并在树里写 `paths.rollbackPatch` 标记（不等 PostProcess），
-   * 用于 Rollback 功能（存档瘦身 D1A）；这里是同一份（只读，不要改）
+   * The tree as it was at round start, a deep copy PreProcessStage takes before the round number moves on. It hands
+   * the copy to RollbackSnapshot and marks the tree at `paths.rollbackPatch` (before PostProcess), for Rollback
+   * (存档瘦身 D1A). This is the held object itself: read it, never change it.
    */
   preRoundSnapshot?: Record<string, unknown>;
   /**
@@ -642,15 +642,17 @@ export interface EnginePathConfig {
    */
   gameTimeFieldNames: EngineGameTimeFieldNames;
   /**
-   * 上次对话前快照路径（如 "元数据.上次对话前快照"）：整份回合开始快照的旧存放位置，不再写入。存档瘦身 D1A：读存档时
-   * 它被升级成 `rollbackPatch`（save-format-migration.ts）；升级失败的树仍带着它时，回退照旧读它（读取兼容）。
+   * The old place of the whole round-start snapshot (e.g. "元数据.上次对话前快照"); no longer written. 存档瘦身 D1A:
+   * loading a save turns it into `rollbackPatch` (save-format-migration.ts); a tree that still holds one (its upgrade
+   * failed) is rolled back to it as before (read compatibility).
    */
   preRoundSnapshot: string;
   /**
-   * 回退数据（如 "系统.扩展.rollbackPatch"，存档瘦身 D1A）。游戏进行中是回合开始时写下的标记
-   * （`round-start:<n>`，指向内存里 RollbackSnapshot 持有的快照）；存档里是从存下的树退回那份快照要改的地方，
-   * 附带它对应的那棵树的回合号与叙事历史长度——每次存档时由标记换成，读档时还原成完整快照、再换回标记。
-   * 有值 = 可以回退。
+   * The rollback data (e.g. "系统.扩展.rollbackPatch", 存档瘦身 D1A). In play, the marker a round start wrote
+   * (`round-start:<n>`, naming the snapshot RollbackSnapshot holds in memory); in a save, the patch from the tree as
+   * saved back to that snapshot, with the round number and history length of that tree — every save puts it in the
+   * place of the marker, loading turns it back into the whole snapshot and the marker. A value means a rollback is
+   * available.
    */
   rollbackPatch: string;
   /**

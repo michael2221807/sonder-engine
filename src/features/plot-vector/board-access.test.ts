@@ -4,6 +4,8 @@ import { DEFAULT_ENGINE_PATHS as P } from '../../engine/pipeline/types';
 import { writePlotVectorControl } from '../../engine/plot-vector/feature-control';
 import { eventBus } from '../../engine/core/event-bus';
 import { VectorBoardAccess } from './board-access';
+import { RollbackSnapshot } from '../../engine/core/rollback-snapshot';
+import { isRollbackPatchRecord } from '../../engine/persistence/save-format/rollback-patch';
 import { initialVectorState, type VectorState } from './runtime';
 import { tasksAfterSave } from './genesis/post-save';
 import { projectSavedElements } from './saved-elements';
@@ -171,6 +173,29 @@ it('another save loaded before the write: at that moment the kept tree goes to i
   expect(h.saveGame).toHaveBeenCalledTimes(1);
   // A view of the old tree cannot keep anything any more.
   await expect(view.commit(layout)).rejects.toThrow('switched');
+});
+it('the kept tree goes to its save with its rollback record, made while its round start is still held (存档瘦身 D1A)', async () => {
+  const h = setup();
+  const holder = new RollbackSnapshot(P);
+  h.state.set(P.rollbackPatch, holder.capture(h.state.toSnapshot()));
+  h.state.set(P.roundNumber, 8);
+  let slotNow = 's';
+  access.dispose();
+  access = new VectorBoardAccess(h.state, { saveGame: h.saveGame, hasSave: h.hasSave, prepareTree: (tree) => holder.treeToSave(tree) },
+    () => ({ profileId: 'p', slotId: slotNow }), () => false);
+  const view = await access.open();
+  await view.commit(view.prepared.layout, 'ring');
+  // Another save is loaded: the tree goes in, then the loader rebuilds that save's round start (the holder moves on).
+  h.state.loadTree({ otherSlot: true });
+  holder.capture({ otherSlot: true });
+  slotNow = 'other';
+  await settled();
+  expect(h.saveGame).toHaveBeenCalledTimes(1);
+  const [, slotId, tree] = h.saveGame.mock.calls[0] as [string, string, Record<string, unknown>];
+  expect(slotId).toBe('s');
+  const record = ((tree.系统 as { 扩展: Record<string, unknown> }).扩展).rollbackPatch;
+  expect(isRollbackPatchRecord(record)).toBe(true);
+  expect(record).toMatchObject({ base: { round: 8 } });
 });
 it('an old tree is never written later: a save restored or synced after the switch keeps what it got', async () => {
   const h = setup(), view = await access.open();

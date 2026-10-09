@@ -14,8 +14,8 @@
  * - flag ON + no thinking → no-op (no state write)
  *
  * Ring size is configurable via `系统.设置.cot.reasoningRingSize` (default 3).
- * Rollback safety: `元数据.推理历史` is inside `元数据.*` which is covered by
- * `preRoundSnapshot` deep-clone in PreProcessStage.
+ * Rollback safety: `元数据.推理历史` is inside the whole-tree round-start snapshot PreProcessStage hands to the
+ * rollback holder (存档瘦身 D1A).
  */
 import type { PipelineStage, PipelineContext, EnginePathConfig } from '../types';
 import type { StateManager } from '../../core/state-manager';

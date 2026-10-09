@@ -138,8 +138,9 @@ export const useEngineStateStore = defineStore('engineState', () => {
     if (_linkedStateManager) {
       // 就地写入：保持 tree.value 与 StateManager.state 是同一个 reactive proxy
       _linkedStateManager.loadTree(data as Record<string, unknown>);
-      // The snapshot to roll back to, rebuilt before any repair below changes the tree (存档瘦身 D1A).
-      _linkedRollbackSnapshot?.restoreLoaded(_linkedStateManager);
+      // The snapshot to roll back to (存档瘦身 D1A), rebuilt from the save as loaded: the 'load' listeners and the
+      // repairs below change the tree in the state, and no repair ever reached the old whole snapshot.
+      _linkedRollbackSnapshot?.restoreLoaded(_linkedStateManager, data);
       // 读档后行为钩子：npc-dedup 同名融合 / effect-lifecycle 过期清理 /
       // validation-repair 存档修复等（各模块 onGameLoad JSDoc 均声明面向读档场景）
       _linkedBehaviorRunner?.runOnGameLoad(_linkedStateManager);
