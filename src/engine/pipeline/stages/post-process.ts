@@ -281,9 +281,10 @@ export class PostProcessStage implements PipelineStage {
       this.stateManager.set(DEFAULT_ENGINE_PATHS.currentActionOptions, [], 'system');
     }
 
-    // Enhanced opening has no user input — skip the fake user entry (I1)
+    // Enhanced opening has no user input — skip the fake user entry (I1).
+    // Both history entries are appended without copying the history (存档瘦身 P1 S3): nothing here reads the change.
     if (!ctx.meta?.isEnhancedOpening) {
-      this.stateManager.push(
+      this.stateManager.append(
         this.paths.narrativeHistory,
         { role: 'user', content: ctx.userInput },
         'system',
@@ -392,7 +393,7 @@ export class PostProcessStage implements PipelineStage {
       }
     }
 
-    this.stateManager.push(this.paths.narrativeHistory, assistantEntry, 'system');
+    this.stateManager.append(this.paths.narrativeHistory, assistantEntry, 'system');
 
     // ── 10b. 收藏楼层一次性消费 ──
     // 本回合已把 pending=true 的收藏经 {{BOOKMARKED_ROUNDS_BLOCK}} 注入过 prompt，

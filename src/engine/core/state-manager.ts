@@ -271,6 +271,33 @@ export class StateManager {
   }
 
   /**
+   * Append one entry to a list that only grows (the narrative history) without copying the list. The change
+   * it records and returns holds the new entry alone (`oldValue` undefined); `push` holds the whole list before
+   * and after, two deep copies through the reactive proxy that cost about a second each on a long save
+   * (存档瘦身 P1 S3). For a caller that never reads the list from the change. Supports filter paths (CR-R1);
+   * a value at the path that is not a list is replaced by a new one, as `push` does.
+   */
+  append(path: StatePath, value: unknown, source: ChangeLog['source'] = 'system'): StateChange {
+    const resolved = this.resolveFilterPath(path);
+    if (resolved === null) {
+      return this.buildNoopChange(path, 'push');
+    }
+    const entry = cloneDeep(value);
+    const arr = _get(this.state, resolved);
+    if (Array.isArray(arr)) {
+      arr.push(entry);
+    } else {
+      _set(this.state, resolved, [entry]);
+    }
+
+    const change: StateChange = {
+      path, action: 'push', oldValue: undefined, newValue: cloneDeep(entry), timestamp: Date.now(),
+    };
+    this.recordChange(change, source);
+    return change;
+  }
+
+  /**
    * 从数组移除匹配项 — 对应 command action "pull"
    *
    * 匹配策略（按优先级）：

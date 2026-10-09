@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { isProxy, toRaw } from 'vue';
+import { computed, isProxy, toRaw } from 'vue';
 
 // Mock eventBus to isolate from real singleton
 vi.mock('@/engine/core/event-bus', () => {
@@ -255,6 +255,57 @@ describe('StateManager', () => {
     it('emits engine:state-changed event', () => {
       sm.set('a', 1, 'system');
       expect(getEmitted().some((e) => e.event === 'engine:state-changed')).toBe(true);
+    });
+  });
+
+  describe('append (存档瘦身 P1 S3)', () => {
+    const entry = () => ({ role: 'assistant', content: 'x', _delta: [{ path: 'p', action: 'push' }] });
+
+    it('adds a copy of the entry at the end of the list', () => {
+      sm.loadTree({ 元数据: { 叙事历史: [{ role: 'user', content: 'a' }] } });
+      const value = entry();
+
+      sm.append('元数据.叙事历史', value, 'system');
+      value._delta[0].path = 'changed by the caller afterwards';
+
+      expect(sm.get('元数据.叙事历史')).toEqual([{ role: 'user', content: 'a' }, entry()]);
+    });
+
+    it('starts the list when there is none', () => {
+      sm.loadTree({ 元数据: {} });
+      sm.append('元数据.叙事历史', entry(), 'system');
+      expect(sm.get('元数据.叙事历史')).toEqual([entry()]);
+    });
+
+    it('records and returns the entry alone, not the list before and after, and the record keeps the entry as appended', () => {
+      sm.loadTree({ 元数据: { 叙事历史: [{ role: 'user', content: 'a' }] } });
+      clearEmitted();
+
+      const change = sm.append('元数据.叙事历史', entry(), 'system');
+      sm.set('元数据.叙事历史.1.content', 'edited later', 'system');
+
+      expect(change).toEqual({ path: '元数据.叙事历史', action: 'push', oldValue: undefined, newValue: entry(), timestamp: expect.any(Number) });
+      expect(sm.getChangeHistory()[0].changes[0]).toBe(change);
+      expect(getEmitted()[0]).toEqual({ event: 'engine:state-changed', payload: { change, source: 'system' } });
+    });
+
+    it('a view of the list sees the new entry', () => {
+      sm.loadTree({ 元数据: { 叙事历史: [] } });
+      const count = computed(() => ((sm.getTree()['元数据'] as Record<string, unknown[]>)['叙事历史']).length);
+      expect(count.value).toBe(0);
+
+      sm.append('元数据.叙事历史', entry(), 'system');
+
+      expect(count.value).toBe(1);
+    });
+
+    it('a filter path that matches nothing changes nothing', () => {
+      sm.loadTree({ 社交: { 关系: [{ 名称: 'A', 记忆: [] }] } });
+      const change = sm.append('社交.关系[名称=B].记忆', 'x', 'system');
+      expect(sm.get('社交.关系')).toEqual([{ 名称: 'A', 记忆: [] }]);
+      expect(change.newValue).toBeUndefined();
+      sm.append('社交.关系[名称=A].记忆', 'y', 'system');
+      expect(sm.get('社交.关系.0.记忆')).toEqual(['y']);
     });
   });
 });

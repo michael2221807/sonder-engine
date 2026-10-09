@@ -39,17 +39,19 @@ const paths = {
 function makeStateManager() {
   const tree: Record<string, unknown> = {};
   const pushed: unknown[] = [];
+  const pushLike = (p: string, v: unknown) => {
+    const arr = (tree[p] as unknown[] | undefined) ?? [];
+    arr.push(v);
+    tree[p] = arr;
+    pushed.push({ path: p, value: v });
+  };
   return {
     get: vi.fn((p: string) => tree[p]),
     set: vi.fn((p: string, v: unknown) => {
       tree[p] = v;
     }),
-    push: vi.fn((p: string, v: unknown) => {
-      const arr = (tree[p] as unknown[] | undefined) ?? [];
-      arr.push(v);
-      tree[p] = arr;
-      pushed.push({ path: p, value: v });
-    }),
+    push: vi.fn(pushLike),
+    append: vi.fn(pushLike),
     delete: vi.fn(),
     toSnapshot: vi.fn(() => tree),
     liveTree: vi.fn(() => tree),
@@ -206,6 +208,14 @@ describe('PostProcessStage — Phase 1 per-turn metadata', () => {
     expect(sm._tree[plotPaths.plotDirection + '._lastEvaluation']).toMatchObject([
       { thread: '唯一剧情线', gauge_updates: [update] },
     ]);
+  });
+
+  it('appends both history entries without copying the history (存档瘦身 P1 S3)', async () => {
+    await stage.execute(makeCtx());
+
+    const history = (calls: unknown[][]) => calls.filter(([p]) => p === '元数据.叙事历史').map(([, v]) => (v as { role: string }).role);
+    expect(history(sm.append.mock.calls)).toEqual(['user', 'assistant']);
+    expect(history(sm.push.mock.calls)).toEqual([]);
   });
 
   it('attaches _metrics with all five fields', async () => {
