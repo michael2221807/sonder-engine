@@ -81,7 +81,7 @@ async function bootstrap(): Promise<void> {
 
   registerPackBehaviors({ pack, stateManager, commandExecutor, behaviorRunner, calendar });
 
-  const { getActiveSlot, engramManager, engramEditor, embedder, unifiedRetriever } = createEngramStack({ aiService, stateManager, engineStateStore, vectorStore });
+  const { getActiveSlot, engramManager, engramEditor, embedder, unifiedRetriever } = createEngramStack({ aiService, stateManager, engineStateStore, vectorStore, rollbackSnapshot });
 
   // Assigned when the orchestrator is built; step-3 field repair asks it for environment-ability repairs.
   const plotVectorHolder: PlotVectorHolder = {};

@@ -26,10 +26,12 @@ import type { EngramEventNode } from './event-builder';
 import { EntityBuilder } from './entity-builder';
 import type { EngramEntity } from './entity-builder';
 import { inferEntityType, isSentenceLikeName, makeFactStubEntity } from './entity-builder';
-import { VectorStore } from './vector-store';
+import { VectorStore, type VectorTable } from './vector-store';
 import type { StoredVector } from '../../persistence/save-format/vector-codec';
-import { countKeys, keysByTable, mainVectorDim, pseudoVectorKeys, type VectorKeysByTable } from './vector-dim-repair';
-import { SAVE_FORMAT_VERSION } from '../../persistence/save-format/save-format-migration';
+import {
+  countKeys, embeddedKeys, engramOf, keysByTable, mainVectorDim, markerSaysRepaired, pseudoVectorKeys, unionKeys,
+  type KeySetsByTable, type VectorKeysByTable,
+} from './vector-dim-repair';
 import { isPlainRecord } from '../../persistence/save-format/plain-data';
 import { canWritePath } from '../../persistence/save-format/path-copy';
 import { eventBus } from '../../core/event-bus';
@@ -93,6 +95,14 @@ import type {
 
 /** 当前 engramMemory schema 版本（取自 engram-types.ts 的 ENGRAM_SCHEMA_VERSION） */
 const CURRENT_SCHEMA_VERSION = ENGRAM_SCHEMA_VERSION;
+
+/** What the pseudo-vector repair reads off a save as it opens. */
+interface OpenedSave {
+  /** Entries marked embedded in the save as opened. */
+  embedded: KeySetsByTable;
+  /** Entries marked embedded in the round-start tree a rollback would put back. */
+  rollback: KeySetsByTable;
+}
 
 /** What EngramManager.repairVectorDims did. */
 export interface VectorDimRepair {
@@ -325,62 +335,82 @@ export class EngramManager {
   /**
    * 存档瘦身 D4A — a save's pseudo vectors (vector-dim-repair.ts), cleaned right after the save is opened
    * (bootstrap/engram-stack.ts, on 'engine:game-opened'), in two steps that never leave an entry marked embedded
-   * without its vector in the stored save (the save check would read that as lost vectors):
-   * 1. a pseudo vector whose entry is not marked embedded in the save as opened is removed;
+   * without its vector, neither in the stored save nor in the tree a rollback puts back (the save check would read
+   * that as lost vectors):
+   * 1. a pseudo vector goes once its entry is marked embedded nowhere: not in the save as opened, not in the tree when
+   *    the write lock is granted, not in the round-start tree a rollback would put back (`rollbackTrees`);
    * 2. once per save (no `vectorDimRepaired` in the save format marker yet): the entries still marked embedded with
    *    a pseudo vector are marked not embedded (entities and edges are embedded again by the next round), the marker
-   *    records it and a save is asked for. Their vectors go when the save is next opened, by step 1.
-   * Pseudo vectors that come later stay as they are (their entries are marked embedded). A tree where the marker
-   * cannot go (a field on its way is not an object: a damaged save, its format upgrade failed as well) is left as it
-   * is: only step 1 runs. Runs under the write lock, as every engram write outside a round does. Never throws.
+   *    records it and a save is asked for. Their vectors go by step 1 at a later open, once a round has been played
+   *    since (the round-start tree of the round before still marks them embedded).
+   * The entries the save as opened marks embedded are read at the call, before anything waits (the listener calls
+   * this as the save opens); the rest once the write lock is granted (a repair queued at the same open then sees the
+   * marker the first one wrote). Pseudo vectors that come later stay as they are (their entries are marked
+   * embedded). A tree where the marker cannot go (a field on its way is not an object: a damaged save) is left as it
+   * is: only step 1 runs. Does nothing while Engram is off or once another save is open. Never throws.
    */
-  async repairVectorDims(stateManager: StateManager, saveFormatPath: string): Promise<VectorDimRepair | null> {
+  async repairVectorDims(
+    stateManager: StateManager,
+    saveFormatPath: string,
+    opened: { profileId: string; slotId: string },
+    rollbackTrees: () => readonly unknown[] = () => [],
+  ): Promise<VectorDimRepair | null> {
     try {
-      return await this.withWriteLock(() => this.repairVectorDimsLocked(stateManager, saveFormatPath));
+      if (!this.isEnabled() || !this.isActiveSlot(opened)) return null;
+      const atOpen: OpenedSave = {
+        embedded: embeddedKeys(this.loadEngram(stateManager)),
+        rollback: unionKeys(rollbackTrees().map((tree) => embeddedKeys(engramOf(tree, this.engramPath)))),
+      };
+      return await this.withWriteLock(() => this.repairVectorDimsLocked(stateManager, saveFormatPath, opened, atOpen));
     } catch (err) {
       console.warn('[Engram] Pseudo-vector repair failed (non-blocking):', err);
       return null;
     }
   }
 
-  private async repairVectorDimsLocked(stateManager: StateManager, saveFormatPath: string): Promise<VectorDimRepair | null> {
-    const slot = this.getActiveSlot();
-    if (!slot?.profileId || !slot.slotId) return null;
-    const data = await this.vectorStore.load(slot.profileId, slot.slotId);
-    const now = this.getActiveSlot();
-    if (now?.profileId !== slot.profileId || now.slotId !== slot.slotId) return null; // another save was opened
+  private async repairVectorDimsLocked(
+    stateManager: StateManager,
+    saveFormatPath: string,
+    opened: { profileId: string; slotId: string },
+    atOpen: OpenedSave,
+  ): Promise<VectorDimRepair | null> {
+    const data = await this.vectorStore.load(opened.profileId, opened.slotId);
+    if (!this.isActiveSlot(opened)) return null; // another save was opened meanwhile
 
     const mainDim = mainVectorDim(data);
     const pseudo = pseudoVectorKeys(data, mainDim);
-    const engram = this.loadEngram(stateManager);
-    const embedded = {
-      eventVectors: new Set(engram.events.filter((e) => e.is_embedded).map((e) => e.id)),
-      entityVectors: new Set(engram.entities.filter((e) => e.is_embedded).map((e) => e.name)),
-      edgeVectors: new Set(engram.v2Edges.filter((e) => e.is_embedded).map((e) => e.id)),
-    };
-    const removable = keysByTable((table) => pseudo[table].filter((key) => !embedded[table].has(key)));
+    const now = embeddedKeys(this.loadEngram(stateManager));
+    const embeddedAnywhere = (table: VectorTable, key: string) =>
+      atOpen.embedded[table].has(key) || now[table].has(key) || atOpen.rollback[table].has(key);
+    const removable = keysByTable((table) => pseudo[table].filter((key) => !embeddedAnywhere(table, key)));
 
     const marker = stateManager.get<unknown>(saveFormatPath);
     const writable = canWritePath(stateManager.liveTree(), saveFormatPath);
     if (!writable) console.warn('[Engram] Pseudo-vector repair: the save format marker has no place in this tree; entries left as they are');
-    const repaired = !writable || (isPlainRecord(marker) && marker.vectorDimRepaired === true);
+    const repaired = !writable || markerSaysRepaired(marker);
     const unmarked = repaired
       ? keysByTable(() => [])
-      : keysByTable((table) => pseudo[table].filter((key) => embedded[table].has(key)));
+      : keysByTable((table) => pseudo[table].filter((key) => now[table].has(key)));
     if (!repaired) {
       this.markNotEmbedded(stateManager, unmarked);
-      const base = isPlainRecord(marker) ? { ...marker } : { version: SAVE_FORMAT_VERSION, migratedAtRound: null };
-      stateManager.set(saveFormatPath, { ...base, vectorDimRepaired: true }, 'system');
+      // Only the flag: a version would claim the tree is in the new save format, which the format upgrade alone may
+      // say (SaveManager keeps the old record aside only for a tree it does not think upgraded already).
+      stateManager.set(saveFormatPath, { ...(isPlainRecord(marker) ? marker : {}), vectorDimRepaired: true }, 'system');
       if (countKeys(unmarked) > 0) eventBus.emit('engine:request-save');
     }
 
     const removed = countKeys(removable) > 0
-      ? await this.vectorStore.removeVectors(removable, slot.profileId, slot.slotId)
+      ? await this.vectorStore.removeVectors(removable, opened.profileId, opened.slotId)
       : 0;
     if (removed > 0 || countKeys(unmarked) > 0) {
       console.info(`[Engram] Pseudo vectors (the save's own dimension is ${mainDim}): ${countKeys(unmarked)} entr${countKeys(unmarked) === 1 ? 'y' : 'ies'} marked not embedded, ${removed} vector(s) removed`);
     }
     return { mainDim, unmarked: countKeys(unmarked), removed };
+  }
+
+  private isActiveSlot(slot: { profileId: string; slotId: string }): boolean {
+    const active = this.getActiveSlot();
+    return active?.profileId === slot.profileId && active.slotId === slot.slotId;
   }
 
   /** Mark the given events / entities / edges not embedded (path-level writes and counts, as vectorizeAsync does). */

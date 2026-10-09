@@ -803,6 +803,11 @@
               "byteLength": 1536,
               "sha256": "15ef9b953c47a798dfbc79ad038585e717579c108240170ebaac228eb0392d07"
             },
+            "lin nuan|陆沉|linnuanisthecousinofluchenandlivesnextdo": {
+              "typedArray": "Float32Array",
+              "byteLength": 1536,
+              "sha256": "f28fcc7c09d3e0adaa9f1b6ad5104b7bf091be611cfcdb5b5cd117fad45cc713"
+            },
             "林月|陆沉|林月是玩家的妹妹": {
               "typedArray": "Float32Array",
               "byteLength": 1536,
@@ -815,10 +820,6 @@
       ]
     ],
     "vectorCalls": [
-      {
-        "op": "get",
-        "key": "engram_vectors_prof_m_slot_m"
-      },
       {
         "op": "get",
         "key": "engram_vectors_prof_m_slot_m"
@@ -878,6 +879,10 @@
         }
       },
       {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
+      },
+      {
         "op": "set",
         "key": "engram_vectors_prof_m_slot_m",
         "value": {
@@ -920,6 +925,11 @@
               "kept": "Float32Array",
               "dim": 384,
               "sha256": "d050442219a0d83d77481edfe6df9f62e98520769e4bc6fe9de3eb8782e74c6e"
+            },
+            "lin nuan|陆沉|linnuanisthecousinofluchenandlivesnextdo": {
+              "kept": "Float32Array",
+              "dim": 384,
+              "sha256": "df649124de4d61d0f8ae80cbfeeb5a3f3ee6fdbe1ee16f5ab60bd0304a362cc6"
             },
             "林月|陆沉|林月是玩家的妹妹": {
               "kept": "Float32Array",

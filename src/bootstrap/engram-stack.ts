@@ -8,17 +8,23 @@ import { UnifiedRetriever } from '../engine/memory/engram/unified-retriever';
 import type { VectorStore } from '../engine/memory/engram/vector-store';
 import { DEFAULT_ENGINE_PATHS } from '../engine/pipeline/types';
 import { eventBus } from '../engine/core/event-bus';
+import type { RollbackSnapshot } from '../engine/core/rollback-snapshot';
+import type { GameOpenedEvent } from '../engine/types/event-bus';
 import type { useEngineStateStore } from '../engine/stores/engine-state';
 import { useEngramDebugStore } from '../engine/stores/engram-debug';
 
-/** Moved verbatim out of main.ts bootstrap() (R5 step 5). Statement order inside is behavior. */
+/**
+ * Moved out of main.ts bootstrap() (R5 step 5); statement order inside is behavior. The pseudo-vector repair on
+ * opening a save was added since (存档瘦身 D4A).
+ */
 export function createEngramStack(deps: {
   aiService: AIService;
   stateManager: StateManager;
   engineStateStore: ReturnType<typeof useEngineStateStore>;
   vectorStore: VectorStore;
+  rollbackSnapshot: RollbackSnapshot;
 }) {
-  const { aiService, stateManager, engineStateStore, vectorStore } = deps;
+  const { aiService, stateManager, engineStateStore, vectorStore, rollbackSnapshot } = deps;
   // E.4: 使用真实 EngramManager 代替之前的 stub
   // 配置从 localStorage (aga_engram_config) 读取，默认 enabled=false。
   // 用户在 Settings → Engram 开关后，下一回合立即生效，无需重启。
@@ -75,9 +81,14 @@ export function createEngramStack(deps: {
     getActiveSlot,
   );
 
-  // 存档瘦身 D4A: a save's pseudo vectors are cleaned once it is opened (EngramManager.repairVectorDims).
-  eventBus.on('engine:game-opened', () => {
-    void engramManager.repairVectorDims(stateManager, DEFAULT_ENGINE_PATHS.saveFormat);
+  // 存档瘦身 D4A: a save's pseudo vectors are cleaned once it is opened (EngramManager.repairVectorDims), called as the
+  // save opens so that it reads the save as opened. The trees a rollback could put back: the round-start snapshot held
+  // for the save, or the old whole snapshot a tree still holds (read compatibility, as the rollback reads them).
+  eventBus.on<GameOpenedEvent>('engine:game-opened', (opened) => {
+    void engramManager.repairVectorDims(stateManager, DEFAULT_ENGINE_PATHS.saveFormat, opened, () => [
+      rollbackSnapshot.current()?.snapshot,
+      stateManager.get<unknown>(DEFAULT_ENGINE_PATHS.preRoundSnapshot),
+    ]);
   });
 
   return { getActiveSlot, engramManager, engramEditor, embedder, unifiedRetriever };

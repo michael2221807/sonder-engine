@@ -13,7 +13,7 @@ import { cloneDeep } from 'lodash-es';
 import { StateManager } from '../../core/state-manager';
 import { idbAdapter } from '../../persistence/idb-adapter';
 import { UnifiedRetriever, type RetrievalContext, type UnifiedRetrieverConfig } from './unified-retriever';
-import { VectorStore, vectorDataForBundle, vectorDataFromBundle, type VectorStoreData } from './vector-store';
+import { VectorStore, vectorDataForBundle, decodeVectorData, type VectorStoreData } from './vector-store';
 import { buildFacts, type FactBuilderParams } from './fact-builder';
 import type { Embedder } from './embedder';
 import type { EngramEdge } from './knowledge-edge';
@@ -148,10 +148,10 @@ describe('Float32Array vectors give the results the number lists gave (存档瘦
     const w = world();
     const before = await retrieval(w, new StoreBeforeChange(w.stored), await slotHolding(w.stored));
 
-    const typed = vectorDataFromBundle(w.stored);
+    const typed = decodeVectorData(w.stored);
     const fromOldSave = await retrieval(w, new VectorStore(), await slotHolding(w.stored));
     const fromNewSave = await retrieval(w, new VectorStore(), await slotHolding(typed));
-    const fromBackup = await retrieval(w, new VectorStore(), await slotHolding(vectorDataFromBundle(JSON.parse(JSON.stringify(vectorDataForBundle(typed))))));
+    const fromBackup = await retrieval(w, new VectorStore(), await slotHolding(decodeVectorData(JSON.parse(JSON.stringify(vectorDataForBundle(typed))))));
 
     // The baseline did use the vectors: memories of each kind came by meaning.
     expect(before.trace.pipeline.vectorEventCount).toBeGreaterThan(0);
@@ -190,7 +190,7 @@ describe('Float32Array vectors give the results the number lists gave (存档瘦
     };
 
     const before = run(cloneDeep(w.stored.edgeVectors));
-    const after = run(vectorDataFromBundle(w.stored).edgeVectors);
+    const after = run(decodeVectorData(w.stored).edgeVectors);
 
     expect(before.result.reinforcedIds.length).toBeGreaterThan(0);
     expect(before.result.renamedEdgeIds.length).toBeGreaterThan(0);

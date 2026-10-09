@@ -15,7 +15,8 @@
  * 2. D3A compact the stored push / pull change records (tree and old snapshot);
  * 3. D1A turn an old whole snapshot into the rollback record at the new path, and remove the old path;
  * 4. when anything changed, mark the format: version 2 and the round of the upgrade (when the copy of the old record
- *    may be dropped). The snapshot carries the same marker, so the patch leaves it alone.
+ *    may be dropped). The snapshot carries the same marker, so the patch leaves it alone. A marker the tree carries
+ *    without a version (a step that recorded itself before the upgrade) keeps its other fields.
  * Vectors are not in the tree: VectorStore.load converts them (D4A).
  */
 import type { GameStateTree } from '../../types';
@@ -70,7 +71,8 @@ export function upgradeSaveFormat(raw: GameStateTree, paths: SaveFormatPaths): S
   const historyChanged = nextTreeHistory !== treeHistory || nextSnapshotHistory !== snapshotHistory;
   if (!historyChanged && !snapshot) return { tree: raw, changed: false, tracesTrimmed: 0, recordsCompacted: false, snapshotToPatch: false };
 
-  const marker = existingMarker(raw, paths) ?? { version: SAVE_FORMAT_VERSION, migratedAtRound: roundOf(raw, paths) };
+  const marker = existingMarker(raw, paths)
+    ?? { ...otherMarkerFields(raw, paths), version: SAVE_FORMAT_VERSION, migratedAtRound: roundOf(raw, paths) };
   let tree = writePath(raw, paths.saveFormat, marker);
   if (nextTreeHistory !== treeHistory) tree = writePath(tree, paths.narrativeHistory, nextTreeHistory);
 
@@ -103,6 +105,18 @@ function existingMarker(tree: GameStateTree, paths: SaveFormatPaths): SaveFormat
   if (!isPlainRecord(marker) || marker.version !== SAVE_FORMAT_VERSION) return undefined;
   const round = marker.migratedAtRound;
   return { ...marker, version: SAVE_FORMAT_VERSION, migratedAtRound: typeof round === 'number' && Number.isFinite(round) ? round : null };
+}
+
+/**
+ * The fields of a marker that names no version: a step that records itself on a save whose format was not upgraded yet
+ * (the pseudo-vector repair's `vectorDimRepaired`, 存档瘦身 D4A) keeps its record through the upgrade. A marker of
+ * another version is not this format's, and is replaced whole.
+ */
+function otherMarkerFields(tree: GameStateTree, paths: SaveFormatPaths): Record<string, unknown> {
+  const marker = readPath(tree, paths.saveFormat);
+  if (!isPlainRecord(marker) || 'version' in marker) return {};
+  const { migratedAtRound: _round, ...fields } = marker;
+  return fields;
 }
 
 /** How many entries of a list were replaced by new objects. */

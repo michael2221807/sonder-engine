@@ -1387,21 +1387,6 @@
           "engram_vectors_prof_m_slot_m",
           {
             "eventVectors": {
-              "evt_muyrtkyo_4fzyo8": {
-                "typedArray": "Float32Array",
-                "byteLength": 1536,
-                "sha256": "9152ebd010a88b0a4718b5c3993386ee6342fc8a7091614cb9b5fd67602f6bb9"
-              },
-              "evt_muyruv9c_4fzyo8": {
-                "typedArray": "Float32Array",
-                "byteLength": 1536,
-                "sha256": "7bf6e447eb656f8f8d1586c97a0a4c3d71c8186bb45b50d95ba72afcbd466470"
-              },
-              "evt_muyrw5k0_4fzyo8": {
-                "typedArray": "Float32Array",
-                "byteLength": 1536,
-                "sha256": "56d6e7755fbcde90b6108fb52e6f44923d58e6de07a880c1b2f97701d51fbdc3"
-              },
               "evt_muyrxfuo_4fzyo8": {
                 "typedArray": "Float32Array",
                 "byteLength": 1536,
@@ -2139,10 +2124,6 @@
           "key": "engram_vectors_prof_m_slot_m"
         },
         {
-          "op": "get",
-          "key": "engram_vectors_prof_m_slot_m"
-        },
-        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
@@ -2232,15 +2213,14 @@
           }
         },
         {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
             "eventVectors": {
-              "evt_muyrtkyo_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "222bdef50069f9fdd2307567b73d70b3dd26475628a1116d3ff3715635da7c0e"
-              },
               "evt_muyruv9c_4fzyo8": {
                 "kept": "Float32Array",
                 "dim": 384,
@@ -2339,10 +2319,6 @@
           "key": "engram_vectors_prof_m_slot_m"
         },
         {
-          "op": "get",
-          "key": "engram_vectors_prof_m_slot_m"
-        },
-        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
@@ -2432,20 +2408,14 @@
           }
         },
         {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
             "eventVectors": {
-              "evt_muyrtkyo_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "222bdef50069f9fdd2307567b73d70b3dd26475628a1116d3ff3715635da7c0e"
-              },
-              "evt_muyruv9c_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "729c9e9591e689faa16cfc1b8864eb3016e06a7313ce4951b637c9c3ee49d550"
-              },
               "evt_muyrw5k0_4fzyo8": {
                 "kept": "Float32Array",
                 "dim": 384,
@@ -2544,10 +2514,6 @@
           "key": "engram_vectors_prof_m_slot_m"
         },
         {
-          "op": "get",
-          "key": "engram_vectors_prof_m_slot_m"
-        },
-        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
@@ -2637,25 +2603,14 @@
           }
         },
         {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
             "eventVectors": {
-              "evt_muyrtkyo_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "222bdef50069f9fdd2307567b73d70b3dd26475628a1116d3ff3715635da7c0e"
-              },
-              "evt_muyruv9c_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "729c9e9591e689faa16cfc1b8864eb3016e06a7313ce4951b637c9c3ee49d550"
-              },
-              "evt_muyrw5k0_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "c2a1de6642cd01ed59a581e5e245937e356646c590f9436d343cd8fa9637a12f"
-              },
               "evt_muyrxfuo_4fzyo8": {
                 "kept": "Float32Array",
                 "dim": 384,
@@ -4415,36 +4370,6 @@
           "engram_vectors_prof_m_slot_m",
           {
             "eventVectors": {
-              "evt_muyrtkyo_4fzyo8": {
-                "typedArray": "Float32Array",
-                "byteLength": 1536,
-                "sha256": "23bc4985f8e4ee9de3ce82ecfc42a35f17f1fa49f8a453b6523de476bb677067"
-              },
-              "evt_muyruv9c_4fzyo8": {
-                "typedArray": "Float32Array",
-                "byteLength": 1536,
-                "sha256": "bb7e7935f09ad21915d0b289760bd933819dece9a61f9d0b65d7ba7be9c11be2"
-              },
-              "evt_muyrw5k0_4fzyo8": {
-                "typedArray": "Float32Array",
-                "byteLength": 1536,
-                "sha256": "870cbba7f2702f25bb7c1bb4d6b1d00aaf36490f12b898377923f8df512e0277"
-              },
-              "evt_muyrxfuo_4fzyo8": {
-                "typedArray": "Float32Array",
-                "byteLength": 1536,
-                "sha256": "ae231276b78ab60046a23640f467c10da574acb5bd383fa75a3b2eb17c53ec1b"
-              },
-              "evt_muyryq5c_4fzyo8": {
-                "typedArray": "Float32Array",
-                "byteLength": 1536,
-                "sha256": "31d61afadb2df66764d6043cd351418b910b7b480e77c4328829c71140c8a8d1"
-              },
-              "evt_muys00g0_4fzyo8": {
-                "typedArray": "Float32Array",
-                "byteLength": 1536,
-                "sha256": "0675580b0070fea91d34c58f4985c8c5f352fd2fa115e8045186a114d88678ef"
-              },
               "evt_muys1aqo_4fzyo8": {
                 "typedArray": "Float32Array",
                 "byteLength": 1536,
@@ -4889,10 +4814,6 @@
           "key": "engram_vectors_prof_m_slot_m"
         },
         {
-          "op": "get",
-          "key": "engram_vectors_prof_m_slot_m"
-        },
-        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
@@ -4972,15 +4893,14 @@
           }
         },
         {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
             "eventVectors": {
-              "evt_muyrtkyo_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "8a725a236efc8f223e5e0a11924d0b328cf204fc83285bdd0ad857304e5f4165"
-              },
               "evt_muyruv9c_4fzyo8": {
                 "kept": "Float32Array",
                 "dim": 384,
@@ -5069,10 +4989,6 @@
           "key": "engram_vectors_prof_m_slot_m"
         },
         {
-          "op": "get",
-          "key": "engram_vectors_prof_m_slot_m"
-        },
-        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
@@ -5152,20 +5068,14 @@
           }
         },
         {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
             "eventVectors": {
-              "evt_muyrtkyo_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "8a725a236efc8f223e5e0a11924d0b328cf204fc83285bdd0ad857304e5f4165"
-              },
-              "evt_muyruv9c_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "87f1bf42c44569d2da1665d21711244a4915ef365f6c37f15e3b6732f5229067"
-              },
               "evt_muyrw5k0_4fzyo8": {
                 "kept": "Float32Array",
                 "dim": 384,
@@ -5254,10 +5164,6 @@
           "key": "engram_vectors_prof_m_slot_m"
         },
         {
-          "op": "get",
-          "key": "engram_vectors_prof_m_slot_m"
-        },
-        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
@@ -5337,25 +5243,14 @@
           }
         },
         {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
             "eventVectors": {
-              "evt_muyrtkyo_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "8a725a236efc8f223e5e0a11924d0b328cf204fc83285bdd0ad857304e5f4165"
-              },
-              "evt_muyruv9c_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "87f1bf42c44569d2da1665d21711244a4915ef365f6c37f15e3b6732f5229067"
-              },
-              "evt_muyrw5k0_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "36b83a44ca886c75ece6d8745938e4f8496db499870d583af8ea89f94c48df8a"
-              },
               "evt_muyrxfuo_4fzyo8": {
                 "kept": "Float32Array",
                 "dim": 384,
@@ -5444,10 +5339,6 @@
           "key": "engram_vectors_prof_m_slot_m"
         },
         {
-          "op": "get",
-          "key": "engram_vectors_prof_m_slot_m"
-        },
-        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
@@ -5527,30 +5418,14 @@
           }
         },
         {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
             "eventVectors": {
-              "evt_muyrtkyo_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "8a725a236efc8f223e5e0a11924d0b328cf204fc83285bdd0ad857304e5f4165"
-              },
-              "evt_muyruv9c_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "87f1bf42c44569d2da1665d21711244a4915ef365f6c37f15e3b6732f5229067"
-              },
-              "evt_muyrw5k0_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "36b83a44ca886c75ece6d8745938e4f8496db499870d583af8ea89f94c48df8a"
-              },
-              "evt_muyrxfuo_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "8d311fb8f060475e632f9078f943b9a3443efea1aadeeae48af7f5f0ca285eb3"
-              },
               "evt_muyryq5c_4fzyo8": {
                 "kept": "Float32Array",
                 "dim": 384,
@@ -5639,10 +5514,6 @@
           "key": "engram_vectors_prof_m_slot_m"
         },
         {
-          "op": "get",
-          "key": "engram_vectors_prof_m_slot_m"
-        },
-        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
@@ -5722,35 +5593,14 @@
           }
         },
         {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
             "eventVectors": {
-              "evt_muyrtkyo_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "8a725a236efc8f223e5e0a11924d0b328cf204fc83285bdd0ad857304e5f4165"
-              },
-              "evt_muyruv9c_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "87f1bf42c44569d2da1665d21711244a4915ef365f6c37f15e3b6732f5229067"
-              },
-              "evt_muyrw5k0_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "36b83a44ca886c75ece6d8745938e4f8496db499870d583af8ea89f94c48df8a"
-              },
-              "evt_muyrxfuo_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "8d311fb8f060475e632f9078f943b9a3443efea1aadeeae48af7f5f0ca285eb3"
-              },
-              "evt_muyryq5c_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "f43546c4fee2dd5eb5c826859249641ae0a5e45cf413bbb0dfb81474b1a12538"
-              },
               "evt_muys00g0_4fzyo8": {
                 "kept": "Float32Array",
                 "dim": 384,
@@ -5829,10 +5679,6 @@
             "model": "unknown",
             "dim": 384
           }
-        },
-        {
-          "op": "get",
-          "key": "engram_vectors_prof_m_slot_m"
         },
         {
           "op": "get",
@@ -5922,40 +5768,14 @@
           }
         },
         {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
             "eventVectors": {
-              "evt_muyrtkyo_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "8a725a236efc8f223e5e0a11924d0b328cf204fc83285bdd0ad857304e5f4165"
-              },
-              "evt_muyruv9c_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "87f1bf42c44569d2da1665d21711244a4915ef365f6c37f15e3b6732f5229067"
-              },
-              "evt_muyrw5k0_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "36b83a44ca886c75ece6d8745938e4f8496db499870d583af8ea89f94c48df8a"
-              },
-              "evt_muyrxfuo_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "8d311fb8f060475e632f9078f943b9a3443efea1aadeeae48af7f5f0ca285eb3"
-              },
-              "evt_muyryq5c_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "f43546c4fee2dd5eb5c826859249641ae0a5e45cf413bbb0dfb81474b1a12538"
-              },
-              "evt_muys00g0_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "43ebe1006b46effd217ca6c565ba847a422b254df070df5f524851eaa58c572c"
-              },
               "evt_muys1aqo_4fzyo8": {
                 "kept": "Float32Array",
                 "dim": 384,
@@ -7953,21 +7773,6 @@
           "engram_vectors_prof_m_slot_m",
           {
             "eventVectors": {
-              "evt_muyrtkyo_4fzyo8": {
-                "typedArray": "Float32Array",
-                "byteLength": 1536,
-                "sha256": "9152ebd010a88b0a4718b5c3993386ee6342fc8a7091614cb9b5fd67602f6bb9"
-              },
-              "evt_muyruv9c_4fzyo8": {
-                "typedArray": "Float32Array",
-                "byteLength": 1536,
-                "sha256": "7bf6e447eb656f8f8d1586c97a0a4c3d71c8186bb45b50d95ba72afcbd466470"
-              },
-              "evt_muyrw5k0_4fzyo8": {
-                "typedArray": "Float32Array",
-                "byteLength": 1536,
-                "sha256": "56d6e7755fbcde90b6108fb52e6f44923d58e6de07a880c1b2f97701d51fbdc3"
-              },
               "evt_muyrxfuo_4fzyo8": {
                 "typedArray": "Float32Array",
                 "byteLength": 1536,
@@ -8825,10 +8630,6 @@
           "key": "engram_vectors_prof_m_slot_m"
         },
         {
-          "op": "get",
-          "key": "engram_vectors_prof_m_slot_m"
-        },
-        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
@@ -8933,15 +8734,14 @@
           }
         },
         {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
             "eventVectors": {
-              "evt_muyrtkyo_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "222bdef50069f9fdd2307567b73d70b3dd26475628a1116d3ff3715635da7c0e"
-              },
               "evt_muyruv9c_4fzyo8": {
                 "kept": "Float32Array",
                 "dim": 384,
@@ -9055,10 +8855,6 @@
           "key": "engram_vectors_prof_m_slot_m"
         },
         {
-          "op": "get",
-          "key": "engram_vectors_prof_m_slot_m"
-        },
-        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
@@ -9163,20 +8959,14 @@
           }
         },
         {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
             "eventVectors": {
-              "evt_muyrtkyo_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "222bdef50069f9fdd2307567b73d70b3dd26475628a1116d3ff3715635da7c0e"
-              },
-              "evt_muyruv9c_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "729c9e9591e689faa16cfc1b8864eb3016e06a7313ce4951b637c9c3ee49d550"
-              },
               "evt_muyrw5k0_4fzyo8": {
                 "kept": "Float32Array",
                 "dim": 384,
@@ -9290,10 +9080,6 @@
           "key": "engram_vectors_prof_m_slot_m"
         },
         {
-          "op": "get",
-          "key": "engram_vectors_prof_m_slot_m"
-        },
-        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
@@ -9398,25 +9184,14 @@
           }
         },
         {
+          "op": "get",
+          "key": "engram_vectors_prof_m_slot_m"
+        },
+        {
           "op": "set",
           "key": "engram_vectors_prof_m_slot_m",
           "value": {
             "eventVectors": {
-              "evt_muyrtkyo_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "222bdef50069f9fdd2307567b73d70b3dd26475628a1116d3ff3715635da7c0e"
-              },
-              "evt_muyruv9c_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "729c9e9591e689faa16cfc1b8864eb3016e06a7313ce4951b637c9c3ee49d550"
-              },
-              "evt_muyrw5k0_4fzyo8": {
-                "kept": "Float32Array",
-                "dim": 384,
-                "sha256": "c2a1de6642cd01ed59a581e5e245937e356646c590f9436d343cd8fa9637a12f"
-              },
               "evt_muyrxfuo_4fzyo8": {
                 "kept": "Float32Array",
                 "dim": 384,

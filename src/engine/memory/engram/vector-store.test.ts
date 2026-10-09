@@ -6,7 +6,7 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { idbAdapter } from '../../persistence/idb-adapter';
 import { encodeVectorBase64 } from '../../persistence/save-format/vector-codec';
-import { VectorStore, vectorDataForBundle, vectorDataFromBundle } from './vector-store';
+import { VectorStore, vectorDataForBundle, decodeVectorData } from './vector-store';
 
 // Float32 values exactly (an embedding is float32), signs mixed.
 const A = [0.5, -0.25, 0.125];
@@ -132,6 +132,33 @@ describe('VectorStore (存档瘦身 D4A)', () => {
     expect(set).not.toHaveBeenCalled();
   });
 
+  it('runs the read-modify-writes of a slot one after another, across VectorStore instances: none drops the change of another', async () => {
+    const s = freshSlot();
+    await idbAdapter.set(keyOf(s), { eventVectors: { a: A }, entityVectors: { Pseudo: C }, edgeVectors: {}, model: 'm', dim: 3 });
+    // A merge and a removal started together, from the engram manager's store and the retriever's: each reads the
+    // record before the other writes it back.
+    const merged = new VectorStore().mergeEntityVectors([{ name: 'NewNpc' }], [B], 'm', s);
+    const removed = new VectorStore().removeVectors({ entityVectors: ['Pseudo'] }, s.profileId, s.slotId);
+    // ...and a trim of the events, from the backup service's store (it writes too: event a goes).
+    const trimmed = new VectorStore().trimToMatchEvents(new Set(), new Set(['NewNpc', 'Pseudo']), s.profileId, s.slotId);
+    await Promise.all([merged, removed, trimmed]);
+
+    const data = await new VectorStore().load(s.profileId, s.slotId);
+    expect(Object.keys(data.entityVectors)).toEqual(['NewNpc']);
+    expect(Array.from(data.entityVectors.NewNpc)).toEqual(B);
+    expect(data.eventVectors).toEqual({});
+    expect(await removed).toBe(1);
+  });
+
+  it('a failed read-modify-write does not hold up the next one on the slot', async () => {
+    const s = freshSlot();
+    await idbAdapter.set(keyOf(s), { eventVectors: { a: A }, entityVectors: {}, edgeVectors: {}, model: 'm', dim: 3 });
+    const set = vi.spyOn(idbAdapter, 'set').mockRejectedValueOnce(new Error('disk full'));
+    await expect(new VectorStore().removeVectors({ eventVectors: ['a'] }, s.profileId, s.slotId)).rejects.toThrow('disk full');
+    set.mockRestore();
+    expect(await new VectorStore().removeVectors({ eventVectors: ['a'] }, s.profileId, s.slotId)).toBe(1);
+  });
+
   it('loadStored and restoreStored give back a record exactly as it was stored', async () => {
     const s = freshSlot();
     const record = { eventVectors: { a: A, o: indexObject(B) }, entityVectors: {}, model: 'm', dim: 3, extra: 'kept' };
@@ -147,14 +174,14 @@ describe('VectorStore (存档瘦身 D4A)', () => {
   });
 
   it('a bundle carries each vector as the base64 of its float32 bytes and reads back the same values', () => {
-    const data = vectorDataFromBundle({ eventVectors: { a: A }, entityVectors: { Bob: B }, edgeVectors: { g: C }, model: 'm', dim: 3 });
+    const data = decodeVectorData({ eventVectors: { a: A }, entityVectors: { Bob: B }, edgeVectors: { g: C }, model: 'm', dim: 3 });
     const bundle = JSON.parse(JSON.stringify(vectorDataForBundle(data))) as Record<string, unknown>;
 
     expect(bundle).toEqual({
       eventVectors: { a: encodeVectorBase64(A) }, entityVectors: { Bob: encodeVectorBase64(B) }, edgeVectors: { g: encodeVectorBase64(C) },
       model: 'm', dim: 3,
     });
-    const back = vectorDataFromBundle(bundle);
+    const back = decodeVectorData(bundle);
     expect(Array.from(back.eventVectors.a)).toEqual(A);
     expect(Array.from(back.entityVectors.Bob)).toEqual(B);
     expect(Array.from(back.edgeVectors.g)).toEqual(C);
@@ -162,7 +189,7 @@ describe('VectorStore (存档瘦身 D4A)', () => {
 
   it('a bundle without vector data reads as empty tables', () => {
     for (const raw of [null, undefined, [], 'x', { model: 3, dim: 'x' }]) {
-      expect(vectorDataFromBundle(raw)).toEqual({ eventVectors: {}, entityVectors: {}, edgeVectors: {}, model: '', dim: 0 });
+      expect(decodeVectorData(raw)).toEqual({ eventVectors: {}, entityVectors: {}, edgeVectors: {}, model: '', dim: 0 });
     }
   });
 });

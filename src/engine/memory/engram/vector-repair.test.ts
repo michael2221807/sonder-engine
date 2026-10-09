@@ -1,10 +1,11 @@
 import 'fake-indexeddb/auto';
 /**
  * 存档瘦身 D4A — EngramManager.repairVectorDims on the real StateManager and the real VectorStore (fake-indexeddb):
- * the pseudo vectors of a save are cleaned in two steps across opens, so the stored save never says "embedded" for an
- * entry whose vector is gone, and the save check before each round never takes the repair for a loss.
+ * the pseudo vectors of a save are cleaned in two steps across opens, so neither the stored save nor the tree a
+ * rollback puts back ever says "embedded" for an entry whose vector is gone, and the save check before each round
+ * never takes the repair for a loss.
  */
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cloneDeep } from 'lodash-es';
 import { StateManager } from '../../core/state-manager';
 import { eventBus } from '../../core/event-bus';
@@ -69,6 +70,9 @@ function engramVectors(): Json {
   };
 }
 
+const ALL_KEYS = { events: ['e1', 'e2', 'e3', 'pe1', 'pe2'], entities: ['Alice', 'Bob', 'Pseudo'], edges: ['g1', 'g2', 'pg1'] };
+const REAL_KEYS = { events: ['e1', 'e2', 'e3'], entities: ['Alice', 'Bob'], edges: ['g1', 'g2'] };
+
 let next = 0;
 /** A save on its own slot: its tree in a real StateManager, its vectors in the store, the manager with that slot active. */
 async function openSave(tree: Json, vectors: Json = engramVectors()) {
@@ -82,6 +86,9 @@ async function openSave(tree: Json, vectors: Json = engramVectors()) {
   const store = new VectorStore();
   return {
     sm, manager, slot, store,
+    /** The save opened (again): its tree, and the trees a rollback could put back. */
+    repair: (state: StateManager = sm, rollbackTrees: unknown[] = []) =>
+      manager.repairVectorDims(state, P.saveFormat, slot, () => rollbackTrees),
     switchTo(other: Slot | null) { active = other; },
     vectorKeys: async () => {
       const data = await store.load(slot.profileId, slot.slotId);
@@ -89,6 +96,12 @@ async function openSave(tree: Json, vectors: Json = engramVectors()) {
     },
   };
 }
+
+const loaded = (tree: Json): StateManager => {
+  const sm = new StateManager();
+  sm.loadTree(cloneDeep(tree));
+  return sm;
+};
 
 function embeddedFlags(sm: StateManager): Json {
   const engram = sm.get<{ events: Json[]; entities: Json[]; v2Edges: Json[] }>(P.engramMemory)!;
@@ -110,6 +123,12 @@ function healthOf(sm: StateManager, slot: Slot) {
   });
 }
 
+beforeEach(() => {
+  // Engram on, as on the PO's game (it is off by default; the repair does nothing then).
+  vi.spyOn(EngramManager.prototype, 'isEnabled').mockReturnValue(true);
+  vi.spyOn(console, 'info').mockImplementation(() => undefined);
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -118,49 +137,98 @@ describe('pseudo-vector repair after a save is opened (存档瘦身 D4A)', () =>
   it('first open: the entries of pseudo vectors are marked not embedded, the marker records it, a save is asked for', async () => {
     const save = await openSave(engramTree());
     const saves = requestedSaves();
-    vi.spyOn(console, 'info').mockImplementation(() => undefined);
 
-    const result = await save.manager.repairVectorDims(save.sm, P.saveFormat);
+    const result = await save.repair();
 
     expect(result).toEqual({ mainDim: 8, unmarked: 4, removed: 2 });
-    expect(embeddedFlags(save.sm)).toEqual({ events: ['e1', 'e2', 'e3'], entities: ['Alice', 'Bob'], edges: ['g1', 'g2'] });
+    expect(embeddedFlags(save.sm)).toEqual(REAL_KEYS);
     expect(save.sm.get(`${P.engramMemory}.meta.embeddedEventCount`)).toBe(3);
     expect(save.sm.get(`${P.engramMemory}.meta.embeddedEntityCount`)).toBe(2);
-    expect(save.sm.get(P.saveFormat)).toEqual({ version: 2, migratedAtRound: null, vectorDimRepaired: true });
+    // Only the flag: no version (that would claim the tree is in the new save format).
+    expect(save.sm.get(P.saveFormat)).toEqual({ vectorDimRepaired: true });
     expect(saves()).toBe(1);
-    // Only vectors whose entries the save as opened already says are not embedded go now; the others stay until the
-    // save that marks their entries is the one opened.
-    expect(await save.vectorKeys()).toEqual({
-      events: ['e1', 'e2', 'e3', 'pe1', 'pe2'], entities: ['Alice', 'Bob', 'Pseudo'], edges: ['g1', 'g2', 'pg1'],
-    });
+    // Only vectors whose entries the save as opened already says are not embedded go now (pe3, and the edge no longer
+    // held); the others stay until no tree marks their entries embedded.
+    expect(await save.vectorKeys()).toEqual(ALL_KEYS);
   });
 
   it('next open: those vectors go, and nothing else changes', async () => {
     const first = await openSave(engramTree());
-    vi.spyOn(console, 'info').mockImplementation(() => undefined);
-    await first.manager.repairVectorDims(first.sm, P.saveFormat);
+    await first.repair();
     const saved = first.sm.toSnapshot();
 
-    // The save that landed, opened again (same slot, same vectors).
-    const sm = new StateManager();
-    sm.loadTree(cloneDeep(saved));
+    // The save that landed, opened again (same slot, same vectors), with no round played before it to roll back to.
+    const sm = loaded(saved);
     const saves = requestedSaves();
-    const result = await first.manager.repairVectorDims(sm, P.saveFormat);
+    const result = await first.repair(sm);
 
     expect(result).toEqual({ mainDim: 8, unmarked: 0, removed: 4 });
     expect(sm.toSnapshot()).toEqual(saved);
     expect(saves()).toBe(0);
-    expect(await first.vectorKeys()).toEqual({ events: ['e1', 'e2', 'e3'], entities: ['Alice', 'Bob'], edges: ['g1', 'g2'] });
+    expect(await first.vectorKeys()).toEqual(REAL_KEYS);
     const data = await first.store.load(first.slot.profileId, first.slot.slotId);
     expect(Array.from(data.eventVectors.e2)).toEqual(Array.from(real(2)));
     expect(Array.from(data.edgeVectors.g1)).toEqual(Array.from(real(6)));
   });
 
+  it('keeps a vector while the round-start tree a rollback would put back still marks its entry embedded', async () => {
+    const save = await openSave(engramTree());
+    const beforeRepair = save.sm.toSnapshot(); // the round-start tree of the round played before the repair
+    expect(await save.repair(save.sm, [beforeRepair])).toEqual({ mainDim: 8, unmarked: 4, removed: 2 });
+    const saved = save.sm.toSnapshot();
+
+    // Next open: the rollback would put the entries back as embedded, so their vectors stay.
+    const second = loaded(saved);
+    expect(await save.repair(second, [beforeRepair])).toEqual({ mainDim: 8, unmarked: 0, removed: 0 });
+    expect(await save.vectorKeys()).toEqual(ALL_KEYS);
+    // Rolled back now, the tree and the vectors still agree.
+    const rolledBack = loaded(beforeRepair);
+    expect(embeddedFlags(rolledBack)).toEqual(ALL_KEYS);
+    expect((await healthOf(rolledBack, save.slot)).damaged).toBe(false);
+
+    // A round played since: its round-start tree has the entries not embedded; at the next open the vectors go.
+    const third = loaded(saved);
+    expect(await save.repair(third, [saved])).toEqual({ mainDim: 8, unmarked: 0, removed: 4 });
+    expect(await save.vectorKeys()).toEqual(REAL_KEYS);
+  });
+
+  it('two repairs queued at one open (behind a long engram write) remove nothing the first one just unmarked', async () => {
+    const save = await openSave(engramTree());
+    let release!: () => void;
+    const held = save.manager.withWriteLock(() => new Promise<void>((resolve) => { release = resolve; }));
+
+    const first = save.repair();
+    const second = save.repair();
+    await new Promise((resolve) => setTimeout(resolve, 0)); // the lock runs what it holds a tick later
+    release();
+    await held;
+
+    expect(await first).toEqual({ mainDim: 8, unmarked: 4, removed: 2 });
+    expect(await second).toEqual({ mainDim: 8, unmarked: 0, removed: 0 });
+    // The stored save still marks pe1, pe2, Pseudo and pg1 embedded until the asked-for save lands: their vectors stay.
+    expect(await save.vectorKeys()).toEqual(ALL_KEYS);
+  });
+
+  it('removes no vector whose entry a round marked embedded while the repair waited for the lock', async () => {
+    // Repaired already (step 2 does not run). pe3 is not embedded as the save opens; a round in flight then embeds it
+    // again, with a pseudo vector as the embedding call failed once more.
+    const save = await openSave(engramTree({ vectorDimRepaired: true }));
+    let release!: () => void;
+    const held = save.manager.withWriteLock(() => new Promise<void>((resolve) => { release = resolve; }));
+    const repair = save.repair();
+    save.sm.set(`${P.engramMemory}.events.5.is_embedded`, true, 'system');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    release();
+    await held;
+
+    expect(await repair).toEqual({ mainDim: 8, unmarked: 0, removed: 1 }); // only the edge no longer held
+    expect((await save.vectorKeys()).events).toEqual(['e1', 'e2', 'e3', 'pe1', 'pe2', 'pe3']);
+  });
+
   it('keeps every field of a marker that is there', async () => {
     const save = await openSave(engramTree({ version: 2, migratedAtRound: 132, other: 'kept' }));
-    vi.spyOn(console, 'info').mockImplementation(() => undefined);
 
-    await save.manager.repairVectorDims(save.sm, P.saveFormat);
+    await save.repair();
 
     expect(save.sm.get(P.saveFormat)).toEqual({ version: 2, migratedAtRound: 132, other: 'kept', vectorDimRepaired: true });
   });
@@ -170,7 +238,7 @@ describe('pseudo-vector repair after a save is opened (存档瘦身 D4A)', () =>
     const save = await openSave(tree, { ...engramVectors(), eventVectors: { e1: real(1), e2: real(2), e3: real(3), pe1: pseudo('later , 1'), pe2: pseudo('later , 2') } });
     const saves = requestedSaves();
 
-    const result = await save.manager.repairVectorDims(save.sm, P.saveFormat);
+    const result = await save.repair();
 
     expect(result).toEqual({ mainDim: 8, unmarked: 0, removed: 1 }); // only the edge no longer held
     expect(save.sm.toSnapshot()).toEqual(tree);
@@ -188,9 +256,9 @@ describe('pseudo-vector repair after a save is opened (存档瘦身 D4A)', () =>
     const saves = requestedSaves();
     const set = vi.spyOn(idbAdapter, 'set');
 
-    expect(await save.manager.repairVectorDims(save.sm, P.saveFormat)).toEqual({ mainDim: 8, unmarked: 0, removed: 0 });
-    expect(save.sm.get(P.saveFormat)).toEqual({ version: 2, migratedAtRound: null, vectorDimRepaired: true });
-    expect(embeddedFlags(save.sm)).toEqual({ events: ['e1', 'e2', 'e3', 'pe1', 'pe2'], entities: ['Alice', 'Bob', 'Pseudo'], edges: ['g1', 'g2', 'pg1'] });
+    expect(await save.repair()).toEqual({ mainDim: 8, unmarked: 0, removed: 0 });
+    expect(save.sm.get(P.saveFormat)).toEqual({ vectorDimRepaired: true });
+    expect(embeddedFlags(save.sm)).toEqual(ALL_KEYS);
     expect(saves()).toBe(0);
     expect(set).not.toHaveBeenCalled();
   });
@@ -204,9 +272,34 @@ describe('pseudo-vector repair after a save is opened (存档瘦身 D4A)', () =>
       model: 'embed-1', dim: 384,
     });
 
-    expect(await save.manager.repairVectorDims(save.sm, P.saveFormat)).toEqual({ mainDim: 384, unmarked: 0, removed: 0 });
-    expect(embeddedFlags(save.sm)).toEqual(embeddedFlags((() => { const sm = new StateManager(); sm.loadTree(cloneDeep(tree)); return sm; })()));
+    expect(await save.repair()).toEqual({ mainDim: 384, unmarked: 0, removed: 0 });
+    expect(embeddedFlags(save.sm)).toEqual(embeddedFlags(loaded(tree)));
     expect(await save.vectorKeys()).toEqual({ events: ['e1', 'e2', 'e3', 'pe1', 'pe2'], entities: ['Alice', 'Bob', 'Pseudo'], edges: ['g1'] });
+  });
+
+  it('leaves a damaged tree as it is (the marker has no place in it), and still removes vectors of no entry', async () => {
+    const tree = { 元数据: { 回合序号: 2 }, 系统: { 扩展: 'damaged' } };
+    const save = await openSave(tree);
+    const saves = requestedSaves();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    // No engram block can be read: no entry is marked embedded, so every pseudo vector belongs to no entry.
+    expect(await save.repair()).toEqual({ mainDim: 8, unmarked: 0, removed: 6 });
+    expect(save.sm.toSnapshot()).toEqual(tree);
+    expect(saves()).toBe(0);
+    expect(warn).toHaveBeenCalledWith('[Engram] Pseudo-vector repair: the save format marker has no place in this tree; entries left as they are');
+    expect(await save.vectorKeys()).toEqual(REAL_KEYS);
+  });
+
+  it('does nothing while Engram is off', async () => {
+    const tree = engramTree();
+    const save = await openSave(tree);
+    vi.mocked(EngramManager.prototype.isEnabled).mockReturnValue(false);
+    const before = await save.store.loadStored(save.slot.profileId, save.slot.slotId);
+
+    expect(await save.repair()).toBeNull();
+    expect(save.sm.toSnapshot()).toEqual(tree);
+    expect(await save.store.loadStored(save.slot.profileId, save.slot.slotId)).toEqual(before);
   });
 
   it('stops without touching anything when another save is opened while it reads the vectors', async () => {
@@ -221,47 +314,31 @@ describe('pseudo-vector repair after a save is opened (存档瘦身 D4A)', () =>
     });
     const saves = requestedSaves();
 
-    expect(await save.manager.repairVectorDims(save.sm, P.saveFormat)).toBeNull();
+    expect(await save.repair()).toBeNull();
     expect(save.sm.toSnapshot()).toEqual(tree);
     expect(saves()).toBe(0);
     expect(await save.store.loadStored(save.slot.profileId, save.slot.slotId)).toEqual(before);
   });
 
-  it('leaves a damaged tree as it is (the marker has no place in it), and still removes vectors of no entry', async () => {
-    const tree = { 元数据: { 回合序号: 2 }, 系统: { 扩展: 'damaged' } };
-    const save = await openSave(tree);
-    const saves = requestedSaves();
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    vi.spyOn(console, 'info').mockImplementation(() => undefined);
-
-    // No engram block can be read: no entry is marked embedded, so every pseudo vector belongs to no entry.
-    expect(await save.manager.repairVectorDims(save.sm, P.saveFormat)).toEqual({ mainDim: 8, unmarked: 0, removed: 6 });
-    expect(save.sm.toSnapshot()).toEqual(tree);
-    expect(saves()).toBe(0);
-    expect(warn).toHaveBeenCalledWith('[Engram] Pseudo-vector repair: the save format marker has no place in this tree; entries left as they are');
-    expect(await save.vectorKeys()).toEqual({ events: ['e1', 'e2', 'e3'], entities: ['Alice', 'Bob'], edges: ['g1', 'g2'] });
-  });
-
-  it('does nothing without an active slot, and never throws', async () => {
+  it('does nothing for a save that is no longer the open one, and never throws', async () => {
     const save = await openSave(engramTree());
     save.switchTo(null);
-    expect(await save.manager.repairVectorDims(save.sm, P.saveFormat)).toBeNull();
+    expect(await save.repair()).toBeNull();
 
     save.switchTo(save.slot);
     vi.spyOn(VectorStore.prototype, 'load').mockRejectedValue(new Error('store unreadable'));
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    expect(await save.manager.repairVectorDims(save.sm, P.saveFormat)).toBeNull();
+    expect(await save.repair()).toBeNull();
     expect(warn).toHaveBeenCalledWith('[Engram] Pseudo-vector repair failed (non-blocking):', expect.any(Error));
     expect(save.sm.get(P.saveFormat)).toBeUndefined();
   });
 
   it('waits for an engram write that holds the write lock', async () => {
     const save = await openSave(engramTree());
-    vi.spyOn(console, 'info').mockImplementation(() => undefined);
     let release!: () => void;
     const held = save.manager.withWriteLock(() => new Promise<void>((resolve) => { release = resolve; }));
 
-    const repair = save.manager.repairVectorDims(save.sm, P.saveFormat);
+    const repair = save.repair();
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(save.sm.get(P.saveFormat)).toBeUndefined();
 
@@ -280,20 +357,16 @@ describe('pseudo-vector repair after a save is opened (存档瘦身 D4A)', () =>
       eventVectors: { pe1: pseudo('only , 1') }, entityVectors: { Alice: real(1), Bob: real(2) }, edgeVectors: { g1: real(3), g2: real(4) },
       model: 'embed-1', dim: 8,
     });
-    vi.spyOn(console, 'info').mockImplementation(() => undefined);
     expect((await healthOf(save.sm, save.slot)).damaged).toBe(false);
 
-    await save.manager.repairVectorDims(save.sm, P.saveFormat);
+    await save.repair();
     // The live tree, and the stored one if the asked-for save never lands (the tab closed first).
     expect((await healthOf(save.sm, save.slot)).damaged).toBe(false);
-    const stored = new StateManager();
-    stored.loadTree(cloneDeep(tree));
-    expect((await healthOf(stored, save.slot)).damaged).toBe(false);
+    expect((await healthOf(loaded(tree), save.slot)).damaged).toBe(false);
 
-    // Next open of the save that landed: the pseudo vector goes.
-    const reopened = new StateManager();
-    reopened.loadTree(save.sm.toSnapshot());
-    expect(await save.manager.repairVectorDims(reopened, P.saveFormat)).toMatchObject({ removed: 1 });
+    // Next open of the save that landed (no round before it to roll back to): the pseudo vector goes.
+    const reopened = loaded(save.sm.toSnapshot());
+    expect(await save.repair(reopened)).toMatchObject({ removed: 1 });
     expect((await save.vectorKeys()).events).toEqual([]);
     expect((await healthOf(reopened, save.slot)).damaged).toBe(false);
   });

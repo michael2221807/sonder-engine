@@ -171,6 +171,13 @@ describe('save format upgrade (version 2)', () => {
     expect(readPath(upgradeSaveFormat(odd, PATHS).tree, PATHS.saveFormat)).toEqual({ version: SAVE_FORMAT_VERSION, migratedAtRound: null });
   });
 
+  it('keeps the fields of a marker without a version: a step recorded before the format was upgraded (存档瘦身 D4A)', () => {
+    const recorded = writePath(legacySave(5), PATHS.saveFormat, { vectorDimRepaired: true });
+    const upgrade = upgradeSaveFormat(recorded, PATHS);
+    expect(upgrade.changed).toBe(true);
+    expect(readPath(upgrade.tree, PATHS.saveFormat)).toEqual({ vectorDimRepaired: true, version: SAVE_FORMAT_VERSION, migratedAtRound: 5 });
+  });
+
   it('marks afresh a tree whose marker is of another version', () => {
     const otherVersion = writePath(legacySave(5), PATHS.saveFormat, { version: 1, migratedAtRound: 2, vectorDimRepaired: true });
     expect(readPath(upgradeSaveFormat(otherVersion, PATHS).tree, PATHS.saveFormat)).toEqual({ version: SAVE_FORMAT_VERSION, migratedAtRound: 5 });

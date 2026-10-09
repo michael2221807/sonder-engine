@@ -42,8 +42,11 @@ describe('path copy', () => {
   });
 
   it('tells whether writePath could write a path, exactly when it would not throw', () => {
-    const t = { x: 'not an object', 系统: { 扩展: { a: 1 }, 列表: [1] }, a: null, 空: {} };
-    const cases = ['系统.扩展.saveFormat', '系统.扩展.a', '系统.新.x', '新.x.y', 'x.y', '系统.列表.x', 'a.b', '空.x', 'top'];
+    const t = { x: 'not an object', 系统: { 扩展: { a: 1 }, 列表: [1], 空值: undefined }, a: null, 空: {}, 未定: undefined };
+    const cases = [
+      '系统.扩展.saveFormat', '系统.扩展.a', '系统.新.x', '新.x.y', 'x.y', '系统.列表.x', 'a.b', '空.x', 'top',
+      '未定.x', '未定.x.y', '系统.空值.x',
+    ];
     for (const path of cases) {
       let wrote = true;
       try { writePath(t, path, 1); } catch { wrote = false; }
@@ -52,6 +55,7 @@ describe('path copy', () => {
     expect(canWritePath(t, 'x.y')).toBe(false);
     expect(canWritePath(t, '系统.扩展.saveFormat')).toBe(true);
     expect(canWritePath('not a tree', 'a')).toBe(false);
+    expect(canWritePath({ 系统: undefined }, '系统.扩展.saveFormat')).toBe(true);
   });
 
   it('removes a field into a copy, or returns the tree itself when the field is not there', () => {

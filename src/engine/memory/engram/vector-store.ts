@@ -14,7 +14,7 @@
  *   values anyway). Reading turns the number lists of older records and the objects of indices an older tab writes
  *   into Float32Arrays, in memory only (the record takes the new form with its next write); the embedder's number
  *   lists are converted before they are written. A backup bundle holds the base64 of the little-endian float32 bytes
- *   (vectorDataForBundle / vectorDataFromBundle).
+ *   (vectorDataForBundle / decodeVectorData). A slot's read-modify-writes run one after another (inSlotOrder).
  *
  * 对应 STEP-03B M3.6 Engram 数据流（VectorStore 持久化）。
  */
@@ -55,26 +55,24 @@ export interface BundleVectorData {
   dim: number;
 }
 
-/**
- * A slot's vectors for a backup bundle (JSON cannot hold a Float32Array: it would become an object of indices). A record
- * from before edge vectors existed has none.
- */
-export function vectorDataForBundle(data: Omit<VectorStoreData, 'edgeVectors'> & Partial<Pick<VectorStoreData, 'edgeVectors'>>): BundleVectorData {
+/** A slot's vectors for a backup bundle (JSON cannot hold a Float32Array: it would become an object of indices). */
+export function vectorDataForBundle(data: VectorStoreData): BundleVectorData {
   return {
     eventVectors: encodeVectorMap(data.eventVectors),
     entityVectors: encodeVectorMap(data.entityVectors),
-    edgeVectors: encodeVectorMap(data.edgeVectors ?? {}),
+    edgeVectors: encodeVectorMap(data.edgeVectors),
     model: data.model,
     dim: data.dim,
   };
 }
 
 /**
- * A slot's vectors from a backup bundle or a stored record, in any form a vector has been kept in (a number list, the
- * base64 of a bundle, a Float32Array, an object of indices), as Float32Arrays. An entry that is no vector is left out
+ * A slot's vectors from a stored record (VectorStore.load) or a backup bundle (the import), in any form a vector has
+ * been kept in (a number list, the base64 of a bundle, a Float32Array, an object of indices), as Float32Arrays; a
+ * table the record lacks (edge vectors in a record from before them) is empty. An entry that is no vector is left out
  * (and logged): it never served a search.
  */
-export function vectorDataFromBundle(raw: unknown): VectorStoreData {
+export function decodeVectorData(raw: unknown): VectorStoreData {
   const record = raw !== null && typeof raw === 'object' && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
   const data: VectorStoreData = {
     eventVectors: {},
@@ -98,6 +96,23 @@ interface StorageIdentifier {
   slotId: string;
 }
 
+/** The read-modify-write running last on each slot's record, by its key. */
+const slotWrites = new Map<string, Promise<void>>();
+
+/**
+ * Run a read-modify-write of a slot's record after the ones already running on it (存档瘦身 D4A): two that overlap
+ * would each write back what it read, and the later write would drop the earlier one's change (a merged vector lost,
+ * a removed one back). Module-wide: the engram manager, the retriever, the save panel and the backup service each
+ * hold a VectorStore of their own.
+ */
+function inSlotOrder<T>(key: string, readModifyWrite: () => Promise<T>): Promise<T> {
+  const done = (slotWrites.get(key) ?? Promise.resolve()).then(readModifyWrite);
+  const settled = done.then(() => undefined, () => undefined);
+  slotWrites.set(key, settled);
+  void settled.then(() => { if (slotWrites.get(key) === settled) slotWrites.delete(key); });
+  return done;
+}
+
 export class VectorStore {
   /**
    * 从 IndexedDB 加载向量数据
@@ -110,7 +125,7 @@ export class VectorStore {
     const stored = await idbAdapter.get<unknown>(key);
     // 存档瘦身 D4A: every form a vector was stored in becomes a Float32Array here, in memory only (the export reads
     // through this too, and must not write); the record takes the new form with its next write.
-    return stored === undefined ? this.createEmpty() : vectorDataFromBundle(stored);
+    return stored === undefined ? this.createEmpty() : decodeVectorData(stored);
   }
 
   /**
@@ -220,6 +235,15 @@ export class VectorStore {
     profileId: string,
     slotId: string,
   ): Promise<void> {
+    await inSlotOrder(this.buildKey({ profileId, slotId }), () => this.trimToMatchEventsNow(eventIds, entityNames, profileId, slotId));
+  }
+
+  private async trimToMatchEventsNow(
+    eventIds: Set<string>,
+    entityNames: Set<string>,
+    profileId: string,
+    slotId: string,
+  ): Promise<void> {
     const data = await this.load(profileId, slotId);
     let changed = false;
 
@@ -246,6 +270,14 @@ export class VectorStore {
   }
 
   async trimEdgeVectors(
+    keptEdgeIds: Set<string>,
+    profileId: string,
+    slotId: string,
+  ): Promise<void> {
+    await inSlotOrder(this.buildKey({ profileId, slotId }), () => this.trimEdgeVectorsNow(keptEdgeIds, profileId, slotId));
+  }
+
+  private async trimEdgeVectorsNow(
     keptEdgeIds: Set<string>,
     profileId: string,
     slotId: string,
@@ -295,6 +327,14 @@ export class VectorStore {
     profileId: string,
     slotId: string,
   ): Promise<number> {
+    return inSlotOrder(this.buildKey({ profileId, slotId }), () => this.removeVectorsNow(keys, profileId, slotId));
+  }
+
+  private async removeVectorsNow(
+    keys: Partial<Record<VectorTable, readonly string[]>>,
+    profileId: string,
+    slotId: string,
+  ): Promise<number> {
     const data = await this.load(profileId, slotId);
     let removed = 0;
     for (const table of VECTOR_TABLES) {
@@ -315,6 +355,17 @@ export class VectorStore {
    * A different embedding model wipes all three tables first (vector spaces differ).
    */
   private async mergeVectors<T extends object>(
+    kind: VectorTable,
+    items: T[],
+    keyOf: (item: T) => string,
+    vectors: ReadonlyArray<ArrayLike<number>>,
+    model: string,
+    storage: StorageIdentifier,
+  ): Promise<void> {
+    await inSlotOrder(this.buildKey(storage), () => this.mergeVectorsNow(kind, items, keyOf, vectors, model, storage));
+  }
+
+  private async mergeVectorsNow<T extends object>(
     kind: VectorTable,
     items: T[],
     keyOf: (item: T) => string,
@@ -352,6 +403,15 @@ export class VectorStore {
     slotId: string,
   ): Promise<void> {
     if (keys.length === 0) return;
+    await inSlotOrder(this.buildKey({ profileId, slotId }), () => this.deleteKeysNow(kind, keys, profileId, slotId));
+  }
+
+  private async deleteKeysNow(
+    kind: 'entityVectors' | 'edgeVectors',
+    keys: string[],
+    profileId: string,
+    slotId: string,
+  ): Promise<void> {
     const data = await this.load(profileId, slotId);
     let changed = false;
     for (const key of keys) {

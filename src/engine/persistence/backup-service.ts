@@ -23,7 +23,7 @@ import type { ProfileManager } from './profile-manager';
 import type { SaveManager } from './save-manager';
 import type { ConfigStore } from '../core/config-system';
 import type { PromptStorage } from '../prompt/prompt-storage';
-import { vectorDataForBundle, vectorDataFromBundle, type VectorStore } from '../memory/engram/vector-store';
+import { vectorDataForBundle, decodeVectorData, type VectorStore } from '../memory/engram/vector-store';
 import type { CustomPresetStore, CustomPresetEntry } from './custom-preset-store';
 import type { ImageAssetCache } from '../image/asset-cache';
 import type { ImageAsset } from '../image/types';
@@ -775,7 +775,7 @@ export class BackupService {
         // As stored, unconverted: the rollback puts back exactly what was there (load would give Float32Arrays for
         // an older record's number lists, 存档瘦身 D4A).
         const vectorData = await this.vectorStore.loadStored(profileId, slotId);
-        if (vectorData !== undefined && hasVectorContent(vectorDataFromBundle(vectorData))) vectors[slotId] = structuredClone(vectorData);
+        if (vectorData !== undefined && hasVectorContent(decodeVectorData(vectorData))) vectors[slotId] = structuredClone(vectorData);
       }
     }
     let worldBooks: import('../prompt/world-book').WorldBook[] = [];
@@ -1608,7 +1608,7 @@ export class BackupService {
   ): Promise<void> {
     for (const [compositeKey, data] of Object.entries(vectorsData)) {
       const { profileId, slotId } = parseCompositeKey(compositeKey);
-      await this.vectorStore.save(profileId, slotId, vectorDataFromBundle(data));
+      await this.vectorStore.save(profileId, slotId, decodeVectorData(data));
     }
   }
 

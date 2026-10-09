@@ -69,6 +69,7 @@ vi.mock('./migration-registry', async (importOriginal) => {
 
 import { formatBackupKey, SaveManager } from './save-manager';
 import { migrationRegistry } from './migration-registry';
+import { writePath } from './save-format/path-copy';
 
 const KEY = 'save_p1_s1';
 const BACKUP = 'save_p1_s1:pre-format-2';
@@ -353,6 +354,27 @@ describe('SaveManager · save format 2', () => {
     adapterHooks.failDelete = undefined;
     await later.saveGame('p1', 's1', withRound(reread, 6));
     expect(memStore.has(BACKUP)).toBe(false);
+  });
+
+  it('keeps the old record aside for a save the pseudo-vector repair marked while its upgrade had failed (B5 review I-1)', async () => {
+    memStore.set(KEY, legacySave(4));
+    // Session 1: the upgrade fails, so the save loads as it was; opening it, the repair records itself (the flag only,
+    // as EngramManager.repairVectorDims writes it); the next save writes the tree as it is: nothing to keep aside yet.
+    upgradeSpy.fail = true;
+    const first = manager();
+    const asLoaded = (await first.loadGame('p1', 's1')) as GameStateTree;
+    const repaired = writePath(asLoaded, '系统.扩展.saveFormat', { vectorDimRepaired: true }) as GameStateTree;
+    await first.saveGame('p1', 's1', repaired);
+    expect(memStore.has(BACKUP)).toBe(false);
+    const oldRecord = memStore.get(KEY);
+
+    // Session 2: the upgrade works; the marker keeps the repair's flag, and the first write keeps the old record aside.
+    upgradeSpy.fail = false;
+    const second = manager();
+    const upgraded = (await second.loadGame('p1', 's1')) as GameStateTree;
+    expect(extensionOf(upgraded).saveFormat).toEqual({ vectorDimRepaired: true, version: 2, migratedAtRound: 4 });
+    await second.saveGame('p1', 's1', upgraded);
+    expect(memStore.get(BACKUP)).toEqual(oldRecord);
   });
 
   it('loads the save as it was when the upgrade fails, says so once, and writes nothing', async () => {

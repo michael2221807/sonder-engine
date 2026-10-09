@@ -66,8 +66,9 @@ type FakeVectorRecord = { eventVectors: Record<string, ArrayLike<number>>; entit
 
 class FakeVectorStore {
   data = new Map<string, FakeVectorRecord>();
+  /** As VectorStore.load: every table there, an empty record when the slot has none. */
   async load(pid: string, sid: string) {
-    return structuredClone(this.data.get(`${pid}/${sid}`) ?? { eventVectors: {}, entityVectors: {} });
+    return { eventVectors: {}, entityVectors: {}, edgeVectors: {}, model: '', dim: 0, ...structuredClone(this.data.get(`${pid}/${sid}`)) };
   }
   async save(pid: string, sid: string, d: FakeVectorRecord) {
     this.data.set(`${pid}/${sid}`, structuredClone(d));

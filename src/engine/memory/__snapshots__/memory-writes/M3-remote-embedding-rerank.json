@@ -3065,11 +3065,6 @@
                 }
               },
               "edgeVectors": {
-                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
-                  "typedArray": "Float32Array",
-                  "byteLength": 1536,
-                  "sha256": "702410cc6a880642e64c113858af5332e6f4799e85e5071c0fd496d13367b0d6"
-                },
                 "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
                   "typedArray": "Float32Array",
                   "byteLength": 1536,
@@ -3106,14 +3101,6 @@
             "key": "engram_vectors_prof_m_slot_m"
           },
           {
-            "op": "get",
-            "key": "engram_vectors_prof_m_slot_m"
-          },
-          {
-            "op": "get",
-            "key": "engram_vectors_prof_m_slot_m"
-          },
-          {
             "op": "set",
             "key": "engram_vectors_prof_m_slot_m",
             "value": {
@@ -3158,6 +3145,14 @@
             }
           },
           {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
+            "op": "get",
+            "key": "engram_vectors_prof_m_slot_m"
+          },
+          {
             "op": "set",
             "key": "engram_vectors_prof_m_slot_m",
             "value": {
@@ -3196,11 +3191,6 @@
                 }
               },
               "edgeVectors": {
-                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
-                  "kept": "Float32Array",
-                  "dim": 384,
-                  "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
-                },
                 "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
                   "kept": "Float32Array",
                   "dim": 384,
@@ -3254,11 +3244,6 @@
                 }
               },
               "edgeVectors": {
-                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
-                  "kept": "Float32Array",
-                  "dim": 384,
-                  "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
-                },
                 "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
                   "kept": "Float32Array",
                   "dim": 384,
@@ -3761,11 +3746,6 @@
                 }
               },
               "edgeVectors": {
-                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
-                  "typedArray": "Float32Array",
-                  "byteLength": 1536,
-                  "sha256": "702410cc6a880642e64c113858af5332e6f4799e85e5071c0fd496d13367b0d6"
-                },
                 "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
                   "typedArray": "Float32Array",
                   "byteLength": 1536,
@@ -3864,11 +3844,6 @@
                 }
               },
               "edgeVectors": {
-                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
-                  "kept": "Float32Array",
-                  "dim": 384,
-                  "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
-                },
                 "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
                   "kept": "Float32Array",
                   "dim": 384,
@@ -3942,11 +3917,6 @@
                 }
               },
               "edgeVectors": {
-                "lin nuan|陆沉|linnuanrunsthetaverninqingshitownwherelu": {
-                  "kept": "Float32Array",
-                  "dim": 384,
-                  "sha256": "01da2e45840e3dcc16036c094009ec6b7df1e71994d33458387979841aba63be"
-                },
                 "lin nuan|青石镇|linnuankeepsthetaverninqingshitown": {
                   "kept": "Float32Array",
                   "dim": 384,

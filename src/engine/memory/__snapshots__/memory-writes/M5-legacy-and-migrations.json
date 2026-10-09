@@ -755,10 +755,6 @@
         "key": "engram_vectors_prof_m_slot_m"
       },
       {
-        "op": "get",
-        "key": "engram_vectors_prof_m_slot_m"
-      },
-      {
         "op": "set",
         "key": "engram_vectors_prof_m_slot_m",
         "value": {
@@ -774,6 +770,10 @@
           "model": "old-model",
           "dim": 2
         }
+      },
+      {
+        "op": "get",
+        "key": "engram_vectors_prof_m_slot_m"
       },
       {
         "op": "set",
