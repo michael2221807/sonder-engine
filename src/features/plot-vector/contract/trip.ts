@@ -12,8 +12,8 @@ import { CHANNEL_NAMES, LIMITS, MULTIPLIER_OF, RELEASE_BONUS, type CardReturn, t
 
 /** Domain names to the board's channels (推力 S+, 阻力 S−, 人际 Y, 机会 J). */
 const CHANNEL_ID: Readonly<Record<ChannelName, ChannelId>> = { push: 'S+', drag: 'S-', social: 'Y', chance: 'J' };
-/** The trace's word for a pass that armed a relay and did nothing else then. */
-export const RELAY_ARMED = 'relay armed';
+/** The trace's word for a pass that armed a relay and did nothing else then (not "relay ...": that is a relay's work on another card). */
+export const RELAY_ARMED = 'armed relay';
 
 /** A card's own store: carried across rounds, at most LIMITS.stored in total, never expiring. */
 export function storeAccountId(cardId: string): string {
@@ -153,8 +153,10 @@ export class TripCards implements CardRuntime {
       const burst = burstOf(card.spec);
       if (triggers(burst)) this.carryOut(card.id, burst, actions);
     }
-    // A pass that only armed a relay acted all the same: the trace says what it did.
-    return { actions, triggered: true, ...(!actions.length && own ? { summary: [RELAY_ARMED] } : {}) };
+    // A pass that only armed a relay acted all the same: the trace says what it did. A return a pending relay
+    // cancelled to nothing (and arming none) did nothing: it spends no use, as before.
+    if (!actions.length) return own ? { actions, triggered: true, summary: [RELAY_ARMED] } : { actions, triggered: false };
+    return { actions, triggered: true };
   }
 
   /** Turn a return into an action; a relay in it is armed for the next triggering card. */

@@ -122,7 +122,7 @@ describe('the supply hand', () => {
     const prepared = prepare(state, 'r1');
     expect(prepared.result.triggeredCards).toContain('supply:chain#1');
     const armed = prepared.result.trace.find(e => e.eventType === 'effect' && e.owner?.id === 'supply:chain#1');
-    expect(armed).toMatchObject({ status: 'applied', deltas: [], cardEffects: ['relay armed'] });
+    expect(armed).toMatchObject({ status: 'applied', deltas: [], cardEffects: ['armed relay'] });
     expect(prepared.result.trace.filter(e => e.eventType === 'effect' && e.status === 'applied' && e.owner?.id === 'basic:push' && e.visitId.startsWith('02#1'))).toHaveLength(2);
     expect(stock(accept(state, prepared), 'supply:chain#1')).toBe(usesOf(SUPPLY, 'supply:chain') - 1);
   });

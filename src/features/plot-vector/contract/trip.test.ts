@@ -26,6 +26,11 @@ const ops = (actions: CardAction[]) => actions.flatMap(a => a.operations.map(op 
 const added = (actions: CardAction[], channel: ChannelId) => ops(actions).filter(o => o.op === 'add' && o.target === SHUTTLE_ACCOUNT && o.channel === channel).reduce((n, o) => n + (o.op === 'add' ? o.amount : 0), 0);
 
 describe('relays between cards', () => {
+  it('a pass that only arms a relay acts and says so; a return a relay cancels to nothing does not act (PO 2026-10-10)', () => {
+    const t = trip({ a: spec('return { relay: { xPush: 0 } };'), b: spec('return { push: 2 };') });
+    expect(t.pass(input('a'))).toEqual({ actions: [], triggered: true, summary: ['armed relay'] });
+    expect(t.pass(input('b'))).toEqual({ actions: [], triggered: false });
+  });
   it('amounts add to what the next acting card produces; the relay is then used up', () => {
     const t = trip({ a: spec('return { relay: { push: 3 } };'), b: spec('return { social: 2 };') });
     expect(t.pass(input('a')).triggered).toBe(true); // arming a relay counts as triggering

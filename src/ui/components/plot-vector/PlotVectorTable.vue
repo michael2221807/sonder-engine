@@ -92,7 +92,15 @@ const helpOpen = ref(false);
 // header grows, and a fixed offset put the panel over the "?" that closes it.
 const head = ref<HTMLElement>();
 const helpTop = ref<number | null>(null);
-watch(helpOpen, open => { helpTop.value = open && head.value ? head.value.offsetTop + head.value.offsetHeight + 6 : null; });
+let headWatch: ResizeObserver | undefined;
+const placeHelp = () => { helpTop.value = helpOpen.value && head.value ? head.value.offsetTop + head.value.offsetHeight + 6 : null; };
+watch(helpOpen, open => {
+  placeHelp();
+  headWatch?.disconnect();
+  headWatch = undefined;
+  if (open && head.value && typeof ResizeObserver !== 'undefined') { headWatch = new ResizeObserver(placeHelp); headWatch.observe(head.value); }
+});
+onBeforeUnmount(() => headWatch?.disconnect());
 const saved = ref(false);
 const replaying = shallowRef<TableModel | null>(null);
 const walk = useTripWalk();
