@@ -230,6 +230,7 @@ export class CardWords {
     if (receipt.stored > 0.005) toks.push(this.concept('store', `+${this.num(receipt.stored)}`));
     if (receipt.released > 0.005) toks.push(this.concept('release', this.num(receipt.released)));
     if (receipt.otherEffects.includes('route')) toks.push({ mark: 'route', color: MARK_COLOR.route, label: this.k('fx.mark.route'), tip: this.k('fx.means.route') });
+    if (receipt.otherEffects.includes('relay')) toks.push(this.concept('relay'));
     return toks;
   }
 

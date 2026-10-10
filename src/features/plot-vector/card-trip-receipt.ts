@@ -1,6 +1,6 @@
 import type { TraceEvent } from '../../engine/plot-vector/core/types';
 import { SHUTTLE_ACCOUNT } from '../../engine/plot-vector/core/runner';
-import { storeAccountId } from './contract/trip';
+import { RELAY_ARMED, storeAccountId } from './contract/trip';
 
 /** A short, observed account of one card in this specific trip, never a promise for every board. */
 export interface CardTripReceipt {
@@ -8,13 +8,13 @@ export interface CardTripReceipt {
   shuttleChanges: Record<string, number>;
   stored: number;
   released: number;
-  otherEffects: Array<'route'>;
+  otherEffects: Array<'route' | 'relay'>;
 }
 
 /** What one card did in a trip, read from the trace (the deltas are authoritative). */
 export function cardTripReceipt(trace: readonly TraceEvent[], cardId: string): CardTripReceipt {
   const shuttleChanges: Record<string, number> = {};
-  const otherEffects = new Set<'route'>();
+  const otherEffects = new Set<'route' | 'relay'>();
   // Passes it acted on: one pass may leave several events (an environment's adds and multipliers apart, an echo).
   const acted = new Set<string>();
   let stored = 0, released = 0;
@@ -30,6 +30,7 @@ export function cardTripReceipt(trace: readonly TraceEvent[], cardId: string): C
     }
     // Steps and turns change the route, which the trace records as the trip itself.
     if (event.cardEffects.some(effect => effect.startsWith('steps') || effect === 'turn')) otherEffects.add('route');
+    if (event.cardEffects.includes(RELAY_ARMED)) otherEffects.add('relay');
   }
   return { activations: acted.size, shuttleChanges, stored, released, otherEffects: [...otherEffects] };
 }

@@ -266,8 +266,10 @@ export interface CardPassInput {
 
 export interface CardPassOutput {
   actions: CardAction[];
-  /** Whether the card acted on this pass (spends a use of a consumable card). */
+  /** Whether the card acted on this pass (spends a use of a consumable card), with or without operations. */
   triggered: boolean;
+  /** What a card that acted without operations of its own did (for the trace), e.g. a relay it armed. */
+  summary?: string[];
   /** Why the card did not act because its own code failed (the pass is dropped, the run goes on). */
   error?: string;
 }

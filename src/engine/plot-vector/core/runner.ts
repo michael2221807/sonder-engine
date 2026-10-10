@@ -220,12 +220,17 @@ class RunContext {
       shuttle: Object.freeze(this.shuttleSnapshot()),
       stored: store && this.accounts.has(store) ? this.accounts.total(store) : 0,
     });
+    if (out.triggered) this.triggered.add(cardId);
     if (!out.actions.length) {
-      this.push({ eventType: 'effect', visitId: visit.id, cellId: visit.cell.id, owner, effectId: `card:${cardId}`, status: 'notTriggered',
-        ...(out.error ? { reason: out.error, reasonCode: 'cardError' as const } : {}) });
+      // A card may act with nothing to apply now (it armed a relay for a later card): it still acted, and spends
+      // its use like any other pass that acted (PO 2026-10-10, A).
+      this.push(out.triggered
+        ? { eventType: 'effect', visitId: visit.id, cellId: visit.cell.id, owner, effectId: `card:${cardId}`, status: 'applied', deltas: [], modifiers: [],
+          cardEffects: [...(out.summary ?? [])] }
+        : { eventType: 'effect', visitId: visit.id, cellId: visit.cell.id, owner, effectId: `card:${cardId}`, status: 'notTriggered',
+          ...(out.error ? { reason: out.error, reasonCode: 'cardError' as const } : {}) });
       return;
     }
-    if (out.triggered) this.triggered.add(cardId);
     for (const action of out.actions) this.applyAction(visit, action, active, view, false);
   }
 

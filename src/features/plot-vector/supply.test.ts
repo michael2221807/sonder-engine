@@ -115,6 +115,18 @@ describe('the supply hand', () => {
     expect(thrice.supply?.hand).toHaveLength(3);
   });
 
+  it('a card that only arms a relay acted: it spends a use, and the next card acts once more (PO 2026-10-10, A)', () => {
+    const state: VectorState = { ...initialVectorState(),
+      supply: { hand: [{ id: 'supply:chain#1', cardId: 'supply:chain' }, { id: 'basic:push', cardId: 'basic:push' }], drawn: 1 },
+      layout: { placements: { ...EMPTY, '01': 'supply:chain#1', '02': 'basic:push' }, tray: [] } };
+    const prepared = prepare(state, 'r1');
+    expect(prepared.result.triggeredCards).toContain('supply:chain#1');
+    const armed = prepared.result.trace.find(e => e.eventType === 'effect' && e.owner?.id === 'supply:chain#1');
+    expect(armed).toMatchObject({ status: 'applied', deltas: [], cardEffects: ['relay armed'] });
+    expect(prepared.result.trace.filter(e => e.eventType === 'effect' && e.status === 'applied' && e.owner?.id === 'basic:push' && e.visitId.startsWith('02#1'))).toHaveLength(2);
+    expect(stock(accept(state, prepared), 'supply:chain#1')).toBe(usesOf(SUPPLY, 'supply:chain') - 1);
+  });
+
   it('a recharge card waits at no uses and regains one every two rounds, never above its uses (5A)', () => {
     const rhythm = SUPPLY.cards.find(c => c.id === 'supply:rhythm')!;
     expect(rhythm.recharge).toEqual({ on: 'round', every: 2 });

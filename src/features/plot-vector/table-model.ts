@@ -140,11 +140,9 @@ export function tableModel(view: BoardView, prepared: PreparedVector, layout: La
     return { id: cell.id, role: roleOf(cell.id, cell.kind), card: placed && cards[placed] ? placed : null };
   });
   const onBoard = new Set(cells.map(c => c.card).filter((id): id is string => !!id));
-  // Only a cell whose card the computed trip also had there: a move not walked yet says nothing about it. A card
-  // that may only arm a relay is never called idle: the trip does not count a pass that only armed one as acting.
+  // Only a cell whose card the computed trip also had there: a move not walked yet says nothing about it.
   const acted = new Set(prepared.result.triggeredCards);
-  const relayOnly = (id: string) => !!cards[id]?.behavior?.clauses.some(cl => cl.ops.length > 0 && cl.ops.every(op => op.kind === 'relay'));
-  const idle = cells.flatMap(c => (c.card && prepared.layout.placements[c.id] === c.card && !acted.has(c.card) && !relayOnly(c.card) ? [c.card] : []));
+  const idle = cells.flatMap(c => (c.card && prepared.layout.placements[c.id] === c.card && !acted.has(c.card) ? [c.card] : []));
   const placeable = [...offered].filter(id => cards[id] && !onBoard.has(id));
   const resting = Object.values(cards).filter(c => c.kind === 'supply' && c.resting && !offered.has(c.id)).map(c => c.id);
   return {

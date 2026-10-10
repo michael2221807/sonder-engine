@@ -80,11 +80,11 @@ describe('the table', () => {
     // On the line the shuttle folds at 06 and comes back over 02 within its ten steps.
     const line = viewOf({ ...state, shape: 'line' }, placed);
     expect(tableModel(line, line.prepared, line.prepared.layout, 'line').idle).toEqual([]);
-    // A card that only arms a relay: the trip does not count such a pass as acting, so the table never calls it idle.
+    // A card that only arms a relay acted (PO 2026-10-10, A): the trip counts it, so it is not idle.
     const relay = bindCard(tasksAfterSave({ id: 's', success: true, before: [], after: [entries[3]] })[0],
       { for: '口才', type: 'talent', summary: '下一张卡再来一次。', onPass: 'return { relay: { echo: true } };' });
     const relayView = viewOf({ ...state, cards: [...cards, relay] }, placed);
-    expect(relayView.prepared.result.triggeredCards).not.toContain('talent:name:口才');
+    expect(relayView.prepared.result.triggeredCards).toContain('talent:name:口才');
     expect(tableModel(relayView, relayView.prepared, relayView.prepared.layout, 'ring').idle).toEqual([]);
   });
   it('a growing card shows how it grows and where it stands', () => {
