@@ -21,7 +21,7 @@ afterEach(() => { vi.restoreAllMocks(); });
 
 const label = (zh: string) => ({ zh, en: zh });
 function card(id: string, over: Partial<TableCard> = {}): TableCard {
-  return { id, kind: 'item', name: label(id), effects: [], resting: false, ...over } as TableCard;
+  return { id, kind: 'item', name: label(id), resting: false, ...over } as TableCard;
 }
 function model(cards: TableCard[], forming: Array<{ id: string; kind: string; name: string }> = []): Pick<TableModel, 'cards' | 'forming'> {
   return { cards: Object.fromEntries(cards.map((c) => [c.id, c])), forming: forming as never };
@@ -169,7 +169,7 @@ describe('compareSeen', () => {
     } as Record<string, Partial<SeenCard>>;
     const { arrivals } = compareSeen(model([card('kept', { kind: 'supply' })]), before);
     expect(arrivals.departed).toEqual([
-      { id: 'gone', kind: 'supply', name: label('Gone'), line: label('Line'), tier: 'rare', effects: [], resting: false },
+      { id: 'gone', kind: 'supply', name: label('Gone'), line: label('Line'), tier: 'rare', resting: false },
     ]);
   });
 });

@@ -10,7 +10,7 @@ import { availableUses, grantConsumable, stateOf } from '../../engine/plot-vecto
 import { storeAccount, type TripCard } from './contract/trip';
 import { validateCard } from './contract/validate';
 import type { CardSpec } from './contract/types';
-import { CARD_TIERS, rateCard, type CardRating, type CardTier, type EffectProfile } from './rating';
+import { CARD_TIERS, rateCard, type CardRating, type CardTier } from './rating';
 
 /** When a supply card regains a use: every `every` accepted rounds, or every `every` passes it acted on. */
 interface RechargeSpec { on: 'round' | 'trigger'; every: number }
@@ -210,16 +210,16 @@ export function settleSupply(rules: SupplyRules, supply: SupplyState, states: Ca
 }
 
 /**
- * What the table shows of a hand card: its pool card, its tier, what it does (its measured profile) and, for a
+ * What the table shows of a hand card: its pool card, its tier, its code (what it does is read from it) and, for a
  * card that recharges, how far it is.
  */
-export interface SupplyCardInfo { cardId: string; tier: CardTier; profile?: EffectProfile; recharge?: RechargeSpec & { progress: number } }
+export interface SupplyCardInfo { cardId: string; tier: CardTier; recharge?: RechargeSpec & { progress: number }; spec: CardSpec }
 export function supplyHandInfo(rules: SupplyRules, supply: SupplyState): Record<string, SupplyCardInfo> {
   const ratings = supplyRatings(rules);
   return Object.fromEntries(inHand(rules, supply).map(({ held, card }) => {
     const rating = ratings.get(card.id);
     const info: SupplyCardInfo = {
-      cardId: card.id, tier: rating?.tier ?? 'common', ...(rating?.profile ? { profile: rating.profile } : {}),
+      cardId: card.id, tier: rating?.tier ?? 'common', spec: card.spec,
       ...(card.recharge ? { recharge: { ...card.recharge, progress: held.recharge ?? 0 } } : {}),
     };
     return [held.id, info];

@@ -105,7 +105,7 @@ describe('what a card does (the effect profile, version 4)', () => {
   });
   it('a rating from before version 4 has no profile and is not current', () => {
     const r = rateCard(card('return { push: 1 };'));
-    expect(r.version).toBe(4);
+    expect(r.version).toBe(RATING_VERSION);
     const { profile: _dropped, ...old } = r;
     expect(ratingIsCurrent({ ...old, version: 3 })).toBe(false);
   });

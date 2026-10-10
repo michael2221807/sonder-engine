@@ -29,7 +29,7 @@ import { readPlotVectorControl, subscribePlotVectorControl } from '@/engine/plot
 import type { Layout, LocalizedLabel } from '@/engine/plot-vector/core/types';
 import type { BoardView } from '@/features/plot-vector/board-access';
 import { readVectorState, type PreparedVector } from '@/features/plot-vector/runtime';
-import { readBoardShape, type BoardShape } from '@/features/plot-vector/vector-board';
+import { DEFAULT_CONVERTER, readBoardShape, readConverter, type BoardShape, type ConverterRule } from '@/features/plot-vector/vector-board';
 import { SIX_CELL_RING_ID } from '@/features/plot-vector/default-board';
 import { arrange, rateStoryCard, sweep, tableModel, tripWalk, unratedStoryCards, type RoundOpening, type TableCard, type TableModel } from '@/features/plot-vector/table-model';
 import { type CardRating, type CardTier } from '@/features/plot-vector/rating';
@@ -82,6 +82,8 @@ const view = shallowRef<BoardView>();
 const prepared = shallowRef<PreparedVector>();
 const layout = ref<Layout>({ placements: {}, tray: [] });
 const shape = ref<BoardShape>('line');
+/** What the converter cell turns into what (PO 2026-10-09, A): kept with the arrangement and the shape. */
+const converter = ref<ConverterRule>({ ...DEFAULT_CONVERTER });
 const note = ref<'cleared' | 'openFailed' | 'saveFailed' | 'reopened' | null>(null);
 const selected = ref<string | null>(null);
 const fresh = ref<ReadonlySet<string>>(new Set());
@@ -143,6 +145,7 @@ async function load(opts: { seen?: boolean } = { seen: true }): Promise<void> {
     prepared.value = next.prepared;
     layout.value = cloneDeep(next.prepared.layout);
     shape.value = readBoardShape(next.state.shape);
+    converter.value = readConverter(next.state.converter);
     note.value = next.cleared ? 'cleared' : null;
     dropTierCache(slotOf(next));
     // Only cards still waiting for the runtime's rating keep theirs; the next write leaves the rest out.
@@ -387,13 +390,14 @@ function whenEngineFree(): void {
 }
 onUnmounted(eventBus.on('engine:sub-pipelines-done', () => { if (settling.value) whenEngineFree(); }));
 async function restoreAfter(): Promise<void> {
-  const keep = cloneDeep(layout.value), keepShape = shape.value, keepSlot = view.value ? slotOf(view.value) : null;
+  const keep = cloneDeep(layout.value), keepShape = shape.value, keepConverter = { ...converter.value }, keepSlot = view.value ? slotOf(view.value) : null;
   await load({ seen: open.value });
   if (!view.value) return;
   // Another save came in meanwhile: the move belonged to the old one and is not carried over.
   if (slotOf(view.value) !== keepSlot) { dirty = false; return; }
   layout.value = keep;
   shape.value = keepShape;
+  converter.value = keepConverter;
   await changed();
   if (!open.value) void persistSoon();
 }
@@ -406,7 +410,7 @@ async function changed(opts: { walkDelay?: number } = {}): Promise<void> {
   const mine = ++changeSeq;
   note.value = null;
   try {
-    const next = await current.preview(cloneDeep(layout.value), shape.value);
+    const next = await current.preview(cloneDeep(layout.value), shape.value, { ...converter.value });
     if (mine !== changeSeq || current !== view.value) return;
     prepared.value = next;
   } catch (error) { if (mine === changeSeq) void recover(error); return; }
@@ -448,6 +452,13 @@ function setShape(next: BoardShape): void {
   // Let the cells glide to their new places before the shuttle walks.
   void changed({ walkDelay: 560 });
 }
+/** The player picked a converter rule: the board walks it at once and keeps it like any move. */
+function setConverter(next: ConverterRule): void {
+  if (locked.value || replaying.value || !view.value) return;
+  if (next.from === converter.value.from && next.to === converter.value.to) return;
+  converter.value = next;
+  void changed();
+}
 
 // ── Keeping the arrangement (PO 2026-09-30, B): in the live game state after each walk, in the save file once,
 // when the table closes, the page is hidden, or the component goes. Writing a large save holds the page for a
@@ -467,13 +478,13 @@ async function flushCommit(): Promise<void> {
   const current = view.value;
   if (!current || !dirty) return;
   dirty = false;
-  const run = commitNow(current, cloneDeep(layout.value), shape.value);
+  const run = commitNow(current, cloneDeep(layout.value), shape.value, { ...converter.value });
   inflight = run;
   try { await run; } finally { if (inflight === run) inflight = null; }
 }
-async function commitNow(current: BoardView, layoutNow: Layout, shapeNow: BoardShape): Promise<void> {
+async function commitNow(current: BoardView, layoutNow: Layout, shapeNow: BoardShape, converterNow: ConverterRule): Promise<void> {
   try {
-    await current.commit(layoutNow, shapeNow);
+    await current.commit(layoutNow, shapeNow, converterNow);
     saved.value = true;
     clearTimeout(savedTimer);
     savedTimer = setTimeout(() => { saved.value = false; }, 900);
@@ -503,11 +514,12 @@ async function recover(error: unknown): Promise<void> {
     return;
   }
   if (!message.includes('stale') || !access) { note.value = 'saveFailed'; return; }
-  const keep = cloneDeep(layout.value), keepShape = shape.value;
+  const keep = cloneDeep(layout.value), keepShape = shape.value, keepConverter = { ...converter.value };
   await load({ seen: open.value });
   if (!view.value) return;
   layout.value = keep;
   shape.value = keepShape;
+  converter.value = keepConverter;
   if (open.value) note.value = 'reopened';
   await changed();
 }
@@ -897,6 +909,11 @@ const ghostStyle = computed(() => {
             :fresh="fresh"
             :lifting="drag.drag.value?.card ?? null"
             :quiet="detail?.card ?? null"
+            :converter="shown.converter"
+            :converter-locked="locked || !!replaying || !view"
+            :idle="shown.idle"
+            :exact="prefs.exact"
+            @converter="setConverter"
             @cell-tap="tapCell"
             @cell-key="keyCell"
             @card-down="(e, card, cell) => drag.start(e, card, cell)"
@@ -930,6 +947,7 @@ const ghostStyle = computed(() => {
               :fresh="fresh.has(id)"
               :lifted="drag.drag.value?.card === id"
               :quiet-marks="detail?.card === id"
+              :exact="prefs.exact"
               :data-card="id"
               role="button"
               tabindex="0"
@@ -1006,6 +1024,7 @@ const ghostStyle = computed(() => {
       :receipt="detailReceipt"
       :retrying="retrying"
       :retry-note="retryNote"
+      :idle="!!detail && !!shown?.idle.includes(detail.card)"
       @enter="detailEnter"
       @leave="detailLeave"
       @retry="retry"

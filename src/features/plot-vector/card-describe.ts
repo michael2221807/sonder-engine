@@ -1,8 +1,8 @@
 // App doc: docs/user-guide/pages/game-main.md §3.18.7 · Marks and colours (§3.18.5 growth sentence)
 /**
  * What a card does and how it grows, as structured data the table turns into words (PO 2026-10-01; demo
- * docs/demo/plot-vector-effect-and-start.html). Everything here comes from the engine: the effect marks from the
- * card's measured profile (rating.ts), the growth from its declared GrowthSpec and the engine's growth record.
+ * docs/demo/plot-vector-effect-and-start.html). Everything here comes from the engine: the growth from its
+ * declared GrowthSpec and the engine's growth record (what a card does is card-behavior.ts).
  * Nothing reads the model's own wording, so the explanation never depends on how the model formatted it. Pure;
  * the UI supplies the words from a fixed glossary.
  */
@@ -10,56 +10,13 @@ import { growthCap } from './contract/growth';
 import { readReturn } from './contract/returns';
 import { codeMentions } from './contract/code-words';
 import { CHANNEL_NAMES, MULTIPLIER_OF, type CardReturn, type CardSpec, type ChannelName, type GrowthState, type GrowthTrigger } from './contract/types';
-import type { EffectProfile } from './rating';
 
 /**
- * The marks, by the direction of the three tendency bars: `up` leans the trip toward 顺 (more push or less drag),
- * `down` toward 逆 (more drag or less push); social and chance feed their bars; `route` turns the shuttle or
- * changes its steps; `store` keeps an amount for later.
+ * The kinds of mark the table draws, by the three tendency bars: `up` push (toward 顺), `down` drag (toward 逆),
+ * social and chance their bars, `route` a turn or steps, `store` an amount kept for later. The shuttle's signs, the
+ * bars, the round opening and the card bubbles share them; what a card does is read from its code (card-behavior.ts).
  */
 export type EffectMark = 'up' | 'down' | 'social' | 'chance' | 'route' | 'store';
-export const EFFECT_MARKS: readonly EffectMark[] = ['up', 'down', 'social', 'chance', 'route', 'store'];
-
-export interface CardEffect {
-  mark: EffectMark;
-  /** 1–3 by how much the card moves it over a trip, against the unit card; 0 for route and store, which have no size. */
-  strength: 0 | 1 | 2 | 3;
-  /** Social or chance going down (a card that costs it). */
-  less?: boolean;
-  /**
-   * For exact numbers: the mean change each time the card acts, in the shuttle's own units, by quantity (a lean
-   * shows push and drag apart). Empty for a card that acts only through the next card.
-   */
-  exact: Partial<Record<ChannelName, number>>;
-}
-
-/** A change smaller than this, over a trip in units of the unit card, is not shown as the card's own. */
-export const SHOWN_FROM = 0.3;
-/** Where a mark gets its second and third stroke (unit card = 1; calibrated on the pack pool, PO 2026-10-01). */
-export const STRENGTH_STEPS = [1.5, 3.5] as const;
-/** An exact number smaller than this is noise of the measurement, not something the card does. */
-const EXACT_FROM = 0.05;
-
-const strength = (size: number): 1 | 2 | 3 => (size >= STRENGTH_STEPS[1] ? 3 : size >= STRENGTH_STEPS[0] ? 2 : 1);
-const exactOf = (perAct: EffectProfile['perAct'], ...names: ChannelName[]): Partial<Record<ChannelName, number>> =>
-  Object.fromEntries(names.filter(n => Math.abs(perAct[n]) >= EXACT_FROM).map(n => [n, perAct[n]]));
-
-/** The marks of a measured card, in the order of the bars (lean, social, chance), then route and store. */
-export function effectMarks(profile: EffectProfile | undefined): CardEffect[] {
-  // A profile from a damaged save shows no marks rather than breaking the table.
-  if (!profile?.perTrip || !profile.perAct) return [];
-  const { perTrip, perAct } = profile;
-  const out: CardEffect[] = [];
-  const lean = perTrip.push - perTrip.drag;
-  if (Math.abs(lean) >= SHOWN_FROM) out.push({ mark: lean > 0 ? 'up' : 'down', strength: strength(Math.abs(lean)), exact: exactOf(perAct, 'push', 'drag') });
-  for (const name of ['social', 'chance'] as const) {
-    if (Math.abs(perTrip[name]) < SHOWN_FROM) continue;
-    out.push({ mark: name, strength: strength(Math.abs(perTrip[name])), ...(perTrip[name] < 0 ? { less: true } : {}), exact: exactOf(perAct, name) });
-  }
-  if (profile.route) out.push({ mark: 'route', strength: 0, exact: {} });
-  if (profile.store) out.push({ mark: 'store', strength: 0, exact: {} });
-  return out;
-}
 
 /**
  * One part of a return, for words. `amount` adds to a quantity; `factor` multiplies it; `convert` turns one into

@@ -6,9 +6,11 @@
  * light along the top edge, and the rarer the card the richer it feels: fine and rare cards catch a sheen on
  * hover; from epic up the card tilts toward the pointer with a light that follows it; legendary cards carry a
  * slow gold-leaf sheen and give off motes; a mythic card has a light running round its edge and embers rising.
- * A card whose ability is still forming is shown faded and cannot be placed (4A). Beside the kind sit the marks of
- * what the card does, measured by the engine (PO 2026-10-01): the same glyphs and colours as the tendency bars;
- * hovering them names them.
+ * A card whose ability is still forming is shown faded and cannot be placed (4A). Under the name the card says what
+ * its own code does (PO 2026-10-09, read by the engine, never the model's sentence): a row per case — a short
+ * condition, then chips in the glyphs and colours of the tendency bars (push ↑ and drag ↓ apart, an add filled, a
+ * multiplier outlined, a move an arrow); hovering says it in words. With one case the second line is the model's
+ * sentence. A card that did not act once on this trip is dimmed and says so.
  */
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -17,7 +19,6 @@ import type { LocalizedLabel } from '@/engine/plot-vector/core/types';
 import Tooltip from '../shared/Tooltip.vue';
 import { motes, tierRank } from './table-effects';
 import { prefersReducedMotion } from './use-trip-walk';
-import { MARK_COLOR, MARK_GLYPH } from './effect-marks';
 import { useCardWords } from './card-words';
 
 const props = defineProps<{
@@ -34,6 +35,10 @@ const props = defineProps<{
   lifted?: boolean;
   /** Its details are showing: the marks' own hint keeps quiet so the two do not overlap. */
   quietMarks?: boolean;
+  /** On the board and did not act once on this trip. */
+  idle?: boolean;
+  /** Exact numbers on: the chips carry their numbers. */
+  exact?: boolean;
 }>();
 const { t, locale } = useI18n();
 const label = (value?: LocalizedLabel) => value ? (locale.value === 'en' ? value.en : value.zh) : '';
@@ -49,9 +54,15 @@ const dots = computed(() => {
   return Array.from({ length: uses.max }, (_, i) => i < uses.left);
 });
 const diamonds = computed(() => Math.min(3, props.card?.level?.value ?? 0));
-const fx = computed(() => props.card?.effects ?? []);
-const words = useCardWords(() => false);
-const fxTip = computed(() => (fx.value.length ? words.value.faceTip(fx.value) : ''));
+const words = useCardWords(() => !!props.exact);
+const behavior = computed(() => props.card?.behavior);
+const rows = computed(() => (behavior.value ? words.value.face(behavior.value) : []));
+const fxTip = computed(() => (behavior.value?.clauses.length ? words.value.faceTip(behavior.value) : ''));
+/** One case leaves room for the model's sentence on the second line. */
+const sayLine = computed(() => rows.value.length < 2);
+/** Cases the face leaves out (it shows two; a narrow card one): their count, so the face never reads as complete. */
+const moreWide = computed(() => Math.max(0, (behavior.value?.clauses.length ?? 0) - rows.value.length));
+const moreNarrow = computed(() => Math.max(0, (behavior.value?.clauses.length ?? 0) - Math.min(1, rows.value.length)));
 const charge = computed(() => {
   const c = props.card;
   return c?.resting && c.charge ? Math.min(1, c.charge.progress / c.charge.every) : null;
@@ -112,6 +123,7 @@ onBeforeUnmount(() => { clearInterval(moteTimer); cancelAnimationFrame(leanFrame
         'vcard--ghost': ghost,
         'vcard--fresh': fresh,
         'vcard--lifted': lifted,
+        'vcard--idle': idle && !ghost,
       },
     ]"
     :data-tier="tier"
@@ -127,15 +139,7 @@ onBeforeUnmount(() => { clearInterval(moteTimer); cancelAnimationFrame(leanFrame
     </span>
     <i v-if="rank >= 5" class="vcard__run" aria-hidden="true"><i /></i>
     <i v-if="rank >= 1" class="vcard__edge" aria-hidden="true" />
-    <span class="vcard__kind">
-      {{ t(`mainGame.vectorTable.kind.${kind}`) }}
-      <!-- Not a control: `interactive` only keeps the hint from adding a tab stop inside the card. -->
-      <Tooltip v-if="fx.length && !ghost" class="vcard__fx" :text="fxTip" interactive fixed :disabled="quietMarks || lifted" data-testid="vector-card-marks">
-        <span class="vcard__fx-in" aria-hidden="true">
-          <i v-for="(e, i) in fx" :key="i" :style="{ color: MARK_COLOR[e.mark] }">{{ e.less ? '−' : '' }}{{ MARK_GLYPH[e.mark] }}</i>
-        </span>
-      </Tooltip>
-    </span>
+    <span class="vcard__kind">{{ t(`mainGame.vectorTable.kind.${kind}`) }}</span>
     <span class="vcard__marks" aria-hidden="true">
       <i v-for="(full, i) in dots" :key="`d${i}`" class="vcard__dot" :class="{ 'vcard__dot--spent': !full }" />
       <i v-if="charge !== null" class="vcard__charge" :style="{ '--p': `${Math.round(charge * 100)}%` }" />
@@ -143,12 +147,28 @@ onBeforeUnmount(() => { clearInterval(moteTimer); cancelAnimationFrame(leanFrame
       <i v-if="card?.stored" class="vcard__stored" />
     </span>
     <strong class="vcard__name">{{ name }}</strong>
-    <span class="vcard__line">{{ line }}</span>
+    <span v-if="rows.length && !ghost" class="vcard__sr">{{ fxTip }}</span>
+    <!-- Not a control: `interactive` only keeps the hint from adding a tab stop inside the card. -->
+    <Tooltip v-if="rows.length && !ghost" class="vcard__fx" :text="fxTip" interactive fixed :disabled="quietMarks || lifted" data-testid="vector-card-marks">
+      <span class="vcard__fx-in">
+        <span v-for="(row, r) in rows" :key="r" class="vcard__row" aria-hidden="true">
+          <i v-for="(w, i) in row.when" :key="`w${i}`" class="vcard__when">{{ w }}</i>
+          <i v-for="(c, i) in row.chips" :key="i" class="vcard__chip" :class="`vcard__chip--${c.frame}`" :style="{ '--c': c.color }">{{ c.text }}</i>
+        </span>
+        <i v-if="moreWide" class="vcard__when vcard__when--more vcard__more-wide" aria-hidden="true">{{ t('mainGame.vectorTable.do.more', { n: moreWide }) }}</i>
+        <i v-if="moreNarrow" class="vcard__when vcard__when--more vcard__more-narrow" aria-hidden="true">{{ t('mainGame.vectorTable.do.more', { n: moreNarrow }) }}</i>
+        <i v-if="behavior?.complex" class="vcard__when vcard__when--complex" aria-hidden="true">{{ t('mainGame.vectorTable.do.complex') }}</i>
+      </span>
+    </Tooltip>
+    <span v-if="sayLine || !rows.length || ghost" class="vcard__line" :class="{ 'vcard__line--one': rows.length > 0 && !ghost }">{{ line }}</span>
     <span v-if="fresh" class="vcard__fresh">{{ t('mainGame.vectorTable.fresh') }}</span>
+    <span v-else-if="idle && !ghost" class="vcard__idle">{{ t('mainGame.vectorTable.do.idle') }}</span>
   </div>
 </template>
 
 <style scoped>
+/* The chips said in words for a screen reader (the chips themselves are glyphs). */
+.vcard__sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .vcard {
   --tier: var(--tier-common);
   --mx: 50%;
@@ -182,11 +202,31 @@ onBeforeUnmount(() => { clearInterval(moteTimer); cancelAnimationFrame(leanFrame
 .vcard:where(:not(.vcard--ghost, .vcard--resting, .vcard--forming, .vcard--lifted, .vcard--selected)):hover { --lift: -3px; box-shadow: 0 10px 22px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08); }
 .vcard--uncommon:where(:not(.vcard--ghost, .vcard--resting, .vcard--lifted, .vcard--selected)):hover, .vcard--rare:where(:not(.vcard--ghost, .vcard--resting, .vcard--lifted, .vcard--selected)):hover { --lift: -4px; }
 .vcard__clip { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; z-index: 0; }
-.vcard__kind, .vcard__marks, .vcard__name, .vcard__line, .vcard__fresh { z-index: 2; }
+.vcard__kind, .vcard__marks, .vcard__name, .vcard__line, .vcard__fresh, .vcard__idle, .vcard__fx { z-index: 2; }
 .vcard__kind { position: absolute; top: 6px; left: 10px; display: inline-flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: 0.06em; color: var(--color-text-muted); }
-.vcard__fx { cursor: default; }
-.vcard__fx-in { display: inline-flex; align-items: center; gap: 4px; }
-.vcard__fx-in i { font-style: normal; font-size: 11px; line-height: 1; letter-spacing: 0; }
+/* What the card does: a row per case, a quiet condition then chips (an add filled, a multiplier outlined). */
+.vcard__fx { position: relative; display: block; cursor: default; min-width: 0; }
+.vcard__fx-in { display: grid; gap: 3px; }
+.vcard__row { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; min-width: 0; }
+.vcard__when, .vcard__chip { font-style: normal; font-size: 10.5px; line-height: 15px; letter-spacing: 0; white-space: nowrap; }
+/* A condition is a quiet neutral tag (square-ish), never in a quantity's colour, so it never reads as one. */
+.vcard__when { padding: 0 4px; border-radius: 3px; color: var(--color-text-secondary); background: oklch(0.28 0.006 95); }
+.vcard__when--complex, .vcard__when--more { justify-self: start; color: var(--color-text-muted); background: oklch(0.26 0.006 95); }
+.vcard__more-narrow { display: none; }
+.vcard__chip { padding: 0 5px; border-radius: 999px; color: var(--c); font-variant-numeric: tabular-nums; }
+.vcard__chip--fill { background: color-mix(in oklch, var(--c) 16%, transparent); }
+.vcard__chip--line { box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--c) 55%, transparent); }
+.vcard__chip--plain { padding: 0 2px; }
+/* A narrow card (a phone): one case on one line, smaller chips, no sentence; the rest is in its details. */
+.vcard { container-type: inline-size; }
+@container (max-width: 125px) {
+  .vcard__fx-in > .vcard__row:nth-child(n + 2), .vcard__more-wide { display: none; }
+  .vcard__more-narrow { display: inline; }
+  .vcard__row { flex-wrap: nowrap; overflow: hidden; }
+  .vcard__when, .vcard__chip { font-size: 9.5px; line-height: 14px; }
+  .vcard__chip { padding: 0 3px; }
+  .vcard__line--one { display: none; }
+}
 .vcard__marks { position: absolute; top: 7px; right: 9px; display: flex; align-items: center; gap: 3px; }
 .vcard__dot { width: 5px; height: 5px; border-radius: 50%; background: var(--color-sage-400); }
 .vcard__dot--spent { background: oklch(0.3 0.006 95); }
@@ -210,6 +250,16 @@ onBeforeUnmount(() => { clearInterval(moteTimer); cancelAnimationFrame(leanFrame
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+/* Under a row of chips the model's sentence keeps to one quiet line. */
+.vcard__line--one { -webkit-line-clamp: 1; font-size: 11px; color: var(--color-text-muted); }
+.vcard__idle {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  font-size: 10px;
+  line-height: 15px;
+  color: var(--color-text-muted);
 }
 .vcard__fresh {
   position: absolute;
@@ -302,6 +352,9 @@ onBeforeUnmount(() => { clearInterval(moteTimer); cancelAnimationFrame(leanFrame
 /* Picked up: the card rises from the table, its shadow deepening. */
 @keyframes vcard-pick { from { transform: none; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); } }
 .vcard--lifted { opacity: 0.3; }
+/* Did not act on this trip: it sits back, its chips greyed, so the cards that worked stand out. */
+.vcard--idle { opacity: 0.62; }
+.vcard--idle .vcard__chip, .vcard--idle .vcard__when { filter: saturate(0.25); }
 @media (prefers-reduced-motion: reduce) {
   .vcard, .vcard:hover { transition: none; transform: none; }
   .vcard--ghost, .vcard__aura, .vcard__foil, .vcard__run > i, .vcard__edge { animation: none !important; }

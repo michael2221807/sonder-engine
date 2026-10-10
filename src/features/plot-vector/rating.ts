@@ -58,8 +58,10 @@ export interface CardRating {
 /**
  * 1: the line board only, four tiers. 2: the mean of both board shapes (PO 2026-09-29), four tiers.
  * 3: the same measurement as 2, six tiers (PO 2026-09-30). 4: the same as 3, with the effect profile (PO 2026-10-01).
+ * 5: the board changed under it (PO 2026-10-09): the converter turns half of one quantity into another both ways, and
+ * at departure every environment's adds come before any multiplier.
  */
-export const RATING_VERSION = 4;
+export const RATING_VERSION = 5;
 export function ratingIsCurrent(rating: CardRating | undefined): boolean { return rating?.version === RATING_VERSION; }
 /** A current rating read from outside the save (a device cache), or undefined when it is not one. */
 export function readRating(value: unknown): CardRating | undefined {

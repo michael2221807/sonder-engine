@@ -10,6 +10,8 @@ import type { ChannelName } from '@/features/plot-vector/contract/types';
 import type { PassSign } from '@/features/plot-vector/table-model';
 
 export const MARK_GLYPH: Readonly<Record<EffectMark, string>> = { up: '↑', down: '↓', social: '◇', chance: '✦', route: '↻', store: '▣' };
+/** Glyphs of what a card does besides the four quantities (PO 2026-10-09): turning, storing, relaying (steps are words: do.stepGlyph). */
+export const OP_GLYPH = { turn: '⇄', store: '▣', release: '⤴', relay: '⤳' } as const;
 export const MARK_COLOR: Readonly<Record<EffectMark, string>> = {
   up: 'var(--ch-push)', down: 'var(--ch-drag)', social: 'var(--ch-social)', chance: 'var(--ch-chance)',
   route: 'var(--color-text-secondary)', store: 'var(--color-text-secondary)',

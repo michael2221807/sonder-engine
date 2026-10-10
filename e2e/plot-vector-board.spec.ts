@@ -44,7 +44,8 @@ test('the table keeps the player\'s arrangement across reload; moves are kept li
     expect((await plotVector.startGauges.allTextContents()).map(text => text.replace(/\s+/g, ''))).toEqual(['↑推力2', '↓阻力0', '◇人际2', '✦机会2', '步数11']);
     await expect(plotVector.ledger).toContainText(/悟性\s*15\s*→\s*步数\s*\+3/);
     await page.getByTestId('vector-help-toggle').click();
-    await plotVector.hoverDetail(plotVector.handCard('item:notebook'));
+    // By its name: the chips in the middle of the card say what it does and hold the details back (PO 2026-10-09).
+    await plotVector.hoverDetail(plotVector.handCard('item:notebook').locator('.vcard__name'));
     await expect(plotVector.detail.getByTestId('vector-card-growth')).toContainText('0 / 50 级');
     await page.mouse.move(5, 5);
     // Tap the notebook, then cell 01: it is placed and kept without a save button, and the handle lights once.
@@ -201,7 +202,9 @@ test('the table fits a narrow viewport and renders English',
     await plotVector.showExact();
     await expect(plotVector.startGauges.first()).toContainText('push');
     await expect(plotVector.ledger).toContainText('Insight');
-    await expect(page.getByTestId('vector-legend')).toContainText('Toward ease');
+    await expect(page.getByTestId('vector-legend').getByTestId('vector-tok')).toHaveText(['↑push', '↓drag', '◇people', '✦openings']);
+    await expect(page.getByTestId('vector-help')).toContainText('push − drag');
+    await expect(page.getByTestId('vector-legend-ops')).toContainText('× more, ÷ less');
     await page.getByTestId('vector-help-toggle').click();
     await expect(plotVector.handCard('basic:push')).toContainText('Supply');
     if (testInfo.repeatEachIndex === 0) await page.screenshot({ path: 'e2e/screenshots/plot-vector-board.png' });
@@ -230,7 +233,7 @@ test('an accepted round: its impulse beside the round title, its growth in the c
     await expect(plotVector.replay).toBeEnabled();
     await plotVector.showExact();
     await page.getByTestId('vector-help-toggle').click();
-    await plotVector.hoverDetail(plotVector.handCard('item:notebook'));
+    await plotVector.hoverDetail(plotVector.handCard('item:notebook').locator('.vcard__name'));
     await expect(plotVector.detail.getByTestId('vector-card-growth')).toContainText('1 / 50 级');
     await page.mouse.move(5, 5);
     await plotVector.replay.click();
@@ -262,7 +265,7 @@ test('the store of a card is the engine balance after disk reload',
     expect(await stored()).toEqual(before);
   });
 
-test('a card says what it does: marks on its face, the effect, how it grows, and the same marks on the bars and in the legend',
+test('a card says what its code does: chips on its face, cases in its effect, how it grows, and the same glyphs on the bars and in the legend',
   { tag: ['@plot-vector', '@story-pv-1001'] }, async ({ page, gameShell, plotVector }, testInfo) => {
     // A touch screen has no hover, so the shared Tooltip never shows there (CLAUDE.md §8.1); the hints are desktop-only.
     const hover = !testInfo.project.use.hasTouch;
@@ -271,28 +274,28 @@ test('a card says what it does: marks on its face, the effect, how it grows, and
     await enterSeededGame(page);
     await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
     await plotVector.openBoard();
-    // PO 2026-10-01: the engine's marks beside the kind, by the direction of the bars.
-    await expect(plotVector.marks('basic:push')).toHaveText('↑');
-    await expect(plotVector.marks('basic:talk')).toHaveText('◇');
-    await expect(plotVector.marks('item:notebook')).toHaveText('✦');
+    // PO 2026-10-09: under the name, what the card's own code does, in the glyphs of the bars (push and drag apart).
+    await expect(plotVector.marks('basic:push')).toHaveText('↑+');
+    await expect(plotVector.marks('basic:talk')).toHaveText('◇+');
+    await expect(plotVector.marks('item:notebook')).toHaveText('✦+');
     const hub = plotVector.board.locator('.vtrack__hub');
     for (const end of ['↓ 逆', '顺 ↑', '◇ 人际', '✦ 机会']) await expect(hub).toContainText(end);
-    // Hovering the marks names them, and the card's details wait while the pointer is on them.
+    // Hovering the chips says them in words, and the card's details wait while the pointer is on them.
     await plotVector.marks('basic:push').hover();
     if (hover) {
-      await expect(plotVector.tooltip('这张卡：↑ 往顺')).toBeVisible();
+      await expect(plotVector.tooltip('推力增加')).toBeVisible();
       await page.waitForTimeout(1200);
       await expect(plotVector.detail).toHaveCount(0);
     }
     await page.mouse.move(5, 5);
-    // The detail: the model's sentence, the measured mark with its strength, no growth for a card that does not grow.
+    // The detail: the model's sentence, what the card does as bubbles, no growth for a card that does not grow.
     await plotVector.hoverDetail(plotVector.handCard('basic:push').locator('.vcard__name'));
     const effects = plotVector.detail.getByTestId('vector-card-effects');
     await expect(effects).toContainText('效果');
-    await expect(effects.getByTestId('vector-tok')).toHaveText('↑往顺');
+    await expect(effects.getByTestId('vector-tok')).toHaveText('↑推力增加');
     await expect(plotVector.detail.getByTestId('vector-card-growth')).toHaveCount(0);
     await effects.getByTestId('vector-tok').hover();
-    if (hover) await expect(plotVector.tooltip('往顺：推力更多或阻力更少')).toContainText('亮一条');
+    if (hover) await expect(plotVector.tooltip('推力：把这一趟往「顺」推')).toBeVisible();
     await page.mouse.move(5, 5);
     // A growing card: its level, the line to the next, and its rule in one sentence from the engine's glossary.
     await plotVector.hoverDetail(plotVector.handCard('item:notebook').locator('.vcard__name'));
@@ -305,10 +308,13 @@ test('a card says what it does: marks on its face, the effect, how it grows, and
     await page.mouse.move(5, 5);
     // Exact numbers sit in the bubbles; what this trip brought is its own row; no pass counts anywhere.
     await plotVector.showExact();
-    await expect(page.getByTestId('vector-legend').getByTestId('vector-tok')).toHaveText(['↑往顺', '↓往逆', '◇人际', '✦机会', '↻改路线', '▣存放']);
+    await expect(page.getByTestId('vector-legend').getByTestId('vector-tok')).toHaveText(['↑推力', '↓阻力', '◇人际', '✦机会']);
+    await expect(page.getByTestId('vector-legend-ops')).toContainText('× 放大，÷ 打折');
     await page.getByTestId('vector-help-toggle').click();
+    // With exact numbers the chips and bubbles carry their numbers.
+    await expect(plotVector.marks('basic:push')).toHaveText('↑+1');
     await plotVector.hoverDetail(plotVector.handCard('basic:push').locator('.vcard__name'));
-    await expect(plotVector.detail.getByTestId('vector-card-effects').getByTestId('vector-tok')).toContainText(/推力 \+[\d.]+／次/);
+    await expect(plotVector.detail.getByTestId('vector-card-effects').getByTestId('vector-tok')).toContainText('推力增加+1');
     await expect(plotVector.detail).toContainText('3/3');
     // A card in the hand took no part in the trip: no trip row for it.
     await expect(plotVector.detail.getByTestId('vector-card-trip')).toHaveCount(0);
@@ -323,6 +329,43 @@ test('a card says what it does: marks on its face, the effect, how it grows, and
     await expect(trip).toContainText('这一趟带来');
     await expect(trip.getByTestId('vector-tok').first()).toContainText(/推力\+[\d.]+/);
     await expect(plotVector.detail).not.toContainText('触发');
+  });
+
+test('the converter cell turns what the player picks; the pick is kept with the board',
+  { tag: ['@plot-vector', '@story-pv-1009'] }, async ({ page, gameShell, plotVector }) => {
+    const ids = await seedSave(page);
+    await addBoardFixture(page, ids);
+    await enterSeededGame(page);
+    await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
+    await plotVector.openBoard();
+    // PO 2026-10-09 (A): by default half the push turns into relations, shown as the cell's mark.
+    const mark = plotVector.board.getByTestId('vector-converter');
+    await expect(mark).toHaveText('↑→◇');
+    await mark.click();
+    const picker = page.getByTestId('vector-converter-picker');
+    await expect(picker).toBeVisible();
+    // It takes the keyboard: the focus is on the quantity it turns now.
+    await expect(page.getByTestId('vector-converter-from-push')).toBeFocused();
+    await page.getByTestId('vector-converter-from-drag').click();
+    await expect(mark).toHaveText('↓→◇');
+    // Picking the side the other row holds swaps the two: never a quantity into itself.
+    await page.getByTestId('vector-converter-to-drag').click();
+    await expect(mark).toHaveText('◇→↓');
+    // Escape closes the picker only; the table stays.
+    await page.keyboard.press('Escape');
+    await expect(picker).toHaveCount(0);
+    await expect(plotVector.board).toBeVisible();
+    // The focus goes back to the mark; a press on the mark while the picker is open closes it, not reopens it.
+    await expect(mark).toBeFocused();
+    await mark.click();
+    await expect(picker).toBeVisible();
+    await mark.click();
+    await expect(picker).toHaveCount(0);
+    await plotVector.kept(board => board?.converter?.from === 'social' && board?.converter?.to === 'drag');
+    await plotVector.closeBoard();
+    await savedUntil(page, ids, pv => pv.converter?.from === 'social' && pv.converter?.to === 'drag');
+    await page.goto('/'); await enterSeededGame(page); await plotVector.openBoard();
+    await expect(plotVector.board.getByTestId('vector-converter')).toHaveText('◇→↓');
   });
 
 /** The round start as the adapter sends it: this save's trip worked out by the runtime, through the app's own bus. */
@@ -540,12 +583,15 @@ test('while the engine finishes a round after its story is shown, the table wait
     await engineRound(page, 'start');
     await plotVector.boardOpen.click();
     await expect(lock).toContainText('故事正在写');
+    // The converter's rule cannot be changed while the round runs (PO 2026-10-09).
+    await expect(plotVector.board.getByTestId('vector-converter')).toBeDisabled();
     await engineRound(page, 'story-shown');
     await expect(lock).toContainText('这一回合正在收尾');
     await engineRound(page, 'retrying');
     await expect(lock).toContainText('故事正在写');
     await engineRound(page, 'finished');
     await expect(lock).toHaveCount(0);
+    await expect(plotVector.board.getByTestId('vector-converter')).toBeEnabled();
     await expect(plotVector.handCard('item:notebook')).toBeVisible();
     await expect(plotVector.note).toHaveText('');
   });

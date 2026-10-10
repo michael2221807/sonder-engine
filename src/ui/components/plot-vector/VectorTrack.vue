@@ -5,16 +5,17 @@
  * road: 01 02 03 / 06 05 04); a ring sets them around a loop with the shuttle riding a track just outside them.
  * Switching shape glides every cell to its new place. The tendencies sit under the line or in the ring's hub.
  */
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Tooltip from '../shared/Tooltip.vue';
 import VectorCardFace from './VectorCardFace.vue';
+import VectorConverterPicker from './VectorConverterPicker.vue';
 import { ringGeometry, RING_ORDER } from './ring-geometry';
 import { prefersReducedMotion, type WalkFloat } from './use-trip-walk';
 import { sweepAcross } from './table-effects';
-import { MARK_COLOR, MARK_GLYPH, SIGN_MARK } from './effect-marks';
+import { CHANNEL_KEY, CHANNEL_MARK, MARK_COLOR, MARK_GLYPH, SIGN_MARK } from './effect-marks';
 import type { PassSign, TableCard, TableCell, TripWalk } from '@/features/plot-vector/table-model';
-import type { BoardShape } from '@/features/plot-vector/vector-board';
+import type { BoardShape, ConverterRule } from '@/features/plot-vector/vector-board';
 import type { LocalizedLabel } from '@/engine/plot-vector/core/types';
 import type { DropTarget } from './use-card-drag';
 
@@ -36,6 +37,14 @@ const props = defineProps<{
   lifting?: string | null;
   /** The card whose details are showing: its marks keep their own hint quiet. */
   quiet?: string | null;
+  /** What the converter cell turns into what (PO 2026-10-09, A). */
+  converter: ConverterRule;
+  /** The rule cannot be changed now (a round running, a replay, nothing loaded). */
+  converterLocked?: boolean;
+  /** Cards on the board that did not act once on this trip. */
+  idle?: readonly string[];
+  /** Exact numbers on: the chips carry their numbers. */
+  exact?: boolean;
 }>();
 const emit = defineEmits<{
   (e: 'cell-tap', cell: string): void;
@@ -43,6 +52,7 @@ const emit = defineEmits<{
   (e: 'card-down', event: PointerEvent, card: string, cell: string): void;
   (e: 'card-enter', card: string, el: HTMLElement): void;
   (e: 'card-leave', card: string): void;
+  (e: 'converter', rule: ConverterRule): void;
 }>();
 const { t, locale } = useI18n();
 const label = (value?: LocalizedLabel) => value ? (locale.value === 'en' ? value.en : value.zh) : '';
@@ -71,10 +81,25 @@ const cellStyle = (id: string) => {
   return box ? { left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px` } : undefined;
 };
 
+const channelName = (ch: ConverterRule['from']) => t(`mainGame.vectorTable.channel.${CHANNEL_KEY[ch]}`);
 function roleText(cell: TableCell): string {
-  if (cell.role === 'converter') return t(props.shape === 'ring' ? 'mainGame.vectorTable.role.converterRing' : 'mainGame.vectorTable.role.converterLine');
+  if (cell.role === 'converter') {
+    return t(props.converterLocked ? 'mainGame.vectorTable.role.converterLocked' : 'mainGame.vectorTable.role.converter',
+      { from: channelName(props.converter.from), to: channelName(props.converter.to) });
+  }
   return t(`mainGame.vectorTable.role.${cell.role}`);
 }
+const glyph = (ch: ConverterRule['from']) => MARK_GLYPH[CHANNEL_MARK[ch]];
+const glyphColor = (ch: ConverterRule['from']) => MARK_COLOR[CHANNEL_MARK[ch]];
+
+// ── The converter's rule: its mark on cell 03 opens the picker. ──
+const picking = shallowRef<HTMLElement | null>(null);
+function openPicker(e: MouseEvent): void {
+  if (props.converterLocked) return;
+  picking.value = picking.value ? null : (e.currentTarget as HTMLElement);
+}
+watch(() => props.converterLocked, locked => { if (locked) picking.value = null; });
+const idleSet = computed(() => new Set(props.idle ?? []));
 function cellLabel(cell: TableCell): string {
   const card = cell.card ? props.cards[cell.card] : undefined;
   return card ? t('mainGame.vectorTable.cell.placed', { cell: cell.id, name: label(card.name) }) : t('mainGame.vectorTable.cell.empty', { cell: cell.id });
@@ -268,10 +293,24 @@ const bar = (value: number, bipolar: boolean) => {
       @keydown.space.self.prevent="emit('cell-key', cell.id)"
     >
       <span class="vcell__num">{{ cell.id }}</span>
-      <Tooltip class="vcell__role" :text="roleText(cell)" fixed>
+      <Tooltip v-if="cell.role === 'converter'" class="vcell__role vcell__role--conv" :text="roleText(cell)" interactive fixed :disabled="!!picking">
+        <button
+          type="button"
+          class="vcell__conv"
+          :aria-label="roleText(cell)"
+          :aria-expanded="!!picking"
+          :disabled="converterLocked"
+          data-testid="vector-converter"
+          @click.stop="openPicker"
+          @keydown.enter.stop
+          @keydown.space.stop
+        >
+          <span :style="{ color: glyphColor(converter.from) }">{{ glyph(converter.from) }}</span><span class="vcell__conv-arrow">→</span><span :style="{ color: glyphColor(converter.to) }">{{ glyph(converter.to) }}</span>
+        </button>
+      </Tooltip>
+      <Tooltip v-else class="vcell__role" :text="roleText(cell)" fixed>
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
           <template v-if="cell.role === 'resonance'"><circle cx="4.5" cy="6" r="3" /><circle cx="7.5" cy="6" r="3" /></template>
-          <template v-else-if="cell.role === 'converter'"><path d="M2 4h7.5M7.5 2l2 2-2 2M10 8H2.5M4.5 6l-2 2 2 2" /></template>
           <template v-else-if="cell.role === 'status'"><path d="M6 1.5 10.5 6 6 10.5 1.5 6Z" /></template>
           <template v-else><path d="M6 1.5v9M1.5 6h9M3 3l6 6M9 3 3 9" stroke-width="0.9" /></template>
         </svg>
@@ -285,6 +324,8 @@ const bar = (value: number, bipolar: boolean) => {
         :selected="selected === cell.card"
         :lifted="lifting === cell.card"
         :quiet-marks="quiet === cell.card"
+        :idle="idleSet.has(cell.card)"
+        :exact="exact"
         :data-card="cell.card"
         class="vcell__card"
         :class="{ 'vcell__card--auto': cell.role === 'status' }"
@@ -295,6 +336,7 @@ const bar = (value: number, bipolar: boolean) => {
       <span v-for="f in floats.filter(x => x.cell === cell.id)" :key="f.id" class="vcell__float" :style="{ color: signColor(f.sign) }" aria-hidden="true">{{ signGlyph(f.sign) }}</span>
     </div>
     <span v-for="(p, i) in trail" :key="`t${i}`" class="vtrack__trail" :style="{ left: `${p.x}px`, top: `${p.y}px`, opacity: 0.34 - i * 0.04, transform: `scale(${1 - i * 0.09})` }" aria-hidden="true" />
+    <VectorConverterPicker v-if="picking" :rule="converter" :anchor="picking" @pick="emit('converter', $event)" @close="picking = null" />
     <span v-if="shuttle" class="vtrack__shuttle" :style="{ left: `${shuttle.x}px`, top: `${shuttle.y}px` }" aria-hidden="true" />
     <div class="vtrack__hub" :style="hubStyle" role="img" :aria-label="t('mainGame.vectorTable.tendency.label')">
       <!-- The same marks and colours as the cards: ↑ toward 顺, ↓ toward 逆, ◇ relations, ✦ chances. -->
@@ -368,6 +410,27 @@ const bar = (value: number, bipolar: boolean) => {
   color: var(--color-text-muted);
 }
 .vcell__role { position: absolute; top: -20px; right: 4px; color: var(--color-sage-700); display: inline-flex; }
+/* The converter's rule is its mark, and a button: it opens the picker. */
+.vcell__role--conv { top: -22px; right: 2px; }
+.vcell__conv {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 1px 6px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-sage-400) 22%, transparent);
+  font: inherit;
+  font-size: 11px;
+  line-height: 15px;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+.vcell__conv:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-sage-400) 45%, transparent); }
+.vcell__conv:disabled { cursor: default; opacity: 0.7; }
+.vcell__conv:focus-visible { outline: 2px solid var(--color-sage-400); outline-offset: 2px; }
+.vcell__conv-arrow { color: var(--color-text-muted); }
 .vcell--empty::after {
   content: '';
   position: absolute;

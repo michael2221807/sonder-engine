@@ -12,8 +12,10 @@ import { impulseOf, type RoundImpulse } from './round-impulse';
 import type { SupplyCardInfo } from './supply';
 import { SIX_CELL_RING_ID } from './default-board';
 import { rateCard, ratingIsCurrent, ratingPlaceOf, tierOf, type CardRating, type CardTier } from './rating';
-import { effectMarks, growthView, type CardEffect, type GrowthView } from './card-describe';
-import type { BoardShape } from './vector-board';
+import { growthView, type GrowthView } from './card-describe';
+import { readCardBehavior, type CardBehavior } from './card-behavior';
+import { DEFAULT_CONVERTER, type BoardShape, type ConverterRule } from './vector-board';
+import type { ChannelName } from './contract/types';
 
 export type TableCardKind = 'item' | 'talent' | 'status' | 'environment' | 'supply';
 export interface TableCard {
@@ -29,8 +31,11 @@ export interface TableCard {
    * 2026-09-30, 2A). Statuses and environments show none.
    */
   tier?: CardTier;
-  /** What the card does, measured by the engine (PO 2026-10-01); empty until it is rated. */
-  effects: CardEffect[];
+  /**
+   * What the card does, read by the engine from its own code (PO 2026-10-09): when it acts and what it returns.
+   * Absent for a card whose code the table does not hold.
+   */
+  behavior?: CardBehavior;
   /** How a growing card grows and where it stands. */
   growth?: GrowthView;
   uses?: { left: number; max: number };
@@ -54,6 +59,10 @@ export interface TableModel {
   /** Environment cards: act at departure, shown as weather above the board. */
   weather: string[];
   forming: FormingCard[];
+  /** Cards on the board that did not act once on this trip (their conditions never held): shown dimmed. */
+  idle: string[];
+  /** What the converter cell turns into what on this trip's board (PO 2026-10-09, A). */
+  converter: ConverterRule;
 }
 
 const STATUS_CELL = '06';
@@ -99,12 +108,14 @@ function tableCards(view: BoardView, prepared: PreparedVector, worked?: Readonly
     const tier = supply?.tier ?? (kind === 'item' || kind === 'talent' ? tierOf(rating) : undefined);
     const bound = story.get(def.id);
     const growth = bound ? growthView(bound.spec, view.state.growth[def.id]) : undefined;
+    const spec = bound?.spec ?? supply?.spec;
+    const behavior = spec ? readCardBehavior(spec, { departs: kind === 'environment', level: view.state.growth[def.id]?.level ?? 0 }) : undefined;
     const card: TableCard = {
       id: def.id, kind, name: def.label,
       ...(def.summary ? { line: def.summary } : {}),
       ...(def.originalText ? { story: def.originalText } : {}),
       ...(tier ? { tier } : {}),
-      effects: effectMarks(supply ? supply.profile : rating?.profile),
+      ...(behavior ? { behavior } : {}),
       ...(growth ? { growth } : {}),
       ...(def.usage && left !== undefined ? { uses: { left, max: def.usage.maxStock } } : {}),
       ...(level ? { level: { value: level.value, ...(level.max !== undefined ? { max: level.max } : {}) } } : {}),
@@ -129,15 +140,34 @@ export function tableModel(view: BoardView, prepared: PreparedVector, layout: La
     return { id: cell.id, role: roleOf(cell.id, cell.kind), card: placed && cards[placed] ? placed : null };
   });
   const onBoard = new Set(cells.map(c => c.card).filter((id): id is string => !!id));
+  // Only a cell whose card the computed trip also had there: a move not walked yet says nothing about it. A card
+  // that may only arm a relay is never called idle: the trip does not count a pass that only armed one as acting.
+  const acted = new Set(prepared.result.triggeredCards);
+  const relayOnly = (id: string) => !!cards[id]?.behavior?.clauses.some(cl => cl.ops.length > 0 && cl.ops.every(op => op.kind === 'relay'));
+  const idle = cells.flatMap(c => (c.card && prepared.layout.placements[c.id] === c.card && !acted.has(c.card) && !relayOnly(c.card) ? [c.card] : []));
   const placeable = [...offered].filter(id => cards[id] && !onBoard.has(id));
   const resting = Object.values(cards).filter(c => c.kind === 'supply' && c.resting && !offered.has(c.id)).map(c => c.id);
   return {
     shape, cells, cards,
     hand: [...placeable, ...resting],
     weather: Object.values(cards).filter(c => c.kind === 'environment').map(c => c.id),
+    idle,
+    converter: converterOf(prepared),
     forming: view.backlog.map(b => ({ id: b.id, kind: b.kind === 'effect' ? 'status' : b.kind === 'environment' ? 'environment' : b.kind === 'talent' ? 'talent' : 'item',
       name: b.name, failed: b.state === 'failed' })),
   };
+}
+
+const CHANNEL_OF: Readonly<Record<string, ChannelName>> = { 'S+': 'push', 'S-': 'drag', Y: 'social', J: 'chance' };
+/** The converter rule a computed board ran (cell 03's convert), so a replayed round shows its own. */
+function converterOf(prepared: PreparedVector): ConverterRule {
+  for (const cell of prepared.board.cells) {
+    if (cell.kind !== 'converter') continue;
+    for (const effect of cell.effects) for (const op of effect.operations) {
+      if (op.op === 'convert' && CHANNEL_OF[op.from] && CHANNEL_OF[op.to]) return { from: CHANNEL_OF[op.from], to: CHANNEL_OF[op.to] };
+    }
+  }
+  return { ...DEFAULT_CONVERTER };
 }
 
 /**
@@ -174,7 +204,8 @@ export interface TripWalk {
   tendency: { s: number; y: number; j: number };
 }
 
-function signOf(event: RunDone['trace'][number]): PassSign | null {
+type SignSource = Pick<RunDone['trace'][number], 'deltas' | 'cardEffects'>;
+function signOf(event: SignSource): PassSign | null {
   if (event.cardEffects?.some(e => e.startsWith('steps') || e === 'turn')) return 'route';
   const change: Record<string, number> = {};
   let store = 0;
@@ -192,8 +223,11 @@ function signOf(event: RunDone['trace'][number]): PassSign | null {
 
 /** A trip as the shuttle's steps, with the cards that acted at each and the sign each left. */
 export function tripWalk(result: RunDone): TripWalk {
-  const steps: WalkStep[] = [], departure: TripWalk['departure'] = [];
+  const steps: WalkStep[] = [];
   const byVisit = new Map<string, WalkStep>();
+  // At departure a card's adds and multipliers come as separate events, every card's adds first (trip.ts
+  // RETURN_PHASES): they are put back together, one sign per card, in the order the cards first acted.
+  const departing = new Map<string, Required<SignSource>>();
   for (const event of result.trace) {
     if (event.eventType === 'visit' && event.cellId) {
       const step: WalkStep = { cell: event.cellId, back: event.entryPort === 'R', acted: [] };
@@ -201,12 +235,18 @@ export function tripWalk(result: RunDone): TripWalk {
       continue;
     }
     if (event.eventType !== 'effect' || event.status !== 'applied' || event.owner?.kind !== 'card' || !event.cardEffects?.length) continue;
+    if (event.visitId === 'departure') {
+      const seen = departing.get(event.owner.id) ?? { deltas: [], cardEffects: [] };
+      departing.set(event.owner.id, { deltas: [...seen.deltas, ...event.deltas], cardEffects: [...seen.cardEffects, ...event.cardEffects] });
+      continue;
+    }
     const sign = signOf(event);
-    if (!sign) continue;
-    const acted = { card: event.owner.id, sign };
-    if (event.visitId === 'departure') departure.push(acted);
-    else byVisit.get(event.visitId)?.acted.push(acted);
+    if (sign) byVisit.get(event.visitId)?.acted.push({ card: event.owner.id, sign });
   }
+  const departure = [...departing].flatMap(([card, merged]) => {
+    const sign = signOf(merged);
+    return sign ? [{ card, sign }] : [];
+  });
   const d = result.vectorPacket.dimensions;
   return { departure, steps, tendency: { s: d.S ?? 0, y: d.Y ?? 0, j: d.J ?? 0 } };
 }

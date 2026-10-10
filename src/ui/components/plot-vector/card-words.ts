@@ -1,21 +1,38 @@
 // App doc: docs/user-guide/pages/game-main.md §3.18.5 · Card details
 /**
- * Words for what a card does and how it grows (PO 2026-10-01; demo docs/demo/plot-vector-effect-and-start.html).
- * The sentences are fixed templates from the i18n glossary; what fills them is engine data — the measured marks,
- * the declared growth read as phrases, the trip's own record. Keywords come as bubbles that explain themselves on
- * hover, and carry their number only when the player asked for exact numbers. Nothing here reads the model's text.
+ * Words for what a card does and how it grows (PO 2026-10-01; demo docs/demo/plot-vector-effect-and-start.html;
+ * PO 2026-10-09: the face says what the card's own code does). The sentences are fixed templates from the i18n
+ * glossary; what fills them is engine data — the behaviour read from the card's code, the declared growth read as
+ * phrases, the trip's own record. On the face a clause is a short condition and a few chips (glyph and operator: an
+ * add is filled, a multiplier outlined, a move an arrow); in the details each operation is a bubble that explains
+ * itself on hover. Numbers show only when the player asked for exact numbers. Nothing here reads the model's text.
  */
 import { computed, type ComputedRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { CardEffect, EffectMark, GrowthView, ReturnPhrase } from '@/features/plot-vector/card-describe';
+import type { EffectMark, GrowthView, ReturnPhrase } from '@/features/plot-vector/card-describe';
+import type { BehaviorAmount, BehaviorClause, BehaviorCondition, BehaviorOp, CardBehavior, VaryBy } from '@/features/plot-vector/card-behavior';
 import type { CardTripReceipt } from '@/features/plot-vector/card-trip-receipt';
 import type { ChannelName } from '@/features/plot-vector/contract/types';
-import { CHANNEL_KEY, CHANNEL_MARK, CHANNEL_OF_ID, MARK_COLOR, MARK_GLYPH, signed } from './effect-marks';
+import { CHANNEL_KEY, CHANNEL_MARK, CHANNEL_OF_ID, MARK_COLOR, MARK_GLYPH, OP_GLYPH, signed } from './effect-marks';
 
 export type Translate = (key: string, params?: Record<string, unknown>) => string;
 /** A keyword bubble: its mark and colour, its name, strength strokes, its number (exact only) and its hint. */
 export interface Tok { mark?: EffectMark; color?: string; label: string; strength?: number; num?: string; tip: string }
 export type Seg = { text: string } | { tok: Tok };
+/** One chip on a card face: its glyphs and operator; `frame`: an add is filled, a multiplier or clearing outlined. */
+export interface Chip { text: string; color: string; frame: 'fill' | 'line' | 'plain' }
+/** One clause on a card face: its short conditions and its chips. */
+export interface FaceClause { when: string[]; chips: Chip[] }
+/** One clause in the details: its conditions in words (empty: always) and its operations as bubbles. */
+export interface DetailClause { when: string; toks: Tok[] }
+
+const D = 'mainGame.vectorTable.do.';
+const glyphOf = (ch: ChannelName) => MARK_GLYPH[CHANNEL_MARK[ch]];
+const colorOf = (ch: ChannelName) => MARK_COLOR[CHANNEL_MARK[ch]];
+/** An amount that moves during a trip (not the level, which is fixed for the trip) is told as approximate. */
+const moves = (a: BehaviorAmount) => !!a.varies && a.varies !== 'level';
+/** Strokes for an add, against the unit card (+1): the same steps the old marks used. */
+const addStrength = (v: number): 1 | 2 | 3 => (Math.abs(v) >= 3.5 ? 3 : Math.abs(v) >= 1.5 ? 2 : 1);
 
 const K = 'mainGame.vectorTable.';
 
@@ -40,23 +57,141 @@ export class CardWords {
       tip: this.k(`fx.means.${means}`), ...(num && this.exact ? { num } : {}) };
   }
 
-  /** The marks of the effect block, with their strokes; exact numbers per time it acts. */
-  effects(effects: readonly CardEffect[]): Tok[] {
-    return effects.map(e => {
-      const less = e.less && (e.mark === 'social' || e.mark === 'chance');
-      const parts = Object.entries(e.exact).map(([ch, v]) => (e.mark === 'up' || e.mark === 'down')
-        ? `${this.k(`channel.${CHANNEL_KEY[ch as ChannelName]}`)} ${this.signed(v)}` : this.signed(v));
-      const num = parts.length ? this.k('fx.perAct', { n: parts.join(' · ') }) : undefined;
-      const tip = [this.k(`fx.means.${e.mark}${less ? 'Less' : ''}`), e.strength ? this.k(`fx.strength.${e.strength}`) : '', num && this.exact ? this.k('fx.perActTip') : '']
-        .filter(Boolean).join(' ');
-      return { mark: e.mark, color: MARK_COLOR[e.mark], label: less ? this.k(`fx.less.${e.mark}`) : this.k(`fx.mark.${e.mark}`), strength: e.strength, tip,
-        ...(num && this.exact ? { num } : {}) };
-    });
+  private name(ch: ChannelName): string { return this.k(`channel.${CHANNEL_KEY[ch]}`); }
+  private d(key: string, params?: Record<string, unknown>): string { return this.t(D + key, params); }
+
+  // ── What a card does (PO 2026-10-09) ──
+
+  /** A condition, short (face) or in words (details and the face's hover line). */
+  condition(c: BehaviorCondition, long: boolean): string {
+    const form = long ? 'whenLong' : 'when';
+    switch (c.kind) {
+      case 'back': case 'forward': return this.d(`${form}.${c.kind}`);
+      case 'chance': return this.d(`${form}.chance`, { n: c.percent });
+      case 'line': {
+        // Whole numbers (passes, steps) come as `< n` / `>= n`; the second pass on is "later", before it "first".
+        const low = c.cmp === '<' || c.cmp === '<=';
+        if (c.on === 'pass') {
+          const first = c.cmp === '<' ? c.value - 1 : c.value;
+          if (first === 1 && low) return this.d(`${form}.firstPass`);
+          if (c.value === 2 && !low) return this.d(`${form}.laterPass`);
+          return this.d(`${form}.${low ? 'passBefore' : 'passFrom'}`, { n: low ? first : c.value });
+        }
+        if (c.on === 'step') return this.d(`${form}.${low ? 'stepBelow' : 'stepAtLeast'}`, { n: this.num(c.value) });
+        const side = ({ '<': 'Below', '<=': 'AtMost', '>=': 'AtLeast', '>': 'Above' } as const)[c.cmp];
+        if (c.on === 'stored') return this.d(`${form}.stored${side}`, { n: this.num(c.value) });
+        // Nothing of a quantity, or any of it.
+        if (c.value === 0 && (c.cmp === '<=' || c.cmp === '>')) return this.d(`${form}.${c.cmp === '<=' ? 'none' : 'some'}`, { g: glyphOf(c.on), name: this.name(c.on) });
+        return this.d(`${form}.${side[0].toLowerCase()}${side.slice(1)}`, { g: glyphOf(c.on), name: this.name(c.on), n: this.num(c.value) });
+      }
+    }
   }
 
-  /** The one hover line of the marks on a card face: their names, in order. */
-  faceTip(effects: readonly CardEffect[]): string {
-    return this.k('fx.faceTip', { marks: effects.map(e => `${MARK_GLYPH[e.mark]} ${e.less ? this.k(`fx.less.${e.mark}`) : this.k(`fx.mark.${e.mark}`)}`).join(' · ') });
+  /** One operation as a face chip. */
+  chip(op: BehaviorOp): Chip {
+    const ex = this.exact;
+    const plain = 'var(--color-text-secondary)';
+    switch (op.kind) {
+      case 'add': {
+        const v = op.amount.value;
+        const n = ex ? `${moves(op.amount) ? '~' : ''}${this.num(Math.abs(v))}` : '';
+        return { text: `${glyphOf(op.channel)}${v > 0 ? '+' : '−'}${n}`, color: colorOf(op.channel), frame: 'fill' };
+      }
+      case 'scale': {
+        const f = op.factor.value;
+        return { text: `${glyphOf(op.channel)}${ex ? `×${this.num(f)}` : f > 1 ? '×' : '÷'}`, color: colorOf(op.channel), frame: 'line' };
+      }
+      case 'clear': return { text: `${glyphOf(op.channel)}0`, color: colorOf(op.channel), frame: 'line' };
+      case 'convert': {
+        const q = !ex ? '' : op.share === 'half' ? '½' : op.share === 'all' ? '' : op.amount ? this.num(op.amount.value) : '';
+        const cap = ex && op.cap !== undefined ? `≤${this.num(op.cap)}` : '';
+        return { text: `${glyphOf(op.from)}→${glyphOf(op.to)}${q}${cap}`, color: colorOf(op.to), frame: 'plain' };
+      }
+      case 'steps': return { text: `+${ex ? this.num(op.amount.value) : ''}${this.d('stepGlyph')}`, color: plain, frame: 'plain' };
+      case 'xSteps': return { text: `${this.d('stepGlyph').trim()}×${ex ? this.num(op.factor.value) : ''}`, color: plain, frame: 'plain' };
+      case 'turn': return { text: OP_GLYPH.turn, color: plain, frame: 'plain' };
+      case 'store': return { text: `${OP_GLYPH.store}${glyphOf(op.from)}${ex ? this.num(op.amount.value) : ''}`, color: plain, frame: 'plain' };
+      case 'release': return { text: `${OP_GLYPH.store}${OP_GLYPH.release}`, color: plain, frame: 'plain' };
+      case 'relay': {
+        const inner = op.ops.map(o => this.chip(o).text).join('');
+        return { text: `${OP_GLYPH.relay}${inner}${op.echo ? this.d('op.echoShort') : ''}`, color: plain, frame: 'plain' };
+      }
+    }
+  }
+
+  /**
+   * A card's clauses for its face: at most two rows (the rest is in its details), the case that does the most first
+   * — a narrow card shows only that one.
+   */
+  face(behavior: CardBehavior): FaceClause[] {
+    return [...behavior.clauses].sort((a, b) => b.ops.length - a.ops.length).slice(0, 2).map(c => ({ when: c.when.map(w => this.condition(w, false)), chips: c.ops.map(op => this.chip(op)) }));
+  }
+
+  /** The face's hover line: every clause in words. */
+  faceTip(behavior: CardBehavior): string {
+    const lines = behavior.clauses.map(c => {
+      const what = c.ops.map(op => this.opWord(op)).join(this.d('join'));
+      return c.when.length ? this.d('clause', { when: c.when.map(w => this.condition(w, true)).join(this.d('and')), what }) : what;
+    });
+    return [...lines, ...(behavior.complex ? [this.d('complexTip')] : [])].join(this.d('sep'));
+  }
+
+  /** An operation in a few words (no number), for the hover line. */
+  private opWord(op: BehaviorOp): string {
+    switch (op.kind) {
+      case 'add': return this.d(op.amount.value > 0 ? 'op.addMore' : 'op.addLess', { name: this.name(op.channel) });
+      case 'scale': return this.d(op.factor.value > 1 ? 'op.scaleUp' : 'op.scaleDown', { name: this.name(op.channel) });
+      case 'clear': return this.d('op.clear', { name: this.name(op.channel) });
+      case 'convert': return this.d('op.convert', { from: this.name(op.from), to: this.name(op.to) });
+      case 'steps': return this.d('op.steps');
+      case 'xSteps': return this.d('op.xSteps');
+      case 'turn': return this.d('op.turn');
+      case 'store': return this.d('op.store', { name: this.name(op.from) });
+      case 'release': return this.d('op.release');
+      case 'relay': return op.ops.length ? this.d('op.relay', { what: op.ops.map(o => this.opWord(o)).join(this.d('join')) }) : this.d('op.echo');
+    }
+  }
+
+  /** Why an amount moves, as a hint. */
+  private varies(by: VaryBy | undefined): string {
+    if (!by) return '';
+    return (CHANNEL_KEY as Record<string, string>)[by] ? this.d('varies.channel', { name: this.name(by as ChannelName) }) : this.d(`varies.${by}`);
+  }
+
+  /** One operation as a detail bubble: its words, strokes for an add, its number (exact only) and its hint. */
+  private opTok(op: BehaviorOp): Tok {
+    const label = this.opWord(op);
+    switch (op.kind) {
+      case 'add': {
+        const v = op.amount.value;
+        const tipKey = op.channel === 'drag' && v < 0 ? 'tip.dragLess' : op.channel === 'push' && v < 0 ? 'tip.pushLess' : '';
+        return { mark: CHANNEL_MARK[op.channel], color: colorOf(op.channel), label, strength: addStrength(v),
+          tip: [tipKey ? this.d(tipKey) : this.k(`fx.means.${op.channel}`), this.varies(op.amount.varies)].filter(Boolean).join(' '),
+          ...(this.exact ? { num: `${moves(op.amount) ? '~' : ''}${this.signed(v)}` } : {}) };
+      }
+      case 'scale':
+        return { mark: CHANNEL_MARK[op.channel], color: colorOf(op.channel), label, tip: [this.d('tip.scale'), this.varies(op.factor.varies)].filter(Boolean).join(' '),
+          ...(this.exact ? { num: `×${this.num(op.factor.value)}` } : {}) };
+      case 'clear': return { mark: CHANNEL_MARK[op.channel], color: colorOf(op.channel), label, tip: this.d('tip.clear') };
+      case 'convert': {
+        const parts = [op.share ? this.d(`share.${op.share}`) : op.amount ? this.num(op.amount.value) : '', op.cap !== undefined ? this.d('share.cap', { n: this.num(op.cap) }) : ''].filter(Boolean);
+        return { mark: CHANNEL_MARK[op.to], color: colorOf(op.to), label, tip: this.d('tip.convert'), ...(this.exact && parts.length ? { num: parts.join(' · ') } : {}) };
+      }
+      case 'steps': return { mark: 'route', color: MARK_COLOR.route, label, tip: this.k('fx.means.steps'), ...(this.exact ? { num: `+${this.num(op.amount.value)}` } : {}) };
+      case 'xSteps': return { mark: 'route', color: MARK_COLOR.route, label, tip: this.k('fx.means.steps'), ...(this.exact ? { num: `×${this.num(op.factor.value)}` } : {}) };
+      case 'turn': return { mark: 'route', color: MARK_COLOR.route, label, tip: this.k('fx.means.turn') };
+      case 'store': return { mark: 'store', color: MARK_COLOR.store, label, tip: this.k('fx.means.store'), ...(this.exact ? { num: this.num(op.amount.value) } : {}) };
+      case 'release': return { mark: 'store', color: MARK_COLOR.store, label, tip: this.k('fx.means.release') };
+      case 'relay': return { label, tip: this.k(op.ops.length ? 'fx.means.relay' : 'fx.means.echo') };
+    }
+  }
+
+  /** The details' effect block: each clause with its conditions in words and its operations as bubbles. */
+  clauses(behavior: CardBehavior): DetailClause[] {
+    return behavior.clauses.map((c: BehaviorClause) => ({
+      when: c.when.map(w => this.condition(w, true)).join(this.d('and')),
+      toks: c.ops.map(op => this.opTok(op)),
+    }));
   }
 
   /** How it grows, as one sentence with bubbles, then what is special about it. */

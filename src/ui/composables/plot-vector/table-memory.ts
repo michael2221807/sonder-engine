@@ -95,7 +95,7 @@ export function compareSeen(
   }
   for (const [id, was] of Object.entries(before)) {
     if (record[id] || was.kind !== 'supply' || !was.name) continue;
-    arrivals.departed.push({ id, kind: 'supply', name: was.name, ...(was.line ? { line: was.line } : {}), ...(was.tier ? { tier: was.tier } : {}), effects: [], resting: false });
+    arrivals.departed.push({ id, kind: 'supply', name: was.name, ...(was.line ? { line: was.line } : {}), ...(was.tier ? { tier: was.tier } : {}), resting: false });
   }
   return { record, arrivals };
 }

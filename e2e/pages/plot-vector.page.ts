@@ -35,7 +35,7 @@ export class PlotVectorPage {
    * The board as the live game holds it (what the next round uses), read from the app's state store. A kept move
    * shows here at once and stays, unlike the handle's light, which lasts 0.9 s and a busy run can miss (P6).
    */
-  async liveBoard(): Promise<{ shape?: string; layout?: { placements?: Record<string, string | null> } } | null> {
+  async liveBoard(): Promise<{ shape?: string; converter?: { from?: string; to?: string }; layout?: { placements?: Record<string, string | null> } } | null> {
     return this.page.evaluate(() => {
       type App = { config: { globalProperties: { $pinia: { _s: Map<string, { tree: Record<string, unknown> }> } } } };
       const app = (document.querySelector('#app') as { __vue_app__?: App } | null)?.__vue_app__;

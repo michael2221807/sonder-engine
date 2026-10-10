@@ -1,50 +1,14 @@
 /**
- * Card effects and growth for the table (PO 2026-10-01): marks from the measured profile, growth from the spec
- * and the engine's record — never from the model's words.
+ * Card growth for the table (PO 2026-10-01): growth from the spec and the engine's record — never from the
+ * model's words. What a card does is read from its code (card-behavior.test.ts).
  */
 import { describe, expect, it } from 'vitest';
-import { describeAdd, describeReturn, effectMarks, growthView, SHOWN_FROM, STRENGTH_STEPS } from './card-describe';
-import { rateCard, type EffectProfile } from './rating';
+import { describeAdd, describeReturn, growthView } from './card-describe';
 import { withGrowth } from './contract/returns';
 import { codeMentions } from './contract/code-words';
 import type { CardSpec } from './contract/types';
 
 const card = (onPass: string, growth?: CardSpec['growth']): CardSpec => ({ for: 'x', type: 'item', summary: 's', onPass, ...(growth ? { growth } : {}) });
-const zero = { push: 0, drag: 0, social: 0, chance: 0 };
-const profile = (perTrip: Partial<EffectProfile['perTrip']>, rest: Partial<EffectProfile> = {}): EffectProfile =>
-  ({ perTrip: { ...zero, ...perTrip }, perAct: { ...zero, ...perTrip }, route: false, store: false, ...rest });
-
-describe('effect marks', () => {
-  it('lean by the bars: more push or less drag leans to 顺, more drag or less push to 逆', () => {
-    expect(effectMarks(profile({ push: 1 })).map(e => e.mark)).toEqual(['up']);
-    expect(effectMarks(profile({ drag: -1 })).map(e => e.mark)).toEqual(['up']);
-    expect(effectMarks(profile({ drag: 2 })).map(e => e.mark)).toEqual(['down']);
-    expect(effectMarks(profile({ push: -1 })).map(e => e.mark)).toEqual(['down']);
-    // A convert from drag to push is one lean, with both numbers kept apart for exact mode.
-    const both = effectMarks(profile({ push: 0.6, drag: -0.6 }));
-    expect(both).toEqual([{ mark: 'up', strength: 1, exact: { push: 0.6, drag: -0.6 } }]);
-  });
-  it('strokes follow the size over a trip; small side changes are not shown', () => {
-    expect(effectMarks(profile({ social: STRENGTH_STEPS[0] - 0.01 }))[0].strength).toBe(1);
-    expect(effectMarks(profile({ social: STRENGTH_STEPS[0] }))[0].strength).toBe(2);
-    expect(effectMarks(profile({ chance: STRENGTH_STEPS[1] }))[0].strength).toBe(3);
-    expect(effectMarks(profile({ push: 1, social: SHOWN_FROM - 0.01 })).map(e => e.mark)).toEqual(['up']);
-  });
-  it('a card that costs social or chance says so; route and store have no size', () => {
-    expect(effectMarks(profile({ social: -1 }))).toEqual([{ mark: 'social', strength: 1, less: true, exact: { social: -1 } }]);
-    expect(effectMarks(profile({}, { route: true, store: true }))).toEqual([
-      { mark: 'route', strength: 0, exact: {} }, { mark: 'store', strength: 0, exact: {} }]);
-    expect(effectMarks(undefined)).toEqual([]);
-  });
-  it('real cards: a push card, a convert, a route card, a store card', () => {
-    const marks = (onPass: string) => effectMarks(rateCard(card(onPass)).profile).map(e => `${e.mark}${e.strength}`);
-    expect(marks('return { push: 1 };')).toEqual(['up1']);
-    expect(marks('return { push: 2 };')).toEqual(['up2']);
-    expect(marks('return { convert: { from: "drag", to: "chance", amount: ctx.drag }, chance: 3 };')).toEqual(['up1', 'chance3']);
-    expect(marks('if (ctx.pass === 1) return { turn: true };\nreturn {};')).toEqual(['route0']);
-    expect(marks('if (ctx.stored >= 3) return { release: true };\nreturn { store: { from: "push", amount: 1 } };')).toEqual(['store0']);
-  });
-});
 
 describe('growth in words', () => {
   it('an add says what one level adds: amounts, multipliers as their rise, switches from the level they turn on, steps', () => {

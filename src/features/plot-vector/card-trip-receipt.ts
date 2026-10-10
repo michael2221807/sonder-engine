@@ -15,12 +15,14 @@ export interface CardTripReceipt {
 export function cardTripReceipt(trace: readonly TraceEvent[], cardId: string): CardTripReceipt {
   const shuttleChanges: Record<string, number> = {};
   const otherEffects = new Set<'route'>();
-  let activations = 0, stored = 0, released = 0;
+  // Passes it acted on: one pass may leave several events (an environment's adds and multipliers apart, an echo).
+  const acted = new Set<string>();
+  let stored = 0, released = 0;
   const store = storeAccountId(cardId);
   for (const event of trace) {
     if (event.eventType !== 'effect' || event.owner?.kind !== 'card' || event.owner.id !== cardId
       || event.status !== 'applied' || !event.cardEffects?.length) continue;
-    activations++;
+    acted.add(event.visitId);
     for (const delta of event.deltas) {
       const change = delta.after - delta.before;
       if (delta.account === SHUTTLE_ACCOUNT) shuttleChanges[delta.channelOrField] = (shuttleChanges[delta.channelOrField] ?? 0) + change;
@@ -29,5 +31,5 @@ export function cardTripReceipt(trace: readonly TraceEvent[], cardId: string): C
     // Steps and turns change the route, which the trace records as the trip itself.
     if (event.cardEffects.some(effect => effect.startsWith('steps') || effect === 'turn')) otherEffects.add('route');
   }
-  return { activations, shuttleChanges, stored, released, otherEffects: [...otherEffects] };
+  return { activations: acted.size, shuttleChanges, stored, released, otherEffects: [...otherEffects] };
 }

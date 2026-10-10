@@ -2,7 +2,8 @@
 // App doc: docs/user-guide/pages/game-main.md §3.18.5 · Plot-vector card table
 /**
  * A card's details (phase 7; PO 2026-10-01, demo docs/demo/plot-vector-effect-and-start.html): hover 0.8 s or
- * long-press. Effect — the model's sentence and the marks the engine measured; Growth — how it grows and what a
+ * long-press. Effect — the model's sentence, then each case the engine read from the card's code (PO 2026-10-09):
+ * its condition in words and what it does as bubbles, and, on the board, whether it acted on this trip; Growth — how it grows and what a
  * level does, one sentence with bubbles; Origin — the entry's own text; then what is left, and with exact numbers
  * what it brought this trip. Every explanation comes from the engine and a fixed glossary, never from the model's
  * wording. An entry whose ability is still forming offers its retry here and nowhere else (4A).
@@ -24,6 +25,8 @@ const props = defineProps<{
   receipt?: CardTripReceipt | null;
   retrying?: boolean;
   retryNote?: 'bound' | 'failed' | 'error' | null;
+  /** On the board and did not act once on this trip. */
+  idle?: boolean;
 }>();
 const emit = defineEmits<{ (e: 'retry'): void; (e: 'enter'): void; (e: 'leave'): void }>();
 const { t, locale } = useI18n();
@@ -47,7 +50,7 @@ onMounted(async () => {
 });
 
 const words = useCardWords(() => props.exact);
-const effects = computed(() => (props.card ? words.value.effects(props.card.effects) : []));
+const clauses = computed(() => (props.card?.behavior ? words.value.clauses(props.card.behavior) : []));
 const growth = computed(() => {
   const g = props.card?.growth;
   return g ? { rule: words.value.growth(g), ...words.value.level(g) } : null;
@@ -81,7 +84,12 @@ const hasStatus = computed(() => !!props.card && (!!uses.value || chargeLeft.val
         <section class="vdetail__block" data-testid="vector-card-effects">
           <span class="vdetail__label">{{ t('mainGame.vectorTable.fx.label') }}</span>
           <p v-if="card.line" class="vdetail__say">{{ label(card.line) }}</p>
-          <div v-if="effects.length" class="vdetail__toks"><VectorTok v-for="(tok, i) in effects" :key="i" :tok="tok" /></div>
+          <div v-for="(c, i) in clauses" :key="i" class="vdetail__case" data-testid="vector-card-case">
+            <span v-if="c.when" class="vdetail__when">{{ c.when }}<span class="vdetail__when-sep">{{ t('mainGame.vectorTable.do.whenSep') }}</span></span>
+            <span class="vdetail__toks"><VectorTok v-for="(tok, j) in c.toks" :key="j" :tok="tok" /></span>
+          </div>
+          <p v-if="card.behavior?.complex" class="vdetail__quiet">{{ t('mainGame.vectorTable.do.complexTip') }}</p>
+          <p v-if="idle" class="vdetail__idle" data-testid="vector-card-idle">{{ t('mainGame.vectorTable.do.idleTip') }}</p>
         </section>
         <section v-if="growth" class="vdetail__block" data-testid="vector-card-growth">
           <div class="vdetail__grow-head">
@@ -162,6 +170,11 @@ const hasStatus = computed(() => !!props.card && (!!uses.value || chargeLeft.val
 .vdetail__label { display: block; margin-bottom: 4px; font-size: 10.5px; letter-spacing: 0.14em; color: var(--color-text-muted); }
 .vdetail__say { margin: 0 0 6px; color: var(--color-text); }
 .vdetail__toks { display: flex; flex-wrap: wrap; gap: 2px 4px; margin-left: -2px; }
+.vdetail__case { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; margin: 2px 0; }
+.vdetail__case .vdetail__toks { flex: 1; min-width: 0; }
+.vdetail__when { flex: none; font-size: 12px; color: var(--color-text); }
+.vdetail__when-sep { color: var(--color-text-muted); }
+.vdetail__idle { margin: 6px 0 0; font-size: 12px; color: var(--color-text-muted); }
 .vdetail__grow-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .vdetail__grow-head .vdetail__label { margin: 0; }
 .vdetail__prog-wrap { flex: 1; }

@@ -7,6 +7,7 @@ import zh from '@/ui/i18n/locales/zh-CN/mainGame.json';
 import en from '@/ui/i18n/locales/en/mainGame.json';
 import { CardWords, type Seg, type Translate } from './card-words';
 import type { GrowthView, ReturnPhrase } from '@/features/plot-vector/card-describe';
+import type { CardBehavior } from '@/features/plot-vector/card-behavior';
 
 const translator = (messages: Record<string, string>): Translate => (key, params = {}) => {
   const message = messages[key];
@@ -53,11 +54,51 @@ describe('card words', () => {
     const g = growth({ on: 'placedRound', every: 2, add: [{ kind: 'amount', channel: 'social', value: 0.1 }], burst: [{ kind: 'amount', channel: 'chance', value: 1 }] });
     expect(read(plain.growth(g))).toBe('在棋盘上每待满 2 回合升一级，最多 20 级。每升一级，它每次起作用时[人际]再多一点；每次升级后，下一趟[出发时]还会额外送一点[机会]。');
     expect(read(exact.growth(g))).toBe('在棋盘上每待满 2 回合升一级，最多 20 级。每升一级，它每次起作用时[人际 +0.1／级]再多一点；每次升级后，下一趟[出发时]还会额外送一点[机会 +1]。');
-    const [lean] = exact.effects([{ mark: 'up', strength: 2, exact: { push: 0.6, drag: -0.6 } }]);
-    expect(lean).toMatchObject({ label: '往顺', strength: 2, num: '推力 +0.6 · 阻力 −0.6／次' });
-    expect(lean.tip).toContain('亮两条');
-    expect(plain.effects([{ mark: 'up', strength: 2, exact: { push: 0.6 } }])[0].num).toBeUndefined();
-    expect(plain.faceTip([{ mark: 'up', strength: 1, exact: {} }, { mark: 'social', strength: 1, less: true, exact: {} }])).toBe('这张卡：↑ 往顺 · ◇ 人际变少');
+  });
+  it('says what a card does (PO 2026-10-09): push and drag apart, an add and a multiplier apart, conditions in front', () => {
+    const exact = new CardWords(translator(zh), 'zh-CN', true), plain = new CardWords(translator(zh), 'zh-CN', false);
+    // 骚鸡贱畜: only going back, drag cleared, chances +4.
+    const back: CardBehavior = { complex: false, clauses: [{ when: [{ kind: 'back' }], ops: [{ kind: 'add', channel: 'chance', amount: { value: 4 } }, { kind: 'clear', channel: 'drag' }] }] };
+    expect(plain.face(back)).toEqual([{ when: ['返程'], chips: [
+      { text: '✦+', color: 'var(--ch-chance)', frame: 'fill' }, { text: '↓0', color: 'var(--ch-drag)', frame: 'line' }] }]);
+    expect(exact.face(back)[0].chips.map(c => c.text)).toEqual(['✦+4', '↓0']);
+    expect(plain.faceTip(back)).toBe('返程时：机会增加、阻力清零');
+    // 天命主角: two cases, a line on chances.
+    const fate: CardBehavior = { complex: false, clauses: [
+      { when: [{ kind: 'line', on: 'chance', cmp: '<', value: 3 }], ops: [{ kind: 'add', channel: 'chance', amount: { value: 12 } }, { kind: 'steps', amount: { value: 2 } }] },
+      { when: [{ kind: 'line', on: 'chance', cmp: '>=', value: 3 }], ops: [{ kind: 'add', channel: 'chance', amount: { value: 1 } }] }] };
+    expect(plain.face(fate).map(r => `${r.when.join('')} ${r.chips.map(c => c.text).join(' ')}`)).toEqual(['✦<3 ✦+ +步', '✦≥3 ✦+']);
+    expect(plain.faceTip(fate)).toBe('梭上机会低于 3 时：机会增加、多走几步；梭上机会达到 3 时：机会增加');
+    // A multiplier reads × or ÷; a move is an arrow; less drag is told it cannot become going well.
+    const mixed: CardBehavior = { complex: false, clauses: [{ when: [], ops: [
+      { kind: 'scale', channel: 'social', factor: { value: 2 } }, { kind: 'scale', channel: 'push', factor: { value: 0.7 } },
+      { kind: 'convert', from: 'drag', to: 'social', share: 'all', cap: 3 }, { kind: 'add', channel: 'drag', amount: { value: -1 } }] }] };
+    expect(plain.face(mixed)[0].chips.map(c => c.text)).toEqual(['◇×', '↑÷', '↓→◇', '↓−']);
+    expect(exact.face(mixed)[0].chips.map(c => c.text)).toEqual(['◇×2', '↑×0.7', '↓→◇≤3', '↓−1']);
+    const [detail] = exact.clauses(mixed);
+    expect(detail.when).toBe('');
+    expect(detail.toks.map(t => `${t.label}${t.num ? ` ${t.num}` : ''}`)).toEqual(['人际放大 ×2', '推力打折 ×0.7', '阻力转成人际 全部 · 每次最多 3', '阻力减少 −1']);
+    expect(detail.toks[3].tip).toContain('不会变成「顺」');
+    expect(plain.clauses(mixed)[0].toks.every(t => t.num === undefined)).toBe(true);
+    // An amount that moves with the trip is told as approximate; one that grows with the level is exact.
+    const moving: CardBehavior = { complex: false, clauses: [{ when: [], ops: [{ kind: 'add', channel: 'push', amount: { value: 2, varies: 'pass' } }, { kind: 'add', channel: 'chance', amount: { value: 4, varies: 'level' } }] }] };
+    expect(exact.face(moving)[0].chips.map(c => c.text)).toEqual(['↑+~2', '✦+4']);
+    expect(exact.clauses(moving)[0].toks[0].tip).toContain('随经过次数变化');
+  });
+  it('says each side of a line exactly: < ≤ ≥ >, none and some, passes and steps, in both languages', () => {
+    const zhW = new CardWords(translator(zh), 'zh-CN', false), enW = new CardWords(translator(en), 'en', false);
+    const line = (on: 'drag' | 'stored' | 'pass' | 'step', cmp: '<' | '<=' | '>=' | '>', value: number) => ({ kind: 'line', on, cmp, value }) as const;
+    const cases = [line('drag', '<', 3), line('drag', '<=', 3), line('drag', '>=', 3), line('drag', '>', 3), line('drag', '<=', 0), line('drag', '>', 0),
+      line('stored', '<', 2), line('stored', '<=', 2), line('stored', '>=', 2), line('stored', '>', 2),
+      line('pass', '<', 2), line('pass', '>=', 2), line('pass', '<', 4), line('pass', '>=', 3), line('step', '<', 4), line('step', '>=', 4)];
+    expect(cases.map(c => zhW.condition(c, false))).toEqual(['↓<3', '↓≤3', '↓≥3', '↓>3', '无↓', '有↓', '存<2', '存≤2', '存≥2', '存>2', '首次', '之后', '前3次', '第3次起', '4步前', '4步起']);
+    expect(cases.map(c => zhW.condition(c, true))).toEqual(['梭上阻力低于 3 时', '梭上阻力不超过 3 时', '梭上阻力达到 3 时', '梭上阻力超过 3 时', '梭上没有阻力时', '梭上有阻力时',
+      '存量不到 2 时', '存量不超过 2 时', '存量达到 2 时', '存量超过 2 时', '第一次经过时', '之后每次经过', '前 3 次经过时', '第 3 次经过起', '这一趟第 4 步之前', '这一趟第 4 步起']);
+    for (const c of cases) for (const long of [false, true]) expect(enW.condition(c, long)).not.toMatch(/\{|mainGame\./);
+    // Steps are words in each language.
+    const steps: CardBehavior = { complex: false, clauses: [{ when: [], ops: [{ kind: 'steps', amount: { value: 2 } }, { kind: 'xSteps', factor: { value: 1.5 } }] }] };
+    expect(zhW.face(steps)[0].chips.map(c => c.text)).toEqual(['+步', '步×']);
+    expect(enW.face(steps)[0].chips.map(c => c.text)).toEqual(['+ steps', 'steps×']);
   });
   it('this trip: what moved, what was stored or let out, a route change; nothing when it did not act', () => {
     const w = new CardWords(translator(zh), 'zh-CN', true);

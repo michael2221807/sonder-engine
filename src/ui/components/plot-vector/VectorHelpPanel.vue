@@ -2,7 +2,8 @@
 // App doc: docs/user-guide/pages/game-main.md §3.18.6 · Plot-vector card table
 /**
  * The "?" on the table (phase 7; PO 2026-10-01, demo docs/demo/plot-vector-effect-and-start.html): how it works in a
- * few lines, the legend of marks the cards and the bars share, the starting force the attributes give as four
+ * few lines, the legend the cards and the bars share — the four quantities, how a card changes them (PO 2026-10-09:
+ * an add filled, a multiplier outlined, a move an arrow) and its conditions — the starting force the attributes give as four
  * gauges, and the two switches — exact numbers (PO 2A: only here) and the automatic walk (animation A). With exact
  * numbers the gauges carry their values, the steps show as a row of ticks and each attribute's share is a ledger
  * line.
@@ -12,8 +13,8 @@ import { useI18n } from 'vue-i18n';
 import type { NativeInput } from '@/features/plot-vector/native-input';
 import type { BoardShape } from '@/features/plot-vector/vector-board';
 import type { LocalizedLabel } from '@/engine/plot-vector/core/types';
-import { EFFECT_MARKS } from '@/features/plot-vector/card-describe';
-import { CHANNEL_KEY, CHANNEL_MARK, CHANNEL_OF_ID, ID_OF_CHANNEL, MARK_COLOR, MARK_GLYPH } from './effect-marks';
+import { CHANNEL_NAMES } from '@/features/plot-vector/contract/types';
+import { CHANNEL_KEY, CHANNEL_MARK, CHANNEL_OF_ID, ID_OF_CHANNEL, MARK_COLOR, MARK_GLYPH, OP_GLYPH } from './effect-marks';
 import VectorTok from './VectorTok.vue';
 import type { Tok } from './card-words';
 
@@ -23,9 +24,28 @@ const { t, locale } = useI18n();
 const label = (value?: LocalizedLabel) => value ? (locale.value === 'en' ? value.en : value.zh) : '';
 const number = (value: number) => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 2 }).format(value);
 
-const legend = computed<Tok[]>(() => EFFECT_MARKS.map(mark => ({
-  mark, color: MARK_COLOR[mark], label: t(`mainGame.vectorTable.fx.mark.${mark}`), tip: t(`mainGame.vectorTable.fx.means.${mark}`),
+/** The four quantities, in the bars' glyphs and colours. */
+const legend = computed<Tok[]>(() => CHANNEL_NAMES.map(ch => ({
+  mark: CHANNEL_MARK[ch], color: MARK_COLOR[CHANNEL_MARK[ch]], label: t(`mainGame.vectorTable.channel.${CHANNEL_KEY[ch]}`), tip: t(`mainGame.vectorTable.fx.means.${ch}`),
 })));
+const G = (ch: 'push' | 'drag' | 'social' | 'chance') => MARK_GLYPH[CHANNEL_MARK[ch]];
+const C = (ch: 'push' | 'drag' | 'social' | 'chance') => MARK_COLOR[CHANNEL_MARK[ch]];
+/** Conditions as the card face shows them. */
+const whenSamples = computed(() => [
+  t('mainGame.vectorTable.do.when.back'), t('mainGame.vectorTable.do.when.firstPass'),
+  t('mainGame.vectorTable.do.when.below', { g: G('chance'), n: 3 }), t('mainGame.vectorTable.do.when.some', { g: G('drag') }),
+  t('mainGame.vectorTable.do.when.chance', { n: 50 }),
+]);
+/** How a card changes them: a sample chip as the card face shows it, and its words. */
+const ops = computed(() => [
+  { text: `${G('push')}+`, color: C('push'), frame: 'fill', words: t('mainGame.vectorTable.legend.opAdd') },
+  { text: `${G('drag')}−`, color: C('drag'), frame: 'fill', words: t('mainGame.vectorTable.legend.opLess') },
+  { text: `${G('social')}× ${G('push')}÷`, color: C('social'), frame: 'line', words: t('mainGame.vectorTable.legend.opScale') },
+  { text: `${G('drag')}0`, color: C('drag'), frame: 'line', words: t('mainGame.vectorTable.legend.opClear') },
+  { text: `${G('drag')}→${G('social')}`, color: C('social'), frame: 'plain', words: t('mainGame.vectorTable.legend.opMove') },
+  { text: `+${t('mainGame.vectorTable.do.stepGlyph').trim()} ${OP_GLYPH.turn}`, color: 'var(--color-text-secondary)', frame: 'plain', words: t('mainGame.vectorTable.legend.opRoute') },
+  { text: `${OP_GLYPH.store} ${OP_GLYPH.relay}`, color: 'var(--color-text-secondary)', frame: 'plain', words: t('mainGame.vectorTable.legend.opStore') },
+]);
 
 /** The four starting forces as gauges on one scale (at least 4, so a small force reads small). */
 const gauges = computed(() => {
@@ -57,10 +77,19 @@ const ledger = computed(() => (props.starting?.contributions ?? []).map(row => {
       <li>{{ t('mainGame.vectorTable.helpPanel.supply') }}</li>
       <li>{{ t('mainGame.vectorTable.helpPanel.keep') }}</li>
       <li>{{ t('mainGame.vectorTable.helpPanel.shape') }}</li>
+      <li>{{ t('mainGame.vectorTable.helpPanel.converter') }}</li>
     </ul>
 
     <h4 class="vhelp__head">{{ t('mainGame.vectorTable.legend.title') }}</h4>
     <div class="vhelp__legend" data-testid="vector-legend"><VectorTok v-for="tok in legend" :key="tok.mark" :tok="tok" fixed /></div>
+    <p class="vhelp__balance">{{ t('mainGame.vectorTable.legend.balance') }}</p>
+    <div class="vhelp__ops" data-testid="vector-legend-ops">
+      <template v-for="(op, i) in ops" :key="i">
+        <span class="vhelp__chip" :class="`vhelp__chip--${op.frame}`" :style="{ '--c': op.color }">{{ op.text }}</span>
+        <span class="vhelp__opwords">{{ op.words }}</span>
+      </template>
+    </div>
+    <p class="vhelp__when"><span v-for="w in whenSamples" :key="w" class="vhelp__whentag">{{ w }}</span>{{ t('mainGame.vectorTable.legend.when') }}</p>
 
     <h4 class="vhelp__head">{{ t('mainGame.vectorTable.legend.start') }}</h4>
     <div class="vhelp__gauges" data-testid="vector-start">
@@ -124,6 +153,14 @@ const ledger = computed(() => (props.starting?.contributions ?? []).map(row => {
 .vhelp__list li { margin: 3px 0; }
 .vhelp__head { margin: 12px 0 6px; font-size: 10.5px; font-weight: 400; letter-spacing: 0.14em; color: var(--color-text-muted); }
 .vhelp__legend { display: flex; flex-wrap: wrap; gap: 2px 4px; margin-left: -2px; }
+.vhelp__balance { margin: 6px 0 8px; font-size: 12px; color: var(--color-text-muted); }
+.vhelp__ops { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 8px; font-size: 12px; }
+.vhelp__chip { justify-self: start; padding: 0 6px; border-radius: 999px; font-size: 11px; line-height: 17px; color: var(--c); white-space: nowrap; }
+.vhelp__chip--fill { background: color-mix(in oklch, var(--c) 16%, transparent); }
+.vhelp__chip--line { box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--c) 55%, transparent); }
+.vhelp__opwords { color: var(--color-text-secondary); }
+.vhelp__when { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 8px 0 0; font-size: 12px; color: var(--color-text-muted); }
+.vhelp__whentag { padding: 0 4px; border-radius: 3px; font-size: 10.5px; line-height: 15px; color: var(--color-text-secondary); background: oklch(0.28 0.006 95); }
 .vhelp__gauges { display: grid; gap: 7px; }
 .vhelp__gauge { display: grid; grid-template-columns: minmax(58px, auto) 1fr 30px; align-items: center; gap: 8px; font-size: 12px; }
 .vhelp__gname { color: var(--color-text-muted); white-space: nowrap; }
