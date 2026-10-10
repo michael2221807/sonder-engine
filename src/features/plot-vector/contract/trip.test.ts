@@ -124,6 +124,15 @@ describe('what a card reads and what fails', () => {
 });
 
 describe('environment cards act like weather, once at departure', () => {
+  it('several act phase by phase — every add, then every multiplier — whichever comes first (PO 2026-10-09, A)', () => {
+    const cards = { double: spec('return { xDrag: 2, xPush: 0.7 };', undefined, 'environment'), heap: spec('return { drag: 3, chance: 8 };', undefined, 'environment') };
+    for (const order of [['double', 'heap'], ['heap', 'double']]) {
+      const t = new TripCards(order.map((id): TripCard => ({ id, spec: cards[id as keyof typeof cards], departs: true })), {}, 'seed');
+      const done = ops(t.depart({ ...ZERO, 'S+': 1.3 }));
+      expect(done.map(o => o.op)).toEqual(['add', 'add', 'scale', 'scale']);
+      expect(done.map(o => o.owner)).toEqual(['heap', 'heap', 'double', 'double']);
+    }
+  });
   it('act on the starting payload with pass and step 0, and never from a cell', () => {
     const t = trip({ rain: spec('return ctx.pass === 0 && ctx.step === 0 ? { xPush: 0.8, steps: 1 } : { chance: 9 };', undefined, 'environment') }, {}, ['rain']);
     const out = ops(t.depart({ ...ZERO, 'S+': 10 }));

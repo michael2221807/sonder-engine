@@ -11,7 +11,7 @@ import { prepareVector, readVectorState, type PreparedVector, type VectorState }
 import { initialSupply, supplyHandInfo, type SupplyCardInfo, type SupplyRules } from './supply';
 import { projectNativeInput, type NativeRules } from './native-input';
 import { abilityBacklog, type BacklogEntry } from './ability-backlog';
-import type { BoardShape } from './vector-board';
+import { readConverter, type BoardShape, type ConverterRule } from './vector-board';
 
 export interface BoardView {
   state: VectorState;
@@ -22,14 +22,14 @@ export interface BoardView {
   cleared: boolean;
   /** Supply hand cards by instance id: tier and recharge (empty without a supply pool). */
   supply: Record<string, SupplyCardInfo>;
-  /** Trip for an arrangement; `shape` tries the other board shape without saving it. */
-  preview(layout: Layout, shape?: BoardShape): Promise<PreparedVector>;
+  /** Trip for an arrangement; `shape` and `converter` try another board shape or converter rule without saving them. */
+  preview(layout: Layout, shape?: BoardShape, converter?: ConverterRule): Promise<PreparedVector>;
   /**
-   * Keeps the arrangement, and the board shape when given, in the live game state at once (the next round
+   * Keeps the arrangement, and the board shape and converter rule when given, in the live game state at once (the next round
    * uses it). It reaches the save file with `VectorBoardAccess.persist` — when the table closes — or with the
    * next round's own save.
    */
-  commit(layout: Layout, shape?: BoardShape): Promise<void>;
+  commit(layout: Layout, shape?: BoardShape, converter?: ConverterRule): Promise<void>;
 }
 
 /**
@@ -213,9 +213,9 @@ export class VectorBoardAccess {
     };
     guard();
     // Computed in the page, synchronously (rebuild plan §4).
-    const preview = async (layout?: Layout, shape?: BoardShape): Promise<PreparedVector> => {
+    const preview = async (layout?: Layout, shape?: BoardShape, converter?: ConverterRule): Promise<PreparedVector> => {
       guard();
-      return prepareVector({ ...state, ...(layout ? { layout: cloneDeep(layout) } : {}), ...(shape ? { shape } : {}) }, entries,
+      return prepareVector({ ...state, ...(layout ? { layout: cloneDeep(layout) } : {}), ...(shape ? { shape } : {}), ...(converter ? { converter } : {}) }, entries,
         `${slot!.profileId}/${slot!.slotId}/${(this.state.get<number>(P.roundNumber) ?? 0) + 1}`, native, this.supplyRules);
     };
     let prepared: PreparedVector, cleared = false;
@@ -229,12 +229,12 @@ export class VectorBoardAccess {
       cleared = true;
     }
     const supply = this.supplyRules ? supplyHandInfo(this.supplyRules, state.supply ?? initialSupply(this.supplyRules)) : {};
-    return { state, prepared, cleared, supply, backlog: abilityBacklog(state, entries), preview, commit: async (layout, shape) => {
+    return { state, prepared, cleared, supply, backlog: abilityBacklog(state, entries), preview, commit: async (layout, shape, converter) => {
       guard();
       // The layout as the trip normalizes it (cards that are gone are dropped, the status cell is the engine's).
-      const normalized = await preview(layout, shape);
+      const normalized = await preview(layout, shape, converter);
       guard();
-      const next = { ...state, layout: normalized.layout, ...(shape ? { shape } : {}) };
+      const next = { ...state, layout: normalized.layout, ...(shape ? { shape } : {}), ...(converter ? { converter: readConverter(converter) } : {}) };
       this.state.set(P.plotVector, next);
       // The view's own write keeps it current: the player goes on arranging without reopening.
       state = next;

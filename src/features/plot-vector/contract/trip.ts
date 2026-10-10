@@ -21,6 +21,21 @@ export function storeAccount(cardId: string): AccountDef {
   return { id: storeAccountId(cardId), owner: { kind: 'card', id: cardId }, encoding: 'channelVector', persist: 'acrossRounds', cap: LIMITS.stored, lifetimeRounds: 'unbounded' };
 }
 
+/**
+ * The phases of a return, in the order the domain describes (add, multiply, move, store, release, steps, step
+ * multiplier, turn): each is the part of a return one phase carries out.
+ */
+const RETURN_PHASES: ReadonlyArray<(ret: CardReturn) => CardReturn> = [
+  ret => Object.fromEntries(CHANNEL_NAMES.flatMap(name => (ret[name] ? [[name, ret[name]]] : []))) as CardReturn,
+  ret => Object.fromEntries(CHANNEL_NAMES.flatMap(name => (ret[MULTIPLIER_OF[name]] !== undefined ? [[MULTIPLIER_OF[name], ret[MULTIPLIER_OF[name]]]] : []))) as CardReturn,
+  ret => (ret.convert ? { convert: ret.convert } : {}),
+  ret => (ret.store ? { store: ret.store } : {}),
+  ret => (ret.release ? { release: ret.release } : {}),
+  ret => (ret.steps ? { steps: ret.steps } : {}),
+  ret => (ret.xSteps !== undefined ? { xSteps: ret.xSteps } : {}),
+  ret => (ret.turn ? { turn: ret.turn } : {}),
+];
+
 /** Operations for one bounded return, in the fixed order the domain describes. */
 function operationsOf(owner: string, ret: CardReturn): { operations: OperationDef[]; summary: string[] } {
   const operations: OperationDef[] = [], summary: string[] = [];
@@ -79,11 +94,19 @@ export class TripCards implements CardRuntime {
 
   depart(shuttle: Readonly<Record<ChannelId, number>>): CardAction[] {
     const actions: CardAction[] = [];
+    // Environment cards, like weather, all read the same starting values. What they return is then carried out
+    // phase by phase across all of them — every add first, then every multiplier, … (PO 2026-10-09, A) — so which
+    // environment happens to come first never changes the trip (a doubling no longer misses an add after it).
+    const departing: Array<{ id: string; ret: CardReturn }> = [];
     for (const card of this.cards.values()) {
       if (!card.departs) continue;
       const result = passCard(card.spec, this.values(shuttle, { pass: 0, step: 0, back: false, level: 0, stored: 0 }), `${this.seed}:${card.id}:departure`);
-      if (result.triggered) this.carryOut(card.id, result.ret, actions);
+      if (result.triggered) departing.push({ id: card.id, ret: result.ret });
     }
+    for (const phase of RETURN_PHASES) {
+      for (const { id, ret } of departing) this.carryOut(id, phase(ret), actions);
+    }
+    for (const { id, ret } of departing) if (ret.relay) this.pending.push({ owner: id, relay: ret.relay });
     // Bursts of levels gained by round growth fire at the first departure after them.
     for (const card of this.cards.values()) {
       const state = this.growth.get(card.id) ?? initialGrowth();

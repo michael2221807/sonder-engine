@@ -91,6 +91,18 @@ describe('two board shapes (PO 2026-09-29: both can be played)', () => {
     expect(readVectorState(JSON.parse(JSON.stringify({ ...base, shape: 'spiral' }))).shape).toBe('line');
     expect('shape' in readVectorState(JSON.parse(JSON.stringify(base)))).toBe(false);
   });
+  it('the converter rule is kept when stored; anything else, or none, reads as push into relations (PO 2026-10-09, A)', () => {
+    const base = initialVectorState();
+    expect(readVectorState(JSON.parse(JSON.stringify({ ...base, converter: { from: 'drag', to: 'chance' } }))).converter).toEqual({ from: 'drag', to: 'chance' });
+    expect(readVectorState(JSON.parse(JSON.stringify({ ...base, converter: { from: 'push', to: 'push' } }))).converter).toEqual({ from: 'push', to: 'social' });
+    expect(readVectorState(JSON.parse(JSON.stringify({ ...base, converter: 'x' }))).converter).toEqual({ from: 'push', to: 'social' });
+    expect('converter' in readVectorState(JSON.parse(JSON.stringify(base)))).toBe(false);
+  });
+  it('the trip runs the converter rule the save holds', () => {
+    const end = (converter?: VectorState['converter']) => prepareVector({ ...initialVectorState(), ...(converter ? { converter } : {}) }, [], 'r-conv', native).result.finalState.shuttle;
+    expect(end()).toMatchObject({ 'S+': 0.5, Y: 2.5, J: 1 });
+    expect(end({ from: 'push', to: 'chance' })).toMatchObject({ 'S+': 0.5, Y: 1, J: 2.5 });
+  });
   it('a round accepted on the ring keeps the ring for the next round', () => {
     const state: VectorState = { ...initialVectorState(), shape: 'ring' };
     const accepted = acceptVector(state, prepareVector(state, [], 'r1', native));

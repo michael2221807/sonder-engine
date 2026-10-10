@@ -1,16 +1,44 @@
 import type { BoardDef, EffectDef, Provenance } from '../../engine/plot-vector/core/types';
 import { SHUTTLE_ACCOUNT } from '../../engine/plot-vector/core/runner';
+import type { ChannelName } from './contract/types';
 
 const SIX_CELL_ID = 'six-cell';
 export const SIX_CELL_RING_ID = 'six-cell-ring';
 export type SixCellTopology = 'line' | 'ring';
+/**
+ * The converter cell's rule (PO 2026-10-09, choice A): each time the shuttle passes cell 03, either way, half of
+ * `from` on it turns into `to`. The player picks both; the two are never the same.
+ */
+export interface ConverterRule { from: ChannelName; to: ChannelName }
+/** New games, and saves from before the choice existed: push into relations (the old forward rule). */
+export const DEFAULT_CONVERTER: Readonly<ConverterRule> = { from: 'push', to: 'social' };
 export interface SixCellOptions {
   topology?: SixCellTopology;
   tripLength?: number;
+  converter?: ConverterRule;
 }
 
 const CH = { Sp: 'S+', Sm: 'S-', Y: 'Y', J: 'J' } as const;
 const TEMPLATE: Provenance = { concept: 'PO', params: 'Codex' };
+const CHANNEL_ID: Readonly<Record<ChannelName, string>> = { push: CH.Sp, drag: CH.Sm, social: CH.Y, chance: CH.J };
+const CHANNEL_WORD: Readonly<Record<ChannelName, { zh: string; en: string }>> = {
+  push: { zh: '推力', en: 'push' }, drag: { zh: '阻力', en: 'drag' }, social: { zh: '人际', en: 'relations' }, chance: { zh: '机会', en: 'openings' },
+};
+
+/** Cell 03's one effect: whichever way the shuttle enters, half of `from` turns into `to`. */
+function converterEffect(rule: ConverterRule): EffectDef {
+  const from = CHANNEL_WORD[rule.from], to = CHANNEL_WORD[rule.to];
+  return {
+    id: '03:convert',
+    owner: { kind: 'cell', id: '03' },
+    event: 'afterCard',
+    order: 10,
+    operations: [{ op: 'convert', target: SHUTTLE_ACCOUNT, from: CHANNEL_ID[rule.from], to: CHANNEL_ID[rule.to], rate: 0.5, efficiency: 1 }],
+    source: 'PO',
+    provenance: TEMPLATE,
+    label: { zh: `每次经过：把梭上一半的「${from.zh}」转成「${to.zh}」`, en: `Each pass: half of the ${from.en} on the shuttle turns into ${to.en}` },
+  };
+}
 
 function resonance(cellId: string): EffectDef {
   return {
@@ -102,34 +130,11 @@ export function buildSixCellBoard(opts: SixCellOptions = {}): BoardDef {
         kind: 'converter',
         tags: ['converter'],
         ports: ['L', 'R'],
-        effects: [
-          {
-            id: '03:convert-forward',
-            owner: { kind: 'cell', id: '03' },
-            event: 'afterCard',
-            order: 10,
-            entryPort: 'L',
-            operations: [{ op: 'convert', target: SHUTTLE_ACCOUNT, from: CH.Sp, to: CH.Y, rate: 0.5, efficiency: 1 }],
-            source: 'PO',
-            provenance: TEMPLATE,
-            label: { zh: '正向经过：把梭上一半的「顺利·推力」转成「人际」', en: 'Entering forward: half of the push on the shuttle turns into Relations' },
-          },
-          {
-            id: '03:convert-reverse',
-            owner: { kind: 'cell', id: '03' },
-            event: 'afterCard',
-            order: 10,
-            entryPort: 'R',
-            operations: [{ op: 'convert', target: SHUTTLE_ACCOUNT, from: CH.Y, to: CH.J, rate: 0.5, efficiency: 1 }],
-            source: 'PO',
-            provenance: TEMPLATE,
-            label: { zh: '反向经过：把梭上一半的「人际」转成「机会」', en: 'Entering backward: half of the Relations on the shuttle turns into Openings' },
-          },
-        ],
+        effects: [converterEffect(opts.converter ?? DEFAULT_CONVERTER)],
         locked: false,
         source: 'PO',
         provenance: TEMPLATE,
-        label: { zh: '转换格（两个方向各一组通道）', en: 'Converter cell (one channel set per direction)' },
+        label: { zh: '转换格（转什么由玩家选）', en: 'Converter cell (the player picks what turns into what)' },
       },
       {
         id: '04',

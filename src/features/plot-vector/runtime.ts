@@ -1,4 +1,4 @@
-import { VECTOR_RUN_OPTIONS, readBoardShape, vectorBaseBoard, type BoardShape } from './vector-board';
+import { VECTOR_RUN_OPTIONS, readBoardShape, readConverter, vectorBaseBoard, type BoardShape, type ConverterRule } from './vector-board';
 import { compileBoard } from '../../engine/plot-vector/core/policies';
 import { run } from '../../engine/plot-vector/core/runner';
 import { commitRun, createSession, type VectorSession } from '../../engine/plot-vector/core/session';
@@ -53,6 +53,8 @@ export interface VectorState {
   supply?: SupplyState;
   /** The board shape the player chose (PO 2026-09-29); absent in older saves, which play on the line. */
   shape?: BoardShape;
+  /** What the converter cell turns into what (PO 2026-10-09, A); absent in older saves, which use the default. */
+  converter?: ConverterRule;
   layout?: Layout;
   last?: { id: string; board: CompiledBoard; result: RunDone; layout: Layout; starting?: NativeInput; progress?: CardProgress[] };
 }
@@ -80,9 +82,10 @@ export function readVectorState(raw: unknown): VectorState {
   // Rows only record failures; a row saved as bound by an earlier build is dropped.
   const tasks = state.tasks.filter(row => row && typeof row === 'object' && row.task?.entry && (row as { status?: unknown }).status !== 'bound');
   const supply = readSupplyState(state.supply);
-  const { supply: _raw, shape: _shape, ...rest } = state as VectorState;
+  const { supply: _raw, shape: _shape, converter: _converter, ...rest } = state as VectorState;
   return { ...rest, tasks, growth: Object.fromEntries(Object.entries(state.growth ?? {}).map(([id, g]) => [id, readGrowth(g)])),
-    ...(supply ? { supply } : {}), ...(state.shape !== undefined ? { shape: readBoardShape(state.shape) } : {}) };
+    ...(supply ? { supply } : {}), ...(state.shape !== undefined ? { shape: readBoardShape(state.shape) } : {}),
+    ...(state.converter !== undefined ? { converter: readConverter(state.converter) } : {}) };
 }
 
 /** The narrative strength every AGA vector round uses (the board and run options live in vector-board.ts). */
@@ -150,7 +153,7 @@ export function prepareVector(state: VectorState, entries: readonly SavedElement
   placements['06'] = status.length ? status[seed % status.length].task.entry.id : null;
   const layout: Layout = { placements, tray: placeable.filter(card => !used.has(card)) };
   const starting = native ?? projectNativeInput(undefined);
-  const board = compileBoard({ ...vectorBaseBoard(readBoardShape(state.shape)), startPayload: starting.payload, cards: [...bound.map(cardDefOf), ...supply] });
+  const board = compileBoard({ ...vectorBaseBoard(readBoardShape(state.shape), readConverter(state.converter)), startPayload: starting.payload, cards: [...bound.map(cardDefOf), ...supply] });
   const tripCards: TripCard[] = [
     ...bound.map(card => ({ id: card.task.entry.id, spec: card.spec, departs: card.task.entry.kind === 'environment' })),
     ...(supplyRules && hand ? supplyTripCards(supplyRules, hand) : []),

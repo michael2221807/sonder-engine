@@ -67,12 +67,16 @@ describe('the trip over the six-cell board', () => {
     const doubled = done(run(board({ cards }), settle({ '02': 'c' }, 4), runtime({ c: i => (i.pass === 1 ? [{ op: 'scaleRemainingVisits', factor: 2 }] : []) })));
     expect(doubled.visits).toBe(6); // two steps were left when it acted on step 2
   });
-  it('the converter cell turns half the push into relations going forward, half the relations into chances going back', () => {
+  it('the converter cell turns half the push into relations, whichever way the shuttle passes (PO 2026-10-09, A)', () => {
     const forward = done(run(board({ start: { 'S+': 8, 'S-': 0, Y: 0, J: 0 } }), settle({}, 3)));
     expect(shuttle(forward)).toMatchObject({ 'S+': 4, Y: 4, J: 0 });
     const back = done(run(board({ start: { 'S+': 8, 'S-': 0, Y: 0, J: 0 } }), settle({}, 9)));
-    expect(back.trace.filter(e => e.effectId === '03:convert-reverse' && e.status === 'applied')).toHaveLength(1);
-    expect(shuttle(back)).toMatchObject({ 'S+': 4, Y: 2, J: 2 });
+    expect(back.trace.filter(e => e.effectId === '03:convert' && e.status === 'applied')).toHaveLength(2);
+    expect(shuttle(back)).toMatchObject({ 'S+': 2, Y: 6, J: 0 });
+  });
+  it('the converter cell follows the rule the player picked', () => {
+    const picked = compileBoard({ ...buildSixCellBoard({ converter: { from: 'drag', to: 'chance' } }), startPayload: { 'S+': 0, 'S-': 6, Y: 0, J: 0 }, cards: [] });
+    expect(shuttle(done(run(picked, settle({}, 3))))).toMatchObject({ 'S+': 0, 'S-': 3, J: 3 });
   });
   it('resonance: a card adds 25% more for the neighbouring resonance cell that also holds a card', () => {
     const cards = [card('a'), card('b')];
