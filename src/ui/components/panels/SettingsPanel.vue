@@ -36,7 +36,12 @@ import {
   parseLowLoadSettings, lowLoadMaxRequestsFromInput, COT_LS_KEY, BODY_POLISH_LS_KEY, PRESENCE_LS_KEY, IMAGE_GEN_LS_KEY,
   type FeatureToggles,
 } from '@/ui/composables/settings/feature-toggles';
-import { sectionMatchesSearchText, type NavCategory } from '@/ui/composables/settings/nav-search';
+import {
+  SETTINGS_SECTIONS, flattenMessageKeys, normalizeSearch, pickActiveNav, searchableText, sectionMatchesSearchText,
+  sectionSearchKeys,
+  type NavCategory, type SectionBox,
+} from '@/ui/composables/settings/nav-search';
+import { DEFAULT_LOCALE } from '@/ui/i18n';
 import { writePlotTimelineAxis } from '@/ui/composables/usePlotTimelineAxis';
 import AgaButton from '@/ui/components/shared/AgaButton.vue';
 import Tooltip from '@/ui/components/shared/Tooltip.vue';
@@ -48,7 +53,7 @@ import {
 import { actionOptionsOn, type PromptSettings } from '@/engine/prompt/world-book';
 import { useI18n } from 'vue-i18n';
 
-const { t } = useI18n();
+const { t, getLocaleMessage } = useI18n();
 
 const settings = ref<UserSettings>({ ...defaultSettings });
 
@@ -868,6 +873,8 @@ function toggleImageGen(): void {
 }
 
 // ─── Sprint UI-3: VSCode-style navigation infrastructure ──────
+// 2026-10-09 fix: the highlight follows where the sections sit (no stale intersection set), a click keeps its entry
+// lit until the reader scrolls by themselves, and search reads each section's labels from the locale messages.
 
 const settingsSearch = ref('');
 const settingsContentRef = ref<HTMLElement | null>(null);
@@ -894,78 +901,155 @@ const navCategories = computed<NavCategory[]>(() => [
   { id: 'settings-data', label: t('settings.nav.data') },
 ]);
 
-function sectionMatchesSearch(sectionId: string): boolean {
-  return sectionMatchesSearchText(
-    settingsSearch.value,
-    () => navCategories.value.find((c) => c.id === sectionId),
-    () => settingsContentRef.value,
-    sectionId,
-  );
-}
+/** Every key of the default locale (always loaded, the complete set); `t` gives each one in the current language. */
+const settingsMessageKeys = flattenMessageKeys(getLocaleMessage(DEFAULT_LOCALE));
 
-const visibleCategoryIds = computed(() => {
-  const q = settingsSearch.value.trim().toLowerCase();
-  if (!q) return new Set(navCategories.value.map((c) => c.id));
-  return new Set(navCategories.value.filter((c) => sectionMatchesSearch(c.id)).map((c) => c.id));
+/** Per section, the lower-cased labels and descriptions search reads, rows behind a switch or a fold included. */
+const sectionSearchTexts = computed(() => {
+  const out = new Map<string, string[]>();
+  for (const def of SETTINGS_SECTIONS) {
+    out.set(def.id, sectionSearchKeys(def, settingsMessageKeys, inGame.value).map((key) => searchableText(t(key))));
+  }
+  return out;
 });
 
-let scrollSuppressed = false;
+const searchActive = computed(() => normalizeSearch(settingsSearch.value) !== '');
 
-function scrollToSection(sectionId: string): void {
-  activeNavId.value = sectionId;
-  const container = settingsContentRef.value;
-  if (!container) return;
-  const el = container.querySelector(`#${sectionId}`) as HTMLElement | null;
-  if (!el) return;
-  scrollSuppressed = true;
-  container.scrollTo({
-    top: el.offsetTop - container.offsetTop,
-    behavior: 'smooth',
-  });
-  setTimeout(() => { scrollSuppressed = false; }, 600);
-}
-
-let scrollSpyObserver: IntersectionObserver | null = null;
-
-function setupScrollSpy(): void {
-  const container = settingsContentRef.value;
-  if (!container) return;
-  scrollSpyObserver?.disconnect();
-
-  const visibleSections = new Set<string>();
-
-  scrollSpyObserver = new IntersectionObserver(
-    (entries) => {
-      if (scrollSuppressed) return;
-      for (const entry of entries) {
-        if (entry.isIntersecting) {
-          visibleSections.add(entry.target.id);
-        } else {
-          visibleSections.delete(entry.target.id);
-        }
-      }
-      for (const cat of navCategories.value) {
-        if (visibleSections.has(cat.id)) {
-          activeNavId.value = cat.id;
-          break;
-        }
-      }
-    },
-    { root: container, rootMargin: '0px 0px -70% 0px', threshold: 0 },
-  );
-
-  for (const cat of navCategories.value) {
-    const el = container.querySelector(`#${cat.id}`);
-    if (el) scrollSpyObserver.observe(el);
+/** The page's blocks that show: those offered on this page and, while searching, those that match. */
+const visibleSectionIds = computed(() => {
+  const offered = new Set(navCategories.value.map((c) => c.id));
+  const out = new Set<string>();
+  for (const def of SETTINGS_SECTIONS) {
+    if (def.nav && !offered.has(def.nav)) continue;
+    const matches = sectionMatchesSearchText(
+      settingsSearch.value,
+      () => navCategories.value.find((c) => c.id === def.nav)?.label,
+      () => sectionSearchTexts.value.get(def.id) ?? [],
+      () => settingsContentRef.value?.querySelector(`#${def.id}`)?.textContent ?? null,
+    );
+    if (matches) out.add(def.id);
   }
+  return out;
+});
+
+/** Side-nav entries with at least one block showing. */
+const visibleCategoryIds = computed(() => new Set(
+  SETTINGS_SECTIONS.filter((def) => def.nav && visibleSectionIds.value.has(def.id)).map((def) => def.nav as string),
+));
+
+/** The showing blocks that belong to a side-nav entry, with where their top edge sits in the scroll area. */
+function sectionBoxes(container: HTMLElement): SectionBox[] {
+  const containerTop = container.getBoundingClientRect().top;
+  const boxes: SectionBox[] = [];
+  for (const def of SETTINGS_SECTIONS) {
+    if (!def.nav) continue;
+    const el = container.querySelector<HTMLElement>(`#${def.id}`);
+    if (!el || el.getClientRects().length === 0) continue;
+    boxes.push({ nav: def.nav, top: el.getBoundingClientRect().top - containerTop });
+  }
+  return boxes;
 }
+
+/** The highlight line sits this far down the visible part of the scroll area (what the old observer watched). */
+const SPY_LINE_RATIO = 0.3;
+/** How long a click's scroll may take before the page stops waiting for it to arrive. */
+const NAV_SCROLL_TIMEOUT_MS = 2000;
+
+/** Where a click's scroll is heading; scroll events on the way do not move the highlight. */
+let navScrollTarget: number | null = null;
+let navScrollTimer: ReturnType<typeof setTimeout> | null = null;
+/** After a click, the clicked entry stays lit until the reader scrolls by themselves. */
+let navClickHolds = false;
+let spyFrame = 0;
+
+function endNavScroll(): void {
+  navScrollTarget = null;
+  if (navScrollTimer) clearTimeout(navScrollTimer);
+  navScrollTimer = null;
+}
+
+function updateActiveNavFromScroll(): void {
+  const container = settingsContentRef.value;
+  if (!container) return;
+  const max = container.scrollHeight - container.clientHeight;
+  const atBottom = max > 0 && container.scrollTop >= max - 2;
+  const nav = pickActiveNav(sectionBoxes(container), container.clientHeight * SPY_LINE_RATIO, atBottom, container.clientHeight);
+  if (nav) activeNavId.value = nav;
+}
+
+function onSettingsContentScroll(): void {
+  const container = settingsContentRef.value;
+  if (!container) return;
+  if (navScrollTarget !== null) {
+    if (Math.abs(container.scrollTop - navScrollTarget) < 2) endNavScroll();
+    return;
+  }
+  if (navClickHolds || spyFrame) return;
+  spyFrame = requestAnimationFrame(() => {
+    spyFrame = 0;
+    updateActiveNavFromScroll();
+  });
+}
+
+/** Wheel, touch, keys or the scrollbar: the reader takes over, so the highlight follows the page again. */
+function onSettingsReaderScrollIntent(): void {
+  endNavScroll();
+  navClickHolds = false;
+}
+
+function prefersReducedMotion(): boolean {
+  return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function scrollToSection(navId: string): void {
+  activeNavId.value = navId;
+  const container = settingsContentRef.value;
+  if (!container) return;
+  const target = SETTINGS_SECTIONS
+    .filter((def) => def.nav === navId && visibleSectionIds.value.has(def.id))
+    .map((def) => container.querySelector<HTMLElement>(`#${def.id}`))
+    .find((el): el is HTMLElement => !!el && el.getClientRects().length > 0);
+  if (!target) return;
+  const top = container.scrollTop + target.getBoundingClientRect().top - container.getBoundingClientRect().top;
+  const max = Math.max(0, container.scrollHeight - container.clientHeight);
+  const dest = Math.round(Math.min(max, Math.max(0, top)));
+  navClickHolds = true;
+  endNavScroll();
+  if (Math.abs(container.scrollTop - dest) < 2) {
+    // Already there, but an earlier click's smooth scroll may still be heading elsewhere: an instant scroll cancels it.
+    container.scrollTo({ top: dest, behavior: 'auto' });
+    return;
+  }
+  navScrollTarget = dest;
+  navScrollTimer = setTimeout(endNavScroll, NAV_SCROLL_TIMEOUT_MS);
+  container.scrollTo({ top: dest, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+}
+
+/** A new search: start from the top and light the first entry that shows. */
+function resetNavToTop(): void {
+  void nextTick(() => {
+    const container = settingsContentRef.value;
+    if (!container) return;
+    endNavScroll();
+    navClickHolds = false;
+    container.scrollTop = 0;
+    updateActiveNavFromScroll();
+  });
+}
+
+watch(settingsSearch, resetNavToTop);
+// Entries come and go with the page and the action-options switch: re-read which one the page shows.
+watch(() => navCategories.value.map((c) => c.id).join('|'), () => {
+  if (!navClickHolds) void nextTick(updateActiveNavFromScroll);
+});
 
 onMounted(() => {
-  nextTick(() => setupScrollSpy());
+  void nextTick(updateActiveNavFromScroll);
 });
 
 onBeforeUnmount(() => {
-  scrollSpyObserver?.disconnect();
+  endNavScroll();
+  if (spyFrame) cancelAnimationFrame(spyFrame);
 });
 </script>
 
@@ -997,10 +1081,21 @@ onBeforeUnmount(() => {
       </nav>
 
       <!-- Scrollable content area -->
-      <div ref="settingsContentRef" class="settings-content">
+      <div
+        ref="settingsContentRef"
+        class="settings-content"
+        @scroll.passive="onSettingsContentScroll"
+        @wheel.passive="onSettingsReaderScrollIntent"
+        @touchstart.passive="onSettingsReaderScrollIntent"
+        @pointerdown="onSettingsReaderScrollIntent"
+        @keydown="onSettingsReaderScrollIntent"
+      >
+
+    <!-- Always in the page, only its text changes: a live region created already filled is often not read out. -->
+    <p class="settings-search-empty" role="status">{{ searchActive && visibleSectionIds.size === 0 ? $t('settings.search.noResults') : '' }}</p>
 
     <!-- ─── NSFW 内容开关 ─── -->
-    <section id="settings-nsfw" v-show="visibleCategoryIds.has('settings-nsfw')" class="settings-section">
+    <section id="settings-nsfw" v-show="visibleSectionIds.has('settings-nsfw')" class="settings-section">
       <h3 class="section-title">{{ $t('settings.nsfw.sectionTitle') }}</h3>
 
       <div class="setting-row">
@@ -1034,7 +1129,7 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- ─── AI 功能开关 ─── -->
-    <section id="settings-ai-features" v-show="visibleCategoryIds.has('settings-ai-features')" class="settings-section">
+    <section id="settings-ai-features" v-show="visibleSectionIds.has('settings-ai-features')" class="settings-section">
       <h3 class="section-title">{{ $t('settings.aiFeatures.sectionTitle') }}</h3>
       <p class="setting-desc" style="margin-bottom: 12px; opacity: 0.7">
         {{ $t('settings.aiFeatures.desc') }}
@@ -1237,13 +1332,13 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- ─── 配音 / TTS ─── -->
-    <TtsSettingsSection v-show="visibleCategoryIds.has('settings-audio')" />
+    <TtsSettingsSection v-show="visibleSectionIds.has('settings-audio')" />
 
     <!-- ─── 语音输入 / STT ─── -->
-    <SttSettingsSection v-show="visibleCategoryIds.has('settings-voice-input')" />
+    <SttSettingsSection v-show="visibleSectionIds.has('settings-voice-input')" />
 
     <!-- ─── UI preferences ─── -->
-    <section id="settings-ui" v-show="visibleCategoryIds.has('settings-ui')" class="settings-section">
+    <section id="settings-ui" v-show="visibleSectionIds.has('settings-ui')" class="settings-section">
       <h3 class="section-title">{{ $t('settings.ui.sectionTitle') }}</h3>
 
       <div class="setting-row">
@@ -1319,7 +1414,7 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- ─── Game settings ─── -->
-    <section id="settings-game" v-show="visibleCategoryIds.has('settings-game')" class="settings-section">
+    <section id="settings-game" v-show="visibleSectionIds.has('settings-game')" class="settings-section">
       <h3 class="section-title">{{ $t('settings.game.sectionTitle') }}</h3>
 
       <div class="setting-row">
@@ -1353,7 +1448,7 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- ─── B.2.1 行动选项深度设置 ─── -->
-    <section v-if="!inGame || actionOptionsSwitchOn" v-show="visibleCategoryIds.has('settings-action')" id="settings-action" class="settings-section">
+    <section v-if="!inGame || actionOptionsSwitchOn" v-show="visibleSectionIds.has('settings-action')" id="settings-action" class="settings-section">
       <h3 class="section-title">{{ $t('settings.action.sectionTitle') }}</h3>
 
       <div class="setting-row">
@@ -1408,7 +1503,7 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- ─── B.2.2 世界心跳高级设置 ─── -->
-    <section v-if="inGame" v-show="visibleCategoryIds.has('settings-heartbeat')" id="settings-heartbeat" class="settings-section">
+    <section v-if="inGame" v-show="visibleSectionIds.has('settings-heartbeat')" id="settings-heartbeat" class="settings-section">
       <h3 class="section-title">{{ $t('settings.heartbeat.sectionTitle') }}</h3>
 
       <div class="setting-row">
@@ -1443,7 +1538,7 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- ─── B.2.3 NPC 设置 ─── -->
-    <section v-if="inGame" v-show="visibleCategoryIds.has('settings-npc')" id="settings-npc" class="settings-section">
+    <section v-if="inGame" v-show="visibleSectionIds.has('settings-npc')" id="settings-npc" class="settings-section">
       <h3 class="section-title">{{ $t('settings.npc.sectionTitle') }}</h3>
 
       <div class="setting-row">
@@ -1464,7 +1559,7 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- ─── Plot Direction Settings (Sprint Plot-1 P6) ─── -->
-    <section v-if="inGame" v-show="visibleCategoryIds.has('settings-plot')" id="settings-plot" class="settings-section">
+    <section v-if="inGame" v-show="visibleSectionIds.has('settings-plot')" id="settings-plot" class="settings-section">
       <h3 class="section-title">{{ $t('settings.plot.sectionTitle') }}</h3>
 
       <div class="setting-row">
@@ -1568,147 +1663,8 @@ onBeforeUnmount(() => {
       </template>
     </section>
 
-    <!-- ─── B.2.4 高级设置 ─── -->
-    <section id="settings-advanced" v-show="visibleCategoryIds.has('settings-advanced')" class="settings-section">
-      <h3 class="section-title">{{ $t('settings.advanced.sectionTitle') }}</h3>
-
-      <!-- Debug mode -->
-      <div class="setting-row">
-        <div class="setting-info">
-          <span class="setting-label">{{ $t('settings.advanced.debugMode.label') }}</span>
-          <span class="setting-desc">{{ $t('settings.advanced.debugMode.desc') }}</span>
-        </div>
-        <AgaToggle
-          :model-value="debugSettings.debugMode"
-          @update:model-value="debugSettings.debugMode = $event"
-        />
-      </div>
-
-      <Transition name="fade-row">
-        <div v-if="debugSettings.debugMode" class="debug-sub">
-          <AgaToggle v-model="debugSettings.consoleDebug" :label="$t('settings.advanced.consoleDebug.label')" show-label />
-          <AgaToggle v-model="debugSettings.aiLogging" :label="$t('settings.advanced.aiLogging.label')" show-label />
-        </div>
-      </Transition>
-
-      <!-- Text replace rules -->
-      <div class="setting-row">
-        <div class="setting-info">
-          <span class="setting-label">{{ $t('settings.advanced.textReplace.label') }}</span>
-          <span class="setting-desc">{{ $t('settings.advanced.textReplace.desc', { count: textReplaceRules.length }) }}</span>
-        </div>
-        <AgaButton variant="primary" size="sm" @click="showReplaceModal = true">{{ $t('settings.advanced.textReplace.editRules') }}</AgaButton>
-      </div>
-
-      <!-- Import / Export settings -->
-      <div class="setting-row">
-        <div class="setting-info">
-          <span class="setting-label">{{ $t('settings.advanced.importExport.label') }}</span>
-          <span class="setting-desc">{{ $t('settings.advanced.importExport.desc') }}</span>
-        </div>
-        <div style="display:flex; gap:6px;">
-          <AgaButton variant="primary" size="sm" @click="exportSettings">{{ $t('settings.advanced.importExport.export') }}</AgaButton>
-          <AgaButton variant="primary" size="sm" @click="openImportSettings">{{ $t('settings.advanced.importExport.import') }}</AgaButton>
-        </div>
-      </div>
-
-      <!-- Clear cache -->
-      <div class="setting-row">
-        <div class="setting-info">
-          <span class="setting-label">{{ $t('settings.advanced.clearCache.label') }}</span>
-          <span class="setting-desc">{{ $t('settings.advanced.clearCache.desc') }}</span>
-        </div>
-        <AgaButton variant="danger" size="sm" @click="showClearCacheConfirm = true">{{ $t('settings.advanced.clearCache.btn') }}</AgaButton>
-      </div>
-    </section>
-
-    <!-- ─── 6.1 界面缩放 + 文本速度 ─── -->
-    <section id="settings-scale" v-show="visibleCategoryIds.has('settings-scale')" class="settings-section">
-      <h3 class="section-title">{{ $t('settings.scale.sectionTitle') }}</h3>
-
-      <!-- UI Scale -->
-      <div class="setting-row">
-        <div class="setting-info">
-          <span class="setting-label">{{ $t('settings.scale.uiScale.label', { value: uiScale }) }}</span>
-          <span class="setting-desc">{{ $t('settings.scale.uiScale.desc') }}</span>
-        </div>
-        <div class="scale-control">
-          <Tooltip :text="$t('settings.scale.uiScale.decrease')" interactive>
-            <button class="adj-btn" :aria-label="$t('settings.scale.uiScale.decrease')" @click="uiScale = Math.max(80, uiScale - 5)">−</button>
-          </Tooltip>
-          <input
-            type="range"
-            min="80"
-            max="120"
-            step="5"
-            v-model.number="uiScale"
-            class="scale-slider"
-            :aria-label="$t('settings.scale.uiScale.ariaLabel')"
-          />
-          <Tooltip :text="$t('settings.scale.uiScale.increase')" interactive>
-            <button class="adj-btn" :aria-label="$t('settings.scale.uiScale.increase')" @click="uiScale = Math.min(120, uiScale + 5)">+</button>
-          </Tooltip>
-          <AgaButton variant="primary" size="sm" @click="uiScale = 100">{{ $t('settings.scale.uiScale.reset') }}</AgaButton>
-        </div>
-      </div>
-
-      <!-- Text speed -->
-      <div class="setting-row">
-        <div class="setting-info">
-          <span class="setting-label">{{ $t('settings.scale.textSpeed.label') }}</span>
-          <span class="setting-desc">{{ $t('settings.scale.textSpeed.desc') }}</span>
-        </div>
-        <div class="radio-group">
-          <label
-            v-for="opt in textSpeedOptions"
-            :key="opt"
-            :class="['speed-opt', { 'speed-opt--active': textSpeed === opt }]"
-          >
-            <input type="radio" :value="opt" v-model="textSpeed" class="sr-only" />
-            {{ opt }}
-          </label>
-        </div>
-      </div>
-    </section>
-
-    <!-- ─── 6.1 数据管理 ─── -->
-    <section id="settings-data" v-show="visibleCategoryIds.has('settings-data')" class="settings-section">
-      <h3 class="section-title">{{ $t('settings.data.sectionTitle') }}</h3>
-
-      <!-- Export all saves -->
-      <div class="setting-row">
-        <div class="setting-info">
-          <span class="setting-label">{{ $t('settings.data.exportAllSaves.label') }}</span>
-          <span class="setting-desc">{{ $t('settings.data.exportAllSaves.desc') }}</span>
-        </div>
-        <AgaButton variant="primary" size="sm" :disabled="isExportingAllSaves" :loading="isExportingAllSaves" @click="exportAllSaves">
-          {{ isExportingAllSaves ? $t('settings.data.exportAllSaves.btnBusy') : $t('settings.data.exportAllSaves.btn') }}
-        </AgaButton>
-      </div>
-
-      <!-- Import saves -->
-      <div class="setting-row">
-        <div class="setting-info">
-          <span class="setting-label">{{ $t('settings.data.importSaves.label') }}</span>
-          <span class="setting-desc">{{ $t('settings.data.importSaves.desc') }}</span>
-        </div>
-        <AgaButton variant="primary" size="sm" @click="openImportSaves">{{ $t('settings.data.importSaves.btn') }}</AgaButton>
-      </div>
-
-      <!-- Clear all data -->
-      <div class="setting-row">
-        <div class="setting-info">
-          <span class="setting-label">{{ $t('settings.data.clearAll.label') }}</span>
-          <span class="setting-desc" style="color: var(--color-danger, #ef4444);">{{ $t('settings.data.clearAll.desc') }}</span>
-        </div>
-        <AgaButton variant="danger" size="sm" @click="showClearAllConfirm = true; clearAllStep = 1">
-          {{ $t('settings.data.clearAll.btn') }}
-        </AgaButton>
-      </div>
-    </section>
-
     <!-- ─── 记忆系统阈值（2026-04-11 四层记忆） ─── -->
-    <section id="settings-memory" v-show="visibleCategoryIds.has('settings-memory')" class="settings-section">
+    <section id="settings-memory" v-show="visibleSectionIds.has('settings-memory')" class="settings-section">
       <h3 class="section-title">{{ $t('settings.memory.sectionTitle') }}</h3>
       <p class="section-subtitle" style="color: var(--color-text-muted, #888); font-size: 12px; margin: -4px 0 10px;">
         {{ $t('settings.memory.sectionDesc') }}
@@ -1823,10 +1779,153 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- ─── Engram 记忆增强 ─── -->
-    <EngramSettingsSection />
+    <EngramSettingsSection
+      id="settings-engram"
+      v-show="visibleSectionIds.has('settings-engram')"
+      :force-expanded="searchActive && visibleSectionIds.has('settings-engram')"
+    />
+
+    <!-- ─── B.2.4 高级设置 ─── -->
+    <section id="settings-advanced" v-show="visibleSectionIds.has('settings-advanced')" class="settings-section">
+      <h3 class="section-title">{{ $t('settings.advanced.sectionTitle') }}</h3>
+
+      <!-- Debug mode -->
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">{{ $t('settings.advanced.debugMode.label') }}</span>
+          <span class="setting-desc">{{ $t('settings.advanced.debugMode.desc') }}</span>
+        </div>
+        <AgaToggle
+          :model-value="debugSettings.debugMode"
+          @update:model-value="debugSettings.debugMode = $event"
+        />
+      </div>
+
+      <Transition name="fade-row">
+        <div v-if="debugSettings.debugMode" class="debug-sub">
+          <AgaToggle v-model="debugSettings.consoleDebug" :label="$t('settings.advanced.consoleDebug.label')" show-label />
+          <AgaToggle v-model="debugSettings.aiLogging" :label="$t('settings.advanced.aiLogging.label')" show-label />
+        </div>
+      </Transition>
+
+      <!-- Text replace rules -->
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">{{ $t('settings.advanced.textReplace.label') }}</span>
+          <span class="setting-desc">{{ $t('settings.advanced.textReplace.desc', { count: textReplaceRules.length }) }}</span>
+        </div>
+        <AgaButton variant="primary" size="sm" @click="showReplaceModal = true">{{ $t('settings.advanced.textReplace.editRules') }}</AgaButton>
+      </div>
+
+      <!-- Import / Export settings -->
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">{{ $t('settings.advanced.importExport.label') }}</span>
+          <span class="setting-desc">{{ $t('settings.advanced.importExport.desc') }}</span>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <AgaButton variant="primary" size="sm" @click="exportSettings">{{ $t('settings.advanced.importExport.export') }}</AgaButton>
+          <AgaButton variant="primary" size="sm" @click="openImportSettings">{{ $t('settings.advanced.importExport.import') }}</AgaButton>
+        </div>
+      </div>
+
+      <!-- Clear cache -->
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">{{ $t('settings.advanced.clearCache.label') }}</span>
+          <span class="setting-desc">{{ $t('settings.advanced.clearCache.desc') }}</span>
+        </div>
+        <AgaButton variant="danger" size="sm" @click="showClearCacheConfirm = true">{{ $t('settings.advanced.clearCache.btn') }}</AgaButton>
+      </div>
+    </section>
+
+    <!-- ─── 6.1 界面缩放 + 文本速度 ─── -->
+    <section id="settings-scale" v-show="visibleSectionIds.has('settings-scale')" class="settings-section">
+      <h3 class="section-title">{{ $t('settings.scale.sectionTitle') }}</h3>
+
+      <!-- UI Scale -->
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">{{ $t('settings.scale.uiScale.label', { value: uiScale }) }}</span>
+          <span class="setting-desc">{{ $t('settings.scale.uiScale.desc') }}</span>
+        </div>
+        <div class="scale-control">
+          <Tooltip :text="$t('settings.scale.uiScale.decrease')" interactive>
+            <button class="adj-btn" :aria-label="$t('settings.scale.uiScale.decrease')" @click="uiScale = Math.max(80, uiScale - 5)">−</button>
+          </Tooltip>
+          <input
+            type="range"
+            min="80"
+            max="120"
+            step="5"
+            v-model.number="uiScale"
+            class="scale-slider"
+            :aria-label="$t('settings.scale.uiScale.ariaLabel')"
+          />
+          <Tooltip :text="$t('settings.scale.uiScale.increase')" interactive>
+            <button class="adj-btn" :aria-label="$t('settings.scale.uiScale.increase')" @click="uiScale = Math.min(120, uiScale + 5)">+</button>
+          </Tooltip>
+          <AgaButton variant="primary" size="sm" @click="uiScale = 100">{{ $t('settings.scale.uiScale.reset') }}</AgaButton>
+        </div>
+      </div>
+
+      <!-- Text speed -->
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">{{ $t('settings.scale.textSpeed.label') }}</span>
+          <span class="setting-desc">{{ $t('settings.scale.textSpeed.desc') }}</span>
+        </div>
+        <div class="radio-group">
+          <label
+            v-for="opt in textSpeedOptions"
+            :key="opt"
+            :class="['speed-opt', { 'speed-opt--active': textSpeed === opt }]"
+          >
+            <input type="radio" :value="opt" v-model="textSpeed" class="sr-only" />
+            {{ opt }}
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── 6.1 数据管理 ─── -->
+    <section id="settings-data" v-show="visibleSectionIds.has('settings-data')" class="settings-section">
+      <h3 class="section-title">{{ $t('settings.data.sectionTitle') }}</h3>
+
+      <!-- Export all saves -->
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">{{ $t('settings.data.exportAllSaves.label') }}</span>
+          <span class="setting-desc">{{ $t('settings.data.exportAllSaves.desc') }}</span>
+        </div>
+        <AgaButton variant="primary" size="sm" :disabled="isExportingAllSaves" :loading="isExportingAllSaves" @click="exportAllSaves">
+          {{ isExportingAllSaves ? $t('settings.data.exportAllSaves.btnBusy') : $t('settings.data.exportAllSaves.btn') }}
+        </AgaButton>
+      </div>
+
+      <!-- Import saves -->
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">{{ $t('settings.data.importSaves.label') }}</span>
+          <span class="setting-desc">{{ $t('settings.data.importSaves.desc') }}</span>
+        </div>
+        <AgaButton variant="primary" size="sm" @click="openImportSaves">{{ $t('settings.data.importSaves.btn') }}</AgaButton>
+      </div>
+
+      <!-- Clear all data -->
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">{{ $t('settings.data.clearAll.label') }}</span>
+          <span class="setting-desc" style="color: var(--color-danger, #ef4444);">{{ $t('settings.data.clearAll.desc') }}</span>
+        </div>
+        <AgaButton variant="danger" size="sm" @click="showClearAllConfirm = true; clearAllStep = 1">
+          {{ $t('settings.data.clearAll.btn') }}
+        </AgaButton>
+      </div>
+    </section>
 
     <!-- ─── About ─── -->
-    <section class="settings-section settings-section--about">
+    <section id="settings-about" v-show="visibleSectionIds.has('settings-about')" class="settings-section settings-section--about">
       <h3 class="section-title">{{ $t('settings.about.sectionTitle') }}</h3>
       <div class="about-info">
         <div class="about-row">
@@ -1983,6 +2082,21 @@ onBeforeUnmount(() => {
 }
 .settings-search:focus { outline: none; border-color: var(--color-primary); }
 .settings-search::placeholder { color: var(--color-text-muted); }
+.settings-search-empty {
+  margin: var(--space-xl) 0 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+/* Empty while there are results: out of the flex flow (no gap above the first section), still the live region. */
+.settings-search-empty:empty {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
 
 .settings-layout {
   display: flex;

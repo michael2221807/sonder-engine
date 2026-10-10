@@ -7,6 +7,7 @@
   "settings.plotVector.storageError": "设置未保存，请检查浏览器存储。",
   "settings.title": "设置",
   "settings.search.placeholder": "搜索设置…",
+  "settings.search.noResults": "没有匹配的设置",
   "settings.resetAll": "重置全部",
   "settings.resetAll.toast": "已重置所有设置",
 

@@ -20,6 +20,12 @@ import { ref, watch, onMounted, computed } from 'vue';
 import { loadEngramConfig, saveEngramConfig } from '@/engine/memory/engram/engram-config';
 import { useAPIManagementStore } from '@/engine/stores/engine-api';
 import type { EngramConfig } from '@/engine/memory/engram/engram-types';
+// App doc: docs/user-guide/pages/home.md §1.3.2 § Engram 记忆增强
+
+const props = defineProps<{
+  /** The settings search matched this section: open the fold so the matching rows show. */
+  forceExpanded?: boolean;
+}>();
 
 // ─── State ───
 
@@ -31,6 +37,10 @@ const apiStore = useAPIManagementStore();
 // Engram 开关根本不存在。默认展开后主开关立即可见，避免此困惑。
 const expanded = ref(true);
 const config = ref<EngramConfig>(loadEngramConfig());
+
+watch(() => props.forceExpanded, (open) => {
+  if (open) expanded.value = true;
+});
 
 // ─── Read-only API assignment display ───
 
