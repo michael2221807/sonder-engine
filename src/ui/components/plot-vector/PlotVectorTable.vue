@@ -88,6 +88,11 @@ const note = ref<'cleared' | 'openFailed' | 'saveFailed' | 'reopened' | null>(nu
 const selected = ref<string | null>(null);
 const fresh = ref<ReadonlySet<string>>(new Set());
 const helpOpen = ref(false);
+// The help panel opens just under the header, wherever its bottom is: on a phone the weather chips wrap and the
+// header grows, and a fixed offset put the panel over the "?" that closes it.
+const head = ref<HTMLElement>();
+const helpTop = ref<number | null>(null);
+watch(helpOpen, open => { helpTop.value = open && head.value ? head.value.offsetTop + head.value.offsetHeight + 6 : null; });
 const saved = ref(false);
 const replaying = shallowRef<TableModel | null>(null);
 const walk = useTripWalk();
@@ -852,7 +857,7 @@ const ghostStyle = computed(() => {
           @pointerup="onHandleUp"
           @keydown.enter.prevent="close"
         />
-        <header class="vtable__head">
+        <header ref="head" class="vtable__head">
           <div class="vtable__weather" data-testid="vector-weather">
             <Tooltip v-for="id in shown?.weather ?? []" :key="id" :text="weatherLine(id)" fixed>
               <span class="vtable__chip" :class="{ 'vtable__chip--acting': walk.acting.value.has(id) }">
@@ -990,7 +995,7 @@ const ghostStyle = computed(() => {
           </div>
         </div>
 
-        <div v-if="helpOpen" class="vtable__help">
+        <div v-if="helpOpen" class="vtable__help" :style="helpTop !== null ? { top: `${helpTop}px` } : undefined" data-testid="vector-help-layer">
           <VectorHelpPanel
             :starting="prepared?.starting"
             :shape="shape"

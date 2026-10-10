@@ -310,6 +310,9 @@ test('a card says what its code does: chips on its face, cases in its effect, ho
     await plotVector.showExact();
     await expect(page.getByTestId('vector-legend').getByTestId('vector-tok')).toHaveText(['↑推力', '↓阻力', '◇人际', '✦机会']);
     await expect(page.getByTestId('vector-legend-ops')).toContainText('× 放大，÷ 打折');
+    // The open panel sits under the header, never over the "?" that closes it (a phone's header wraps; PO 2026-10-10).
+    const [layer, toggle] = await Promise.all([page.getByTestId('vector-help-layer').boundingBox(), page.getByTestId('vector-help-toggle').boundingBox()]);
+    expect(layer!.y).toBeGreaterThanOrEqual(toggle!.y + toggle!.height);
     await page.getByTestId('vector-help-toggle').click();
     // With exact numbers the chips and bubbles carry their numbers.
     await expect(plotVector.marks('basic:push')).toHaveText('↑+1');
