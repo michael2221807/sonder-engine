@@ -196,6 +196,48 @@ const narrativeHistory = useValue<ChatMessage[]>(DEFAULT_ENGINE_PATHS.narrativeH
 
 import type { NpcBrief } from '@/ui/components/shared/FormattedText.vue';
 import PlotGaugeStrip from '@/ui/components/panels/plot/PlotGaugeStrip.vue';
+import PlotGaugeToggle from '@/ui/components/panels/plot/PlotGaugeToggle.vue';
+import { useGaugeDrawer } from '@/ui/composables/main-game/gauge-drawer';
+import { useScrollEdges } from '@/ui/composables/main-game/scroll-edges';
+import { useElementWidth } from '@/ui/composables/main-game/element-width';
+
+// Status bar (2026-10-10): the active threads' gauges sit in a drawer below the first row; the row's chips scroll
+// sideways when they do not fit (a phone), fading only at an end that hides more.
+const {
+  groups: statusGaugeGroups, count: statusGaugeCount, open: gaugeDrawerOpen, unseenChange: gaugeUnseenChange, toggle: toggleGaugeDrawer,
+} = useGaugeDrawer();
+const statusChipsRef = ref<HTMLElement | null>(null);
+const { edges: statusChipEdges } = useScrollEdges(statusChipsRef);
+/**
+ * Below this content width the bar's fixed controls go small (the gauge toggle drops its word, voice becomes an icon);
+ * it leaves compact only past the wider bound, so a width hovering at the edge (the padding animates with the
+ * sidebars) does not flip it back and forth.
+ */
+const STATUS_BAR_COMPACT_WIDTH = 640;
+const STATUS_BAR_ROOMY_WIDTH = 680;
+const statusRowRef = ref<HTMLElement | null>(null);
+const statusRowWidth = useElementWidth(statusRowRef);
+const statusCompact = ref(false);
+watch(statusRowWidth, (width) => {
+  if (width <= 0) return;
+  if (width < STATUS_BAR_COMPACT_WIDTH) statusCompact.value = true;
+  else if (width > STATUS_BAR_ROOMY_WIDTH) statusCompact.value = false;
+}, { immediate: true });
+
+/**
+ * A vertical wheel over chips that overflow scrolls them sideways (a mouse has no sideways wheel). Left alone: a
+ * sideways swipe (the browser scrolls it), ctrl + wheel and pinch (zoom), and a wheel the row cannot follow (at an end).
+ */
+function onStatusChipsWheel(e: WheelEvent): void {
+  const row = statusChipsRef.value;
+  if (!row || e.ctrlKey || row.scrollWidth <= row.clientWidth + 1) return;
+  if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+  // Lines (Firefox mouse wheels) and pages, in pixels.
+  const step = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? row.clientWidth : 1;
+  const before = row.scrollLeft;
+  row.scrollLeft = before + e.deltaY * step;
+  if (row.scrollLeft !== before) e.preventDefault();
+}
 
 const relationships = useValue<NpcBrief[]>(DEFAULT_ENGINE_PATHS.relationships);
 const npcNameList = computed(() => {
@@ -1105,54 +1147,73 @@ watch(
 
 <template>
   <div class="main-game-panel">
-    <!-- Status bar: left cluster [round counter][weather][env chips] / right cluster [festival][generating].
-         It sits right under the top bar, so its hints are `fixed` (CLAUDE.md §8.1) and show below: an in-flow
-         bubble above it went under the top bar, and a long one above it left the screen (2026-10-04). A hint is
-         off while the panel its control opened is open, since it would lie over that panel. -->
+    <!-- Status bar. First row: the round's own chips on the left [round][momentum][weather][environment][festival],
+         which scroll sideways when they do not fit; the controls on the right [generating][gauges][search]
+         [bookmarks][voice] stay put. Below it, the active threads' gauges in a drawer (2026-10-10: in the row they were
+         squeezed to nothing on a phone). It sits right under the top bar, so its hints are `fixed` (CLAUDE.md §8.1)
+         and show below: an in-flow bubble above it went under the top bar, and a long one above it left the screen
+         (2026-10-04). A hint is off while the panel its control opened is open, since it would lie over that panel. -->
     <div class="status-bar">
-      <div class="status-bar__left">
-        <span class="round-counter">{{ roundDisplay }}</span>
-        <RoundImpulseChip />
-        <WeatherBadge :weather="weather" />
-        <EnvironmentChips :tags="environmentTags" />
-        <!-- Plot Threads: focus-thread gauges (honours 设置→剧情导向→主面板显示度量值 + per-gauge flag) -->
-        <PlotGaugeStrip />
+      <div ref="statusRowRef" class="status-bar__row" :class="{ 'status-bar__row--compact': statusCompact }">
+        <div
+          ref="statusChipsRef"
+          class="status-bar__left"
+          :class="{ 'status-bar__left--more-before': statusChipEdges.moreBefore, 'status-bar__left--more-after': statusChipEdges.moreAfter }"
+          data-testid="status-chips"
+          @wheel="onStatusChipsWheel"
+        >
+          <span class="round-counter">{{ roundDisplay }}</span>
+          <RoundImpulseChip />
+          <WeatherBadge :weather="weather" />
+          <EnvironmentChips :tags="environmentTags" />
+          <FestivalChip :festival="festival" />
+        </div>
+        <div class="status-bar__right">
+          <span v-if="isGenerating" class="status-generating" role="status">
+            <span class="status-generating__text">{{ $t('mainGame.status.aiThinking') }}</span>
+          </span>
+          <!-- Plot Threads: every active thread's gauges, focus first (honours 设置→剧情导向→主面板显示度量值 + per-gauge flag) -->
+          <PlotGaugeToggle
+            v-if="statusGaugeCount > 0"
+            :count="statusGaugeCount"
+            :open="gaugeDrawerOpen"
+            :changed="gaugeUnseenChange"
+            :compact="statusCompact"
+            controls="status-gauge-drawer"
+            @toggle="toggleGaugeDrawer"
+          />
+          <Tooltip :text="$t('mainGame.search.toggleTitle')" interactive fixed position="bottom" :disabled="showSearch">
+            <button
+              class="search-toggle-btn"
+              :class="{ 'search-toggle-btn--active': showSearch }"
+              :aria-label="$t('mainGame.search.toggleTitle')"
+              @click="toggleSearch"
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden="true">
+                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+              </svg>
+            </button>
+          </Tooltip>
+          <!-- 收藏楼层 展开按钮 — 紧邻搜索按钮 (2026-07-18) -->
+          <Tooltip :text="$t('mainGame.bookmark.toggleTitle')" interactive fixed position="bottom" :disabled="showBookmarks">
+            <button
+              class="search-toggle-btn bookmark-toggle-btn"
+              :class="{ 'bookmark-toggle-btn--active': showBookmarks }"
+              data-testid="bookmark-toggle"
+              :aria-label="$t('mainGame.bookmark.toggleTitle')"
+              @click="toggleBookmarksPanel"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15" aria-hidden="true">
+                <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+              </svg>
+              <span v-if="bookmarks.length > 0" class="bookmark-count">{{ bookmarks.length }}</span>
+            </button>
+          </Tooltip>
+          <!-- 配音快速切换 (2026-07-20) — chip → popover: 切音色/方言 + 自动配音开关 -->
+          <VoiceQuickSwitch v-if="ttsReady" :speaking="ttsState.status !== 'idle'" :compact="statusCompact" />
+        </div>
       </div>
-      <div class="status-bar__right">
-        <Tooltip :text="$t('mainGame.search.toggleTitle')" interactive fixed position="bottom" :disabled="showSearch">
-          <button
-            class="search-toggle-btn"
-            :class="{ 'search-toggle-btn--active': showSearch }"
-            :aria-label="$t('mainGame.search.toggleTitle')"
-            @click="toggleSearch"
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden="true">
-              <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
-            </svg>
-          </button>
-        </Tooltip>
-        <!-- 收藏楼层 展开按钮 — 紧邻搜索按钮 (2026-07-18) -->
-        <Tooltip :text="$t('mainGame.bookmark.toggleTitle')" interactive fixed position="bottom" :disabled="showBookmarks">
-          <button
-            class="search-toggle-btn bookmark-toggle-btn"
-            :class="{ 'bookmark-toggle-btn--active': showBookmarks }"
-            data-testid="bookmark-toggle"
-            :aria-label="$t('mainGame.bookmark.toggleTitle')"
-            @click="toggleBookmarksPanel"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15" aria-hidden="true">
-              <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
-            </svg>
-            <span v-if="bookmarks.length > 0" class="bookmark-count">{{ bookmarks.length }}</span>
-          </button>
-        </Tooltip>
-        <!-- 配音快速切换 (2026-07-20) — chip → popover: 切音色/方言 + 自动配音开关 -->
-        <VoiceQuickSwitch v-if="ttsReady" :speaking="ttsState.status !== 'idle'" />
-        <FestivalChip :festival="festival" />
-        <span v-if="isGenerating" class="status-generating">
-          {{ $t('mainGame.status.aiThinking') }}
-        </span>
-      </div>
+      <PlotGaugeStrip id="status-gauge-drawer" :groups="statusGaugeGroups" :open="gaugeDrawerOpen" />
     </div>
 
     <!-- Messages area —— wrapper 提供 position:relative 以承载浮动按钮 -->
@@ -1658,6 +1719,12 @@ watch(
 /* ── Status bar ─────────────────────────────────────────────── */
 
 .status-bar {
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
+.status-bar__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1665,23 +1732,56 @@ watch(
   padding: 0.4rem var(--sidebar-right-reserve, 40px) 0.4rem var(--sidebar-left-reserve, 40px);
   transition: padding-left var(--duration-open) var(--ease-droplet),
               padding-right var(--duration-open) var(--ease-droplet);
-  border-bottom: 1px solid var(--color-border-subtle);
-  background: var(--color-surface);
-  flex-shrink: 0;
   min-height: 36px;
   gap: 0.75rem;
 }
 
-.status-bar__left,
+/* The round's own chips: one line that scrolls sideways when it does not fit (2026-10-10). */
+.status-bar__left {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  /* Room for a chip's glow and a keyboard focus ring, which the scroll box would cut; the margin gives it back. */
+  padding: 4px;
+  margin: -4px;
+  --fade-before: 0px;
+  --fade-after: 0px;
+}
+.status-bar__left::-webkit-scrollbar { display: none; }
+.status-bar__left > * { flex-shrink: 0; }
+/* Fade only an end that hides more: the round counter is never faded while nothing is scrolled. */
+.status-bar__left--more-before { --fade-before: 18px; }
+.status-bar__left--more-after { --fade-after: 18px; }
+.status-bar__left--more-before,
+.status-bar__left--more-after {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-before), #000 calc(100% - var(--fade-after)), transparent 100%);
+          mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-before), #000 calc(100% - var(--fade-after)), transparent 100%);
+}
+
 .status-bar__right {
   display: inline-flex;
   align-items: center;
   gap: 0.625rem;
-  min-width: 0;
-}
-
-.status-bar__right {
   flex-shrink: 0;
+}
+/* A narrow bar (a phone, or a tablet with both sidebars open): the fixed controls stay small so the chips keep room
+   to scroll; "AI thinking" keeps its breathing dot. */
+.status-bar__row--compact { gap: 0.5rem; }
+.status-bar__row--compact .status-bar__right { gap: 2px; }
+/* Out of sight, still read out. */
+.status-bar__row--compact .status-generating__text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .round-counter {
@@ -2534,10 +2634,11 @@ watch(
 
 /* Mobile baseline: replace 0px sidebar-reserve with minimum padding */
 @media (max-width: 767px) {
-  .status-bar {
+  .status-bar__row {
     padding-left: var(--space-md);
     padding-right: var(--space-md);
   }
+
   .messages-container {
     padding-left: var(--space-sm);
     padding-right: var(--space-sm);

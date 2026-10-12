@@ -25,6 +25,8 @@ const LONG_GAUGE_DESCRIPTION = '旧城区的流言一天比一天多：茶馆、
 const IMPULSE = '[data-testid="vector-impulse"]';
 const ENV = '.status-bar .env-chips';
 const GAUGE = '.status-bar [data-testid="plot-gauge-strip"] .gauge-strip__item';
+/** The gauges sit in a drawer below the bar since 2026-10-10; this toggle opens it. */
+const GAUGE_TOGGLE = '[data-testid="gauge-drawer-toggle"]';
 const SEARCH = '.status-bar .search-toggle-btn:not(.bookmark-toggle-btn)';
 const BOOKMARK = '[data-testid="bookmark-toggle"]';
 const VOICE = '[data-testid="voice-quick-chip"]';
@@ -85,7 +87,7 @@ async function openFullStatusBar(page: Page, gameShell: GameShellPage, plotVecto
   await page.reload();
   await enterSeededGame(page);
   await gameShell.goTab('settings'); await plotVector.toggleFeature(); await gameShell.goTab('');
-  for (const selector of [IMPULSE, ENV, GAUGE, SEARCH, BOOKMARK, VOICE, FESTIVAL]) await expect(page.locator(selector).first()).toBeVisible();
+  for (const selector of [IMPULSE, ENV, GAUGE_TOGGLE, SEARCH, BOOKMARK, VOICE, FESTIVAL]) await expect(page.locator(selector).first()).toBeVisible();
 }
 
 /** A toast shows in the same top-right corner and is meant to sit over everything: each step waits one out first. */
@@ -162,7 +164,16 @@ test.describe('status-bar hints', () => {
 
   test('every hint shows below its chip, in full and on screen', { tag: ['@regression'] }, async ({ page, gameShell, plotVector }) => {
     await openFullStatusBar(page, gameShell, plotVector);
-    for (const selector of [GAUGE, IMPULSE, ENV, SEARCH, BOOKMARK, VOICE, FESTIVAL]) {
+    // The toggle's own hint first, with the drawer closed (it is off while the drawer is open); then open it.
+    for (const selector of [GAUGE_TOGGLE, IMPULSE, ENV, SEARCH, BOOKMARK, VOICE, FESTIVAL]) {
+      const look = await lookAtHint(page, selector);
+      expect.soft({ shown: look.shown, coveredBy: look.coveredBy, below: look.below, onScreen: look.onScreen }, selector)
+        .toEqual({ shown: true, coveredBy: null, below: true, onScreen: true });
+    }
+    await page.locator(GAUGE_TOGGLE).click();
+    await expect(page.locator(GAUGE).first()).toBeVisible();
+    await page.mouse.move(960, 700);
+    for (const selector of [GAUGE]) {
       const look = await lookAtHint(page, selector);
       expect.soft({ shown: look.shown, coveredBy: look.coveredBy, below: look.below, onScreen: look.onScreen }, selector)
         .toEqual({ shown: true, coveredBy: null, below: true, onScreen: true });
@@ -199,6 +210,7 @@ test.describe('status-bar hints', () => {
     await openFullStatusBar(page, gameShell, plotVector);
     const closeModal = () => page.locator('.modal-backdrop .modal-close').click();
     for (const [selector, panel, close, dialog] of [
+      [GAUGE_TOGGLE, page.locator('[data-testid="plot-gauge-strip"]'), () => page.locator(GAUGE_TOGGLE).click(), false],
       [SEARCH, page.locator('.search-panel'), () => page.locator(SEARCH).click(), false],
       [BOOKMARK, page.getByTestId('bookmark-panel'), () => page.locator(BOOKMARK).click(), false],
       [VOICE, page.locator('.voice-popover'), () => page.locator(VOICE).click(), false],
@@ -209,7 +221,7 @@ test.describe('status-bar hints', () => {
       await noToast(page);
       await trigger.click(); // the pointer stays on the control, which keeps the focus
       await expect(panel, selector).toBeVisible();
-      // Search, bookmarks and voice open a panel beside their control, so their hint needs its own guard. A dialog
+      // The gauge drawer, search, bookmarks and voice open a panel beside their control, so their hint needs its own guard. A dialog
       // covers its chip and takes the focus, and the browser then closes the hint by itself (pointerleave, focusout).
       await page.waitForTimeout(1200); // longer than the hint's 800 ms delay and its fade: it would show by now
       expect.soft(await bubbleOf(trigger), `${selector} with its panel open`).toEqual({ hot: false, opacity: '0' });
@@ -229,7 +241,8 @@ test.describe('status-bar hints', () => {
     await waitForHint(page.locator(BOOKMARK));
     expect(await bubbleOf(page.locator(BOOKMARK)), 'bookmarks reached by Tab').toEqual({ hot: true, opacity: '1' });
     // A dialog opened and closed from the keyboard hands the focus back as keyboard focus: the hint shows.
-    await page.keyboard.press('Tab'); // voice
+    // The festival chip sits after the environment chip, on the left of the bar (2026-10-10).
+    await page.locator(ENV).focus();
     await page.keyboard.press('Tab'); // festival
     await expect(page.locator(FESTIVAL)).toBeFocused();
     await page.keyboard.press('Enter');

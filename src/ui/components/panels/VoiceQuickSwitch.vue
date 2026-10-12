@@ -21,7 +21,11 @@ import { TTS_RATE_MIN, TTS_RATE_MAX } from '@/engine/tts/types';
 import type { TtsSettings, TtsVoiceFavorite, TtsBackendType } from '@/engine/tts/types';
 import { providerCatalog } from '@/engine/providers';
 
-defineProps<{ speaking?: boolean }>();
+defineProps<{
+  speaking?: boolean;
+  /** The status bar is narrow: show a speaker icon instead of the voice's name. */
+  compact?: boolean;
+}>();
 
 const { t } = useI18n();
 const ttsService = injectService('ttsService', undefined);
@@ -110,14 +114,20 @@ onBeforeUnmount(() => {
       <button
         type="button"
         class="voice-chip"
-        :class="{ 'voice-chip--speaking': speaking, 'voice-chip--open': open }"
+        :class="{ 'voice-chip--speaking': speaking, 'voice-chip--open': open, 'voice-chip--compact': compact }"
         data-testid="voice-quick-chip"
+        :aria-label="compact ? `${$t('mainGame.voice.title')}：${chipLabel}` : undefined"
         aria-haspopup="dialog"
         :aria-expanded="open"
         @click="toggleOpen"
       >
         <span class="voice-chip__dot" :class="{ 'voice-chip__dot--on': speaking }" />
         <span class="voice-chip__label">{{ chipLabel }}</span>
+        <!-- Narrow status bar (`compact`): a speaker icon in place of the voice's name, so the chips keep room (2026-10-10) -->
+        <svg class="voice-chip__icon" viewBox="0 0 20 20" width="15" height="15" fill="currentColor" aria-hidden="true">
+          <path d="M9 4.5 5.5 7.5H3v5h2.5L9 15.5z" />
+          <path d="M12.5 7a4 4 0 0 1 0 6M14.5 5a7 7 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+        </svg>
       </button>
     </Tooltip>
 
@@ -247,7 +257,12 @@ onBeforeUnmount(() => {
 .voice-chip--speaking { color: var(--color-sage-300); }
 .voice-chip__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @keyframes voice-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-@media (prefers-reduced-motion: reduce) { .voice-chip__dot--on { animation: none; } }
+.voice-chip__icon { display: none; flex-shrink: 0; }
+.voice-chip--compact { width: 28px; height: 28px; padding: 0; justify-content: center; background: none; }
+.voice-chip--compact .voice-chip__dot, .voice-chip--compact .voice-chip__label { display: none; }
+.voice-chip--compact .voice-chip__icon { display: block; }
+.voice-chip--compact.voice-chip--speaking .voice-chip__icon { animation: voice-blink 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .voice-chip__dot--on, .voice-chip--speaking .voice-chip__icon { animation: none; } }
 
 .voice-popover {
   position: absolute;
