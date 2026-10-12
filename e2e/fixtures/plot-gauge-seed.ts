@@ -69,7 +69,9 @@ export async function seedThreads(page: Page, ids: SeedIds, threads: SeedThread[
 /** Changes one thread's gauges (`arcIndex`, the first by default) in the running game, as a round's command would, through the app's own store. */
 export async function changeLiveGauges(page: Page, change: { setCurrent?: Record<string, number>; renameIds?: Record<string, string>; arcIndex?: number }): Promise<void> {
   await page.evaluate(async (change) => {
-    const { DEFAULT_ENGINE_PATHS: P } = await import(/* @vite-ignore */ '/src/engine/pipeline/types.ts');
+    // Through a variable, like the seed above: the browser resolves this path, the e2e type-check must not.
+    const load = (p: string) => import(/* @vite-ignore */ p);
+    const { DEFAULT_ENGINE_PATHS: P } = await load('/src/engine/pipeline/types.ts');
     const app = document.querySelector('#app') as unknown as {
       __vue_app__: { config: { globalProperties: { $pinia: { _s: Map<string, { get: (p: string) => unknown; setValue: (p: string, v: unknown) => void }> } } } };
     };
